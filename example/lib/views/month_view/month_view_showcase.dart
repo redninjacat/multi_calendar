@@ -8,16 +8,14 @@ import 'styles/classic_style.dart';
 import 'styles/minimal_style.dart';
 import 'styles/colorful_style.dart';
 import 'styles/features_demo_style.dart';
+import 'styles/layout_poc_style.dart';
 
 /// Information about a style tab.
 class StyleTabInfo {
   final String name;
   final String description;
 
-  const StyleTabInfo({
-    required this.name,
-    required this.description,
-  });
+  const StyleTabInfo({required this.name, required this.description});
 }
 
 /// Showcase for Month View with multiple style tabs.
@@ -42,6 +40,11 @@ class _MonthViewShowcaseState extends State<MonthViewShowcase>
   DateTime? _selectedDate;
 
   static const List<StyleTabInfo> _styles = [
+    StyleTabInfo(
+      name: 'Layout POC',
+      description:
+          'Proof of concept for the new 2-layer Stack-based calendar layout. Layer 1 is the calendar grid (day cells). Layer 2 is the event tiles using Wrap layout. This demonstrates how multi-day and single-day events can be laid out independently of the cell grid.',
+    ),
     StyleTabInfo(
       name: 'Features',
       description:
@@ -114,15 +117,16 @@ class _MonthViewShowcaseState extends State<MonthViewShowcase>
           child: TabBarView(
             controller: _tabController,
             children: [
+              LayoutPocStyle(description: _styles[0].description),
               FeaturesDemoStyle(
                 locale: widget.currentLocale,
                 isDarkMode: widget.isDarkMode,
-                description: _styles[0].description,
+                description: _styles[1].description,
               ),
               DefaultMonthStyle(
                 eventController: _eventController,
                 locale: widget.currentLocale,
-                description: _styles[1].description,
+                description: _styles[2].description,
               ),
               ModernMonthStyle(
                 eventController: _eventController,
@@ -130,7 +134,7 @@ class _MonthViewShowcaseState extends State<MonthViewShowcase>
                 isDarkMode: widget.isDarkMode,
                 selectedDate: _selectedDate,
                 onDateSelected: _onDateSelected,
-                description: _styles[2].description,
+                description: _styles[3].description,
               ),
               ClassicMonthStyle(
                 eventController: _eventController,
@@ -138,7 +142,7 @@ class _MonthViewShowcaseState extends State<MonthViewShowcase>
                 isDarkMode: widget.isDarkMode,
                 selectedDate: _selectedDate,
                 onDateSelected: _onDateSelected,
-                description: _styles[3].description,
+                description: _styles[4].description,
               ),
               MinimalMonthStyle(
                 eventController: _eventController,
@@ -146,7 +150,7 @@ class _MonthViewShowcaseState extends State<MonthViewShowcase>
                 isDarkMode: widget.isDarkMode,
                 selectedDate: _selectedDate,
                 onDateSelected: _onDateSelected,
-                description: _styles[4].description,
+                description: _styles[5].description,
               ),
               ColorfulMonthStyle(
                 eventController: _eventController,
@@ -154,7 +158,7 @@ class _MonthViewShowcaseState extends State<MonthViewShowcase>
                 isDarkMode: widget.isDarkMode,
                 selectedDate: _selectedDate,
                 onDateSelected: _onDateSelected,
-                description: _styles[5].description,
+                description: _styles[6].description,
               ),
             ],
           ),
