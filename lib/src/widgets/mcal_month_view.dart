@@ -2569,7 +2569,7 @@ class _WeekRowWidget extends StatelessWidget {
     final segment = tileContext.segment;
 
     // Determine corner radius based on segment position
-    final cornerRadius = theme.tileCornerRadius ?? 4.0;
+    final cornerRadius = theme.eventTileCornerRadius ?? 4.0;
     final leftRadius = segment?.isFirstSegment ?? true ? cornerRadius : 0.0;
     final rightRadius = segment?.isLastSegment ?? true ? cornerRadius : 0.0;
 

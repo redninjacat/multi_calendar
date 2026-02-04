@@ -255,7 +255,7 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
 
   /// Corner radius for event tiles.
   /// Defaults to 3.0 pixels.
-  final double? tileCornerRadius;
+  final double? eventTileCornerRadius;
 
   /// Whether to ignore individual event colors and use [eventTileBackgroundColor] instead.
   ///
@@ -320,7 +320,7 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     this.dateLabelHeight,
     this.dateLabelPosition,
     this.overflowIndicatorHeight,
-    this.tileCornerRadius,
+    this.eventTileCornerRadius,
     this.ignoreEventColors = false,
     this.eventTileBorderColor,
     this.eventTileBorderWidth,
@@ -402,7 +402,7 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
       dateLabelHeight: 18.0,
       dateLabelPosition: DateLabelPosition.topLeft,
       overflowIndicatorHeight: 14.0,
-      tileCornerRadius: 3.0,
+      eventTileCornerRadius: 3.0,
       ignoreEventColors: false,
     );
   }
@@ -446,7 +446,7 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     double? dateLabelHeight,
     DateLabelPosition? dateLabelPosition,
     double? overflowIndicatorHeight,
-    double? tileCornerRadius,
+    double? eventTileCornerRadius,
     bool? ignoreEventColors,
     Color? eventTileBorderColor,
     double? eventTileBorderWidth,
@@ -510,7 +510,8 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
       dateLabelPosition: dateLabelPosition ?? this.dateLabelPosition,
       overflowIndicatorHeight:
           overflowIndicatorHeight ?? this.overflowIndicatorHeight,
-      tileCornerRadius: tileCornerRadius ?? this.tileCornerRadius,
+      eventTileCornerRadius:
+          eventTileCornerRadius ?? this.eventTileCornerRadius,
       ignoreEventColors: ignoreEventColors ?? this.ignoreEventColors,
       eventTileBorderColor: eventTileBorderColor ?? this.eventTileBorderColor,
       eventTileBorderWidth: eventTileBorderWidth ?? this.eventTileBorderWidth,
@@ -685,9 +686,9 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
         other.overflowIndicatorHeight,
         t,
       ),
-      tileCornerRadius: _lerpDouble(
-        tileCornerRadius,
-        other.tileCornerRadius,
+      eventTileCornerRadius: _lerpDouble(
+        eventTileCornerRadius,
+        other.eventTileCornerRadius,
         t,
       ),
       ignoreEventColors: t < 0.5 ? ignoreEventColors : other.ignoreEventColors,

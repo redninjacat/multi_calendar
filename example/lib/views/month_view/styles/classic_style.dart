@@ -59,7 +59,7 @@ class ClassicMonthStyle extends StatelessWidget {
                 fontSize: 10,
                 color: colorScheme.onPrimaryContainer,
               ),
-              tileCornerRadius: 0.0, // Square corners
+              eventTileCornerRadius: 0.0, // Square corners
               ignoreEventColors: true, // Use uniform colors from theme
               eventTileBorderColor: colorScheme.onPrimaryContainer,
               eventTileBorderWidth: 0.5,

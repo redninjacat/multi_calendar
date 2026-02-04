@@ -54,7 +54,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   double _tileHeight = 18.0;
   double _tileVerticalSpacing = 2.0;
   double _tileHorizontalSpacing = 2.0;
-  double _tileCornerRadius = 4.0;
+  double _eventTileCornerRadius = 4.0;
   double _tileBorderWidth = 0.0;
 
   // Overflow indicator settings
@@ -228,7 +228,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
       eventTileHeight: _tileHeight,
       eventTileVerticalSpacing: _tileVerticalSpacing,
       eventTileHorizontalSpacing: _tileHorizontalSpacing,
-      tileCornerRadius: _tileCornerRadius,
+      eventTileCornerRadius: _eventTileCornerRadius,
       eventTileBorderWidth: _tileBorderWidth,
       eventTileBorderColor: _tileBorderWidth > 0 ? colorScheme.outline : null,
 
@@ -442,11 +442,11 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
           ),
           _buildSliderRow(
             'Corner',
-            _tileCornerRadius,
+            _eventTileCornerRadius,
             0,
             10,
             10,
-            (v) => setState(() => _tileCornerRadius = v),
+            (v) => setState(() => _eventTileCornerRadius = v),
             colorScheme,
           ),
           _buildSliderRow(
@@ -617,13 +617,13 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
               // Corner radius slider
               _buildCompactSlider(
                 'Corner',
-                _tileCornerRadius,
+                _eventTileCornerRadius,
                 0,
                 10,
                 10,
-                (v) => setState(() => _tileCornerRadius = v),
+                (v) => setState(() => _eventTileCornerRadius = v),
                 colorScheme,
-                showValue: '${_tileCornerRadius.toInt()}px',
+                showValue: '${_eventTileCornerRadius.toInt()}px',
               ),
               // Border width slider
               _buildCompactSlider(
@@ -927,7 +927,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 cellTextStyle: const TextStyle(fontSize: 12),
                 dateLabelPosition: _dateLabelPosition,
                 eventTileHeight: _tileHeight,
-                tileCornerRadius: _tileCornerRadius,
+                eventTileCornerRadius: _eventTileCornerRadius,
               ),
               child: MCalMonthView(
                 controller: _sharedController,

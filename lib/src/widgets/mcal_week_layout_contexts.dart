@@ -174,7 +174,7 @@ class MCalWeekLayoutConfig {
   /// Corner radius for event tiles in pixels.
   ///
   /// Defaults to 3.0 when using [fromTheme].
-  final double tileCornerRadius;
+  final double eventTileCornerRadius;
 
   /// Border width for event tiles in pixels.
   ///
@@ -207,7 +207,7 @@ class MCalWeekLayoutConfig {
     required this.tileHeight,
     required this.tileVerticalSpacing,
     required this.tileHorizontalSpacing,
-    required this.tileCornerRadius,
+    required this.eventTileCornerRadius,
     required this.tileBorderWidth,
     required this.dateLabelHeight,
     required this.dateLabelPosition,
@@ -222,7 +222,7 @@ class MCalWeekLayoutConfig {
   /// - tileHeight: theme.eventTileHeight ?? 18.0
   /// - tileVerticalSpacing: theme.eventTileVerticalSpacing ?? 2.0
   /// - tileHorizontalSpacing: theme.eventTileHorizontalSpacing ?? 2.0
-  /// - tileCornerRadius: 3.0
+  /// - eventTileCornerRadius: 3.0
   /// - tileBorderWidth: 0.0
   /// - dateLabelHeight: 18.0
   /// - dateLabelPosition: DateLabelPosition.topLeft
@@ -236,7 +236,7 @@ class MCalWeekLayoutConfig {
       tileHeight: theme.eventTileHeight ?? 18.0,
       tileVerticalSpacing: theme.eventTileVerticalSpacing ?? 2.0,
       tileHorizontalSpacing: theme.eventTileHorizontalSpacing ?? 2.0,
-      tileCornerRadius: theme.tileCornerRadius ?? 3.0,
+      eventTileCornerRadius: theme.eventTileCornerRadius ?? 3.0,
       tileBorderWidth: 0.0,
       dateLabelHeight: theme.dateLabelHeight ?? 18.0,
       dateLabelPosition: theme.dateLabelPosition ?? DateLabelPosition.topLeft,
@@ -252,7 +252,7 @@ class MCalWeekLayoutConfig {
         other.tileHeight == tileHeight &&
         other.tileVerticalSpacing == tileVerticalSpacing &&
         other.tileHorizontalSpacing == tileHorizontalSpacing &&
-        other.tileCornerRadius == tileCornerRadius &&
+        other.eventTileCornerRadius == eventTileCornerRadius &&
         other.tileBorderWidth == tileBorderWidth &&
         other.dateLabelHeight == dateLabelHeight &&
         other.dateLabelPosition == dateLabelPosition &&
@@ -266,7 +266,7 @@ class MCalWeekLayoutConfig {
       tileHeight,
       tileVerticalSpacing,
       tileHorizontalSpacing,
-      tileCornerRadius,
+      eventTileCornerRadius,
       tileBorderWidth,
       dateLabelHeight,
       dateLabelPosition,
@@ -281,7 +281,7 @@ class MCalWeekLayoutConfig {
         'tileHeight: $tileHeight, '
         'tileVerticalSpacing: $tileVerticalSpacing, '
         'tileHorizontalSpacing: $tileHorizontalSpacing, '
-        'tileCornerRadius: $tileCornerRadius, '
+        'eventTileCornerRadius: $eventTileCornerRadius, '
         'tileBorderWidth: $tileBorderWidth, '
         'dateLabelHeight: $dateLabelHeight, '
         'dateLabelPosition: $dateLabelPosition, '

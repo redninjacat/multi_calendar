@@ -60,7 +60,7 @@ class _LayoutPocStyleState extends State<LayoutPocStyle> {
   // Layer 2: Event tile settings
   double _tileVerticalSpacing = 2.0;
   double _tileHorizontalSpacing = 2.0;
-  double _tileCornerRadius = 3.0;
+  double _eventTileCornerRadius = 3.0;
   double _tileBorderWidth = 0.0;
 
   @override
@@ -318,17 +318,17 @@ class _LayoutPocStyleState extends State<LayoutPocStyle> {
               SizedBox(
                 width: 80,
                 child: Slider(
-                  value: _tileCornerRadius,
+                  value: _eventTileCornerRadius,
                   min: 0,
                   max: 12,
                   divisions: 12,
                   onChanged: (value) {
-                    setState(() => _tileCornerRadius = value);
+                    setState(() => _eventTileCornerRadius = value);
                   },
                 ),
               ),
               Text(
-                '${_tileCornerRadius.toStringAsFixed(0)}px',
+                '${_eventTileCornerRadius.toStringAsFixed(0)}px',
                 style: const TextStyle(fontSize: 10),
               ),
               const SizedBox(width: 8),
@@ -707,10 +707,10 @@ class _LayoutPocStyleState extends State<LayoutPocStyle> {
   Widget _buildEventTile({required _EventSegment segment}) {
     // Determine corner radius based on segment position
     final leftRadius = segment.isFirstSegment
-        ? Radius.circular(_tileCornerRadius)
+        ? Radius.circular(_eventTileCornerRadius)
         : Radius.zero;
     final rightRadius = segment.isLastSegment
-        ? Radius.circular(_tileCornerRadius)
+        ? Radius.circular(_eventTileCornerRadius)
         : Radius.zero;
 
     // Determine border based on segment position

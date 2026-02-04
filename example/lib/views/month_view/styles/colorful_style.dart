@@ -48,6 +48,7 @@ class ColorfulMonthStyle extends StatelessWidget {
               data: MCalThemeData(
                 cellBackgroundColor: Colors.transparent,
                 cellBorderColor: Colors.transparent,
+                dateLabelHeight: 24.0,
                 todayBackgroundColor: Colors.transparent,
                 weekdayHeaderBackgroundColor: Colors.transparent,
                 weekdayHeaderTextStyle: TextStyle(
@@ -56,8 +57,10 @@ class ColorfulMonthStyle extends StatelessWidget {
                   color: isDarkMode ? Colors.white70 : gradientStart,
                 ),
                 // Thin pills for elongated event display
-                eventTileHeight: 3.0,
-                eventTileVerticalSpacing: 1.0,
+                eventTileHeight: 4.0,
+                eventTileVerticalSpacing: 3.0,
+                eventTileHorizontalSpacing: 6.0,
+                eventTileCornerRadius: 4,
               ),
               child: MCalMonthView(
                 controller: eventController,
@@ -66,16 +69,22 @@ class ColorfulMonthStyle extends StatelessWidget {
                 locale: locale,
                 eventTileBuilder: (context, tileContext, defaultTile) {
                   final segment = tileContext.segment;
+                  final isAllDay = tileContext.isAllDay;
+                  final MCalThemeData theme = MCalTheme.of(context);
+                  final eventTileCornerRadius =
+                      theme.eventTileCornerRadius ?? 4.0;
 
                   // Determine corner radius based on segment position
                   final leftRadius = segment?.isFirstSegment == true
-                      ? const Radius.circular(1.5)
+                      ? Radius.circular(eventTileCornerRadius)
                       : Radius.zero;
                   final rightRadius = segment?.isLastSegment == true
-                      ? const Radius.circular(1.5)
+                      ? Radius.circular(eventTileCornerRadius)
                       : Radius.zero;
 
-                  return Container(
+                  final pill = Container(
+                    // Timed events use half width, all-day events use full width
+                    width: isAllDay ? null : (tileContext.width ?? 0) / 2,
                     decoration: BoxDecoration(
                       color:
                           tileContext.event.color ??
@@ -88,6 +97,16 @@ class ColorfulMonthStyle extends StatelessWidget {
                       ),
                     ),
                   );
+
+                  // For timed events, align to the left (start)
+                  if (!isAllDay) {
+                    return Align(
+                      alignment: AlignmentDirectional.center,
+                      child: pill,
+                    );
+                  }
+
+                  return pill;
                 },
                 dateLabelBuilder: (context, labelContext, defaultLabel) {
                   return _buildDateLabel(context, labelContext);

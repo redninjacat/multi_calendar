@@ -19,7 +19,7 @@
 - **`MCalDefaultWeekLayoutBuilder`** - Default layout implementation (greedy first-fit algorithm)
 - **`DateLabelPosition` enum** - 6 positions for date labels (topLeft, topCenter, topRight, bottomLeft, bottomCenter, bottomRight)
 - **`MCalOverflowTapDetails`** - Details object for overflow tap callbacks with hidden and visible events
-- **Theme properties** - `dateLabelHeight`, `dateLabelPosition`, `overflowIndicatorHeight`, `tileCornerRadius`
+- **Theme properties** - `dateLabelHeight`, `dateLabelPosition`, `overflowIndicatorHeight`, `eventTileCornerRadius`
 
 ### Migration Guide
 

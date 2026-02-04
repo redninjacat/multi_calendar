@@ -12,7 +12,10 @@ void main() {
       expect(DateLabelPosition.values, contains(DateLabelPosition.topCenter));
       expect(DateLabelPosition.values, contains(DateLabelPosition.topRight));
       expect(DateLabelPosition.values, contains(DateLabelPosition.bottomLeft));
-      expect(DateLabelPosition.values, contains(DateLabelPosition.bottomCenter));
+      expect(
+        DateLabelPosition.values,
+        contains(DateLabelPosition.bottomCenter),
+      );
       expect(DateLabelPosition.values, contains(DateLabelPosition.bottomRight));
     });
   });
@@ -106,7 +109,7 @@ void main() {
       expect(config.tileHeight, 18.0);
       expect(config.tileVerticalSpacing, 2.0);
       expect(config.tileHorizontalSpacing, 2.0);
-      expect(config.tileCornerRadius, 3.0);
+      expect(config.eventTileCornerRadius, 3.0);
       expect(config.tileBorderWidth, 0.0);
       expect(config.dateLabelHeight, 18.0);
       expect(config.dateLabelPosition, DateLabelPosition.topLeft);
