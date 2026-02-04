@@ -1,5 +1,6 @@
 import '../models/mcal_calendar_event.dart';
 import '../utils/date_utils.dart';
+import 'mcal_week_layout_contexts.dart';
 
 /// Represents one segment of a multi-day event within a single week row.
 ///
@@ -580,6 +581,87 @@ class MCalMultiDayRenderer {
       totalRows: maxRowUsed + 1,
       columnMaxRows: columnMaxRows,
     );
+  }
+
+  /// Calculates event segments for ALL events (single-day and multi-day) in a month.
+  ///
+  /// Unlike [calculateLayouts] which only handles multi-day events, this method
+  /// creates [MCalEventSegment] objects for every event, making it suitable for
+  /// the unified layered architecture.
+  ///
+  /// Single-day events get a segment with spanDays=1 and both isFirstSegment
+  /// and isLastSegment set to true.
+  static List<List<MCalEventSegment>> calculateAllEventSegments({
+    required List<MCalCalendarEvent> events,
+    required DateTime monthStart,
+    required int firstDayOfWeek,
+  }) {
+    // Generate the month grid dates
+    final monthDates = generateMonthDates(monthStart, firstDayOfWeek);
+    if (monthDates.isEmpty) return [];
+
+    final gridStart = monthDates.first;
+    final gridEnd = monthDates.last;
+    final weekCount = (monthDates.length / 7).ceil();
+
+    // Initialize per-week segment lists
+    final weekSegments = List.generate(weekCount, (_) => <MCalEventSegment>[]);
+
+    // Sort all events: multi-day first, then by start time, then by duration
+    final sortedEvents = List<MCalCalendarEvent>.from(events)
+      ..sort(multiDayEventComparator);
+
+    for (final event in sortedEvents) {
+      // Normalize event dates to start of day
+      final eventStartDay = DateTime(event.start.year, event.start.month, event.start.day);
+      final eventEndDay = DateTime(event.end.year, event.end.month, event.end.day);
+
+      // Check if event overlaps with the visible grid
+      if (eventEndDay.isBefore(gridStart) || eventStartDay.isAfter(gridEnd)) {
+        continue;
+      }
+
+      // Clamp to visible grid
+      final visibleStart = eventStartDay.isBefore(gridStart) ? gridStart : eventStartDay;
+      final visibleEnd = eventEndDay.isAfter(gridEnd) ? gridEnd : eventEndDay;
+
+      // Calculate grid indices
+      final startGridIndex = _daysBetween(gridStart, visibleStart);
+      final endGridIndex = _daysBetween(gridStart, visibleEnd);
+
+      // Generate segments for each week this event spans
+      int currentGridIndex = startGridIndex;
+
+      while (currentGridIndex <= endGridIndex) {
+        final weekRowIndex = currentGridIndex ~/ 7;
+        final dayInRow = currentGridIndex % 7;
+
+        // Calculate end day in this row
+        final weekRowEnd = (weekRowIndex + 1) * 7 - 1;
+        final segmentEndGridIndex = endGridIndex < weekRowEnd ? endGridIndex : weekRowEnd;
+        final endDayInRow = segmentEndGridIndex % 7;
+
+        // Determine if this is first/last segment
+        final isFirstSegment = currentGridIndex == startGridIndex && visibleStart == eventStartDay;
+        final isLastSegment = segmentEndGridIndex == endGridIndex && visibleEnd == eventEndDay;
+
+        if (weekRowIndex < weekCount) {
+          weekSegments[weekRowIndex].add(MCalEventSegment(
+            event: event,
+            weekRowIndex: weekRowIndex,
+            startDayInWeek: dayInRow,
+            endDayInWeek: endDayInRow,
+            isFirstSegment: isFirstSegment,
+            isLastSegment: isLastSegment,
+          ));
+        }
+
+        // Move to next week row
+        currentGridIndex = (weekRowIndex + 1) * 7;
+      }
+    }
+
+    return weekSegments;
   }
 
   /// Calculates the number of days between two dates (ignoring time).

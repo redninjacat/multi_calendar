@@ -6,7 +6,13 @@ import 'package:multi_calendar/multi_calendar.dart';
 
 /// Mock MCalEventController that implements event loading for testing
 class MockMCalEventController extends MCalEventController {
-  void addEventsForRange(DateTime start, DateTime end, List<MCalCalendarEvent> events) {
+  MockMCalEventController({super.initialDate});
+
+  void addEventsForRange(
+    DateTime start,
+    DateTime end,
+    List<MCalCalendarEvent> events,
+  ) {
     // Add events to the controller's cache
     addEvents(events);
   }
@@ -28,7 +34,7 @@ void main() {
     late MockMCalEventController controller;
 
     setUp(() {
-      controller = MockMCalEventController();
+      controller = MockMCalEventController(initialDate: DateTime(2024, 6, 15));
       // Pre-load empty events to prevent errors
       final now = DateTime.now();
       final firstDay = DateTime(now.year, now.month, 1);
@@ -39,9 +45,25 @@ void main() {
       final nextMonth = now.month == 12
           ? DateTime(now.year + 1, 1, 1)
           : DateTime(now.year, now.month + 1, 1);
-      final prevLastDay = DateTime(prevMonth.year, prevMonth.month + 1, 0, 23, 59, 59, 999);
-      final nextLastDay = DateTime(nextMonth.year, nextMonth.month + 1, 0, 23, 59, 59, 999);
-      
+      final prevLastDay = DateTime(
+        prevMonth.year,
+        prevMonth.month + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      );
+      final nextLastDay = DateTime(
+        nextMonth.year,
+        nextMonth.month + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      );
+
       controller.addEventsForRange(prevMonth, prevLastDay, []);
       controller.addEventsForRange(firstDay, lastDay, []);
       controller.addEventsForRange(nextMonth, nextLastDay, []);
@@ -51,16 +73,15 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('day cells have semantic labels with date information', (tester) async {
+    testWidgets('day cells have semantic labels with date information', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: SizedBox(
               height: 600,
-              child: MCalMonthView(
-                controller: controller,
-                initialDate: DateTime(2024, 6, 15),
-              ),
+              child: MCalMonthView(controller: controller),
             ),
           ),
         ),
@@ -77,18 +98,18 @@ void main() {
       // Note: Actual label content verification would require examining the semantics tree
     });
 
-    testWidgets('day cells include today indicator in semantic labels', (tester) async {
+    testWidgets('day cells include today indicator in semantic labels', (
+      tester,
+    ) async {
       final today = DateTime.now();
+      final todayController = MockMCalEventController(initialDate: today);
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: SizedBox(
               height: 600,
-              child: MCalMonthView(
-                controller: controller,
-                initialDate: today,
-              ),
+              child: MCalMonthView(controller: todayController),
             ),
           ),
         ),
@@ -100,16 +121,15 @@ void main() {
       expect(semantics, isNotNull);
     });
 
-    testWidgets('day cells include month indicator in semantic labels', (tester) async {
+    testWidgets('day cells include month indicator in semantic labels', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: SizedBox(
               height: 600,
-              child: MCalMonthView(
-                controller: controller,
-                initialDate: DateTime(2024, 6, 15),
-              ),
+              child: MCalMonthView(controller: controller),
             ),
           ),
         ),
@@ -121,7 +141,9 @@ void main() {
       expect(semantics, isNotNull);
     });
 
-    testWidgets('day cells include event count in semantic labels', (tester) async {
+    testWidgets('day cells include event count in semantic labels', (
+      tester,
+    ) async {
       // Note: This would require a mock controller with events
       // For now, verify the structure supports it
       await tester.pumpWidget(
@@ -129,10 +151,7 @@ void main() {
           home: Scaffold(
             body: SizedBox(
               height: 600,
-              child: MCalMonthView(
-                controller: controller,
-                initialDate: DateTime(2024, 6, 15),
-              ),
+              child: MCalMonthView(controller: controller),
             ),
           ),
         ),
@@ -144,7 +163,9 @@ void main() {
       expect(semantics, isNotNull);
     });
 
-    testWidgets('event tiles have semantic labels with event title and time', (tester) async {
+    testWidgets('event tiles have semantic labels with event title and time', (
+      tester,
+    ) async {
       // Note: This would require events to be displayed
       // For now, verify the structure supports semantic labels
       await tester.pumpWidget(
@@ -152,10 +173,7 @@ void main() {
           home: Scaffold(
             body: SizedBox(
               height: 600,
-              child: MCalMonthView(
-                controller: controller,
-                initialDate: DateTime(2024, 6, 15),
-              ),
+              child: MCalMonthView(controller: controller),
             ),
           ),
         ),
@@ -173,11 +191,7 @@ void main() {
           home: Scaffold(
             body: SizedBox(
               height: 600,
-              child: MCalMonthView(
-                controller: controller,
-                showNavigator: true,
-                initialDate: DateTime(2024, 6, 15),
-              ),
+              child: MCalMonthView(controller: controller, showNavigator: true),
             ),
           ),
         ),
@@ -193,17 +207,15 @@ void main() {
       expect(semantics, isNotNull);
     });
 
-    testWidgets('navigator buttons have button role in semantics', (tester) async {
+    testWidgets('navigator buttons have button role in semantics', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: SizedBox(
               height: 600,
-              child: MCalMonthView(
-                controller: controller,
-                showNavigator: true,
-                initialDate: DateTime(2024, 6, 15),
-              ),
+              child: MCalMonthView(controller: controller, showNavigator: true),
             ),
           ),
         ),
@@ -215,7 +227,9 @@ void main() {
       expect(semantics, isNotNull);
     });
 
-    testWidgets('navigator buttons have enabled state in semantics', (tester) async {
+    testWidgets('navigator buttons have enabled state in semantics', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -224,7 +238,6 @@ void main() {
               child: MCalMonthView(
                 controller: controller,
                 showNavigator: true,
-                initialDate: DateTime(2024, 6, 15),
                 minDate: DateTime(2024, 6, 1),
                 maxDate: DateTime(2024, 6, 30),
               ),
@@ -245,11 +258,7 @@ void main() {
           home: Scaffold(
             body: SizedBox(
               height: 600,
-              child: MCalMonthView(
-                controller: controller,
-                showNavigator: true,
-                initialDate: DateTime(2024, 6, 15),
-              ),
+              child: MCalMonthView(controller: controller, showNavigator: true),
             ),
           ),
         ),
@@ -261,16 +270,15 @@ void main() {
       expect(semantics, isNotNull);
     });
 
-    testWidgets('leading/trailing dates have hints in semantic labels', (tester) async {
+    testWidgets('leading/trailing dates have hints in semantic labels', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: SizedBox(
               height: 600,
-              child: MCalMonthView(
-                controller: controller,
-                initialDate: DateTime(2024, 6, 15),
-              ),
+              child: MCalMonthView(controller: controller),
             ),
           ),
         ),
@@ -282,7 +290,9 @@ void main() {
       expect(semantics, isNotNull);
     });
 
-    testWidgets('non-interactive cells are marked appropriately in semantics', (tester) async {
+    testWidgets('non-interactive cells are marked appropriately in semantics', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -290,10 +300,10 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 cellInteractivityCallback: (context, details) {
                   // Disable interaction for weekends
-                  return details.date.weekday != DateTime.saturday && details.date.weekday != DateTime.sunday;
+                  return details.date.weekday != DateTime.saturday &&
+                      details.date.weekday != DateTime.sunday;
                 },
               ),
             ),
@@ -316,7 +326,7 @@ void main() {
     late MockMCalEventController controller;
 
     setUp(() {
-      controller = MockMCalEventController();
+      controller = MockMCalEventController(initialDate: DateTime(2025, 1, 15));
       // Pre-load events for January 2025
       controller.addEventsForRange(
         DateTime(2024, 11, 1),
@@ -330,60 +340,58 @@ void main() {
     });
 
     group('Semantic Labels Tests', () {
-      testWidgets('cells have semantic labels including date, events count, focus state', (tester) async {
-        // Add events for testing
-        controller.addEvents([
-          MCalCalendarEvent(
-            id: 'event-1',
-            title: 'Test Event 1',
-            start: DateTime(2025, 1, 15, 10, 0),
-            end: DateTime(2025, 1, 15, 11, 0),
-          ),
-          MCalCalendarEvent(
-            id: 'event-2',
-            title: 'Test Event 2',
-            start: DateTime(2025, 1, 15, 14, 0),
-            end: DateTime(2025, 1, 15, 15, 0),
-          ),
-        ]);
+      testWidgets(
+        'cells have semantic labels including date, events count, focus state',
+        (tester) async {
+          // Add events for testing
+          controller.addEvents([
+            MCalCalendarEvent(
+              id: 'event-1',
+              title: 'Test Event 1',
+              start: DateTime(2025, 1, 15, 10, 0),
+              end: DateTime(2025, 1, 15, 11, 0),
+            ),
+            MCalCalendarEvent(
+              id: 'event-2',
+              title: 'Test Event 2',
+              start: DateTime(2025, 1, 15, 14, 0),
+              end: DateTime(2025, 1, 15, 15, 0),
+            ),
+          ]);
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SizedBox(
-                height: 600,
-                child: MCalMonthView(
-                  controller: controller,
-                  initialDate: DateTime(2025, 1, 15),
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  height: 600,
+                  child: MCalMonthView(controller: controller),
                 ),
               ),
             ),
-          ),
-        );
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        // Find cells with Semantics
-        final semanticsFinder = find.byType(Semantics);
-        expect(semanticsFinder, findsWidgets);
+          // Find cells with Semantics
+          final semanticsFinder = find.byType(Semantics);
+          expect(semanticsFinder, findsWidgets);
 
-        // Verify semantic labels are present on day cells
-        final semanticsData = tester.getSemantics(find.byType(MCalMonthView));
-        expect(semanticsData, isNotNull);
-      });
+          // Verify semantic labels are present on day cells
+          final semanticsData = tester.getSemantics(find.byType(MCalMonthView));
+          expect(semanticsData, isNotNull);
+        },
+      );
 
       testWidgets('today cell has "today" in semantic label', (tester) async {
         final today = DateTime.now();
+        final todayController = MockMCalEventController(initialDate: today);
 
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 height: 600,
-                child: MCalMonthView(
-                  controller: controller,
-                  initialDate: today,
-                ),
+                child: MCalMonthView(controller: todayController),
               ),
             ),
           ),
@@ -396,7 +404,9 @@ void main() {
         expect(semanticsData, isNotNull);
       });
 
-      testWidgets('event tiles have semantic labels with title and time', (tester) async {
+      testWidgets('event tiles have semantic labels with title and time', (
+        tester,
+      ) async {
         // Add an event
         controller.addEvents([
           MCalCalendarEvent(
@@ -412,10 +422,7 @@ void main() {
             home: Scaffold(
               body: SizedBox(
                 height: 600,
-                child: MCalMonthView(
-                  controller: controller,
-                  initialDate: DateTime(2025, 1, 15),
-                ),
+                child: MCalMonthView(controller: controller),
               ),
             ),
           ),
@@ -431,7 +438,9 @@ void main() {
         expect(semanticsData, isNotNull);
       });
 
-      testWidgets('all-day events have "all day" in semantic label', (tester) async {
+      testWidgets('all-day events have "all day" in semantic label', (
+        tester,
+      ) async {
         // Add an all-day event
         controller.addEvents([
           MCalCalendarEvent(
@@ -448,10 +457,7 @@ void main() {
             home: Scaffold(
               body: SizedBox(
                 height: 600,
-                child: MCalMonthView(
-                  controller: controller,
-                  initialDate: DateTime(2025, 1, 15),
-                ),
+                child: MCalMonthView(controller: controller),
               ),
             ),
           ),
@@ -463,7 +469,9 @@ void main() {
         expect(find.text('All Day Conference'), findsOneWidget);
       });
 
-      testWidgets('overflow indicator has accessible semantic label', (tester) async {
+      testWidgets('overflow indicator has accessible semantic label', (
+        tester,
+      ) async {
         // Add many events to trigger overflow
         controller.addEvents([
           MCalCalendarEvent(
@@ -505,8 +513,7 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 15),
-                  maxVisibleEvents: 3, // Show only 3 events, hide 2
+                  maxVisibleEventsPerDay: 3, // Show only 3 events, hide 2
                 ),
               ),
             ),
@@ -521,7 +528,9 @@ void main() {
     });
 
     group('Keyboard Navigation Accessibility Tests', () {
-      testWidgets('keyboard focus moves correctly between cells', (tester) async {
+      testWidgets('keyboard focus moves correctly between cells', (
+        tester,
+      ) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
         controller.setFocusedDate(DateTime(2025, 1, 15));
 
@@ -532,7 +541,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
                   enableKeyboardNavigation: true,
                 ),
               ),
@@ -578,7 +586,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
                   enableKeyboardNavigation: true,
                 ),
               ),
@@ -608,7 +615,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
                   enableKeyboardNavigation: true,
                 ),
               ),
@@ -636,16 +642,17 @@ void main() {
             home: Scaffold(
               body: SizedBox(
                 height: 600,
-                child: MCalMonthView(
-                  controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
-                  enableKeyboardNavigation: true,
-                  theme: MCalThemeData(
+                child: MCalTheme(
+                  data: MCalThemeData(
                     focusedDateBackgroundColor: Colors.blue.shade100,
                     focusedDateTextStyle: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.blue,
                     ),
+                  ),
+                  child: MCalMonthView(
+                    controller: controller,
+                    enableKeyboardNavigation: true,
                   ),
                 ),
               ),
@@ -673,7 +680,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
                   enableKeyboardNavigation: true,
                   onCellTap: (context, details) {
                     tappedDate = details.date;
@@ -708,7 +714,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
                   enableKeyboardNavigation: true,
                   autoFocusOnCellTap: false,
                   onCellTap: (context, details) {
@@ -731,7 +736,9 @@ void main() {
         expect(tappedDate, equals(DateTime(2025, 1, 20)));
       });
 
-      testWidgets('keyboard navigation respects minDate boundary', (tester) async {
+      testWidgets('keyboard navigation respects minDate boundary', (
+        tester,
+      ) async {
         final minDate = DateTime(2025, 1, 10);
         controller.setDisplayDate(DateTime(2025, 1, 1));
         controller.setFocusedDate(DateTime(2025, 1, 10));
@@ -743,7 +750,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
                   minDate: minDate,
                   enableKeyboardNavigation: true,
                   autoFocusOnCellTap: false,
@@ -766,7 +772,9 @@ void main() {
         expect(controller.focusedDate, equals(DateTime(2025, 1, 10)));
       });
 
-      testWidgets('keyboard navigation respects maxDate boundary', (tester) async {
+      testWidgets('keyboard navigation respects maxDate boundary', (
+        tester,
+      ) async {
         final maxDate = DateTime(2025, 1, 25);
         controller.setDisplayDate(DateTime(2025, 1, 1));
         controller.setFocusedDate(DateTime(2025, 1, 25));
@@ -778,7 +786,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
                   maxDate: maxDate,
                   enableKeyboardNavigation: true,
                   autoFocusOnCellTap: false,
@@ -801,43 +808,47 @@ void main() {
         expect(controller.focusedDate, equals(DateTime(2025, 1, 25)));
       });
 
-      testWidgets('focus automatically navigates to new month when crossing boundary', (tester) async {
-        controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 1));
+      testWidgets(
+        'focus automatically navigates to new month when crossing boundary',
+        (tester) async {
+          controller.setDisplayDate(DateTime(2025, 1, 1));
+          controller.setFocusedDate(DateTime(2025, 1, 1));
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SizedBox(
-                height: 600,
-                child: MCalMonthView(
-                  controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
-                  enableKeyboardNavigation: true,
-                  autoFocusOnCellTap: false,
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  height: 600,
+                  child: MCalMonthView(
+                    controller: controller,
+                    enableKeyboardNavigation: true,
+                    autoFocusOnCellTap: false,
+                  ),
                 ),
               ),
             ),
-          ),
-        );
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        await tester.tap(find.byType(MCalMonthView));
-        await tester.pumpAndSettle();
+          await tester.tap(find.byType(MCalMonthView));
+          await tester.pumpAndSettle();
 
-        // Move to previous month (December 2024)
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-        await tester.pumpAndSettle();
+          // Move to previous month (December 2024)
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+          await tester.pumpAndSettle();
 
-        // Should move to December 31, 2024 and auto-navigate
-        expect(controller.focusedDate, equals(DateTime(2024, 12, 31)));
-        expect(controller.displayDate.month, equals(12));
-      });
+          // Should move to December 31, 2024 and auto-navigate
+          expect(controller.focusedDate, equals(DateTime(2024, 12, 31)));
+          expect(controller.displayDate.month, equals(12));
+        },
+      );
     });
 
     group('Focus Announcement Tests', () {
-      testWidgets('focus changes trigger onFocusedDateChanged callback', (tester) async {
+      testWidgets('focus changes trigger onFocusedDateChanged callback', (
+        tester,
+      ) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
         controller.setFocusedDate(DateTime(2025, 1, 15));
 
@@ -850,7 +861,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
                   enableKeyboardNavigation: true,
                   onFocusedDateChanged: (date) {
                     focusChanges.add(date);
@@ -879,7 +889,9 @@ void main() {
         expect(focusChanges, contains(DateTime(2025, 1, 23)));
       });
 
-      testWidgets('month navigation triggers onDisplayDateChanged callback', (tester) async {
+      testWidgets('month navigation triggers onDisplayDateChanged callback', (
+        tester,
+      ) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
         controller.setFocusedDate(DateTime(2025, 1, 15));
 
@@ -892,7 +904,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
                   enableKeyboardNavigation: true,
                   onDisplayDateChanged: (date) {
                     displayChanges.add(date);
@@ -917,41 +928,43 @@ void main() {
         expect(displayChanges.last.month, equals(2));
       });
 
-      testWidgets('viewable range changes trigger onViewableRangeChanged callback', (tester) async {
-        controller.setDisplayDate(DateTime(2025, 1, 1));
+      testWidgets(
+        'viewable range changes trigger onViewableRangeChanged callback',
+        (tester) async {
+          controller.setDisplayDate(DateTime(2025, 1, 1));
 
-        DateTimeRange? lastRange;
+          DateTimeRange? lastRange;
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SizedBox(
-                height: 600,
-                child: MCalMonthView(
-                  controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
-                  enableKeyboardNavigation: true,
-                  onViewableRangeChanged: (range) {
-                    lastRange = range;
-                  },
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  height: 600,
+                  child: MCalMonthView(
+                    controller: controller,
+                    enableKeyboardNavigation: true,
+                    onViewableRangeChanged: (range) {
+                      lastRange = range;
+                    },
+                  ),
                 ),
               ),
             ),
-          ),
-        );
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        // Initial range should be set
-        expect(lastRange, isNotNull);
+          // Initial range should be set
+          expect(lastRange, isNotNull);
 
-        // Navigate to next month
-        controller.setDisplayDate(DateTime(2025, 2, 1));
-        await tester.pumpAndSettle();
+          // Navigate to next month
+          controller.setDisplayDate(DateTime(2025, 2, 1));
+          await tester.pumpAndSettle();
 
-        // Range should have updated
-        expect(lastRange?.start.month, equals(2));
-      });
+          // Range should have updated
+          expect(lastRange?.start.month, equals(2));
+        },
+      );
 
       testWidgets('focus clears when null is set', (tester) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
@@ -967,7 +980,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 1),
                   onFocusedDateChanged: (date) {
                     lastFocusedDate = date;
                     if (date == null) {
@@ -992,7 +1004,9 @@ void main() {
     });
 
     group('Screen Reader Compatibility', () {
-      testWidgets('calendar has semantics label describing current month', (tester) async {
+      testWidgets('calendar has semantics label describing current month', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -1000,7 +1014,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 15),
                   showNavigator: true,
                   semanticsLabel: 'January 2025 Calendar',
                 ),
@@ -1022,10 +1035,7 @@ void main() {
             home: Scaffold(
               body: SizedBox(
                 height: 600,
-                child: MCalMonthView(
-                  controller: controller,
-                  initialDate: DateTime(2025, 1, 15),
-                ),
+                child: MCalMonthView(controller: controller),
               ),
             ),
           ),
@@ -1047,7 +1057,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 15),
                   showNavigator: true,
                 ),
               ),
@@ -1062,7 +1071,9 @@ void main() {
         expect(find.byTooltip('Next month'), findsOneWidget);
       });
 
-      testWidgets('disabled navigation buttons indicate disabled state', (tester) async {
+      testWidgets('disabled navigation buttons indicate disabled state', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -1070,7 +1081,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  initialDate: DateTime(2025, 1, 15),
                   showNavigator: true,
                   minDate: DateTime(2025, 1, 1),
                   maxDate: DateTime(2025, 1, 31),
@@ -1103,7 +1113,6 @@ void main() {
                   height: 600,
                   child: MCalMonthView(
                     controller: controller,
-                    initialDate: DateTime(2025, 1, 15),
                     locale: const Locale('ar'), // Arabic - RTL
                   ),
                 ),
@@ -1117,7 +1126,9 @@ void main() {
         expect(find.byType(MCalMonthView), findsOneWidget);
       });
 
-      testWidgets('keyboard navigation works correctly in RTL mode', (tester) async {
+      testWidgets('keyboard navigation works correctly in RTL mode', (
+        tester,
+      ) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
         controller.setFocusedDate(DateTime(2025, 1, 15));
 
@@ -1130,7 +1141,6 @@ void main() {
                   height: 600,
                   child: MCalMonthView(
                     controller: controller,
-                    initialDate: DateTime(2025, 1, 1),
                     enableKeyboardNavigation: true,
                     locale: const Locale('ar'),
                   ),

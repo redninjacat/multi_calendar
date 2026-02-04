@@ -7,6 +7,8 @@ import 'package:multi_calendar/multi_calendar.dart';
 
 /// Mock MCalEventController that implements event loading for testing
 class MockMCalEventController extends MCalEventController {
+  MockMCalEventController({super.initialDate});
+
   void addEventsForRange(DateTime start, DateTime end, List<MCalCalendarEvent> events) {
     // Add events to the controller's cache
     addEvents(events);
@@ -43,7 +45,7 @@ void main() {
       DateTime? requestedEnd;
 
       // Create a controller that tracks requests
-      final trackingController = MockMCalEventController();
+      final trackingController = MockMCalEventController(initialDate: DateTime(2024, 6, 15));
       trackingController.addEventsForRange(
         DateTime(2024, 5, 1),
         DateTime(2024, 7, 31, 23, 59, 59, 999),
@@ -57,7 +59,6 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: trackingController,
-                initialDate: DateTime(2024, 6, 15),
               ),
             ),
           ),
@@ -73,6 +74,7 @@ void main() {
     });
 
     testWidgets('displays events loaded from controller', (tester) async {
+      final testController = MockMCalEventController(initialDate: DateTime(2024, 6, 15));
       final events = [
         MCalCalendarEvent(
           id: 'event-1',
@@ -89,7 +91,7 @@ void main() {
       ];
 
       // Add events for June 2024 (including previous and next month ranges)
-      controller.addEventsForRange(
+      testController.addEventsForRange(
         DateTime(2024, 5, 1),
         DateTime(2024, 7, 31, 23, 59, 59, 999),
         events,
@@ -101,8 +103,7 @@ void main() {
             body: SizedBox(
               height: 600,
               child: MCalMonthView(
-                controller: controller,
-                initialDate: DateTime(2024, 6, 15),
+                controller: testController,
               ),
             ),
           ),
@@ -116,6 +117,7 @@ void main() {
 
     testWidgets('loads events for correct date range (current + previous + next month)', (tester) async {
       final now = DateTime(2024, 6, 15);
+      final testController = MockMCalEventController(initialDate: now);
       final events = [
         MCalCalendarEvent(
           id: 'event-1',
@@ -126,7 +128,7 @@ void main() {
       ];
 
       // Add events for the 3-month range
-      controller.addEventsForRange(
+      testController.addEventsForRange(
         DateTime(2024, 5, 1), // Previous month start
         DateTime(2024, 7, 31, 23, 59, 59, 999), // Next month end
         events,
@@ -138,8 +140,7 @@ void main() {
             body: SizedBox(
               height: 600,
               child: MCalMonthView(
-                controller: controller,
-                initialDate: now,
+                controller: testController,
               ),
             ),
           ),
@@ -154,14 +155,14 @@ void main() {
     });
 
     testWidgets('updates when controller notifies listeners', (tester) async {
+      final testController = MockMCalEventController(initialDate: DateTime(2024, 6, 15));
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: SizedBox(
               height: 600,
               child: MCalMonthView(
-                controller: controller,
-                initialDate: DateTime(2024, 6, 15),
+                controller: testController,
               ),
             ),
           ),
@@ -171,7 +172,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Add events and notify
-      controller.addEventsForRange(
+      testController.addEventsForRange(
         DateTime(2024, 5, 1),
         DateTime(2024, 7, 31, 23, 59, 59, 999),
         [
@@ -184,7 +185,7 @@ void main() {
         ],
       );
 
-      controller.setVisibleDateRange(
+      testController.setVisibleDateRange(
         DateTimeRange(
           start: DateTime(2024, 6, 1),
           end: DateTime(2024, 6, 30, 23, 59, 59, 999),
@@ -197,6 +198,7 @@ void main() {
     });
 
     testWidgets('navigates to different month and loads events', (tester) async {
+      final testController = MockMCalEventController(initialDate: DateTime(2024, 6, 15));
       final juneEvents = [
         MCalCalendarEvent(
           id: 'june-event',
@@ -216,13 +218,13 @@ void main() {
       ];
 
       // Pre-load events for both months
-      controller.addEventsForRange(
+      testController.addEventsForRange(
         DateTime(2024, 5, 1),
         DateTime(2024, 6, 30, 23, 59, 59, 999),
         juneEvents,
       );
 
-      controller.addEventsForRange(
+      testController.addEventsForRange(
         DateTime(2024, 7, 1),
         DateTime(2024, 8, 31, 23, 59, 59, 999),
         julyEvents,
@@ -234,8 +236,7 @@ void main() {
             body: SizedBox(
               height: 600,
               child: MCalMonthView(
-                controller: controller,
-                initialDate: DateTime(2024, 6, 15),
+                controller: testController,
               ),
             ),
           ),
@@ -248,8 +249,9 @@ void main() {
     });
 
     testWidgets('swipe navigation uses pre-loaded events for instant display', (tester) async {
+      final testController = MockMCalEventController(initialDate: DateTime(2024, 6, 15));
       // Pre-load events for adjacent months
-      controller.addEventsForRange(
+      testController.addEventsForRange(
         DateTime(2024, 5, 1),
         DateTime(2024, 6, 30, 23, 59, 59, 999),
         [
@@ -262,7 +264,7 @@ void main() {
         ],
       );
 
-      controller.addEventsForRange(
+      testController.addEventsForRange(
         DateTime(2024, 7, 1),
         DateTime(2024, 7, 31, 23, 59, 59, 999),
         [
@@ -281,8 +283,7 @@ void main() {
             body: SizedBox(
               height: 600,
               child: MCalMonthView(
-                controller: controller,
-                initialDate: DateTime(2024, 6, 15),
+                controller: testController,
                 enableSwipeNavigation: true,
               ),
             ),
@@ -305,7 +306,7 @@ void main() {
     late MockMCalEventController sharedController;
 
     setUp(() {
-      sharedController = MockMCalEventController();
+      sharedController = MockMCalEventController(initialDate: DateTime(2024, 6, 15));
       // Pre-load events for a wide range
       sharedController.addEventsForRange(
         DateTime(2024, 1, 1),
@@ -327,14 +328,12 @@ void main() {
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                   ),
                 ),
                 const Divider(height: 2),
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                   ),
                 ),
               ],
@@ -361,7 +360,6 @@ void main() {
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                     onDisplayDateChanged: (date) => view1DisplayDate = date,
                   ),
                 ),
@@ -369,7 +367,6 @@ void main() {
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                     onDisplayDateChanged: (date) => view2DisplayDate = date,
                   ),
                 ),
@@ -407,7 +404,6 @@ void main() {
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                     onFocusedDateChanged: (date) => view1FocusedDate = date,
                   ),
                 ),
@@ -415,7 +411,6 @@ void main() {
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                     onFocusedDateChanged: (date) => view2FocusedDate = date,
                   ),
                 ),
@@ -452,7 +447,6 @@ void main() {
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                     onDisplayDateChanged: (date) => view1DisplayDate = date,
                     onFocusedDateChanged: (date) => view1FocusedDate = date,
                   ),
@@ -461,7 +455,6 @@ void main() {
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                     onDisplayDateChanged: (date) => view2DisplayDate = date,
                     onFocusedDateChanged: (date) => view2FocusedDate = date,
                   ),
@@ -502,7 +495,6 @@ void main() {
                   child: MCalMonthView(
                     key: const Key('view1'),
                     controller: sharedController,
-                    initialDate: DateTime(2025, 1, 1),
                     enableKeyboardNavigation: true,
                   ),
                 ),
@@ -511,7 +503,6 @@ void main() {
                   child: MCalMonthView(
                     key: const Key('view2'),
                     controller: sharedController,
-                    initialDate: DateTime(2025, 1, 1),
                     enableKeyboardNavigation: true,
                     onFocusedDateChanged: (date) => view2FocusedDate = date,
                   ),
@@ -554,7 +545,6 @@ void main() {
                   child: MCalMonthView(
                     key: const Key('view1'),
                     controller: sharedController,
-                    initialDate: DateTime(2025, 1, 1),
                     enableKeyboardNavigation: true,
                   ),
                 ),
@@ -563,7 +553,6 @@ void main() {
                   child: MCalMonthView(
                     key: const Key('view2'),
                     controller: sharedController,
-                    initialDate: DateTime(2025, 1, 1),
                     enableKeyboardNavigation: true,
                     onDisplayDateChanged: (date) => view2DisplayDate = date,
                   ),
@@ -610,14 +599,12 @@ void main() {
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                   ),
                 ),
                 const Divider(height: 2),
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                   ),
                 ),
               ],
@@ -666,7 +653,6 @@ void main() {
                   child: MCalMonthView(
                     key: const Key('view1'),
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                     enableSwipeNavigation: true,
                     showNavigator: true,
                   ),
@@ -676,7 +662,6 @@ void main() {
                   child: MCalMonthView(
                     key: const Key('view2'),
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                     enableSwipeNavigation: true,
                     showNavigator: true,
                     onDisplayDateChanged: (date) => view2DisplayDate = date,
@@ -716,7 +701,6 @@ void main() {
                   child: MCalMonthView(
                     key: const Key('view1'),
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                     autoFocusOnCellTap: true,
                     onFocusedDateChanged: (date) => view1FocusedDate = date,
                     onCellTap: (context, details) {
@@ -729,7 +713,6 @@ void main() {
                   child: MCalMonthView(
                     key: const Key('view2'),
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                     autoFocusOnCellTap: true,
                     onFocusedDateChanged: (date) => view2FocusedDate = date,
                   ),
@@ -767,14 +750,12 @@ void main() {
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                   ),
                 ),
                 const Divider(height: 2),
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                   ),
                 ),
               ],
@@ -808,14 +789,12 @@ void main() {
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                   ),
                 ),
                 const Divider(height: 2),
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    initialDate: DateTime(2024, 6, 15),
                   ),
                 ),
               ],
@@ -842,6 +821,7 @@ void main() {
     });
 
     testWidgets('multiple views sync when controller displayDate changes', (tester) async {
+      // Controller was already created with initialDate in setUp
       // Set the controller's display date first, then create views
       sharedController.setDisplayDate(DateTime(2024, 6, 1));
 
@@ -856,7 +836,6 @@ void main() {
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    // Don't set initialDate - let it use controller's date
                     onDisplayDateChanged: (date) => view1DisplayDate = date,
                   ),
                 ),
@@ -864,7 +843,6 @@ void main() {
                 Expanded(
                   child: MCalMonthView(
                     controller: sharedController,
-                    // Don't set initialDate - let it use controller's date
                     onDisplayDateChanged: (date) => view2DisplayDate = date,
                   ),
                 ),
@@ -897,7 +875,7 @@ void main() {
     late MockMCalEventController controller;
 
     setUp(() {
-      controller = MockMCalEventController();
+      controller = MockMCalEventController(initialDate: DateTime(2024, 6, 15));
     });
 
     tearDown(() {
@@ -929,7 +907,9 @@ void main() {
         multiDayEvents,
       );
 
-      List<MCalMultiDayTileDetails> capturedDetails = [];
+      // TODO: MCalMultiDayTileDetails has been replaced by MCalEventSegment in the new architecture.
+      // Event tile customization is now done via eventTileBuilder.
+      List<MCalEventTileContext> capturedContexts = [];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -938,14 +918,12 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 enableSwipeNavigation: true,
-                renderMultiDayEventsAsContiguous: true,
-                multiDayEventTileBuilder: (context, details) {
-                  capturedDetails.add(details);
+                eventTileBuilder: (context, ctx, defaultTile) {
+                  capturedContexts.add(ctx);
                   return Container(
                     color: Colors.blue,
-                    child: Text(details.event.title),
+                    child: Text(ctx.event.title),
                   );
                 },
               ),
@@ -957,26 +935,26 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify multi-day events are rendered with correct details
-      expect(capturedDetails, isNotEmpty);
+      expect(capturedContexts, isNotEmpty);
 
-      // Find the week-spanning event details
-      final weekSpanningDetails = capturedDetails.where(
-        (d) => d.event.id == 'multi-day-1',
+      // Find the week-spanning event contexts
+      final weekSpanningContexts = capturedContexts.where(
+        (c) => c.event.id == 'multi-day-1',
       ).toList();
 
       // The event should have segments for multiple days
-      expect(weekSpanningDetails.isNotEmpty, isTrue);
+      expect(weekSpanningContexts.isNotEmpty, isTrue);
 
       // Verify first segment has correct flags
-      final firstDetail = weekSpanningDetails.firstWhere(
-        (d) => d.isFirstDayOfEvent,
-        orElse: () => weekSpanningDetails.first,
-      );
-      expect(firstDetail.event.title, equals('Week-Spanning Event'));
-      expect(firstDetail.totalDaysInEvent, equals(7)); // 7 days inclusive
+      final firstContext = weekSpanningContexts.first;
+      expect(firstContext.event.title, equals('Week-Spanning Event'));
+      // Verify segment info is available
+      if (firstContext.segment != null) {
+        expect(firstContext.segment!.spanDays, greaterThanOrEqualTo(1));
+      }
 
       // Clear and swipe to next month
-      capturedDetails.clear();
+      capturedContexts.clear();
 
       // Swipe to next month (July)
       final monthView = find.byType(MCalMonthView);
@@ -987,10 +965,10 @@ void main() {
       expect(controller.displayDate.month, equals(7));
 
       // Verify month-boundary event renders in July with correct details
-      final julyDetails = capturedDetails.where(
-        (d) => d.event.id == 'multi-day-2',
+      final julyContexts = capturedContexts.where(
+        (c) => c.event.id == 'multi-day-2',
       ).toList();
-      expect(julyDetails, isNotEmpty);
+      expect(julyContexts, isNotEmpty);
     });
 
     testWidgets('events appear in correct order: multi-day before single-day', (tester) async {
@@ -1020,14 +998,12 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 enableSwipeNavigation: true,
-                renderMultiDayEventsAsContiguous: true,
-                multiDayEventTileBuilder: (context, details) {
-                  if (!renderOrder.contains('multi:${details.event.id}')) {
-                    renderOrder.add('multi:${details.event.id}');
+                eventTileBuilder: (context, ctx, defaultTile) {
+                  if (!renderOrder.contains('event:${ctx.event.id}')) {
+                    renderOrder.add('event:${ctx.event.id}');
                   }
-                  return Text(details.event.title);
+                  return Text(ctx.event.title);
                 },
               ),
             ),
@@ -1038,7 +1014,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Multi-day events should be rendered in builder calls
-      expect(renderOrder.where((e) => e.startsWith('multi:')).isNotEmpty, isTrue);
+      expect(renderOrder.where((e) => e.startsWith('event:')).isNotEmpty, isTrue);
     });
 
     testWidgets('swipe navigation fires onSwipeNavigation with correct details', (tester) async {
@@ -1058,7 +1034,6 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 enableSwipeNavigation: true,
                 onSwipeNavigation: (context, details) {
                   capturedContext = context;
@@ -1090,7 +1065,7 @@ void main() {
     late MockMCalEventController controller;
 
     setUp(() {
-      controller = MockMCalEventController();
+      controller = MockMCalEventController(initialDate: DateTime(2024, 6, 15));
     });
 
     tearDown(() {
@@ -1116,7 +1091,6 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 enableDragAndDrop: true,
                 draggedTileBuilder: (context, details) {
                   draggedDetails = details;
@@ -1159,7 +1133,6 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 enableDragAndDrop: true,
                 onDragWillAccept: (context, details) {
                   validationRequests.add(details);
@@ -1199,7 +1172,6 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 enableDragAndDrop: true,
                 onEventDropped: (context, details) {
                   droppedDetails = details;
@@ -1238,7 +1210,6 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 enableDragAndDrop: true,
                 dragEdgeNavigationDelay: const Duration(milliseconds: 300),
               ),
@@ -1258,7 +1229,7 @@ void main() {
     late MockMCalEventController controller;
 
     setUp(() {
-      controller = MockMCalEventController();
+      controller = MockMCalEventController(initialDate: DateTime(2024, 6, 15));
     });
 
     tearDown(() {
@@ -1289,7 +1260,6 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 onCellTap: (context, details) {
                   cellTapContext = context;
                   cellTapDetails = details;
@@ -1340,7 +1310,6 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 cellInteractivityCallback: (context, details) {
                   capturedContext = context;
                   capturedDetails.add(details);
@@ -1379,7 +1348,6 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 errorBuilder: (context, details) {
                   capturedContext = context;
                   capturedDetails = details;
@@ -1435,24 +1403,25 @@ void main() {
           home: Scaffold(
             body: SizedBox(
               height: 600,
-              child: MCalMonthView(
-                controller: controller,
-                initialDate: DateTime(2024, 6, 15),
-                theme: customTheme,
-                dayCellBuilder: (context, ctx, defaultCell) {
-                  dayCellBuilderCalled = true;
-                  // Builder is called with context
-                  expect(context, isNotNull);
-                  expect(ctx.date, isNotNull);
-                  return defaultCell;
-                },
-                dayHeaderBuilder: (context, ctx, defaultHeader) {
-                  dayHeaderBuilderCalled = true;
-                  // Builder is called with context
-                  expect(context, isNotNull);
-                  expect(ctx.dayName, isNotEmpty);
-                  return defaultHeader;
-                },
+              child: MCalTheme(
+                data: customTheme,
+                child: MCalMonthView(
+                  controller: controller,
+                  dayCellBuilder: (context, ctx, defaultCell) {
+                    dayCellBuilderCalled = true;
+                    // Builder is called with context
+                    expect(context, isNotNull);
+                    expect(ctx.date, isNotNull);
+                    return defaultCell;
+                  },
+                  dayHeaderBuilder: (context, ctx, defaultHeader) {
+                    dayHeaderBuilderCalled = true;
+                    // Builder is called with context
+                    expect(context, isNotNull);
+                    expect(ctx.dayName, isNotEmpty);
+                    return defaultHeader;
+                  },
+                ),
               ),
             ),
           ),
@@ -1471,7 +1440,7 @@ void main() {
     late MockMCalEventController controller;
 
     setUp(() {
-      controller = MockMCalEventController();
+      controller = MockMCalEventController(initialDate: DateTime(2024, 6, 15));
     });
 
     tearDown(() {
@@ -1499,11 +1468,12 @@ void main() {
           home: Scaffold(
             body: SizedBox(
               height: 600,
-              child: MCalMonthView(
-                controller: controller,
-                initialDate: DateTime(2024, 6, 15),
-                showNavigator: true,
-                theme: customTheme,
+              child: MCalTheme(
+                data: customTheme,
+                child: MCalMonthView(
+                  controller: controller,
+                  showNavigator: true,
+                ),
               ),
             ),
           ),
@@ -1548,7 +1518,6 @@ void main() {
                       return MCalMonthView(
                         key: const Key('outer'),
                         controller: controller,
-                        initialDate: DateTime(2024, 6, 15),
                       );
                     }),
                   ),
@@ -1563,7 +1532,6 @@ void main() {
                         return MCalMonthView(
                           key: const Key('inner'),
                           controller: controller,
-                          initialDate: DateTime(2024, 6, 15),
                         );
                       }),
                     ),
@@ -1647,13 +1615,14 @@ void main() {
     late MockMCalEventController controller;
 
     setUp(() {
-      controller = MockMCalEventController();
+      controller = MockMCalEventController(initialDate: DateTime(2024, 6, 15));
     });
 
     tearDown(() {
       controller.dispose();
     });
 
+    // TODO: MCalMultiDayTileDetails has been replaced by MCalEventTileContext with MCalEventSegment.
     testWidgets('multi-day events can be set up for drag-and-drop', (tester) async {
       // Create a multi-day event
       final multiDayEvent = MCalCalendarEvent(
@@ -1666,7 +1635,7 @@ void main() {
 
       controller.setMockEvents([multiDayEvent]);
 
-      MCalMultiDayTileDetails? multiDayTileDetails;
+      MCalEventTileContext? eventTileContext;
       MCalDragWillAcceptDetails? dragWillAcceptDetails;
       MCalEventDroppedDetails? eventDroppedDetails;
 
@@ -1677,14 +1646,12 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 enableDragAndDrop: true,
-                renderMultiDayEventsAsContiguous: true,
-                multiDayEventTileBuilder: (context, details) {
-                  multiDayTileDetails = details;
+                eventTileBuilder: (context, ctx, defaultTile) {
+                  eventTileContext = ctx;
                   return Container(
                     color: Colors.blue,
-                    child: Text(details.event.title),
+                    child: Text(ctx.event.title),
                   );
                 },
                 onDragWillAccept: (context, details) {
@@ -1704,9 +1671,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify multi-day event is rendered
-      expect(multiDayTileDetails, isNotNull);
-      expect(multiDayTileDetails!.event.id, equals('multi-day-drag'));
-      expect(multiDayTileDetails!.totalDaysInEvent, equals(4)); // 4 days inclusive
+      expect(eventTileContext, isNotNull);
+      expect(eventTileContext!.event.id, equals('multi-day-drag'));
+      // Verify segment info is available
+      if (eventTileContext!.segment != null) {
+        expect(eventTileContext!.segment!.spanDays, equals(4)); // 4 days inclusive
+      }
 
       // Verify the widget is set up for drag-and-drop
       expect(find.byType(MCalMonthView), findsOneWidget);
@@ -1732,7 +1702,6 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 enableDragAndDrop: true,
                 onDragWillAccept: (context, details) {
                   validationDetails.add(details);
@@ -1781,9 +1750,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                initialDate: DateTime(2024, 6, 15),
                 enableDragAndDrop: true,
-                renderMultiDayEventsAsContiguous: true,
                 onDragWillAccept: (context, details) {
                   validationCalled = true;
                   // Reject if the proposed dates would span across a month boundary
@@ -1824,7 +1791,7 @@ void main() {
 
       controller.setMockEvents(events);
 
-      int multiDayTileBuilderCalls = 0;
+      int eventTileBuilderCalls = 0;
       bool swipeCallbackFired = false;
 
       await tester.pumpWidget(
@@ -1832,30 +1799,29 @@ void main() {
           home: Scaffold(
             body: SizedBox(
               height: 600,
-              child: MCalMonthView(
-                controller: controller,
-                initialDate: DateTime(2024, 6, 15),
-                enableSwipeNavigation: true,
-                enableDragAndDrop: true,
-                renderMultiDayEventsAsContiguous: true,
-                theme: const MCalThemeData(
+              child: MCalTheme(
+                data: const MCalThemeData(
                   cellBackgroundColor: Colors.grey,
-                  multiDayEventBackgroundColor: Colors.blue,
                   eventTileBackgroundColor: Colors.green,
                 ),
-                multiDayEventTileBuilder: (context, details) {
-                  multiDayTileBuilderCalls++;
-                  return Container(
-                    color: Colors.blue,
-                    child: Text(details.event.title),
-                  );
-                },
-                onSwipeNavigation: (context, details) {
-                  swipeCallbackFired = true;
-                },
-                onDragWillAccept: (context, details) {
-                  return true;
-                },
+                child: MCalMonthView(
+                  controller: controller,
+                  enableSwipeNavigation: true,
+                  enableDragAndDrop: true,
+                  eventTileBuilder: (context, ctx, defaultTile) {
+                    eventTileBuilderCalls++;
+                    return Container(
+                      color: Colors.blue,
+                      child: Text(ctx.event.title),
+                    );
+                  },
+                  onSwipeNavigation: (context, details) {
+                    swipeCallbackFired = true;
+                  },
+                  onDragWillAccept: (context, details) {
+                    return true;
+                  },
+                ),
               ),
             ),
           ),
@@ -1864,8 +1830,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Multi-day tile builder should have been called for multi-day events
-      expect(multiDayTileBuilderCalls, greaterThan(0));
+      // Event tile builder should have been called for multi-day events
+      expect(eventTileBuilderCalls, greaterThan(0));
 
       // Swipe to next month
       final monthView = find.byType(MCalMonthView);

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../widgets/mcal_week_layout_contexts.dart' show DateLabelPosition;
+
+// Re-export DateLabelPosition so it's accessible from this file's exports
+export '../widgets/mcal_week_layout_contexts.dart' show DateLabelPosition;
 
 /// An InheritedWidget that provides [MCalThemeData] to descendant widgets.
 ///
@@ -29,11 +33,7 @@ class MCalTheme extends InheritedWidget {
   /// Creates an [MCalTheme] widget.
   ///
   /// The [data] and [child] arguments must not be null.
-  const MCalTheme({
-    super.key,
-    required this.data,
-    required super.child,
-  });
+  const MCalTheme({super.key, required this.data, required super.child});
 
   /// The theme data for calendar widgets.
   final MCalThemeData data;
@@ -59,8 +59,8 @@ class MCalTheme extends InheritedWidget {
   /// ```
   static MCalThemeData of(BuildContext context) {
     // Step 1: Try to find MCalTheme ancestor
-    final inheritedTheme =
-        context.dependOnInheritedWidgetOfExactType<MCalTheme>();
+    final inheritedTheme = context
+        .dependOnInheritedWidgetOfExactType<MCalTheme>();
     if (inheritedTheme != null) {
       return inheritedTheme.data;
     }
@@ -95,8 +95,8 @@ class MCalTheme extends InheritedWidget {
   /// }
   /// ```
   static MCalThemeData? maybeOf(BuildContext context) {
-    final inheritedTheme =
-        context.dependOnInheritedWidgetOfExactType<MCalTheme>();
+    final inheritedTheme = context
+        .dependOnInheritedWidgetOfExactType<MCalTheme>();
     return inheritedTheme?.data;
   }
 
@@ -241,6 +241,44 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
   /// Defaults to 1.0 pixel.
   final double? eventTileVerticalSpacing;
 
+  /// Height reserved for date labels in day cells.
+  /// Defaults to 18.0 pixels.
+  final double? dateLabelHeight;
+
+  /// Position of date labels within day cells.
+  /// Defaults to DateLabelPosition.topLeft.
+  final DateLabelPosition? dateLabelPosition;
+
+  /// Height reserved for overflow indicators.
+  /// Defaults to 14.0 pixels.
+  final double? overflowIndicatorHeight;
+
+  /// Corner radius for event tiles.
+  /// Defaults to 3.0 pixels.
+  final double? tileCornerRadius;
+
+  /// Whether to ignore individual event colors and use [eventTileBackgroundColor] instead.
+  ///
+  /// When true, all event tiles use [eventTileBackgroundColor] regardless of
+  /// the event's individual color property. This is useful for styles that
+  /// want uniform event tile colors (e.g., classic calendar styles).
+  ///
+  /// Defaults to false (individual event colors are respected).
+  final bool ignoreEventColors;
+
+  /// Border color for event tiles.
+  ///
+  /// When set along with [eventTileBorderWidth], adds a border around event tiles.
+  /// Defaults to null (no border).
+  final Color? eventTileBorderColor;
+
+  /// Border width for event tiles in pixels.
+  ///
+  /// When set to a value greater than 0 along with [eventTileBorderColor],
+  /// adds a border around event tiles.
+  /// Defaults to 0.0 (no border).
+  final double? eventTileBorderWidth;
+
   /// Creates a new [MCalThemeData] instance.
   ///
   /// All parameters are optional, allowing partial customization.
@@ -279,6 +317,13 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     this.eventTileHeight,
     this.eventTileHorizontalSpacing,
     this.eventTileVerticalSpacing,
+    this.dateLabelHeight,
+    this.dateLabelPosition,
+    this.overflowIndicatorHeight,
+    this.tileCornerRadius,
+    this.ignoreEventColors = false,
+    this.eventTileBorderColor,
+    this.eventTileBorderWidth,
   });
 
   /// Creates a [MCalThemeData] instance with default values derived
@@ -339,7 +384,9 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
       ),
       weekNumberBackgroundColor: colorScheme.surfaceContainerHighest,
       hoverCellBackgroundColor: colorScheme.primary.withValues(alpha: 0.05),
-      hoverEventBackgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.8),
+      hoverEventBackgroundColor: colorScheme.primaryContainer.withValues(
+        alpha: 0.8,
+      ),
       dragTargetValidColor: Colors.green.withValues(alpha: 0.3),
       dragTargetInvalidColor: Colors.red.withValues(alpha: 0.3),
       dragSourceOpacity: 0.5,
@@ -352,6 +399,11 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
       eventTileHeight: 20.0,
       eventTileHorizontalSpacing: 1.0,
       eventTileVerticalSpacing: 1.0,
+      dateLabelHeight: 18.0,
+      dateLabelPosition: DateLabelPosition.topLeft,
+      overflowIndicatorHeight: 14.0,
+      tileCornerRadius: 3.0,
+      ignoreEventColors: false,
     );
   }
 
@@ -391,6 +443,13 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     double? eventTileHeight,
     double? eventTileHorizontalSpacing,
     double? eventTileVerticalSpacing,
+    double? dateLabelHeight,
+    DateLabelPosition? dateLabelPosition,
+    double? overflowIndicatorHeight,
+    double? tileCornerRadius,
+    bool? ignoreEventColors,
+    Color? eventTileBorderColor,
+    double? eventTileBorderWidth,
   }) {
     return MCalThemeData(
       cellBackgroundColor: cellBackgroundColor ?? this.cellBackgroundColor,
@@ -402,14 +461,14 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
           leadingDatesTextStyle ?? this.leadingDatesTextStyle,
       trailingDatesTextStyle:
           trailingDatesTextStyle ?? this.trailingDatesTextStyle,
-      leadingDatesBackgroundColor: leadingDatesBackgroundColor ??
-          this.leadingDatesBackgroundColor,
-      trailingDatesBackgroundColor: trailingDatesBackgroundColor ??
-          this.trailingDatesBackgroundColor,
+      leadingDatesBackgroundColor:
+          leadingDatesBackgroundColor ?? this.leadingDatesBackgroundColor,
+      trailingDatesBackgroundColor:
+          trailingDatesBackgroundColor ?? this.trailingDatesBackgroundColor,
       weekdayHeaderTextStyle:
           weekdayHeaderTextStyle ?? this.weekdayHeaderTextStyle,
-      weekdayHeaderBackgroundColor: weekdayHeaderBackgroundColor ??
-          this.weekdayHeaderBackgroundColor,
+      weekdayHeaderBackgroundColor:
+          weekdayHeaderBackgroundColor ?? this.weekdayHeaderBackgroundColor,
       eventTileBackgroundColor:
           eventTileBackgroundColor ?? this.eventTileBackgroundColor,
       eventTileTextStyle: eventTileTextStyle ?? this.eventTileTextStyle,
@@ -418,50 +477,48 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
           navigatorBackgroundColor ?? this.navigatorBackgroundColor,
       focusedDateBackgroundColor:
           focusedDateBackgroundColor ?? this.focusedDateBackgroundColor,
-      focusedDateTextStyle:
-          focusedDateTextStyle ?? this.focusedDateTextStyle,
+      focusedDateTextStyle: focusedDateTextStyle ?? this.focusedDateTextStyle,
       allDayEventBackgroundColor:
           allDayEventBackgroundColor ?? this.allDayEventBackgroundColor,
-      allDayEventTextStyle:
-          allDayEventTextStyle ?? this.allDayEventTextStyle,
+      allDayEventTextStyle: allDayEventTextStyle ?? this.allDayEventTextStyle,
       allDayEventBorderColor:
           allDayEventBorderColor ?? this.allDayEventBorderColor,
       allDayEventBorderWidth:
           allDayEventBorderWidth ?? this.allDayEventBorderWidth,
-      weekNumberTextStyle:
-          weekNumberTextStyle ?? this.weekNumberTextStyle,
+      weekNumberTextStyle: weekNumberTextStyle ?? this.weekNumberTextStyle,
       weekNumberBackgroundColor:
           weekNumberBackgroundColor ?? this.weekNumberBackgroundColor,
       hoverCellBackgroundColor:
           hoverCellBackgroundColor ?? this.hoverCellBackgroundColor,
       hoverEventBackgroundColor:
           hoverEventBackgroundColor ?? this.hoverEventBackgroundColor,
-      dragTargetValidColor:
-          dragTargetValidColor ?? this.dragTargetValidColor,
+      dragTargetValidColor: dragTargetValidColor ?? this.dragTargetValidColor,
       dragTargetInvalidColor:
           dragTargetInvalidColor ?? this.dragTargetInvalidColor,
-      dragSourceOpacity:
-          dragSourceOpacity ?? this.dragSourceOpacity,
-      draggedTileElevation:
-          draggedTileElevation ?? this.draggedTileElevation,
+      dragSourceOpacity: dragSourceOpacity ?? this.dragSourceOpacity,
+      draggedTileElevation: draggedTileElevation ?? this.draggedTileElevation,
       multiDayEventBackgroundColor:
           multiDayEventBackgroundColor ?? this.multiDayEventBackgroundColor,
       multiDayEventTextStyle:
           multiDayEventTextStyle ?? this.multiDayEventTextStyle,
-      eventTileHeight:
-          eventTileHeight ?? this.eventTileHeight,
+      eventTileHeight: eventTileHeight ?? this.eventTileHeight,
       eventTileHorizontalSpacing:
           eventTileHorizontalSpacing ?? this.eventTileHorizontalSpacing,
       eventTileVerticalSpacing:
           eventTileVerticalSpacing ?? this.eventTileVerticalSpacing,
+      dateLabelHeight: dateLabelHeight ?? this.dateLabelHeight,
+      dateLabelPosition: dateLabelPosition ?? this.dateLabelPosition,
+      overflowIndicatorHeight:
+          overflowIndicatorHeight ?? this.overflowIndicatorHeight,
+      tileCornerRadius: tileCornerRadius ?? this.tileCornerRadius,
+      ignoreEventColors: ignoreEventColors ?? this.ignoreEventColors,
+      eventTileBorderColor: eventTileBorderColor ?? this.eventTileBorderColor,
+      eventTileBorderWidth: eventTileBorderWidth ?? this.eventTileBorderWidth,
     );
   }
 
   @override
-  MCalThemeData lerp(
-    ThemeExtension<MCalThemeData>? other,
-    double t,
-  ) {
+  MCalThemeData lerp(ThemeExtension<MCalThemeData>? other, double t) {
     if (other is! MCalThemeData) {
       return this;
     }
@@ -472,26 +529,14 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
         other.cellBackgroundColor,
         t,
       ),
-      cellBorderColor: Color.lerp(
-        cellBorderColor,
-        other.cellBorderColor,
-        t,
-      ),
-      cellTextStyle: TextStyle.lerp(
-        cellTextStyle,
-        other.cellTextStyle,
-        t,
-      ),
+      cellBorderColor: Color.lerp(cellBorderColor, other.cellBorderColor, t),
+      cellTextStyle: TextStyle.lerp(cellTextStyle, other.cellTextStyle, t),
       todayBackgroundColor: Color.lerp(
         todayBackgroundColor,
         other.todayBackgroundColor,
         t,
       ),
-      todayTextStyle: TextStyle.lerp(
-        todayTextStyle,
-        other.todayTextStyle,
-        t,
-      ),
+      todayTextStyle: TextStyle.lerp(todayTextStyle, other.todayTextStyle, t),
       leadingDatesTextStyle: TextStyle.lerp(
         leadingDatesTextStyle,
         other.leadingDatesTextStyle,
@@ -622,11 +667,7 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
         other.multiDayEventTextStyle,
         t,
       ),
-      eventTileHeight: _lerpDouble(
-        eventTileHeight,
-        other.eventTileHeight,
-        t,
-      ),
+      eventTileHeight: _lerpDouble(eventTileHeight, other.eventTileHeight, t),
       eventTileHorizontalSpacing: _lerpDouble(
         eventTileHorizontalSpacing,
         other.eventTileHorizontalSpacing,
@@ -635,6 +676,29 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
       eventTileVerticalSpacing: _lerpDouble(
         eventTileVerticalSpacing,
         other.eventTileVerticalSpacing,
+        t,
+      ),
+      dateLabelHeight: _lerpDouble(dateLabelHeight, other.dateLabelHeight, t),
+      dateLabelPosition: t < 0.5 ? dateLabelPosition : other.dateLabelPosition,
+      overflowIndicatorHeight: _lerpDouble(
+        overflowIndicatorHeight,
+        other.overflowIndicatorHeight,
+        t,
+      ),
+      tileCornerRadius: _lerpDouble(
+        tileCornerRadius,
+        other.tileCornerRadius,
+        t,
+      ),
+      ignoreEventColors: t < 0.5 ? ignoreEventColors : other.ignoreEventColors,
+      eventTileBorderColor: Color.lerp(
+        eventTileBorderColor,
+        other.eventTileBorderColor,
+        t,
+      ),
+      eventTileBorderWidth: _lerpDouble(
+        eventTileBorderWidth,
+        other.eventTileBorderWidth,
         t,
       ),
     );

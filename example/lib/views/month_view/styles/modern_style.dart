@@ -33,16 +33,8 @@ class ModernMonthStyle extends StatelessWidget {
       children: [
         StyleDescription(description: description),
         Expanded(
-          child: MCalMonthView(
-            controller: eventController,
-            initialDate: DateTime.now(),
-            showNavigator: true,
-            enableSwipeNavigation: true,
-            locale: locale,
-            // Disable contiguous multi-day tiles when using custom cell builder
-            // that handles events differently (e.g., showing dots instead of tiles)
-            renderMultiDayEventsAsContiguous: false,
-            theme: MCalThemeData(
+          child: MCalTheme(
+            data: MCalThemeData(
               cellBackgroundColor: colorScheme.surface,
               cellBorderColor: Colors.transparent,
               todayBackgroundColor: colorScheme.primary,
@@ -57,20 +49,119 @@ class ModernMonthStyle extends StatelessWidget {
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
-            dayCellBuilder: (context, ctx, defaultCell) {
-              return _buildDayCell(context, ctx, colorScheme);
-            },
-            navigatorBuilder: (context, ctx, defaultNavigator) {
-              return _buildNavigator(context, ctx, colorScheme);
-            },
-            onCellTap: (context, details) {
-              onDateSelected(details.date);
-              showDayEventsBottomSheet(context, details.date, details.events, locale);
-            },
+            child: MCalMonthView(
+              controller: eventController,
+              showNavigator: true,
+              enableSwipeNavigation: true,
+              locale: locale,
+              // Custom week layout builder that renders dots for events
+              weekLayoutBuilder: (context, ctx) {
+                return _buildDotsWeekLayout(context, ctx, colorScheme);
+              },
+              dayCellBuilder: (context, ctx, defaultCell) {
+                return _buildDayCell(context, ctx, colorScheme);
+              },
+              navigatorBuilder: (context, ctx, defaultNavigator) {
+                return _buildNavigator(context, ctx, colorScheme);
+              },
+              onCellTap: (context, details) {
+                onDateSelected(details.date);
+                showDayEventsBottomSheet(
+                  context,
+                  details.date,
+                  details.events,
+                  locale,
+                );
+              },
+            ),
           ),
         ),
       ],
     );
+  }
+
+  /// Custom week layout builder that renders colored dots for events.
+  ///
+  /// This replaces the default event tile layout with a dots-based visualization.
+  /// Each day with events shows up to 3 colored dots plus a '+' indicator for more.
+  Widget _buildDotsWeekLayout(
+    BuildContext context,
+    MCalWeekLayoutContext ctx,
+    ColorScheme colorScheme,
+  ) {
+    // Collect events for each day in the week
+    final eventsPerDay = <int, List<MCalCalendarEvent>>{};
+    for (final segment in ctx.segments) {
+      // Add event to each day it spans
+      for (
+        int day = segment.startDayInWeek;
+        day <= segment.endDayInWeek;
+        day++
+      ) {
+        eventsPerDay.putIfAbsent(day, () => []);
+        // Only add if not already present (avoid duplicates for multi-day events)
+        if (!eventsPerDay[day]!.any((e) => e.id == segment.event.id)) {
+          eventsPerDay[day]!.add(segment.event);
+        }
+      }
+    }
+
+    // Build dots for each day that has events
+    final dotWidgets = <Widget>[];
+    double leftOffset = 0;
+
+    for (int dayIndex = 0; dayIndex < 7; dayIndex++) {
+      final columnWidth = ctx.columnWidths[dayIndex];
+      final dayEvents = eventsPerDay[dayIndex] ?? [];
+
+      if (dayEvents.isNotEmpty) {
+        // Create dots row for this day
+        final dots = Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ...dayEvents.take(3).map((event) {
+              final color = event.color ?? getEventColor(event.id);
+              return Container(
+                width: 6,
+                height: 6,
+                margin: const EdgeInsets.symmetric(horizontal: 1),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              );
+            }),
+            if (dayEvents.length > 3)
+              Text(
+                '+',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        );
+
+        // Position dots in the center of the cell, below the date
+        dotWidgets.add(
+          Positioned(
+            left: leftOffset,
+            top:
+                ctx.config.dateLabelHeight + 8, // Below date label with padding
+            width: columnWidth,
+            child: Center(child: dots),
+          ),
+        );
+      }
+
+      leftOffset += columnWidth;
+    }
+
+    // Return empty container if no events
+    if (dotWidgets.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Stack(children: dotWidgets);
   }
 
   Widget _buildDayCell(
@@ -78,21 +169,24 @@ class ModernMonthStyle extends StatelessWidget {
     MCalDayCellContext ctx,
     ColorScheme colorScheme,
   ) {
-    final isSelected = selectedDate != null &&
+    final isSelected =
+        selectedDate != null &&
         ctx.date.year == selectedDate!.year &&
         ctx.date.month == selectedDate!.month &&
         ctx.date.day == selectedDate!.day;
 
+    // Day cell only renders background and date number
+    // Dots are rendered by the weekLayoutBuilder in Layer 2
     return Container(
       margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: isSelected
             ? colorScheme.primaryContainer
             : ctx.isToday
-                ? colorScheme.primary
-                : ctx.isCurrentMonth
-                    ? colorScheme.surface
-                    : colorScheme.surfaceContainerHighest.withAlpha(100),
+            ? colorScheme.primary
+            : ctx.isCurrentMonth
+            ? colorScheme.surface
+            : colorScheme.surfaceContainerHighest.withAlpha(100),
         borderRadius: BorderRadius.circular(12),
         border: isSelected
             ? Border.all(color: colorScheme.primary, width: 2)
@@ -118,43 +212,10 @@ class ModernMonthStyle extends StatelessWidget {
               color: ctx.isToday
                   ? Colors.white
                   : ctx.isCurrentMonth
-                      ? colorScheme.onSurface
-                      : colorScheme.onSurface.withAlpha(100),
+                  ? colorScheme.onSurface
+                  : colorScheme.onSurface.withAlpha(100),
             ),
           ),
-          if (ctx.events.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ...ctx.events.take(3).map((event) {
-                    // Use event.color if available, fall back to hash-based color
-                    final color = event.color ?? getEventColor(event.id);
-                    return Container(
-                      width: 6,
-                      height: 6,
-                      margin: const EdgeInsets.symmetric(horizontal: 1),
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                      ),
-                    );
-                  }),
-                  if (ctx.events.length > 3)
-                    Text(
-                      '+',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: ctx.isToday
-                            ? Colors.white70
-                            : colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
-              ),
-            ),
         ],
       ),
     );

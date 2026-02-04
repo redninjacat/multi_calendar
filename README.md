@@ -39,8 +39,11 @@ flutter pub get
 ```dart
 import 'package:multi_calendar/multi_calendar.dart';
 
-// Create an event controller
+// Create an event controller (defaults to showing current month)
 final controller = MCalEventController();
+
+// Or specify an initial date to display
+final controller = MCalEventController(initialDate: DateTime(2024, 6, 15));
 
 // Create calendar events
 final event = MCalCalendarEvent(
@@ -64,7 +67,6 @@ final allDayEvent = MCalCalendarEvent(
 // Display month view
 MCalMonthView(
   controller: controller,
-  initialDate: DateTime.now(),
   showNavigator: true,
   enableSwipeNavigation: true,
   onCellTap: (context, details) {
@@ -97,7 +99,6 @@ final controller = MCalEventController();
 
 MCalMonthView(
   controller: controller,
-  initialDate: DateTime.now(),
 )
 ```
 
@@ -110,7 +111,6 @@ MCalMonthView(
 #### Optional Parameters
 
 **Date Configuration:**
-- **`initialDate`** (`DateTime?`): The initial date to display (defaults to today).
 - **`minDate`** (`DateTime?`): The minimum date that can be displayed.
 - **`maxDate`** (`DateTime?`): The maximum date that can be displayed.
 - **`firstDayOfWeek`** (`int?`): The first day of the week (0 = Sunday, 1 = Monday, etc.).
@@ -129,6 +129,8 @@ MCalMonthView(
 - **`dayHeaderBuilder`**: Custom builder for weekday header rendering.
 - **`navigatorBuilder`**: Custom builder for navigator rendering.
 - **`dateLabelBuilder`**: Custom builder for date label rendering.
+- **`weekLayoutBuilder`**: Custom builder for week row event layout (Layer 2).
+- **`overflowIndicatorBuilder`**: Custom builder for "+N more" overflow indicators.
 
 **Interactivity:**
 - **`cellInteractivityCallback`**: Callback to determine if a cell is interactive.
@@ -175,18 +177,6 @@ ThemeData(
       ),
     ),
   ],
-)
-```
-
-#### 3. Pass directly to widget
-
-```dart
-MCalMonthView(
-  controller: controller,
-  theme: MCalThemeData(
-    cellBackgroundColor: Colors.grey[100],
-    todayBackgroundColor: Colors.blue[100],
-  ),
 )
 ```
 
@@ -284,17 +274,65 @@ MCalMonthView(
 ```dart
 MCalMonthView(
   controller: controller,
-  eventTileBuilder: (context, ctx, defaultTile) {
+  eventTileBuilder: (context, tileContext, defaultTile) {
+    // Access segment info for multi-day events
+    final segment = tileContext.segment;
+    
+    // Apply different styling for first/last segments
+    final leftRadius = segment?.isFirstSegment == true ? 4.0 : 0.0;
+    final rightRadius = segment?.isLastSegment == true ? 4.0 : 0.0;
+    
     return Container(
       decoration: BoxDecoration(
-        color: ctx.isAllDay ? Colors.blue : Colors.green,
-        borderRadius: BorderRadius.circular(4),
+        color: tileContext.event.color,
+        borderRadius: BorderRadius.horizontal(
+          left: Radius.circular(leftRadius),
+          right: Radius.circular(rightRadius),
+        ),
       ),
       child: defaultTile,
     );
   },
 )
 ```
+
+**MCalEventTileContext properties:**
+
+| Property | Description |
+|----------|-------------|
+| `event` | The calendar event being rendered |
+| `displayDate` | The date the tile is displayed on |
+| `isAllDay` | Whether the event is an all-day event |
+| `segment` | `MCalEventSegment` with multi-day positioning info |
+| `width` | Tile width in pixels |
+| `height` | Tile height in pixels |
+
+#### Overflow Indicator
+
+When more events exist than can be displayed, an overflow indicator appears:
+
+```dart
+MCalMonthView(
+  controller: controller,
+  overflowIndicatorBuilder: (context, overflowContext, defaultIndicator) {
+    return GestureDetector(
+      onTap: () => showAllEvents(overflowContext.date, overflowContext.hiddenEvents),
+      child: Text('+${overflowContext.hiddenEventCount} more'),
+    );
+  },
+)
+```
+
+**MCalOverflowIndicatorContext properties:**
+
+| Property | Description |
+|----------|-------------|
+| `date` | The date with overflow |
+| `hiddenEventCount` | Number of hidden events |
+| `hiddenEvents` | List of hidden events |
+| `visibleEvents` | List of visible events |
+| `width` | Indicator width in pixels |
+| `height` | Indicator height in pixels |
 
 ### Swipe Navigation
 
@@ -507,54 +545,55 @@ MCalMonthView(
 
 Set `enableAnimations: false` for reduced motion or performance optimization.
 
-### Multi-Day Event Rendering
+### Week Layout Builder
 
-Events spanning multiple days can render as contiguous tiles that visually span across cells.
+MCalMonthView uses a 3-layer architecture for rendering:
+
+- **Layer 1**: Calendar grid (day cells, backgrounds, borders)
+- **Layer 2**: Events, date labels, and overflow indicators
+- **Layer 3**: Drag-and-drop feedback (ghost tiles)
+
+Customize event layout with `weekLayoutBuilder`:
 
 ```dart
 MCalMonthView(
   controller: controller,
-  renderMultiDayEventsAsContiguous: true, // Default
-  multiDayEventTileBuilder: (context, details) {
-    // Smart corner radius based on position
-    final leftRadius = details.isFirstDayInRow ? 8.0 : 0.0;
-    final rightRadius = details.isLastDayInRow ? 8.0 : 0.0;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.blue,
-        borderRadius: BorderRadius.horizontal(
-          left: Radius.circular(leftRadius),
-          right: Radius.circular(rightRadius),
-        ),
-      ),
-      padding: EdgeInsets.symmetric(horizontal: 4),
-      child: Text(
-        // Only show title on first day in row
-        details.isFirstDayInRow ? details.event.title : '',
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
+  weekLayoutBuilder: (context, layoutContext) {
+    // layoutContext provides:
+    // - segments: List<MCalEventSegment> for this week
+    // - dates: 7 DateTime objects for each day
+    // - eventTileBuilder, dateLabelBuilder, overflowIndicatorBuilder
+    // - config: MCalWeekLayoutConfig with layout settings
+    
+    // Return a Widget that positions events for this week row
+    return MCalDefaultWeekLayoutBuilder.build(context, layoutContext);
   },
 )
 ```
 
-**MCalMultiDayTileDetails properties:**
+**MCalWeekLayoutContext properties:**
 
 | Property | Description |
 |----------|-------------|
-| `event` | The calendar event being rendered |
-| `displayDate` | Current date being rendered |
-| `isFirstDayOfEvent` | True if this is the event's start date |
-| `isLastDayOfEvent` | True if this is the event's end date |
-| `isFirstDayInRow` | True if at start of week row |
-| `isLastDayInRow` | True if at end of week row |
-| `dayIndexInEvent` | 0-based index within event span |
-| `totalDaysInEvent` | Total days the event spans |
-| `rowIndex` | Which week row (0-based) |
-| `totalRows` | Total rows the event spans |
+| `segments` | List of `MCalEventSegment` objects for the week |
+| `dates` | 7 `DateTime` objects for each day in the week |
+| `config` | `MCalWeekLayoutConfig` with layout settings |
+| `eventTileBuilder` | Pre-wrapped builder for event tiles |
+| `dateLabelBuilder` | Pre-wrapped builder for date labels |
+| `overflowIndicatorBuilder` | Pre-wrapped builder for overflow indicators |
 
-Set `renderMultiDayEventsAsContiguous: false` for traditional per-cell rendering.
+**MCalEventSegment properties:**
+
+| Property | Description |
+|----------|-------------|
+| `event` | The calendar event |
+| `weekRowIndex` | Which week row (0-based) |
+| `startDayInWeek` | Starting day column (0-6) |
+| `endDayInWeek` | Ending day column (0-6) |
+| `isFirstSegment` | True if this is the event's first week segment |
+| `isLastSegment` | True if this is the event's last week segment |
+| `spanDays` | Number of days this segment spans |
+| `isSingleDay` | True if segment spans only one day |
 
 ### Drag-and-Drop
 
@@ -649,7 +688,7 @@ Limit the number of visible events per cell:
 ```dart
 MCalMonthView(
   controller: controller,
-  maxVisibleEvents: 3, // Default: 3
+  maxVisibleEventsPerDay: 5, // Default: 5
   onOverflowTap: (context, details) {
     // Custom handler for "+N more" tap
     print('${details.hiddenCount} more events on ${details.date}');

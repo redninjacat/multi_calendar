@@ -1,6 +1,3 @@
-import 'dart:ui' show Offset;
-
-import 'package:flutter/foundation.dart' show VoidCallback;
 import 'package:flutter/material.dart';
 
 import '../models/mcal_calendar_event.dart';
@@ -95,7 +92,7 @@ class MCalDraggableEventTile extends StatefulWidget {
   /// If not provided, the default feedback is the child widget wrapped
   /// in a [Material] with elevation from the theme.
   final Widget Function(BuildContext, MCalDraggedTileDetails)?
-      draggedTileBuilder;
+  draggedTileBuilder;
 
   /// Custom builder for the source placeholder widget.
   ///
@@ -131,20 +128,42 @@ class MCalDraggableEventTile extends StatefulWidget {
   /// a valid drop zone.
   final VoidCallback? onDragCanceled;
 
+  /// Builder for creating the default dragged tile feedback.
+  ///
+  /// This builder is used when [draggedTileBuilder] is not provided.
+  /// It receives the full tile width (calculated from event duration and day width)
+  /// and should return a widget matching the original tile's styling.
+  ///
+  /// The builder should treat the tile as a single non-continuation segment
+  /// (isFirstSegment=true, isLastSegment=true) for uniform corners and borders.
+  final Widget Function(double tileWidth)? defaultFeedbackBuilder;
+
+  /// The width of a single day cell.
+  ///
+  /// Used to calculate the full tile width for the dragged feedback.
+  final double dayWidth;
+
+  /// The horizontal spacing around the tile.
+  final double horizontalSpacing;
+
   /// Creates a new [MCalDraggableEventTile] widget.
   ///
-  /// The [child], [event], and [sourceDate] parameters are required.
+  /// The [child], [event], [sourceDate], [dayWidth], and [horizontalSpacing]
+  /// parameters are required.
   const MCalDraggableEventTile({
     super.key,
     required this.child,
     required this.event,
     required this.sourceDate,
+    required this.dayWidth,
+    required this.horizontalSpacing,
     this.enabled = true,
     this.draggedTileBuilder,
     this.dragSourceBuilder,
     this.onDragStarted,
     this.onDragEnded,
     this.onDragCanceled,
+    this.defaultFeedbackBuilder,
   });
 
   @override
@@ -189,6 +208,11 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
 
   /// Builds the feedback widget shown while dragging.
   Widget _buildFeedback(BuildContext context) {
+    // Calculate full event width
+    final eventDurationDays = _calculateEventDurationDays();
+    final tileWidth =
+        (widget.dayWidth * eventDurationDays) - (widget.horizontalSpacing * 2);
+
     // If custom builder is provided, use it
     if (widget.draggedTileBuilder != null) {
       return Builder(
@@ -197,23 +221,47 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
             event: widget.event,
             sourceDate: widget.sourceDate,
             currentPosition: _currentDragPosition,
+            dayWidth: widget.dayWidth,
+            horizontalSpacing: widget.horizontalSpacing,
+            eventDurationDays: eventDurationDays,
           );
           return widget.draggedTileBuilder!(context, details);
         },
       );
     }
 
-    // Build default feedback: child with Material + elevation
-    // Note: theme.draggedTileElevation will be added in a later task (Task 23)
-    // For now, we use the default elevation
-    const elevation = _defaultDraggedTileElevation;
+    // Use default feedback builder if provided (reuses existing tile builder logic)
+    if (widget.defaultFeedbackBuilder != null) {
+      return Material(
+        elevation: _defaultDraggedTileElevation,
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(4.0),
+        child: widget.defaultFeedbackBuilder!(tileWidth),
+      );
+    }
 
+    // Fallback: just use the child with elevation
     return Material(
-      elevation: elevation,
+      elevation: _defaultDraggedTileElevation,
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(4.0),
       child: widget.child,
     );
+  }
+
+  /// Calculates the number of days the event spans.
+  int _calculateEventDurationDays() {
+    final startDate = DateTime(
+      widget.event.start.year,
+      widget.event.start.month,
+      widget.event.start.day,
+    );
+    final endDate = DateTime(
+      widget.event.end.year,
+      widget.event.end.month,
+      widget.event.end.day,
+    );
+    return endDate.difference(startDate).inDays + 1;
   }
 
   /// Builds the placeholder widget shown at the source position while dragging.
@@ -228,10 +276,7 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
     }
 
     // Build default: child with 50% opacity (ghost effect)
-    return Opacity(
-      opacity: _defaultSourceOpacity,
-      child: widget.child,
-    );
+    return Opacity(opacity: _defaultSourceOpacity, child: widget.child);
   }
 
   /// Handles the drag start event.

@@ -8,12 +8,21 @@ import '../models/mcal_calendar_event.dart';
 import '../styles/mcal_theme.dart';
 import '../utils/date_utils.dart';
 import '../utils/mcal_localization.dart';
+import 'mcal_builder_wrapper.dart';
 import 'mcal_callback_details.dart';
+import 'mcal_default_week_layout.dart';
 import 'mcal_drag_handler.dart';
 import 'mcal_draggable_event_tile.dart';
 import 'mcal_month_view_contexts.dart';
 import 'mcal_multi_day_renderer.dart';
-import 'mcal_multi_day_tile.dart';
+import 'mcal_week_layout_contexts.dart';
+
+/// Builder callback for customizing week row event layout.
+///
+/// Receives [MCalWeekLayoutContext] containing all events, dates, column widths,
+/// and pre-wrapped builders for event tiles, date labels, and overflow indicators.
+typedef MCalWeekLayoutBuilder =
+    Widget Function(BuildContext context, MCalWeekLayoutContext layoutContext);
 
 /// Direction for swipe navigation gestures.
 enum MCalSwipeNavigationDirection {
@@ -46,7 +55,6 @@ enum MCalSwipeDirection {
 ///
 /// MCalMonthView(
 ///   controller: controller,
-///   initialDate: DateTime.now(),
 ///   onCellTap: (context, details) {
 ///     print('Tapped on ${details.date} with ${details.events.length} events');
 ///   },
@@ -63,11 +71,6 @@ class MCalMonthView extends StatefulWidget {
   final MCalEventController controller;
 
   /// The initial date to display (defaults to today).
-  ///
-  /// The widget will display the month containing this date. If not provided,
-  /// the current month is displayed.
-  final DateTime? initialDate;
-
   /// The minimum date that can be displayed.
   ///
   /// If provided, navigation to dates before this date will be disabled.
@@ -99,17 +102,12 @@ class MCalMonthView extends StatefulWidget {
   /// Defaults to [MCalSwipeNavigationDirection.horizontal].
   final MCalSwipeNavigationDirection swipeNavigationDirection;
 
-  /// Custom theme data for calendar styling.
-  ///
-  /// If not provided, the widget will attempt to resolve theme from the
-  /// widget tree's ThemeData, or use sensible defaults.
-  final MCalThemeData? theme;
-
   /// Builder callback for customizing day cell rendering.
   ///
   /// Receives the build context, [MCalDayCellContext] with cell data, and
   /// the default cell widget. Return a custom widget to override the default.
-  final Widget Function(BuildContext, MCalDayCellContext, Widget)? dayCellBuilder;
+  final Widget Function(BuildContext, MCalDayCellContext, Widget)?
+  dayCellBuilder;
 
   /// Builder callback for customizing event tile rendering.
   ///
@@ -146,7 +144,8 @@ class MCalMonthView extends StatefulWidget {
   /// Receives the [BuildContext] and [MCalCellInteractivityDetails] containing
   /// the date, whether it's in the current month, and whether it's selectable.
   /// Return false to disable interactions for that cell.
-  final bool Function(BuildContext, MCalCellInteractivityDetails)? cellInteractivityCallback;
+  final bool Function(BuildContext, MCalCellInteractivityDetails)?
+  cellInteractivityCallback;
 
   /// Callback invoked when a day cell is tapped.
   ///
@@ -161,6 +160,19 @@ class MCalMonthView extends StatefulWidget {
   /// long-pressed date, list of events on that date, and whether the date
   /// is in the current month.
   final void Function(BuildContext, MCalCellTapDetails)? onCellLongPress;
+
+  /// Callback invoked when a date label is tapped.
+  ///
+  /// When set, date labels become tappable with this handler.
+  /// When not set, taps on date labels pass through to trigger [onCellTap].
+  final void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelTap;
+
+  /// Callback invoked when a date label is long-pressed.
+  ///
+  /// When set, date labels respond to long-press with this handler.
+  /// When not set, long-presses on date labels pass through to the cell.
+  final void Function(BuildContext, MCalDateLabelTapDetails)?
+  onDateLabelLongPress;
 
   /// Callback invoked when an event tile is tapped.
   ///
@@ -178,7 +190,8 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Receives the [BuildContext] and [MCalSwipeNavigationDetails] containing
   /// the previous month, new month, and swipe direction.
-  final void Function(BuildContext, MCalSwipeNavigationDetails)? onSwipeNavigation;
+  final void Function(BuildContext, MCalSwipeNavigationDetails)?
+  onSwipeNavigation;
 
   /// Custom date format string for date labels.
   ///
@@ -267,7 +280,8 @@ class MCalMonthView extends StatefulWidget {
   /// date of the cell, the complete list of events for that date, and the
   /// number of hidden events. Useful for showing a context menu or
   /// alternative interaction.
-  final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowLongPress;
+  final void Function(BuildContext, MCalOverflowTapDetails)?
+  onOverflowLongPress;
 
   // ============ Animation ============
 
@@ -297,8 +311,11 @@ class MCalMonthView extends StatefulWidget {
   /// The maximum number of event tiles to display before showing overflow.
   ///
   /// Events beyond this limit are represented by a "+N more" indicator.
-  /// Defaults to 3.
-  final int maxVisibleEvents;
+  /// The overflow indicator shows when EITHER:
+  /// - Number of events exceeds what fits by height, OR
+  /// - Number of events exceeds this limit
+  /// Defaults to 5.
+  final int maxVisibleEventsPerDay;
 
   // ============ State builders ============
 
@@ -327,7 +344,11 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Receives the build context and [MCalWeekNumberContext] with week data.
   /// Return a custom widget to override the default week number display.
-  final Widget Function(BuildContext context, MCalWeekNumberContext weekContext)? weekNumberBuilder;
+  final Widget Function(
+    BuildContext context,
+    MCalWeekNumberContext weekContext,
+  )?
+  weekNumberBuilder;
 
   // ============ Accessibility ============
 
@@ -339,27 +360,21 @@ class MCalMonthView extends StatefulWidget {
 
   // ============ Multi-day event rendering ============
 
-  /// Whether to render multi-day events as contiguous tiles spanning cells.
+  /// Builder callback for customizing week row event layout.
   ///
-  /// When true (default), multi-day events are rendered as single tiles that
-  /// span across multiple day cells, positioned at the top of each week row.
-  /// This provides a cleaner visual representation similar to Google Calendar.
+  /// When provided, this builder has complete control over how events are
+  /// positioned within each week row in Layer 2. It receives pre-wrapped
+  /// builders that include interaction handlers.
   ///
-  /// When false, multi-day events are rendered in each day cell independently,
-  /// using the traditional per-cell rendering approach.
-  ///
-  /// Defaults to true.
-  final bool renderMultiDayEventsAsContiguous;
+  /// If not provided, the default layout (greedy first-fit) is used.
+  final MCalWeekLayoutBuilder? weekLayoutBuilder;
 
-  /// Builder callback for customizing multi-day event tile rendering.
+  /// Builder callback for customizing overflow indicator rendering.
   ///
-  /// Receives the build context and [MCalMultiDayTileDetails] with complete
-  /// information about the tile's position within the event and row.
-  /// Return a custom widget to override the default multi-day tile rendering.
-  ///
-  /// This is only used when [renderMultiDayEventsAsContiguous] is true.
-  final Widget Function(BuildContext, MCalMultiDayTileDetails)?
-      multiDayEventTileBuilder;
+  /// Receives the build context, [MCalOverflowIndicatorContext] with overflow data,
+  /// and the default indicator widget. Return a custom widget to override the default.
+  final Widget Function(BuildContext, MCalOverflowIndicatorContext, Widget)?
+  overflowIndicatorBuilder;
 
   // ============ Drag-and-Drop ============
 
@@ -381,7 +396,7 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Only used when [enableDragAndDrop] is true.
   final Widget Function(BuildContext, MCalDraggedTileDetails)?
-      draggedTileBuilder;
+  draggedTileBuilder;
 
   /// Builder callback for customizing the drag source placeholder widget.
   ///
@@ -392,8 +407,7 @@ class MCalMonthView extends StatefulWidget {
   /// If not provided, the default placeholder is the tile with 50% opacity.
   ///
   /// Only used when [enableDragAndDrop] is true.
-  final Widget Function(BuildContext, MCalDragSourceDetails)?
-      dragSourceBuilder;
+  final Widget Function(BuildContext, MCalDragSourceDetails)? dragSourceBuilder;
 
   /// Builder callback for customizing the drag target preview widget.
   ///
@@ -402,8 +416,7 @@ class MCalMonthView extends StatefulWidget {
   /// with the event, target date, and validity state.
   ///
   /// Only used when [enableDragAndDrop] is true.
-  final Widget Function(BuildContext, MCalDragTargetDetails)?
-      dragTargetBuilder;
+  final Widget Function(BuildContext, MCalDragTargetDetails)? dragTargetBuilder;
 
   /// Builder callback for customizing drop target cell appearance.
   ///
@@ -416,7 +429,7 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Only used when [enableDragAndDrop] is true.
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
-      dropTargetCellBuilder;
+  dropTargetCellBuilder;
 
   /// Callback to validate whether a drop should be accepted.
   ///
@@ -428,7 +441,7 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Only used when [enableDragAndDrop] is true.
   final bool Function(BuildContext, MCalDragWillAcceptDetails)?
-      onDragWillAccept;
+  onDragWillAccept;
 
   /// Callback invoked when an event is dropped on a new date.
   ///
@@ -439,8 +452,7 @@ class MCalMonthView extends StatefulWidget {
   /// its original position (useful if a backend update fails).
   ///
   /// Only used when [enableDragAndDrop] is true.
-  final bool Function(BuildContext, MCalEventDroppedDetails)?
-      onEventDropped;
+  final bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped;
 
   /// The delay before edge navigation triggers during drag operations.
   ///
@@ -462,14 +474,12 @@ class MCalMonthView extends StatefulWidget {
   const MCalMonthView({
     super.key,
     required this.controller,
-    this.initialDate,
     this.minDate,
     this.maxDate,
     this.firstDayOfWeek,
     this.showNavigator = false,
     this.enableSwipeNavigation = false,
     this.swipeNavigationDirection = MCalSwipeNavigationDirection.horizontal,
-    this.theme,
     this.dayCellBuilder,
     this.eventTileBuilder,
     this.dayHeaderBuilder,
@@ -478,6 +488,8 @@ class MCalMonthView extends StatefulWidget {
     this.cellInteractivityCallback,
     this.onCellTap,
     this.onCellLongPress,
+    this.onDateLabelTap,
+    this.onDateLabelLongPress,
     this.onEventTap,
     this.onEventLongPress,
     this.onSwipeNavigation,
@@ -503,7 +515,7 @@ class MCalMonthView extends StatefulWidget {
     this.animationDuration = const Duration(milliseconds: 300),
     this.animationCurve = Curves.easeInOut,
     // Event display
-    this.maxVisibleEvents = 3,
+    this.maxVisibleEventsPerDay = 5,
     // State builders
     this.loadingBuilder,
     this.errorBuilder,
@@ -512,9 +524,9 @@ class MCalMonthView extends StatefulWidget {
     this.weekNumberBuilder,
     // Accessibility
     this.semanticsLabel,
-    // Multi-day event rendering
-    this.renderMultiDayEventsAsContiguous = true,
-    this.multiDayEventTileBuilder,
+    // Week layout customization
+    this.weekLayoutBuilder,
+    this.overflowIndicatorBuilder,
     // Drag-and-drop
     this.enableDragAndDrop = false,
     this.draggedTileBuilder,
@@ -630,7 +642,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   bool _isPageIndexWithinBounds(int pageIndex) {
     final minIdx = _minPageIndex;
     final maxIdx = _maxPageIndex;
-    
+
     if (minIdx != null && pageIndex < minIdx) return false;
     if (maxIdx != null && pageIndex > maxIdx) return false;
     return true;
@@ -645,38 +657,28 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize focus node for keyboard navigation
     _focusNode = FocusNode(debugLabel: 'MCalMonthView');
-    
+
     // Initialize tracking variables
     _previousDisplayDate = _currentMonth;
     _previousFocusedDate = widget.controller.focusedDate;
-    
+
     // Initialize PageView controller for swipe navigation (Task 8)
     // Set the reference month to the current display date
     _referenceMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
     _pageController = PageController(initialPage: _initialPageIndex);
-    
+
     // Load initial events
     _loadEvents();
 
     // Subscribe to controller changes
     widget.controller.addListener(_onControllerChanged);
-    
-    // IMPORTANT: Defer initialDate setup to post-frame to avoid triggering
-    // setState on other widgets that share this controller during their build.
-    // Also fire initial callbacks after the first frame.
+
+    // Fire initial callbacks after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
-      // Set initial date if provided (deferred to avoid build-phase conflicts)
-      if (widget.initialDate != null) {
-        widget.controller.setDisplayDate(
-          DateTime(widget.initialDate!.year, widget.initialDate!.month, 1),
-        );
-      }
-      
       _fireViewableRangeChanged();
     });
   }
@@ -705,7 +707,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   DateTime _pageIndexToMonth(int pageIndex) {
     final offset = pageIndex - _initialPageIndex;
     // Calculate the target month by adding the offset in months
-    final referenceMonths = _referenceMonth.year * 12 + _referenceMonth.month - 1;
+    final referenceMonths =
+        _referenceMonth.year * 12 + _referenceMonth.month - 1;
     final targetMonths = referenceMonths + offset;
     final targetYear = targetMonths ~/ 12;
     final targetMonth = (targetMonths % 12) + 1;
@@ -717,7 +720,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// The month matching [_referenceMonth] returns [_initialPageIndex].
   /// Each month forward adds 1, each month backward subtracts 1.
   int _monthToPageIndex(DateTime month) {
-    final referenceMonths = _referenceMonth.year * 12 + _referenceMonth.month - 1;
+    final referenceMonths =
+        _referenceMonth.year * 12 + _referenceMonth.month - 1;
     final targetMonths = month.year * 12 + month.month - 1;
     return _initialPageIndex + (targetMonths - referenceMonths);
   }
@@ -735,14 +739,14 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       // Snap back to the nearest valid page
       final minIdx = _minPageIndex;
       final maxIdx = _maxPageIndex;
-      
+
       int targetPage = pageIndex;
       if (minIdx != null && pageIndex < minIdx) {
         targetPage = minIdx;
       } else if (maxIdx != null && pageIndex > maxIdx) {
         targetPage = maxIdx;
       }
-      
+
       // Programmatically jump back to the valid page
       if (_pageController.hasClients && targetPage != pageIndex) {
         _isProgrammaticPageChange = true;
@@ -756,7 +760,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final previousMonth = _currentMonth;
 
     // Skip if same month (shouldn't happen but be safe)
-    if (newMonth.year == previousMonth.year && newMonth.month == previousMonth.month) {
+    if (newMonth.year == previousMonth.year &&
+        newMonth.month == previousMonth.month) {
       return;
     }
 
@@ -794,7 +799,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final currentFocusedDate = widget.controller.focusedDate;
 
     // Check if display date changed
-    final displayDateChanged = _previousDisplayDate == null ||
+    final displayDateChanged =
+        _previousDisplayDate == null ||
         currentDisplayDate.year != _previousDisplayDate!.year ||
         currentDisplayDate.month != _previousDisplayDate!.month;
 
@@ -803,30 +809,30 @@ class _MCalMonthViewState extends State<MCalMonthView> {
 
     if (displayDateChanged) {
       _previousDisplayDate = currentDisplayDate;
-      
+
       // Sync PageView to the new month if needed (Task 8)
       // This handles external navigation from the controller
       _syncPageViewToMonth(currentDisplayDate);
-      
+
       // Fire onDisplayDateChanged callback
       widget.onDisplayDateChanged?.call(currentDisplayDate);
-      
+
       // Fire onViewableRangeChanged callback
       _fireViewableRangeChanged();
-      
+
       // Announce month change for accessibility
       _announceMonthChange(currentDisplayDate);
-      
+
       // Reload events for new month
       _loadEvents();
     }
 
     if (focusedDateChanged) {
       _previousFocusedDate = currentFocusedDate;
-      
+
       // Fire onFocusedDateChanged callback
       widget.onFocusedDateChanged?.call(currentFocusedDate);
-      
+
       // Fire onFocusedRangeChanged callback (single date range when focused)
       if (currentFocusedDate != null) {
         final focusedRange = DateTimeRange(
@@ -839,7 +845,10 @@ class _MCalMonthViewState extends State<MCalMonthView> {
             currentFocusedDate.year,
             currentFocusedDate.month,
             currentFocusedDate.day,
-            23, 59, 59, 999,
+            23,
+            59,
+            59,
+            999,
           ),
         );
         widget.onFocusedRangeChanged?.call(focusedRange);
@@ -878,27 +887,30 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     _isProgrammaticPageChange = true;
 
     if (shouldAnimate && widget.enableAnimations) {
-      _pageController.animateToPage(
-        targetPageIndex,
-        duration: widget.animationDuration,
-        curve: widget.animationCurve,
-      ).then((_) {
-        _isProgrammaticPageChange = false;
-      });
+      _pageController
+          .animateToPage(
+            targetPageIndex,
+            duration: widget.animationDuration,
+            curve: widget.animationCurve,
+          )
+          .then((_) {
+            _isProgrammaticPageChange = false;
+          });
     } else {
       _pageController.jumpToPage(targetPageIndex);
       _isProgrammaticPageChange = false;
     }
   }
-  
+
   /// Safely schedules a setState, deferring to post-frame if in build phase.
   void _scheduleSetState(VoidCallback fn) {
     if (!mounted) return;
-    
+
     final phase = SchedulerBinding.instance.schedulerPhase;
-    final isBuildPhase = phase == SchedulerPhase.persistentCallbacks ||
+    final isBuildPhase =
+        phase == SchedulerPhase.persistentCallbacks ||
         phase == SchedulerPhase.midFrameMicrotasks;
-    
+
     if (isBuildPhase) {
       // Defer to next frame to avoid setState during build
       SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -910,7 +922,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       setState(fn);
     }
   }
-  
+
   /// Fires the onViewableRangeChanged callback with the current month's range.
   void _fireViewableRangeChanged() {
     final monthRange = getMonthRange(_currentMonth);
@@ -925,7 +937,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final locale = widget.locale ?? Localizations.localeOf(context);
     final localizations = MCalLocalizations();
     final monthYearText = localizations.formatMonthYear(month, locale);
-    
+
     // Announce the new month to screen readers
     // Use sendAnnouncement for compatibility with multiple windows
     final view = View.of(context);
@@ -1012,9 +1024,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // Task 9: Determine scroll physics based on swipe navigation setting and boundaries
     final ScrollPhysics physics;
     if (widget.enableSwipeNavigation) {
-      // Use custom boundary physics that provides bounce-back at min/max dates
+      // Use custom boundary physics with snappy (non-bouncy) page snapping
       physics = _MCalBoundaryScrollPhysics(
-        parent: const PageScrollPhysics(),
+        parent: const _MCalSnappyPageScrollPhysics(),
         minPageIndex: _minPageIndex,
         maxPageIndex: _maxPageIndex,
       );
@@ -1032,11 +1044,16 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       physics: physics,
       onPageChanged: _onPageChanged,
       // Determine scroll direction based on swipe navigation direction setting
-      scrollDirection: widget.swipeNavigationDirection == MCalSwipeNavigationDirection.vertical
+      scrollDirection:
+          widget.swipeNavigationDirection ==
+              MCalSwipeNavigationDirection.vertical
           ? Axis.vertical
           : Axis.horizontal,
       // Reverse for RTL languages when horizontal
-      reverse: isRTL && widget.swipeNavigationDirection == MCalSwipeNavigationDirection.horizontal,
+      reverse:
+          isRTL &&
+          widget.swipeNavigationDirection ==
+              MCalSwipeNavigationDirection.horizontal,
       itemBuilder: (context, pageIndex) {
         // Convert page index to month and build the grid for that month
         final month = _pageIndexToMonth(pageIndex);
@@ -1055,19 +1072,22 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           cellInteractivityCallback: widget.cellInteractivityCallback,
           onCellTap: widget.onCellTap,
           onCellLongPress: widget.onCellLongPress,
+          onDateLabelTap: widget.onDateLabelTap,
+          onDateLabelLongPress: widget.onDateLabelLongPress,
           onEventTap: widget.onEventTap,
           onEventLongPress: widget.onEventLongPress,
           onHoverCell: widget.onHoverCell,
           onHoverEvent: widget.onHoverEvent,
-          maxVisibleEvents: widget.maxVisibleEvents,
+          maxVisibleEventsPerDay: widget.maxVisibleEventsPerDay,
           onOverflowTap: widget.onOverflowTap,
           onOverflowLongPress: widget.onOverflowLongPress,
           showWeekNumbers: widget.showWeekNumbers,
           weekNumberBuilder: widget.weekNumberBuilder,
           autoFocusOnCellTap: widget.autoFocusOnCellTap,
           getEventsForMonth: _getEventsForMonth,
-          renderMultiDayEventsAsContiguous: widget.renderMultiDayEventsAsContiguous,
-          multiDayEventTileBuilder: widget.multiDayEventTileBuilder,
+          // Week layout customization
+          weekLayoutBuilder: widget.weekLayoutBuilder,
+          overflowIndicatorBuilder: widget.overflowIndicatorBuilder,
           // Drag-and-drop
           enableDragAndDrop: widget.enableDragAndDrop,
           draggedTileBuilder: widget.draggedTileBuilder,
@@ -1089,12 +1109,15 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final textDirection = isRTL ? TextDirection.rtl : TextDirection.ltr;
     return Directionality(textDirection: textDirection, child: pageView);
   }
-  /// Resolves the calendar theme from widget, context, or defaults.
-  MCalThemeData _resolveTheme(BuildContext context) {
-    final theme = Theme.of(context);
-    final extension = theme.extension<MCalThemeData>();
 
-    return widget.theme ?? extension ?? MCalThemeData.fromTheme(theme);
+  /// Resolves the calendar theme from context.
+  ///
+  /// Uses the fallback chain in [MCalTheme.of]:
+  /// 1. [MCalTheme] ancestor widget
+  /// 2. [Theme.of(context).extension<MCalThemeData>()]
+  /// 3. [MCalThemeData.fromTheme(Theme.of(context))]
+  MCalThemeData _resolveTheme(BuildContext context) {
+    return MCalTheme.of(context);
   }
 
   @override
@@ -1137,7 +1160,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     if (widget.controller.hasError) {
       final error = widget.controller.error;
       final retryCallback = widget.controller.retryLoad;
-      
+
       if (widget.errorBuilder != null) {
         overlay = widget.errorBuilder!(
           context,
@@ -1160,26 +1183,25 @@ class _MCalMonthViewState extends State<MCalMonthView> {
 
     // Use Stack to layer overlays on top of the calendar
     final content = Stack(
-      children: [
-        calendarContent,
-        if (overlay != null) overlay,
-      ],
+      children: [calendarContent, if (overlay != null) overlay],
     );
 
     // Generate default semantics label if not provided
     final localizations = MCalLocalizations();
-    final defaultSemanticsLabel = '${localizations.getLocalizedString('calendar', locale)}, ${localizations.formatMonthYear(_currentMonth, locale)}';
+    final defaultSemanticsLabel =
+        '${localizations.getLocalizedString('calendar', locale)}, ${localizations.formatMonthYear(_currentMonth, locale)}';
     final semanticsLabel = widget.semanticsLabel ?? defaultSemanticsLabel;
 
     // Wrap in Focus widget for keyboard navigation and drag cancellation (Task 21)
-    // Use Listener to capture pointer events and request focus without 
+    // Use Listener to capture pointer events and request focus without
     // competing with child gesture detectors
     // Wrap entire widget tree with MCalTheme so descendants can access theme via MCalTheme.of(context)
     // Use LayoutBuilder to get the calendar size for edge detection during drag
     // Enable key events if keyboard navigation OR drag-and-drop is enabled
     // (drag-and-drop needs Escape key for cancellation)
-    final enableKeyEvents = widget.enableKeyboardNavigation || widget.enableDragAndDrop;
-    
+    final enableKeyEvents =
+        widget.enableKeyboardNavigation || widget.enableDragAndDrop;
+
     return MCalTheme(
       data: theme,
       child: Semantics(
@@ -1195,7 +1217,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
                 constraints.maxWidth,
                 constraints.maxHeight,
               );
-              
+
               return Listener(
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (_) {
@@ -1259,9 +1281,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // Get or initialize the focused date
-    DateTime focusedDate = widget.controller.focusedDate ?? 
-        widget.controller.displayDate;
-    
+    DateTime focusedDate =
+        widget.controller.focusedDate ?? widget.controller.displayDate;
+
     // If no focused date was set, set it now
     if (widget.controller.focusedDate == null) {
       widget.controller.setFocusedDate(focusedDate);
@@ -1302,9 +1324,13 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       final prevMonth = focusedDate.month == 1
           ? DateTime(focusedDate.year - 1, 12, 1)
           : DateTime(focusedDate.year, focusedDate.month - 1, 1);
-      final lastDayOfPrevMonth = DateTime(prevMonth.year, prevMonth.month + 1, 0).day;
-      final targetDay = focusedDate.day > lastDayOfPrevMonth 
-          ? lastDayOfPrevMonth 
+      final lastDayOfPrevMonth = DateTime(
+        prevMonth.year,
+        prevMonth.month + 1,
+        0,
+      ).day;
+      final targetDay = focusedDate.day > lastDayOfPrevMonth
+          ? lastDayOfPrevMonth
           : focusedDate.day;
       newFocusedDate = DateTime(prevMonth.year, prevMonth.month, targetDay);
       handled = true;
@@ -1316,17 +1342,21 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       final nextMonth = focusedDate.month == 12
           ? DateTime(focusedDate.year + 1, 1, 1)
           : DateTime(focusedDate.year, focusedDate.month + 1, 1);
-      final lastDayOfNextMonth = DateTime(nextMonth.year, nextMonth.month + 1, 0).day;
-      final targetDay = focusedDate.day > lastDayOfNextMonth 
-          ? lastDayOfNextMonth 
+      final lastDayOfNextMonth = DateTime(
+        nextMonth.year,
+        nextMonth.month + 1,
+        0,
+      ).day;
+      final targetDay = focusedDate.day > lastDayOfNextMonth
+          ? lastDayOfNextMonth
           : focusedDate.day;
       newFocusedDate = DateTime(nextMonth.year, nextMonth.month, targetDay);
       handled = true;
     }
     // Enter/Space - trigger cell tap
-    else if (key == LogicalKeyboardKey.enter || 
-             key == LogicalKeyboardKey.space ||
-             key == LogicalKeyboardKey.numpadEnter) {
+    else if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.space ||
+        key == LogicalKeyboardKey.numpadEnter) {
       _triggerCellTapForFocusedDate(focusedDate);
       return KeyEventResult.handled;
     }
@@ -1361,8 +1391,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       widget.controller.setFocusedDate(newFocusedDate);
 
       // Auto-navigate if focus moves outside visible month
-      final newFocusMonth = DateTime(newFocusedDate.year, newFocusedDate.month, 1);
-      if (newFocusMonth.year != _currentMonth.year || 
+      final newFocusMonth = DateTime(
+        newFocusedDate.year,
+        newFocusedDate.month,
+        1,
+      );
+      if (newFocusMonth.year != _currentMonth.year ||
           newFocusMonth.month != _currentMonth.month) {
         _navigateToMonth(newFocusMonth);
       }
@@ -1383,14 +1417,19 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         event.start.day,
       );
       final eventEnd = DateTime(event.end.year, event.end.month, event.end.day);
-      final checkDate = DateTime(focusedDate.year, focusedDate.month, focusedDate.day);
+      final checkDate = DateTime(
+        focusedDate.year,
+        focusedDate.month,
+        focusedDate.day,
+      );
       return (checkDate.isAtSameMomentAs(eventStart) ||
           checkDate.isAtSameMomentAs(eventEnd) ||
           (checkDate.isAfter(eventStart) && checkDate.isBefore(eventEnd)));
     }).toList();
 
     // Determine if it's in the current month
-    final isCurrentMonth = focusedDate.year == _currentMonth.year &&
+    final isCurrentMonth =
+        focusedDate.year == _currentMonth.year &&
         focusedDate.month == _currentMonth.month;
 
     // Fire the callback
@@ -1476,7 +1515,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Updates drag state tracking and prepares the drag handler.
   void _handleDragStarted(MCalCalendarEvent event, DateTime sourceDate) {
     if (!widget.enableDragAndDrop) return;
-    
+
     _isDragActive = true;
     _ensureDragHandler.startDrag(event, sourceDate);
   }
@@ -1502,7 +1541,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Checks for edge proximity based on the current drag position.
   void _handleDragPositionUpdate(Offset globalPosition, Size calendarSize) {
     if (!widget.enableDragAndDrop || !_isDragActive) return;
-    
+
     _checkEdgeProximity(globalPosition, calendarSize);
   }
 
@@ -1512,21 +1551,22 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// starts the edge navigation timer via the drag handler.
   void _checkEdgeProximity(Offset globalPosition, Size calendarSize) {
     if (!_isDragActive || _dragHandler == null) return;
-    
+
     // Get the local position within the calendar widget
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
-    
+
     final localPosition = renderBox.globalToLocal(globalPosition);
-    
+
     // Check if near left edge
     final nearLeftEdge = localPosition.dx < _edgeProximityThreshold;
-    
+
     // Check if near right edge
-    final nearRightEdge = localPosition.dx > (calendarSize.width - _edgeProximityThreshold);
-    
+    final nearRightEdge =
+        localPosition.dx > (calendarSize.width - _edgeProximityThreshold);
+
     final nearEdge = nearLeftEdge || nearRightEdge;
-    
+
     if (nearEdge) {
       // Check boundary restrictions before allowing navigation
       if (nearLeftEdge) {
@@ -1565,24 +1605,24 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Checks if navigation to previous month is allowed (minDate restriction).
   bool _canNavigateToPreviousMonth() {
     if (widget.minDate == null) return true;
-    
+
     final previousMonth = _currentMonth.month == 1
         ? DateTime(_currentMonth.year - 1, 12, 1)
         : DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
     final minMonth = DateTime(widget.minDate!.year, widget.minDate!.month, 1);
-    
+
     return !previousMonth.isBefore(minMonth);
   }
 
   /// Checks if navigation to next month is allowed (maxDate restriction).
   bool _canNavigateToNextMonth() {
     if (widget.maxDate == null) return true;
-    
+
     final nextMonth = _currentMonth.month == 12
         ? DateTime(_currentMonth.year + 1, 1, 1)
         : DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
     final maxMonth = DateTime(widget.maxDate!.year, widget.maxDate!.month, 1);
-    
+
     return !nextMonth.isAfter(maxMonth);
   }
 }
@@ -1692,13 +1732,97 @@ class _MCalBoundaryScrollPhysics extends ScrollPhysics {
     return super.createBallisticSimulation(position, velocity);
   }
 
-  /// Spring description for bounce-back animation.
+  /// Spring description for page settling animation.
+  ///
+  /// Uses a critically-damped spring for smooth settling without oscillation.
+  /// Critical damping = 2 * sqrt(stiffness * mass)
+  /// For mass=1.0, stiffness=100: critical damping ≈ 20
+  /// Using slightly higher (over-damped) for faster settling.
   @override
-  SpringDescription get spring => const SpringDescription(
-    mass: 0.5,
-    stiffness: 100.0,
-    damping: 1.0,
-  );
+  SpringDescription get spring =>
+      const SpringDescription(mass: 1.0, stiffness: 100.0, damping: 20.0);
+}
+
+/// Custom page scroll physics with snappy (non-bouncy) settling and
+/// lower threshold for page changes.
+///
+/// Extends [PageScrollPhysics] to provide page snapping behavior
+/// while using a critically-damped spring to eliminate oscillation.
+/// Also reduces the distance threshold needed to trigger a page change.
+class _MCalSnappyPageScrollPhysics extends PageScrollPhysics {
+  /// The fraction of the page width that must be dragged to trigger a page change.
+  /// Default PageScrollPhysics uses ~0.5 (50%). We use 0.3 (30%) for easier swiping.
+  static const double _pageChangeThreshold = 0.3;
+
+  const _MCalSnappyPageScrollPhysics({super.parent});
+
+  @override
+  _MCalSnappyPageScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return _MCalSnappyPageScrollPhysics(parent: buildParent(ancestor));
+  }
+
+  /// Uses a critically-damped spring for smooth, non-bouncy settling.
+  @override
+  SpringDescription get spring =>
+      const SpringDescription(mass: 1.0, stiffness: 100.0, damping: 20.0);
+
+  /// Lower the minimum fling velocity to make page changes easier with quick swipes.
+  @override
+  double get minFlingVelocity => 50.0; // Default is ~365
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) {
+    // If there's no viewport, use default behavior
+    if (position.viewportDimension == 0) {
+      return super.createBallisticSimulation(position, velocity);
+    }
+
+    final double pageSize = position.viewportDimension;
+    final double currentPage = position.pixels / pageSize;
+    final int currentPageFloor = currentPage.floor();
+
+    // Calculate how far into the current page we are (0.0 to 1.0)
+    final double pageFraction = currentPage - currentPageFloor;
+
+    // Determine target page based on velocity and position
+    int targetPage;
+
+    // If velocity is significant, use it to determine direction
+    if (velocity.abs() > minFlingVelocity) {
+      targetPage = velocity > 0 ? currentPageFloor + 1 : currentPageFloor;
+    } else {
+      // Use position-based threshold
+      if (pageFraction > (1.0 - _pageChangeThreshold)) {
+        // Crossed threshold to next page
+        targetPage = currentPageFloor + 1;
+      } else if (pageFraction < _pageChangeThreshold) {
+        // Still on current page
+        targetPage = currentPageFloor;
+      } else {
+        // In the middle - go to nearest page
+        targetPage = currentPage.round();
+      }
+    }
+
+    final double targetPixels = targetPage * pageSize;
+
+    // If we're already at the target, no simulation needed
+    if ((position.pixels - targetPixels).abs() < tolerance.distance) {
+      return null;
+    }
+
+    // Create a spring simulation to the target
+    return ScrollSpringSimulation(
+      spring,
+      position.pixels,
+      targetPixels,
+      velocity,
+      tolerance: tolerance,
+    );
+  }
 }
 
 /// Widget for rendering a single month page in the PageView.
@@ -1730,52 +1854,57 @@ class _MonthPageWidget extends StatelessWidget {
   final int firstDayOfWeek;
 
   /// Builder callbacks
-  final Widget Function(BuildContext, MCalDayCellContext, Widget)? dayCellBuilder;
-  final Widget Function(BuildContext, MCalEventTileContext, Widget)? eventTileBuilder;
-  final Widget Function(BuildContext, MCalDateLabelContext, String)? dateLabelBuilder;
+  final Widget Function(BuildContext, MCalDayCellContext, Widget)?
+  dayCellBuilder;
+  final Widget Function(BuildContext, MCalEventTileContext, Widget)?
+  eventTileBuilder;
+  final Widget Function(BuildContext, MCalDateLabelContext, String)?
+  dateLabelBuilder;
   final String? dateFormat;
-  final bool Function(BuildContext, MCalCellInteractivityDetails)? cellInteractivityCallback;
+  final bool Function(BuildContext, MCalCellInteractivityDetails)?
+  cellInteractivityCallback;
   final void Function(BuildContext, MCalCellTapDetails)? onCellTap;
   final void Function(BuildContext, MCalCellTapDetails)? onCellLongPress;
+  final void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelTap;
+  final void Function(BuildContext, MCalDateLabelTapDetails)?
+  onDateLabelLongPress;
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final ValueChanged<MCalDayCellContext?>? onHoverCell;
   final ValueChanged<MCalEventTileContext?>? onHoverEvent;
-  final int maxVisibleEvents;
+  final int maxVisibleEventsPerDay;
   final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap;
-  final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowLongPress;
+  final void Function(BuildContext, MCalOverflowTapDetails)?
+  onOverflowLongPress;
   final bool showWeekNumbers;
   final Widget Function(BuildContext, MCalWeekNumberContext)? weekNumberBuilder;
   final bool autoFocusOnCellTap;
-  
+
   /// Function to get events for a specific month.
   final List<MCalCalendarEvent> Function(DateTime month) getEventsForMonth;
-  
-  /// Whether to render multi-day events as contiguous tiles.
-  final bool renderMultiDayEventsAsContiguous;
-  
-  /// Builder for custom multi-day event tile rendering.
-  final Widget Function(BuildContext, MCalMultiDayTileDetails)?
-      multiDayEventTileBuilder;
+
+  /// Builder callback for customizing week row event layout.
+  final MCalWeekLayoutBuilder? weekLayoutBuilder;
+
+  /// Builder callback for customizing overflow indicator rendering.
+  final Widget Function(BuildContext, MCalOverflowIndicatorContext, Widget)?
+  overflowIndicatorBuilder;
 
   // Drag-and-drop parameters
   final bool enableDragAndDrop;
   final Widget Function(BuildContext, MCalDraggedTileDetails)?
-      draggedTileBuilder;
-  final Widget Function(BuildContext, MCalDragSourceDetails)?
-      dragSourceBuilder;
-  final Widget Function(BuildContext, MCalDragTargetDetails)?
-      dragTargetBuilder;
+  draggedTileBuilder;
+  final Widget Function(BuildContext, MCalDragSourceDetails)? dragSourceBuilder;
+  final Widget Function(BuildContext, MCalDragTargetDetails)? dragTargetBuilder;
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
-      dropTargetCellBuilder;
+  dropTargetCellBuilder;
   final bool Function(BuildContext, MCalDragWillAcceptDetails)?
-      onDragWillAccept;
-  final bool Function(BuildContext, MCalEventDroppedDetails)?
-      onEventDropped;
+  onDragWillAccept;
+  final bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped;
 
   // Drag lifecycle callbacks (Task 21)
   final void Function(MCalCalendarEvent event, DateTime sourceDate)?
-      onDragStartedCallback;
+  onDragStartedCallback;
   final void Function(bool wasAccepted)? onDragEndedCallback;
   final VoidCallback? onDragCanceledCallback;
 
@@ -1795,18 +1924,21 @@ class _MonthPageWidget extends StatelessWidget {
     this.cellInteractivityCallback,
     this.onCellTap,
     this.onCellLongPress,
+    this.onDateLabelTap,
+    this.onDateLabelLongPress,
     this.onEventTap,
     this.onEventLongPress,
     this.onHoverCell,
     this.onHoverEvent,
-    this.maxVisibleEvents = 3,
+    this.maxVisibleEventsPerDay = 5,
     this.onOverflowTap,
     this.onOverflowLongPress,
     this.showWeekNumbers = false,
     this.weekNumberBuilder,
     this.autoFocusOnCellTap = true,
-    this.renderMultiDayEventsAsContiguous = true,
-    this.multiDayEventTileBuilder,
+    // Week layout customization
+    this.weekLayoutBuilder,
+    this.overflowIndicatorBuilder,
     // Drag-and-drop
     this.enableDragAndDrop = false,
     this.draggedTileBuilder,
@@ -1827,8 +1959,9 @@ class _MonthPageWidget extends StatelessWidget {
     final dates = generateMonthDates(month, firstDayOfWeek);
 
     // Get events for this specific month (may differ from currentDisplayMonth)
-    final monthEvents = (month.year == currentDisplayMonth.year && 
-                         month.month == currentDisplayMonth.month)
+    final monthEvents =
+        (month.year == currentDisplayMonth.year &&
+            month.month == currentDisplayMonth.month)
         ? events
         : getEventsForMonth(month);
 
@@ -1838,30 +1971,27 @@ class _MonthPageWidget extends StatelessWidget {
       weeks.add(dates.sublist(i, i + 7));
     }
 
-    // Calculate multi-day event layouts if contiguous rendering is enabled
-    List<MCalMultiDayEventLayout>? multiDayLayouts;
-    if (renderMultiDayEventsAsContiguous) {
-      multiDayLayouts = MCalMultiDayRenderer.calculateLayouts(
-        events: monthEvents,
-        monthStart: month,
-        firstDayOfWeek: firstDayOfWeek,
-      );
-    }
+    // Calculate multi-day event layouts
+    final multiDayLayouts = MCalMultiDayRenderer.calculateLayouts(
+      events: monthEvents,
+      monthStart: month,
+      firstDayOfWeek: firstDayOfWeek,
+    );
 
     return Column(
       children: weeks.asMap().entries.map((entry) {
         final weekRowIndex = entry.key;
         final weekDates = entry.value;
-        
+
         // Get layouts for this week row
-        List<MCalMultiDayEventLayout>? weekLayouts;
-        if (multiDayLayouts != null) {
-          weekLayouts = multiDayLayouts
-              .where((layout) => layout.rowSegments
-                  .any((segment) => segment.weekRowIndex == weekRowIndex))
-              .toList();
-        }
-        
+        final weekLayouts = multiDayLayouts
+            .where(
+              (layout) => layout.rowSegments.any(
+                (segment) => segment.weekRowIndex == weekRowIndex,
+              ),
+            )
+            .toList();
+
         return Expanded(
           child: _WeekRowWidget(
             dates: weekDates,
@@ -1880,18 +2010,21 @@ class _MonthPageWidget extends StatelessWidget {
             cellInteractivityCallback: cellInteractivityCallback,
             onCellTap: onCellTap,
             onCellLongPress: onCellLongPress,
+            onDateLabelTap: onDateLabelTap,
+            onDateLabelLongPress: onDateLabelLongPress,
             onEventTap: onEventTap,
             onEventLongPress: onEventLongPress,
             onHoverCell: onHoverCell,
             onHoverEvent: onHoverEvent,
             locale: locale,
-            maxVisibleEvents: maxVisibleEvents,
+            maxVisibleEventsPerDay: maxVisibleEventsPerDay,
             onOverflowTap: onOverflowTap,
             onOverflowLongPress: onOverflowLongPress,
             showWeekNumbers: showWeekNumbers,
             weekNumberBuilder: weekNumberBuilder,
-            renderMultiDayEventsAsContiguous: renderMultiDayEventsAsContiguous,
-            multiDayEventTileBuilder: multiDayEventTileBuilder,
+            // Week layout customization
+            weekLayoutBuilder: weekLayoutBuilder,
+            overflowIndicatorBuilder: overflowIndicatorBuilder,
             weekRowIndex: weekRowIndex,
             multiDayLayouts: weekLayouts,
             // Drag-and-drop
@@ -1972,11 +2105,9 @@ class _WeekNumberCell extends StatelessWidget {
       child: Center(
         child: Text(
           '$weekNumber',
-          style: theme.weekNumberTextStyle ??
-              TextStyle(
-                fontSize: 11,
-                color: Colors.grey.shade600,
-              ),
+          style:
+              theme.weekNumberTextStyle ??
+              TextStyle(fontSize: 11, color: Colors.grey.shade600),
         ),
       ),
     );
@@ -1998,9 +2129,7 @@ class _LoadingOverlay extends StatelessWidget {
     return Positioned.fill(
       child: Container(
         color: Colors.black.withValues(alpha: 0.3),
-        child: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: const Center(child: CircularProgressIndicator()),
       ),
     );
   }
@@ -2053,9 +2182,9 @@ class _ErrorOverlay extends StatelessWidget {
                   Text(
                     errorMessage,
                     textAlign: TextAlign.center,
-                    style: theme.cellTextStyle?.copyWith(
-                      fontSize: 14,
-                    ) ?? const TextStyle(fontSize: 14),
+                    style:
+                        theme.cellTextStyle?.copyWith(fontSize: 14) ??
+                        const TextStyle(fontSize: 14),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
@@ -2082,58 +2211,61 @@ class _WeekRowWidget extends StatelessWidget {
   final DateTime? focusedDate;
   final bool autoFocusOnCellTap;
   final ValueChanged<DateTime>? onSetFocusedDate;
-  final Widget Function(BuildContext, MCalDayCellContext, Widget)? dayCellBuilder;
+  final Widget Function(BuildContext, MCalDayCellContext, Widget)?
+  dayCellBuilder;
   final Widget Function(BuildContext, MCalEventTileContext, Widget)?
   eventTileBuilder;
   final Widget Function(BuildContext, MCalDateLabelContext, String)?
   dateLabelBuilder;
   final String? dateFormat;
-  final bool Function(BuildContext, MCalCellInteractivityDetails)? cellInteractivityCallback;
+  final bool Function(BuildContext, MCalCellInteractivityDetails)?
+  cellInteractivityCallback;
   final void Function(BuildContext, MCalCellTapDetails)? onCellTap;
   final void Function(BuildContext, MCalCellTapDetails)? onCellLongPress;
+  final void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelTap;
+  final void Function(BuildContext, MCalDateLabelTapDetails)?
+  onDateLabelLongPress;
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final ValueChanged<MCalDayCellContext?>? onHoverCell;
   final ValueChanged<MCalEventTileContext?>? onHoverEvent;
   final Locale locale;
-  final int maxVisibleEvents;
+  final int maxVisibleEventsPerDay;
   final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap;
-  final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowLongPress;
+  final void Function(BuildContext, MCalOverflowTapDetails)?
+  onOverflowLongPress;
   final bool showWeekNumbers;
   final Widget Function(BuildContext, MCalWeekNumberContext)? weekNumberBuilder;
-  
-  /// Whether to render multi-day events as contiguous tiles.
-  final bool renderMultiDayEventsAsContiguous;
-  
-  /// Builder for custom multi-day event tile rendering.
-  final Widget Function(BuildContext, MCalMultiDayTileDetails)?
-      multiDayEventTileBuilder;
-  
+
+  /// Builder callback for customizing week row event layout.
+  final MCalWeekLayoutBuilder? weekLayoutBuilder;
+
+  /// Builder callback for customizing overflow indicator rendering.
+  final Widget Function(BuildContext, MCalOverflowIndicatorContext, Widget)?
+  overflowIndicatorBuilder;
+
   /// The index of this week row within the month grid.
   final int weekRowIndex;
-  
+
   /// Multi-day event layouts for this week row.
   final List<MCalMultiDayEventLayout>? multiDayLayouts;
 
   // Drag-and-drop parameters
   final bool enableDragAndDrop;
   final Widget Function(BuildContext, MCalDraggedTileDetails)?
-      draggedTileBuilder;
-  final Widget Function(BuildContext, MCalDragSourceDetails)?
-      dragSourceBuilder;
-  final Widget Function(BuildContext, MCalDragTargetDetails)?
-      dragTargetBuilder;
+  draggedTileBuilder;
+  final Widget Function(BuildContext, MCalDragSourceDetails)? dragSourceBuilder;
+  final Widget Function(BuildContext, MCalDragTargetDetails)? dragTargetBuilder;
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
-      dropTargetCellBuilder;
+  dropTargetCellBuilder;
   final bool Function(BuildContext, MCalDragWillAcceptDetails)?
-      onDragWillAccept;
-  final bool Function(BuildContext, MCalEventDroppedDetails)?
-      onEventDropped;
+  onDragWillAccept;
+  final bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped;
   final MCalEventController controller;
 
   // Drag lifecycle callbacks (Task 21)
   final void Function(MCalCalendarEvent event, DateTime sourceDate)?
-      onDragStartedCallback;
+  onDragStartedCallback;
   final void Function(bool wasAccepted)? onDragEndedCallback;
   final VoidCallback? onDragCanceledCallback;
 
@@ -2152,18 +2284,21 @@ class _WeekRowWidget extends StatelessWidget {
     this.cellInteractivityCallback,
     this.onCellTap,
     this.onCellLongPress,
+    this.onDateLabelTap,
+    this.onDateLabelLongPress,
     this.onEventTap,
     this.onEventLongPress,
     this.onHoverCell,
     this.onHoverEvent,
     required this.locale,
-    this.maxVisibleEvents = 3,
+    this.maxVisibleEventsPerDay = 5,
     this.onOverflowTap,
     this.onOverflowLongPress,
     this.showWeekNumbers = false,
     this.weekNumberBuilder,
-    this.renderMultiDayEventsAsContiguous = true,
-    this.multiDayEventTileBuilder,
+    // Week layout customization
+    this.weekLayoutBuilder,
+    this.overflowIndicatorBuilder,
     this.weekRowIndex = 0,
     this.multiDayLayouts,
     // Drag-and-drop
@@ -2181,187 +2316,387 @@ class _WeekRowWidget extends StatelessWidget {
     this.onDragCanceledCallback,
   });
 
-  /// Total height of the date label including top padding.
-  /// This should match the value used in _DayCellWidget (20.0 label + 4.0 top padding).
-  static const double dateLabelHeightWithPadding = 24.0;
-
   @override
   Widget build(BuildContext context) {
     // Determine text direction for RTL support
     final textDirection = Directionality.of(context);
     final isRTL = textDirection == TextDirection.rtl;
-    
-    // Calculate the layout frame using greedy first-fit algorithm
-    MCalWeekEventLayoutFrame? layoutFrame;
-    if (renderMultiDayEventsAsContiguous && 
-        multiDayLayouts != null && 
-        multiDayLayouts!.isNotEmpty) {
-      layoutFrame = MCalMultiDayRenderer.calculateWeekLayout(
-        multiDayLayouts: multiDayLayouts!,
-        weekDates: dates,
-        weekRowIndex: weekRowIndex,
-      );
-    }
-    
-    // Get row count from layout frame
-    final multiDayRowCount = layoutFrame?.totalRows ?? 0;
-    
-    // Get theme-based tile height (slot height including margins)
-    final tileHeight = theme.eventTileHeight ?? 20.0;
-    
-    // Calculate the height needed for multi-day events area (below date label)
-    // Each row = tileHeight (margins are inside the tile, no additional spacing)
-    final multiDayAreaHeight = multiDayRowCount > 0
-        ? multiDayRowCount * tileHeight
-        : 0.0;
-    
-    // No additional offset needed - dateLabelHeightWithPadding includes the spacing
-    const multiDayTopOffset = 0.0;
 
-    // Build the day cells
-    final dayCells = dates.asMap().entries.map((entry) {
-        final dayIndex = entry.key;
-        final date = entry.value;
-        final isCurrentMonth =
-            date.year == currentMonth.year && date.month == currentMonth.month;
-        final isToday = _isToday(date);
-        
-        // Get all events for this date (used for callbacks)
-        final allDayEvents = _getEventsForDate(date);
-        
-        // Filter out multi-day events for rendering if contiguous rendering is enabled
-        // Multi-day events are rendered separately as contiguous tiles
-        final eventsForRendering = renderMultiDayEventsAsContiguous
-            ? allDayEvents.where((e) => !MCalMultiDayRenderer.isMultiDay(e)).toList()
-            : allDayEvents;
-        
-        // Check if this date is focused
-        final isFocused = focusedDate != null &&
-            date.year == focusedDate!.year &&
-            date.month == focusedDate!.month &&
-            date.day == focusedDate!.day;
-        
-        // Calculate multi-day reserved height for this specific day column
-        // Uses per-column occupancy from the layout frame
-        double dayMultiDayReservedHeight = 0.0;
-        if (layoutFrame != null && multiDayAreaHeight > 0) {
-          final rowsAtColumn = layoutFrame.rowCountAtColumn(dayIndex);
-          if (rowsAtColumn > 0) {
-            // Calculate height based on how many rows occupy this column
-            // No additional spacing - margins are inside tiles
-            dayMultiDayReservedHeight = rowsAtColumn * tileHeight;
-          }
-        }
-
-        return Expanded(
-          child: _DayCellWidget(
-            date: date,
-            displayMonth: currentMonth,
-            isCurrentMonth: isCurrentMonth,
-            isToday: isToday,
-            isSelectable: true,
-            isFocused: isFocused,
-            autoFocusOnCellTap: autoFocusOnCellTap,
-            onSetFocusedDate: onSetFocusedDate,
-            events: allDayEvents, // All events for callbacks
-            eventsForRendering: eventsForRendering, // Filtered events for tile rendering
-            theme: theme,
-            dayCellBuilder: dayCellBuilder,
-            eventTileBuilder: eventTileBuilder,
-            dateLabelBuilder: dateLabelBuilder,
-            dateFormat: dateFormat,
-            cellInteractivityCallback: cellInteractivityCallback,
-            onCellTap: onCellTap,
-            onCellLongPress: onCellLongPress,
-            onEventTap: onEventTap,
-            onEventLongPress: onEventLongPress,
-            onHoverCell: onHoverCell,
-            onHoverEvent: onHoverEvent,
-            locale: locale,
-            maxVisibleEvents: maxVisibleEvents,
-            onOverflowTap: onOverflowTap,
-            onOverflowLongPress: onOverflowLongPress,
-            // Use per-column reserved height for accurate single-day event offsetting
-            multiDayReservedHeight: dayMultiDayReservedHeight,
-            // Drag-and-drop
-            enableDragAndDrop: enableDragAndDrop,
-            draggedTileBuilder: draggedTileBuilder,
-            dragSourceBuilder: dragSourceBuilder,
-            dragTargetBuilder: dragTargetBuilder,
-            dropTargetCellBuilder: dropTargetCellBuilder,
-            onDragWillAccept: onDragWillAccept,
-            onEventDropped: onEventDropped,
-            controller: controller,
-            // Drag lifecycle callbacks (Task 21)
-            onDragStartedCallback: onDragStartedCallback,
-            onDragEndedCallback: onDragEndedCallback,
-            onDragCanceledCallback: onDragCanceledCallback,
-          ),
-        );
-      }).toList();
-
-    // Calculate week number from the first day of the week
-    final firstDayOfWeek = dates.first;
-    final weekNumber = getISOWeekNumber(firstDayOfWeek);
+    // Calculate week number for week number column
+    final firstDayOfWeekDate = dates.first;
+    final weekNumber = getISOWeekNumber(firstDayOfWeekDate);
 
     // Build week number cell if needed
     Widget? weekNumberCell;
     if (showWeekNumbers) {
       weekNumberCell = _WeekNumberCell(
         weekNumber: weekNumber,
-        firstDayOfWeek: firstDayOfWeek,
+        firstDayOfWeek: firstDayOfWeekDate,
         theme: theme,
         weekNumberBuilder: weekNumberBuilder,
       );
     }
 
-    // Build the base row with day cells (and optional week number)
-    final List<Widget> rowChildren;
-    if (weekNumberCell != null) {
-      rowChildren = isRTL
-          ? [...dayCells, weekNumberCell]
-          : [weekNumberCell, ...dayCells];
-    } else {
-      rowChildren = dayCells;
-    }
+    // Check if we're currently dragging (for Layer 3)
+    // TODO: Integrate with drag state when drag handler is available
+    const isDragging = false;
 
-    final dayRow = Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: rowChildren,
-    );
+    // Build the 3-layer Stack architecture
+    return ClipRect(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Calculate column widths (excluding week number column)
+          final weekNumberWidth = showWeekNumbers
+              ? _WeekNumberCell.columnWidth
+              : 0.0;
+          final availableWidth = constraints.maxWidth - weekNumberWidth;
+          final dayWidth = availableWidth / 7;
+          final columnWidths = List.filled(7, dayWidth);
 
-    // If multi-day contiguous rendering is enabled and we have a layout frame,
-    // overlay the multi-day tiles on top of the day row
-    if (renderMultiDayEventsAsContiguous && layoutFrame != null && multiDayRowCount > 0) {
-      return ClipRect(
-        child: Stack(
-          clipBehavior: Clip.hardEdge,
-          children: [
-            // Day cells fill the entire row
-            dayRow,
-            // Multi-day event tiles positioned below date labels
-            // Uses dateLabelHeightWithPadding to align with single-day tiles in cells
-            Positioned(
-              top: dateLabelHeightWithPadding + multiDayTopOffset,
-              left: showWeekNumbers && !isRTL ? _WeekNumberCell.columnWidth : 0,
-              right: showWeekNumbers && isRTL ? _WeekNumberCell.columnWidth : 0,
-              height: multiDayAreaHeight,
-              child: ClipRect(
-                child: _MultiDayEventRowsWidget(
-                  layoutFrame: layoutFrame,
-                  theme: theme,
-                  multiDayEventTileBuilder: multiDayEventTileBuilder,
-                  onEventTap: onEventTap,
-                  onEventLongPress: onEventLongPress,
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Week number column (positioned outside the 3-layer Stack)
+              if (weekNumberCell != null && !isRTL) weekNumberCell,
+
+              // Main calendar content with 3-layer Stack
+              Expanded(
+                child: Stack(
+                  clipBehavior: Clip.hardEdge,
+                  children: [
+                    // Layer 1: Grid cells (just backgrounds/borders, NO events)
+                    _buildLayer1Grid(context, isRTL),
+
+                    // Layer 2: Events, date labels, overflow indicators
+                    Positioned.fill(
+                      child: _buildLayer2Events(
+                        context,
+                        columnWidths,
+                        constraints.maxHeight,
+                      ),
+                    ),
+
+                    // Layer 3: Drag ghost (only during drag)
+                    if (isDragging)
+                      Positioned.fill(child: _buildLayer3DragGhost(context)),
+                  ],
                 ),
               ),
-            ),
-          ],
+
+              // Week number column for RTL
+              if (weekNumberCell != null && isRTL) weekNumberCell,
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// Layer 1: Grid cells with just backgrounds/borders, NO events.
+  Widget _buildLayer1Grid(BuildContext context, bool isRTL) {
+    final dayCells = dates.asMap().entries.map((entry) {
+      final date = entry.value;
+      final isCurrentMonth =
+          date.year == currentMonth.year && date.month == currentMonth.month;
+      final isToday = _isToday(date);
+
+      // Get events for this date (for callbacks, not rendering)
+      final allDayEvents = _getEventsForDate(date);
+
+      // Check if this date is focused
+      final isFocused =
+          focusedDate != null &&
+          date.year == focusedDate!.year &&
+          date.month == focusedDate!.month &&
+          date.day == focusedDate!.day;
+
+      return Expanded(
+        child: _DayCellWidget(
+          date: date,
+          displayMonth: currentMonth,
+          isCurrentMonth: isCurrentMonth,
+          isToday: isToday,
+          isSelectable: true,
+          isFocused: isFocused,
+          autoFocusOnCellTap: autoFocusOnCellTap,
+          onSetFocusedDate: onSetFocusedDate,
+          events: allDayEvents,
+          // IMPORTANT: Pass empty list for rendering - events are in Layer 2
+          eventsForRendering: const [],
+          theme: theme,
+          dayCellBuilder: dayCellBuilder,
+          eventTileBuilder: eventTileBuilder,
+          dateLabelBuilder: null, // Date labels are in Layer 2
+          showDateLabel: false, // Date labels are rendered in Layer 2
+          dateFormat: dateFormat,
+          cellInteractivityCallback: cellInteractivityCallback,
+          onCellTap: onCellTap,
+          onCellLongPress: onCellLongPress,
+          onDateLabelTap: onDateLabelTap,
+          onDateLabelLongPress: onDateLabelLongPress,
+          onEventTap: onEventTap,
+          onEventLongPress: onEventLongPress,
+          onHoverCell: onHoverCell,
+          onHoverEvent: onHoverEvent,
+          locale: locale,
+          maxVisibleEventsPerDay: maxVisibleEventsPerDay,
+          onOverflowTap: onOverflowTap,
+          onOverflowLongPress: onOverflowLongPress,
+          multiDayReservedHeight:
+              0.0, // No reserved height - all events in Layer 2
+          enableDragAndDrop: enableDragAndDrop,
+          draggedTileBuilder: draggedTileBuilder,
+          dragSourceBuilder: dragSourceBuilder,
+          dragTargetBuilder: dragTargetBuilder,
+          dropTargetCellBuilder: dropTargetCellBuilder,
+          onDragWillAccept: onDragWillAccept,
+          onEventDropped: onEventDropped,
+          controller: controller,
+          onDragStartedCallback: onDragStartedCallback,
+          onDragEndedCallback: onDragEndedCallback,
+          onDragCanceledCallback: onDragCanceledCallback,
         ),
+      );
+    }).toList();
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: dayCells,
+    );
+  }
+
+  /// Layer 2: Events, date labels, and overflow indicators.
+  Widget _buildLayer2Events(
+    BuildContext context,
+    List<double> columnWidths,
+    double rowHeight,
+  ) {
+    // Create layout config from theme, passing maxVisibleEventsPerDay
+    final config = MCalWeekLayoutConfig.fromTheme(
+      theme,
+      maxVisibleEventsPerDay: maxVisibleEventsPerDay,
+    );
+
+    // Calculate event segments for this week using the dates' first day to determine week start
+    final firstDayOfWeekValue = dates.first.weekday == DateTime.sunday
+        ? 0
+        : dates.first.weekday;
+    final allSegments = MCalMultiDayRenderer.calculateAllEventSegments(
+      events: events,
+      monthStart: currentMonth,
+      firstDayOfWeek: firstDayOfWeekValue,
+    );
+
+    // Get segments for this specific week row
+    final weekSegments = weekRowIndex < allSegments.length
+        ? allSegments[weekRowIndex]
+        : <MCalEventSegment>[];
+
+    // Get day width for dragged tile sizing
+    final dayWidth = columnWidths.isNotEmpty ? columnWidths[0] : 0.0;
+
+    // Create wrapped builders using MCalBuilderWrapper
+    final wrappedEventTileBuilder = MCalBuilderWrapper.wrapEventTileBuilder(
+      developerBuilder: eventTileBuilder,
+      defaultBuilder: _buildDefaultEventTile,
+      onEventTap: onEventTap,
+      onEventLongPress: onEventLongPress,
+      enableDragAndDrop: enableDragAndDrop,
+      dragHandler: null,
+      // Drag-related parameters
+      draggedTileBuilder: draggedTileBuilder,
+      dragSourceBuilder: dragSourceBuilder,
+      onDragStartedCallback: onDragStartedCallback,
+      onDragEndedCallback: onDragEndedCallback,
+      onDragCanceledCallback: onDragCanceledCallback,
+      // Tile sizing for dragged feedback (styling comes from theme via defaultBuilder)
+      dayWidth: dayWidth,
+      tileHeight: theme.eventTileHeight,
+      horizontalSpacing: theme.eventTileHorizontalSpacing ?? 2.0,
+    );
+
+    final wrappedDateLabelBuilder = MCalBuilderWrapper.wrapDateLabelBuilder(
+      developerBuilder: dateLabelBuilder,
+      defaultBuilder: _buildDefaultDateLabel,
+      onDateLabelTap: onDateLabelTap,
+      onDateLabelLongPress: onDateLabelLongPress,
+    );
+
+    final wrappedOverflowIndicatorBuilder =
+        MCalBuilderWrapper.wrapOverflowIndicatorBuilder(
+          developerBuilder: overflowIndicatorBuilder,
+          defaultBuilder: _buildDefaultOverflowIndicator,
+          onOverflowTap: onOverflowTap,
+        );
+
+    // Create the week layout context
+    final layoutContext = MCalWeekLayoutContext(
+      segments: weekSegments,
+      dates: dates,
+      columnWidths: columnWidths,
+      rowHeight: rowHeight,
+      weekRowIndex: weekRowIndex,
+      currentMonth: currentMonth,
+      config: config,
+      eventTileBuilder: wrappedEventTileBuilder,
+      dateLabelBuilder: wrappedDateLabelBuilder,
+      overflowIndicatorBuilder: wrappedOverflowIndicatorBuilder,
+    );
+
+    // Use custom weekLayoutBuilder if provided, otherwise use default
+    if (weekLayoutBuilder != null) {
+      return weekLayoutBuilder!(context, layoutContext);
+    }
+
+    // Use default week layout builder
+    return MCalDefaultWeekLayoutBuilder.build(context, layoutContext);
+  }
+
+  /// Layer 3: Drag ghost (only rendered during drag operations).
+  Widget _buildLayer3DragGhost(BuildContext context) {
+    // TODO: Full implementation will be in a later spec
+    // For now, return an empty container - the actual ghost rendering
+    // will be implemented when drag-and-drop is integrated with the layered architecture
+    return const SizedBox.shrink();
+  }
+
+  /// Builds the default event tile widget.
+  Widget _buildDefaultEventTile(
+    BuildContext context,
+    MCalEventTileContext tileContext,
+  ) {
+    final event = tileContext.event;
+    final segment = tileContext.segment;
+
+    // Determine corner radius based on segment position
+    final cornerRadius = theme.tileCornerRadius ?? 4.0;
+    final leftRadius = segment?.isFirstSegment ?? true ? cornerRadius : 0.0;
+    final rightRadius = segment?.isLastSegment ?? true ? cornerRadius : 0.0;
+
+    // Determine tile color - respect ignoreEventColors theme setting
+    final tileColor = theme.ignoreEventColors
+        ? (theme.eventTileBackgroundColor ?? Colors.blue)
+        : (event.color ?? theme.eventTileBackgroundColor ?? Colors.blue);
+
+    // Determine border - only add if both color and width are specified
+    // For continuation segments, omit border on the continuation edge
+    final borderWidth = theme.eventTileBorderWidth ?? 0.0;
+    final hasBorder = borderWidth > 0 && theme.eventTileBorderColor != null;
+    final isFirstSegment = segment?.isFirstSegment ?? true;
+    final isLastSegment = segment?.isLastSegment ?? true;
+
+    // Build border with individual sides based on segment position
+    Border? tileBorder;
+    if (hasBorder) {
+      final borderColor = theme.eventTileBorderColor!;
+      final topBorder = BorderSide(color: borderColor, width: borderWidth);
+      final bottomBorder = BorderSide(color: borderColor, width: borderWidth);
+      // Only add left border if this is the first segment (event starts here)
+      final leftBorder = isFirstSegment
+          ? BorderSide(color: borderColor, width: borderWidth)
+          : BorderSide.none;
+      // Only add right border if this is the last segment (event ends here)
+      final rightBorder = isLastSegment
+          ? BorderSide(color: borderColor, width: borderWidth)
+          : BorderSide.none;
+      tileBorder = Border(
+        top: topBorder,
+        bottom: bottomBorder,
+        left: leftBorder,
+        right: rightBorder,
       );
     }
 
-    return dayRow;
+    return Container(
+      decoration: BoxDecoration(
+        color: tileColor,
+        borderRadius: BorderRadius.horizontal(
+          left: Radius.circular(leftRadius),
+          right: Radius.circular(rightRadius),
+        ),
+        border: tileBorder,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      alignment: Alignment.centerLeft,
+      child: Text(
+        event.title,
+        style:
+            theme.eventTileTextStyle ??
+            const TextStyle(fontSize: 11, color: Colors.white),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  /// Builds the default date label widget.
+  Widget _buildDefaultDateLabel(
+    BuildContext context,
+    MCalDateLabelContext labelContext,
+  ) {
+    final isCurrentMonth = labelContext.isCurrentMonth;
+    final isToday = labelContext.isToday;
+
+    // Text style - today uses bold but keeps readable color
+    final textStyle = isToday
+        ? (theme.todayTextStyle ??
+              TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isCurrentMonth ? Colors.black87 : Colors.grey.shade600,
+              ))
+        : (theme.cellTextStyle ??
+              TextStyle(
+                fontSize: 12,
+                color: isCurrentMonth ? Colors.black87 : Colors.grey,
+              ));
+
+    final dateText = Text(
+      labelContext.defaultFormattedString,
+      style: textStyle,
+      textAlign: TextAlign.center,
+    );
+
+    // Get alignment from the DateLabelPosition
+    final alignment = labelContext.horizontalAlignment;
+
+    // Use a fixed-size container for ALL dates to ensure uniform spacing.
+    // For today, the circle is visible; for other days, it's transparent.
+    // This prevents alignment shifts when using left/right aligned labels.
+    final circleContainer = Container(
+      width: 24,
+      height: 24,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        // Only show the background color for today
+        color: isToday
+            ? (theme.todayBackgroundColor ?? Colors.grey.shade300)
+            : Colors.transparent,
+        shape: BoxShape.circle,
+      ),
+      child: dateText,
+    );
+
+    // Align the container according to DateLabelPosition
+    return SizedBox(
+      height: 24,
+      child: Align(alignment: alignment, child: circleContainer),
+    );
+  }
+
+  /// Builds the default overflow indicator widget.
+  Widget _buildDefaultOverflowIndicator(
+    BuildContext context,
+    MCalOverflowIndicatorContext overflowContext,
+  ) {
+    return Center(
+      child: Text(
+        '+${overflowContext.hiddenEventCount} more',
+        style:
+            theme.leadingDatesTextStyle ??
+            TextStyle(fontSize: 10, color: Colors.grey.shade600),
+      ),
+    );
   }
 
   bool _isToday(DateTime date) {
@@ -2393,222 +2728,6 @@ class _WeekRowWidget extends StatelessWidget {
   }
 }
 
-/// Widget for rendering multi-day event tiles at the top of a week row.
-///
-/// This widget renders contiguous tiles for multi-day events that span
-/// across multiple day cells. Each tile is positioned to span the
-/// appropriate cells based on the event's layout segments.
-class _MultiDayEventRowsWidget extends StatelessWidget {
-  /// The layout frame containing positioned event assignments.
-  final MCalWeekEventLayoutFrame layoutFrame;
-  
-  /// The theme for styling.
-  final MCalThemeData theme;
-  
-  /// Custom builder for multi-day tiles.
-  final Widget Function(BuildContext, MCalMultiDayTileDetails)?
-      multiDayEventTileBuilder;
-  
-  /// Callback when event is tapped.
-  final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
-  
-  /// Callback when event is long-pressed.
-  final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
-
-  const _MultiDayEventRowsWidget({
-    required this.layoutFrame,
-    required this.theme,
-    this.multiDayEventTileBuilder,
-    this.onEventTap,
-    this.onEventLongPress,
-  });
-  
-  /// Gets the tile slot height from theme or uses default.
-  /// This is the total height per row including margins.
-  double _getTileHeight() => theme.eventTileHeight ?? 20.0;
-
-  @override
-  Widget build(BuildContext context) {
-    if (layoutFrame.assignments.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final tileHeight = _getTileHeight();
-
-    // Calculate total height: rows * tileHeight
-    // No additional spacing needed - tile margins handle visual gaps
-    final totalHeight = layoutFrame.totalRows * tileHeight;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cellWidth = constraints.maxWidth / 7;
-
-        // Build children with LayoutId wrappers
-        final children = <Widget>[];
-
-        for (int i = 0; i < layoutFrame.assignments.length; i++) {
-          final assignment = layoutFrame.assignments[i];
-          final event = assignment.event;
-          final segment = assignment.segment;
-
-          // Calculate display date (first day of this segment)
-          final displayDate = layoutFrame.weekDates[segment.startDayInRow];
-
-          // Build the tile details
-          final eventStartDay = DateTime(
-              event.start.year, event.start.month, event.start.day);
-          final eventEndDay =
-              DateTime(event.end.year, event.end.month, event.end.day);
-          final totalDaysInEvent =
-              eventEndDay.difference(eventStartDay).inDays + 1;
-          final dayIndexInEvent = displayDate.difference(eventStartDay).inDays;
-
-          final details = MCalMultiDayTileDetails(
-            event: event,
-            displayDate: displayDate,
-            isFirstDayOfEvent: segment.isFirstSegment,
-            isLastDayOfEvent: segment.isLastSegment,
-            isFirstDayInRow: true, // Always true for segment start
-            isLastDayInRow: true, // Always true for segment end
-            dayIndexInEvent: dayIndexInEvent,
-            totalDaysInEvent: totalDaysInEvent,
-            dayIndexInRow: 0,
-            totalDaysInRow: segment.spanDays,
-            rowIndex: assignment.row,
-            totalRows: layoutFrame.totalRows,
-          );
-
-          // Build the tile widget
-          Widget tile;
-          if (multiDayEventTileBuilder != null) {
-            tile = multiDayEventTileBuilder!(context, details);
-          } else {
-            tile = MCalMultiDayTile(
-              event: event,
-              details: details,
-              onTap: onEventTap,
-              onLongPress: onEventLongPress,
-            );
-          }
-
-          // Wrap in Semantics for accessibility
-          tile = Semantics(
-            label: '${event.title}, multi-day event',
-            child: tile,
-          );
-
-          children.add(LayoutId(
-            id: i,
-            child: tile,
-          ));
-        }
-
-        // Get margin values from theme
-        final horizontalMargin = theme.eventTileHorizontalSpacing ?? 1.0;
-        final verticalMargin = theme.eventTileVerticalSpacing ?? 1.0;
-
-        // DEBUG: Set to true to visualize multi-day event area
-        const bool debugMultiDaySpacing = false;
-
-        return Container(
-          height: totalHeight,
-          // DEBUG: Blue border shows the multi-day events area bounds
-          decoration: debugMultiDaySpacing
-              ? BoxDecoration(border: Border.all(color: Colors.blue, width: 0.5))
-              : null,
-          child: CustomMultiChildLayout(
-            delegate: _MultiDayLayoutDelegate(
-              layoutFrame: layoutFrame,
-              cellWidth: cellWidth,
-              rowHeight: tileHeight,
-              horizontalMargin: horizontalMargin,
-              verticalMargin: verticalMargin,
-            ),
-            children: children,
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Layout delegate that positions multi-day event tiles using greedy-assigned rows.
-///
-/// This delegate positions each tile based on its [MCalEventLayoutAssignment]
-/// and enforces margins around each tile. The margins are:
-/// - Vertical: always applied top and bottom
-/// - Horizontal left: only applied if this is the first segment of the event
-/// - Horizontal right: only applied if this is the last segment of the event
-///
-/// This approach ensures:
-/// - Tiles within a single week have proper spacing on all sides
-/// - Tiles that span multiple weeks have no horizontal margin at week boundaries,
-///   creating visual continuity across week rows
-/// - The tile widget receives its final clickable area, not including margins
-class _MultiDayLayoutDelegate extends MultiChildLayoutDelegate {
-  final MCalWeekEventLayoutFrame layoutFrame;
-  final double cellWidth;
-  final double rowHeight;
-  final double horizontalMargin;
-  final double verticalMargin;
-
-  _MultiDayLayoutDelegate({
-    required this.layoutFrame,
-    required this.cellWidth,
-    required this.rowHeight,
-    required this.horizontalMargin,
-    required this.verticalMargin,
-  });
-
-  @override
-  void performLayout(Size size) {
-    for (int i = 0; i < layoutFrame.assignments.length; i++) {
-      final assignment = layoutFrame.assignments[i];
-      final segment = assignment.segment;
-
-      // Calculate margin based on segment position:
-      // - Left margin: only if this is the first segment of the event
-      // - Right margin: only if this is the last segment of the event
-      final leftMargin = segment.isFirstSegment ? horizontalMargin : 0.0;
-      final rightMargin = segment.isLastSegment ? horizontalMargin : 0.0;
-
-      // Calculate base position and size from grid coordinates
-      final baseLeft = assignment.startColumn * cellWidth;
-      final baseTop = assignment.row * rowHeight;
-      final baseWidth = assignment.columnSpan * cellWidth;
-
-      // Apply margins to position and size
-      final left = baseLeft + leftMargin;
-      final top = baseTop + verticalMargin;
-      final width = baseWidth - leftMargin - rightMargin;
-      final height = rowHeight - (verticalMargin * 2);
-
-      // DEBUG: Uncomment to see margin calculations
-      // print('[MARGIN DEBUG] Event: ${assignment.event.title}, '
-      //     'weekRow: ${segment.weekRowIndex}, '
-      //     'cols: ${assignment.startColumn}-${assignment.endColumn}, '
-      //     'isFirst: ${segment.isFirstSegment}, isLast: ${segment.isLastSegment}, '
-      //     'leftM: $leftMargin, rightM: $rightMargin, topM: $verticalMargin, '
-      //     'baseLeft: $baseLeft, left: $left, baseWidth: $baseWidth, width: $width, height: $height');
-
-      // Layout and position the child with margin-adjusted dimensions
-      if (hasChild(i)) {
-        layoutChild(i, BoxConstraints.tight(Size(width.clamp(0.0, double.infinity), height.clamp(0.0, double.infinity))));
-        positionChild(i, Offset(left, top));
-      }
-    }
-  }
-
-  @override
-  bool shouldRelayout(_MultiDayLayoutDelegate oldDelegate) {
-    return layoutFrame != oldDelegate.layoutFrame ||
-        cellWidth != oldDelegate.cellWidth ||
-        rowHeight != oldDelegate.rowHeight ||
-        horizontalMargin != oldDelegate.horizontalMargin ||
-        verticalMargin != oldDelegate.verticalMargin;
-  }
-}
-
 /// Placeholder widget for day cell (will be fully implemented in task 9).
 class _DayCellWidget extends StatelessWidget {
   final DateTime date;
@@ -2619,59 +2738,66 @@ class _DayCellWidget extends StatelessWidget {
   final bool isFocused;
   final bool autoFocusOnCellTap;
   final ValueChanged<DateTime>? onSetFocusedDate;
-  
+
   /// All events for this date, used for callbacks.
   final List<MCalCalendarEvent> events;
-  
+
   /// Events to render as tiles in this cell.
   /// May exclude multi-day events when they're rendered separately as contiguous tiles.
   /// If null, defaults to [events].
   final List<MCalCalendarEvent>? eventsForRendering;
-  
+
   final MCalThemeData theme;
-  final Widget Function(BuildContext, MCalDayCellContext, Widget)? dayCellBuilder;
+  final Widget Function(BuildContext, MCalDayCellContext, Widget)?
+  dayCellBuilder;
   final Widget Function(BuildContext, MCalEventTileContext, Widget)?
   eventTileBuilder;
   final Widget Function(BuildContext, MCalDateLabelContext, String)?
   dateLabelBuilder;
   final String? dateFormat;
-  final bool Function(BuildContext, MCalCellInteractivityDetails)? cellInteractivityCallback;
+  final bool Function(BuildContext, MCalCellInteractivityDetails)?
+  cellInteractivityCallback;
   final void Function(BuildContext, MCalCellTapDetails)? onCellTap;
   final void Function(BuildContext, MCalCellTapDetails)? onCellLongPress;
+  final void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelTap;
+  final void Function(BuildContext, MCalDateLabelTapDetails)?
+  onDateLabelLongPress;
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final ValueChanged<MCalDayCellContext?>? onHoverCell;
   final ValueChanged<MCalEventTileContext?>? onHoverEvent;
   final Locale locale;
-  final int maxVisibleEvents;
+  final int maxVisibleEventsPerDay;
   final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap;
-  final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowLongPress;
+  final void Function(BuildContext, MCalOverflowTapDetails)?
+  onOverflowLongPress;
 
   // Drag-and-drop parameters
   final bool enableDragAndDrop;
   final Widget Function(BuildContext, MCalDraggedTileDetails)?
-      draggedTileBuilder;
-  final Widget Function(BuildContext, MCalDragSourceDetails)?
-      dragSourceBuilder;
-  final Widget Function(BuildContext, MCalDragTargetDetails)?
-      dragTargetBuilder;
+  draggedTileBuilder;
+  final Widget Function(BuildContext, MCalDragSourceDetails)? dragSourceBuilder;
+  final Widget Function(BuildContext, MCalDragTargetDetails)? dragTargetBuilder;
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
-      dropTargetCellBuilder;
+  dropTargetCellBuilder;
   final bool Function(BuildContext, MCalDragWillAcceptDetails)?
-      onDragWillAccept;
-  final bool Function(BuildContext, MCalEventDroppedDetails)?
-      onEventDropped;
+  onDragWillAccept;
+  final bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped;
   final MCalEventController controller;
 
   // Drag lifecycle callbacks (Task 21)
   final void Function(MCalCalendarEvent event, DateTime sourceDate)?
-      onDragStartedCallback;
+  onDragStartedCallback;
   final void Function(bool wasAccepted)? onDragEndedCallback;
   final VoidCallback? onDragCanceledCallback;
-  
+
   /// Reserved height for multi-day events above single-day events.
   /// When > 0, single-day events are pushed down by this amount.
   final double multiDayReservedHeight;
+
+  /// Whether to show date labels in this cell.
+  /// Set to false for Layer 1 grid cells when date labels are rendered in Layer 2.
+  final bool showDateLabel;
 
   const _DayCellWidget({
     required this.date,
@@ -2692,15 +2818,18 @@ class _DayCellWidget extends StatelessWidget {
     this.cellInteractivityCallback,
     this.onCellTap,
     this.onCellLongPress,
+    this.onDateLabelTap,
+    this.onDateLabelLongPress,
     this.onEventTap,
     this.onEventLongPress,
     this.onHoverCell,
     this.onHoverEvent,
     required this.locale,
-    this.maxVisibleEvents = 3,
+    this.maxVisibleEventsPerDay = 5,
     this.onOverflowTap,
     this.onOverflowLongPress,
     this.multiDayReservedHeight = 0.0,
+    this.showDateLabel = true,
     // Drag-and-drop
     this.enableDragAndDrop = false,
     this.draggedTileBuilder,
@@ -2715,7 +2844,7 @@ class _DayCellWidget extends StatelessWidget {
     this.onDragEndedCallback,
     this.onDragCanceledCallback,
   });
-  
+
   /// Gets the events to use for rendering tiles.
   List<MCalCalendarEvent> get _renderableEvents => eventsForRendering ?? events;
 
@@ -2733,11 +2862,20 @@ class _DayCellWidget extends StatelessWidget {
           )
         : true;
 
+    // Create wrapped date label builder for use in dayCellBuilder context
+    // This builder is pre-wrapped with tap handlers (or IgnorePointer)
+    final wrappedDateLabelBuilder = MCalBuilderWrapper.wrapDateLabelBuilder(
+      developerBuilder: dateLabelBuilder,
+      defaultBuilder: _buildDefaultDateLabelWidget,
+      onDateLabelTap: onDateLabelTap,
+      onDateLabelLongPress: onDateLabelLongPress,
+    );
+
     // Build cell decoration (apply non-interactive styling if needed)
     final decoration = _getCellDecoration(isInteractive);
 
-    // Build date label
-    final dateLabel = _buildDateLabel(context);
+    // Build date label (only if showDateLabel is true - Layer 2 handles labels now)
+    final dateLabel = showDateLabel ? _buildDateLabel(context) : null;
 
     // Build the cell widget with clip to prevent overflow on small screens
     // The LayoutBuilder dynamically calculates how many events fit
@@ -2745,29 +2883,34 @@ class _DayCellWidget extends StatelessWidget {
       builder: (context, constraints) {
         // Get theme-based tile height (slot height including margins)
         final tileHeight = theme.eventTileHeight ?? 20.0;
-        
+
         // Calculate available height for events after:
-        // - date label with top padding (20.0 + 4.0 = 24.0)
+        // - date label with top padding (20.0 + 4.0 = 24.0) if showing
         // - multi-day reserved area (variable)
         // - cell border (1px top + 1px bottom = 2px)
         // Note: Event tiles now go edge-to-edge horizontally (no cell padding)
         // and tiles handle their own margins
-        const dateLabelHeightWithPadding = 24.0; // 20.0 label + 4.0 top padding
+        final dateLabelHeightWithPadding = showDateLabel
+            ? 24.0
+            : 0.0; // 20.0 label + 4.0 top padding
         const cellBorderHeight = 2.0; // 1px border on top and bottom
         final availableEventHeight =
-            constraints.maxHeight - dateLabelHeightWithPadding - multiDayReservedHeight - cellBorderHeight;
+            constraints.maxHeight -
+            dateLabelHeightWithPadding -
+            multiDayReservedHeight -
+            cellBorderHeight;
 
         // Calculate how many event tiles can fit
         final maxTilesByHeight = availableEventHeight > 0
             ? (availableEventHeight / tileHeight).floor()
             : 0;
 
-        // Use the smaller of maxVisibleEvents and what fits by height
-        final effectiveMaxEvents = maxVisibleEvents == 0
+        // Use the smaller of maxVisibleEventsPerDay and what fits by height
+        final effectiveMaxEvents = maxVisibleEventsPerDay == 0
             ? maxTilesByHeight
-            : (maxTilesByHeight < maxVisibleEvents
-                ? maxTilesByHeight
-                : maxVisibleEvents);
+            : (maxTilesByHeight < maxVisibleEventsPerDay
+                  ? maxTilesByHeight
+                  : maxVisibleEventsPerDay);
 
         // Rebuild event tiles with the effective max, applying consistent sizing
         final effectiveTiles = _buildEventTilesWithLimit(
@@ -2778,19 +2921,21 @@ class _DayCellWidget extends StatelessWidget {
 
         // DEBUG: Set to true to visualize cell structure
         const bool debugCellSpacing = false;
-        
+
         // Cell structure:
         // - Outer container with decoration (cell background/border)
         // - Column with:
         //   - Date label (with horizontal padding)
         //   - Multi-day reserved spacer (full width, no padding)
-        //   - Single-day event tiles (full width, no horizontal padding - 
+        //   - Single-day event tiles (full width, no horizontal padding -
         //     tiles handle their own margins)
         return Container(
           decoration: decoration,
           // DEBUG: Green border shows the cell boundary
           foregroundDecoration: debugCellSpacing
-              ? BoxDecoration(border: Border.all(color: Colors.green, width: 0.5))
+              ? BoxDecoration(
+                  border: Border.all(color: Colors.green, width: 0.5),
+                )
               : null,
           clipBehavior: Clip.hardEdge,
           child: Opacity(
@@ -2799,20 +2944,28 @@ class _DayCellWidget extends StatelessWidget {
             child: ClipRect(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch, // Full width for tiles
+                crossAxisAlignment:
+                    CrossAxisAlignment.stretch, // Full width for tiles
                 children: [
-                  // Date label with padding (only the label gets padding)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4.0, top: 4.0, right: 4.0),
-                    child: dateLabel,
-                  ),
+                  // Date label with padding (only if showDateLabel is true)
+                  if (dateLabel != null)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        left: 4.0,
+                        top: 4.0,
+                        right: 4.0,
+                      ),
+                      child: dateLabel,
+                    ),
                   // Spacer for multi-day events (if any reserved space)
                   // No horizontal padding - aligns with multi-day overlay
                   if (multiDayReservedHeight > 0)
                     Container(
                       height: multiDayReservedHeight,
                       // DEBUG: Purple shows multi-day reserved space within cell
-                      color: debugCellSpacing ? Colors.purple.withValues(alpha: 0.2) : null,
+                      color: debugCellSpacing
+                          ? Colors.purple.withValues(alpha: 0.2)
+                          : null,
                     ),
                   // Single-day events - NO horizontal padding
                   // Each tile handles its own 1px margin via the Padding wrapper
@@ -2834,6 +2987,7 @@ class _DayCellWidget extends StatelessWidget {
         isSelectable: isSelectable,
         isFocused: isFocused,
         events: events,
+        dateLabelBuilder: wrappedDateLabelBuilder,
       );
       cell = dayCellBuilder!(context, contextObj, cell);
     }
@@ -2867,13 +3021,13 @@ class _DayCellWidget extends StatelessWidget {
           : null,
       onLongPress: isInteractive && onCellLongPress != null
           ? () => onCellLongPress!(
-                context,
-                MCalCellTapDetails(
-                  date: date,
-                  events: events,
-                  isCurrentMonth: isCurrentMonth,
-                ),
-              )
+              context,
+              MCalCellTapDetails(
+                date: date,
+                events: events,
+                isCurrentMonth: isCurrentMonth,
+              ),
+            )
           : null,
       child: Semantics(
         label: _getSemanticLabel(),
@@ -2896,6 +3050,7 @@ class _DayCellWidget extends StatelessWidget {
             isSelectable: isSelectable,
             isFocused: isFocused,
             events: events,
+            dateLabelBuilder: wrappedDateLabelBuilder,
           );
           onHoverCell!(contextObj);
         },
@@ -2919,7 +3074,8 @@ class _DayCellWidget extends StatelessWidget {
 
     // Apply focused styling first (takes priority)
     if (isFocused) {
-      backgroundColor = theme.focusedDateBackgroundColor ?? theme.cellBackgroundColor;
+      backgroundColor =
+          theme.focusedDateBackgroundColor ?? theme.cellBackgroundColor;
     } else if (isToday) {
       backgroundColor = theme.todayBackgroundColor ?? theme.cellBackgroundColor;
     } else if (isCurrentMonth) {
@@ -3008,11 +3164,63 @@ class _DayCellWidget extends StatelessWidget {
     );
   }
 
+  /// Builds the default date label widget for use in builder wrapper.
+  ///
+  /// This method matches the signature required by [MCalBuilderWrapper.wrapDateLabelBuilder]
+  /// and provides the default rendering for date labels.
+  Widget _buildDefaultDateLabelWidget(
+    BuildContext context,
+    MCalDateLabelContext labelContext,
+  ) {
+    // Use the same styling logic as _buildDateLabel but with context-based values
+    TextStyle? textStyle;
+    if (labelContext.isToday) {
+      textStyle = theme.todayTextStyle ?? theme.cellTextStyle;
+    } else if (labelContext.isCurrentMonth) {
+      textStyle = theme.cellTextStyle;
+    } else {
+      textStyle =
+          theme.leadingDatesTextStyle ??
+          theme.trailingDatesTextStyle ??
+          theme.cellTextStyle;
+    }
+
+    final dateText = Text(
+      labelContext.defaultFormattedString,
+      style: textStyle?.copyWith(
+        fontWeight: labelContext.isToday ? FontWeight.bold : null,
+      ),
+      textAlign: TextAlign.center,
+    );
+
+    // Get alignment from the DateLabelPosition
+    final alignment = labelContext.horizontalAlignment;
+
+    // Use a fixed-size container for uniform spacing
+    final circleContainer = Container(
+      width: 24,
+      height: 24,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: labelContext.isToday
+            ? (theme.todayBackgroundColor ?? Colors.grey.shade300)
+            : Colors.transparent,
+        shape: BoxShape.circle,
+      ),
+      child: dateText,
+    );
+
+    return SizedBox(
+      height: 24,
+      child: Align(alignment: alignment, child: circleContainer),
+    );
+  }
+
   /// Builds event tiles for this day cell.
   /// Builds event tiles with a dynamic limit based on available space.
   ///
   /// This method is similar to [_buildEventTiles] but accepts an explicit
-  /// limit to use instead of [maxVisibleEvents], allowing the layout to
+  /// limit to use instead of [maxVisibleEventsPerDay], allowing the layout to
   /// adapt to the actual available cell height.
   ///
   /// The [tileHeight] parameter controls the height of each tile slot
@@ -3023,7 +3231,7 @@ class _DayCellWidget extends StatelessWidget {
     double tileHeight = 20.0,
   }) {
     final renderEvents = _renderableEvents;
-    
+
     // If no space for any tiles (limit <= 0), show nothing at all
     // Even the overflow indicator needs space, so we can't show it either
     if (renderEvents.isEmpty || limit <= 0) {
@@ -3067,24 +3275,39 @@ class _DayCellWidget extends StatelessWidget {
       );
 
       // Wrap with MCalDraggableEventTile when drag-and-drop is enabled
+      // Note: This is legacy Layer 1 rendering. Layer 2 (via weekLayoutBuilder)
+      // is the primary path for event rendering in the new architecture.
       if (enableDragAndDrop) {
         // Capture event and date for the callback closures
         final capturedEvent = event;
         final capturedDate = date;
-        
-        tile = MCalDraggableEventTile(
-          event: event,
-          sourceDate: date,
-          enabled: true,
-          draggedTileBuilder: draggedTileBuilder,
-          dragSourceBuilder: dragSourceBuilder,
-          // Drag lifecycle callbacks (Task 21)
-          onDragStarted: onDragStartedCallback != null
-              ? () => onDragStartedCallback!(capturedEvent, capturedDate)
-              : null,
-          onDragEnded: onDragEndedCallback,
-          onDragCanceled: onDragCanceledCallback,
-          child: tile,
+
+        // For Layer 1 rendering, we don't have direct access to dayWidth,
+        // so we use a LayoutBuilder wrapper to get it dynamically
+        tile = LayoutBuilder(
+          builder: (context, constraints) {
+            // Cell width is approximately the available width
+            final cellWidth = constraints.maxWidth > 0
+                ? constraints.maxWidth
+                : 50.0;
+            final hSpacing = theme.eventTileHorizontalSpacing ?? 2.0;
+
+            return MCalDraggableEventTile(
+              event: capturedEvent,
+              sourceDate: capturedDate,
+              dayWidth: cellWidth,
+              horizontalSpacing: hSpacing,
+              enabled: true,
+              draggedTileBuilder: draggedTileBuilder,
+              dragSourceBuilder: dragSourceBuilder,
+              onDragStarted: onDragStartedCallback != null
+                  ? () => onDragStartedCallback!(capturedEvent, capturedDate)
+                  : null,
+              onDragEnded: onDragEndedCallback,
+              onDragCanceled: onDragCanceledCallback,
+              child: tile,
+            );
+          },
         );
       }
 
@@ -3093,7 +3316,7 @@ class _DayCellWidget extends StatelessWidget {
       // Single-day tiles have margin on all sides.
       final horizontalMargin = theme.eventTileHorizontalSpacing ?? 1.0;
       final verticalMargin = theme.eventTileVerticalSpacing ?? 1.0;
-      
+
       tiles.add(
         SizedBox(
           height: tileHeight,
@@ -3114,7 +3337,7 @@ class _DayCellWidget extends StatelessWidget {
     if (overflowCount > 0) {
       final horizontalMargin = theme.eventTileHorizontalSpacing ?? 1.0;
       final verticalMargin = theme.eventTileVerticalSpacing ?? 1.0;
-      
+
       tiles.add(
         SizedBox(
           height: tileHeight,
@@ -3176,7 +3399,7 @@ class _DayCellWidget extends StatelessWidget {
     return DragTarget<MCalCalendarEvent>(
       onWillAcceptWithDetails: (details) {
         final event = details.data;
-        
+
         // Calculate proposed new dates by computing the day delta
         // The source date is stored on the draggable (from MCalDraggableEventTile)
         // We calculate delta from the event's start to the target cell
@@ -3209,7 +3432,7 @@ class _DayCellWidget extends StatelessWidget {
       },
       builder: (context, candidateData, rejectedData) {
         final isDragOver = candidateData.isNotEmpty || rejectedData.isNotEmpty;
-        
+
         if (!isDragOver) {
           return child;
         }
@@ -3232,8 +3455,10 @@ class _DayCellWidget extends StatelessWidget {
 
         // Default visual feedback: colored overlay
         // Use theme colors if available, otherwise use defaults
-        final validColor = theme.dragTargetValidColor ?? Colors.green.withValues(alpha: 0.3);
-        final invalidColor = theme.dragTargetInvalidColor ?? Colors.red.withValues(alpha: 0.3);
+        final validColor =
+            theme.dragTargetValidColor ?? Colors.green.withValues(alpha: 0.3);
+        final invalidColor =
+            theme.dragTargetInvalidColor ?? Colors.red.withValues(alpha: 0.3);
         final overlayColor = isValid ? validColor : invalidColor;
 
         return Stack(
@@ -3308,7 +3533,6 @@ class _DayCellWidget extends StatelessWidget {
     );
   }
 
-
   /// Gets the semantic label for accessibility.
   ///
   /// Builds a comprehensive label for screen readers including:
@@ -3319,35 +3543,39 @@ class _DayCellWidget extends StatelessWidget {
   /// - Event count (e.g., "3 events")
   String _getSemanticLabel() {
     final localizations = MCalLocalizations();
-    
+
     // Full date with day name for better screen reader experience
     final dateStr = localizations.formatFullDateWithDayName(date, locale);
-    
+
     final parts = <String>[dateStr];
-    
+
     // Add "today" indicator
     if (isToday) {
       parts.add(localizations.getLocalizedString('today', locale));
     }
-    
+
     // Add focused/selected indicator
     if (isFocused) {
       parts.add(localizations.getLocalizedString('focused', locale));
     }
-    
+
     // Add month context for dates outside current month
     if (!isCurrentMonth) {
       // Determine if date is in previous or next month relative to display month
       final dateMonth = DateTime(date.year, date.month, 1);
-      final currentDisplayMonth = DateTime(displayMonth.year, displayMonth.month, 1);
-      
+      final currentDisplayMonth = DateTime(
+        displayMonth.year,
+        displayMonth.month,
+        1,
+      );
+
       if (dateMonth.isBefore(currentDisplayMonth)) {
         parts.add(localizations.getLocalizedString('previousMonth', locale));
       } else {
         parts.add(localizations.getLocalizedString('nextMonth', locale));
       }
     }
-    
+
     // Add event count
     if (events.isNotEmpty) {
       final eventWord = events.length == 1
@@ -3355,7 +3583,7 @@ class _DayCellWidget extends StatelessWidget {
           : localizations.getLocalizedString('events', locale);
       parts.add('${events.length} $eventWord');
     }
-    
+
     return parts.join(', ');
   }
 }
@@ -3410,10 +3638,10 @@ class _EventTileWidget extends StatelessWidget {
     // For multi-day events, adjust border radius and content to show continuity
     BorderRadiusGeometry? borderRadius;
     EdgeInsetsGeometry padding;
-    
+
     final bool isMultiDay = spanLength > 1;
     final bool isContinuation = isMultiDay && !isStartOfSpan;
-    
+
     if (isMultiDay) {
       if (isStartOfSpan && isEndOfSpan) {
         // Single day event (shouldn't happen, but handle it)
@@ -3449,24 +3677,26 @@ class _EventTileWidget extends StatelessWidget {
     final TextStyle textStyle;
     final Color? borderColor;
     final double borderWidth;
-    
+
     if (isAllDay) {
       // Use event color if provided, otherwise fall back to theme/defaults
-      backgroundColor = event.color ?? 
-          theme.allDayEventBackgroundColor ?? 
-          theme.eventTileBackgroundColor ?? 
+      backgroundColor =
+          event.color ??
+          theme.allDayEventBackgroundColor ??
+          theme.eventTileBackgroundColor ??
           Colors.blue.shade50;
-      textStyle = theme.allDayEventTextStyle ?? 
-          theme.eventTileTextStyle ?? 
+      textStyle =
+          theme.allDayEventTextStyle ??
+          theme.eventTileTextStyle ??
           const TextStyle(fontSize: 11, color: Colors.black87);
       borderColor = theme.allDayEventBorderColor;
       borderWidth = theme.allDayEventBorderWidth ?? 1.0;
     } else {
       // Use event color if provided, otherwise fall back to theme/defaults
-      backgroundColor = event.color ?? 
-          theme.eventTileBackgroundColor ?? 
-          Colors.blue.shade100;
-      textStyle = theme.eventTileTextStyle ?? 
+      backgroundColor =
+          event.color ?? theme.eventTileBackgroundColor ?? Colors.blue.shade100;
+      textStyle =
+          theme.eventTileTextStyle ??
           const TextStyle(fontSize: 11, color: Colors.black87);
       borderColor = null;
       borderWidth = 0.0;
@@ -3531,7 +3761,7 @@ class _EventTileWidget extends StatelessWidget {
     // Note: Margins are enforced by the parent layout (SizedBox + Padding wrapper),
     // not by this widget. The tile receives its final size and should fill it completely.
     // This makes the tile the clickable area, with margin space belonging to the cell.
-    
+
     Widget tile = Container(
       decoration: BoxDecoration(
         color: backgroundColor,
@@ -3560,15 +3790,15 @@ class _EventTileWidget extends StatelessWidget {
     Widget result = GestureDetector(
       onTap: onEventTap != null
           ? () => onEventTap!(
-                context,
-                MCalEventTapDetails(event: event, displayDate: displayDate),
-              )
+              context,
+              MCalEventTapDetails(event: event, displayDate: displayDate),
+            )
           : null,
       onLongPress: onEventLongPress != null
           ? () => onEventLongPress!(
-                context,
-                MCalEventTapDetails(event: event, displayDate: displayDate),
-              )
+              context,
+              MCalEventTapDetails(event: event, displayDate: displayDate),
+            )
           : null,
       child: Semantics(label: _getSemanticLabel(), child: tile),
     );
@@ -3612,7 +3842,7 @@ class _EventTileWidget extends StatelessWidget {
 }
 
 /// Widget for displaying overflow event indicator.
-/// 
+///
 /// This widget displays a "+N more" indicator when there are more events
 /// than can be shown in a day cell. It supports tap and long-press interactions:
 /// - On tap: calls [onOverflowTap] if provided, otherwise shows a default bottom sheet
@@ -3620,25 +3850,26 @@ class _EventTileWidget extends StatelessWidget {
 class _OverflowIndicatorWidget extends StatelessWidget {
   /// The number of hidden events.
   final int count;
-  
+
   /// The date this overflow indicator belongs to.
   final DateTime date;
-  
+
   /// All events for this date (including visible and hidden).
   final List<MCalCalendarEvent> allEvents;
-  
+
   /// The theme for styling.
   final MCalThemeData theme;
-  
+
   /// The locale for formatting.
   final Locale locale;
-  
+
   /// Callback when the overflow indicator is tapped.
   /// If null, a default bottom sheet is shown.
   final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap;
-  
+
   /// Callback when the overflow indicator is long-pressed.
-  final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowLongPress;
+  final void Function(BuildContext, MCalOverflowTapDetails)?
+  onOverflowLongPress;
 
   const _OverflowIndicatorWidget({
     required this.count,
@@ -3653,17 +3884,17 @@ class _OverflowIndicatorWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final indicatorText = '+$count more';
-    
+
     final Widget indicator = Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: Text(
         indicatorText,
-        style: (theme.eventTileTextStyle ?? const TextStyle(fontSize: 11)).copyWith(
-          fontStyle: FontStyle.italic,
-          color: (theme.eventTileTextStyle?.color ?? Colors.black87).withValues(
-            alpha: 0.7,
-          ),
-        ),
+        style: (theme.eventTileTextStyle ?? const TextStyle(fontSize: 11))
+            .copyWith(
+              fontStyle: FontStyle.italic,
+              color: (theme.eventTileTextStyle?.color ?? Colors.black87)
+                  .withValues(alpha: 0.7),
+            ),
         overflow: TextOverflow.ellipsis,
         maxLines: 1,
       ),
@@ -3678,44 +3909,58 @@ class _OverflowIndicatorWidget extends StatelessWidget {
       child: GestureDetector(
         onTap: () => _handleTap(context),
         onLongPress: onOverflowLongPress != null
-            ? () => onOverflowLongPress!(
+            ? () {
+                final visibleCount = allEvents.length - count;
+                onOverflowLongPress!(
                   context,
                   MCalOverflowTapDetails(
                     date: date,
-                    allEvents: allEvents,
-                    hiddenCount: count,
+                    hiddenEvents: allEvents.sublist(
+                      visibleCount.clamp(0, allEvents.length),
+                    ),
+                    visibleEvents: allEvents.sublist(
+                      0,
+                      visibleCount.clamp(0, allEvents.length),
+                    ),
                   ),
-                )
+                );
+              }
             : null,
         child: indicator,
       ),
     );
   }
-  
+
   /// Handles tap on the overflow indicator.
-  /// 
+  ///
   /// If [onOverflowTap] is provided, calls it with the context and details.
   /// Otherwise, shows a default bottom sheet with all events for the day.
   void _handleTap(BuildContext context) {
     if (onOverflowTap != null) {
+      final visibleCount = allEvents.length - count;
       onOverflowTap!(
         context,
         MCalOverflowTapDetails(
           date: date,
-          allEvents: allEvents,
-          hiddenCount: count,
+          hiddenEvents: allEvents.sublist(
+            visibleCount.clamp(0, allEvents.length),
+          ),
+          visibleEvents: allEvents.sublist(
+            0,
+            visibleCount.clamp(0, allEvents.length),
+          ),
         ),
       );
     } else {
       _showDefaultBottomSheet(context);
     }
   }
-  
+
   /// Shows the default bottom sheet with all events for the day.
   void _showDefaultBottomSheet(BuildContext context) {
     final localizations = MCalLocalizations();
     final dateStr = localizations.formatDate(date, locale);
-    
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -3738,13 +3983,15 @@ class _OverflowIndicatorWidget extends StatelessWidget {
                       Expanded(
                         child: Text(
                           dateStr,
-                          style: theme.navigatorTextStyle?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ) ?? const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
+                          style:
+                              theme.navigatorTextStyle?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ) ??
+                              const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
                         ),
                       ),
                       IconButton(
@@ -3757,12 +4004,11 @@ class _OverflowIndicatorWidget extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     '${allEvents.length} ${allEvents.length == 1 ? 'event' : 'events'}',
-                    style: theme.cellTextStyle?.copyWith(
-                      color: Colors.grey[600],
-                    ) ?? TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style:
+                        theme.cellTextStyle?.copyWith(
+                          color: Colors.grey[600],
+                        ) ??
+                        TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 16),
                   const Divider(),
@@ -3771,7 +4017,8 @@ class _OverflowIndicatorWidget extends StatelessWidget {
                     child: ListView.separated(
                       controller: scrollController,
                       itemCount: allEvents.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1),
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final event = allEvents[index];
                         return _buildEventListItem(context, event);
@@ -3786,11 +4033,11 @@ class _OverflowIndicatorWidget extends StatelessWidget {
       },
     );
   }
-  
+
   /// Builds a list item for an event in the bottom sheet.
   Widget _buildEventListItem(BuildContext context, MCalCalendarEvent event) {
     final localizations = MCalLocalizations();
-    
+
     // Format time string
     String timeStr;
     if (event.isAllDay) {
@@ -3804,12 +4051,14 @@ class _OverflowIndicatorWidget extends StatelessWidget {
       final endTime = localizations.formatTime(event.end, locale);
       timeStr = '$startTime - $endTime';
     }
-    
+
     // Use appropriate color based on whether event is all-day
     final indicatorColor = event.isAllDay
-        ? (theme.allDayEventBackgroundColor ?? theme.eventTileBackgroundColor ?? Colors.blue)
+        ? (theme.allDayEventBackgroundColor ??
+              theme.eventTileBackgroundColor ??
+              Colors.blue)
         : (theme.eventTileBackgroundColor ?? Colors.blue);
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
@@ -3843,13 +4092,15 @@ class _OverflowIndicatorWidget extends StatelessWidget {
                     Expanded(
                       child: Text(
                         event.title,
-                        style: theme.eventTileTextStyle?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ) ?? const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style:
+                            theme.eventTileTextStyle?.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ) ??
+                            const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -3859,10 +4110,7 @@ class _OverflowIndicatorWidget extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   timeStr,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -3968,7 +4216,9 @@ class _WeekdayHeaderRowWidget extends StatelessWidget {
       width: _WeekNumberCell.columnWidth,
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       decoration: BoxDecoration(
-        color: theme.weekNumberBackgroundColor ?? theme.weekdayHeaderBackgroundColor,
+        color:
+            theme.weekNumberBackgroundColor ??
+            theme.weekdayHeaderBackgroundColor,
         border: Border(
           bottom: BorderSide(
             color: theme.cellBorderColor ?? Colors.grey.shade300,

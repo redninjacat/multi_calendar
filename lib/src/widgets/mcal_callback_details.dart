@@ -57,10 +57,7 @@ class MCalEventTapDetails {
   final DateTime displayDate;
 
   /// Creates a new [MCalEventTapDetails] instance.
-  const MCalEventTapDetails({
-    required this.event,
-    required this.displayDate,
-  });
+  const MCalEventTapDetails({required this.event, required this.displayDate});
 }
 
 /// Details object for swipe navigation callbacks.
@@ -95,36 +92,61 @@ class MCalSwipeNavigationDetails {
   });
 }
 
-/// Details object for overflow indicator tap callbacks.
+/// Details provided when an overflow indicator is tapped.
 ///
-/// Provides information when the user taps on an overflow indicator showing
-/// that more events exist than can be displayed.
-///
-/// Example:
-/// ```dart
-/// onOverflowTap: (context, details) {
-///   print('Date: ${details.date}');
-///   print('Total events: ${details.allEvents.length}');
-///   print('Hidden count: ${details.hiddenCount}');
-///   // Show dialog with all events
-///   showEventsDialog(details.allEvents);
-/// }
-/// ```
+/// Overflow indicators appear when there are more events than can be
+/// displayed in a day cell. This details object provides both the hidden
+/// and visible events so handlers can display all events for the day.
 class MCalOverflowTapDetails {
-  /// The date of the cell with hidden events.
+  /// The date for which the overflow indicator was tapped.
   final DateTime date;
 
-  /// All events occurring on this date, including hidden ones.
-  final List<MCalCalendarEvent> allEvents;
+  /// The list of events that are hidden (not displayed in the cell).
+  final List<MCalCalendarEvent> hiddenEvents;
 
-  /// The number of events that are hidden due to overflow.
-  final int hiddenCount;
+  /// The list of events that are visible in the cell.
+  final List<MCalCalendarEvent> visibleEvents;
 
   /// Creates a new [MCalOverflowTapDetails] instance.
   const MCalOverflowTapDetails({
     required this.date,
-    required this.allEvents,
-    required this.hiddenCount,
+    required this.hiddenEvents,
+    required this.visibleEvents,
+  });
+
+  /// The total count of hidden events.
+  int get hiddenEventCount => hiddenEvents.length;
+
+  /// All events for this date (visible + hidden).
+  List<MCalCalendarEvent> get allEvents => [...visibleEvents, ...hiddenEvents];
+}
+
+/// Details object for date label tap callbacks.
+///
+/// Provides context about a tap event on a date label in the month view.
+///
+/// Example:
+/// ```dart
+/// onDateLabelTap: (context, details) {
+///   print('Tapped date: ${details.date}');
+///   print('Is today: ${details.isToday}');
+/// }
+/// ```
+class MCalDateLabelTapDetails {
+  /// The date of the tapped label.
+  final DateTime date;
+
+  /// Whether this date is the current day.
+  final bool isToday;
+
+  /// Whether this date belongs to the currently displayed month.
+  final bool isCurrentMonth;
+
+  /// Creates a new [MCalDateLabelTapDetails] instance.
+  const MCalDateLabelTapDetails({
+    required this.date,
+    required this.isToday,
+    required this.isCurrentMonth,
   });
 }
 
@@ -199,10 +221,7 @@ class MCalErrorDetails {
   final VoidCallback? onRetry;
 
   /// Creates a new [MCalErrorDetails] instance.
-  const MCalErrorDetails({
-    required this.error,
-    this.onRetry,
-  });
+  const MCalErrorDetails({required this.error, this.onRetry});
 }
 
 /// Details object for multi-day event tile builder callbacks.
@@ -355,11 +374,30 @@ class MCalDraggedTileDetails {
   /// such as rotation or scaling based on movement.
   final Offset currentPosition;
 
+  /// The width of a single day cell/column in the calendar grid.
+  final double dayWidth;
+
+  /// The horizontal spacing applied to event tiles.
+  ///
+  /// The full tile width can be calculated as:
+  /// `(dayWidth * eventDurationDays) - (horizontalSpacing * 2)`
+  final double horizontalSpacing;
+
+  /// The number of days this event spans.
+  final int eventDurationDays;
+
+  /// Calculates the tile width based on day width, duration, and spacing.
+  double get tileWidth =>
+      (dayWidth * eventDurationDays) - (horizontalSpacing * 2);
+
   /// Creates a new [MCalDraggedTileDetails] instance.
   const MCalDraggedTileDetails({
     required this.event,
     required this.sourceDate,
     required this.currentPosition,
+    required this.dayWidth,
+    required this.horizontalSpacing,
+    required this.eventDurationDays,
   });
 }
 
@@ -395,10 +433,7 @@ class MCalDragSourceDetails {
   final DateTime sourceDate;
 
   /// Creates a new [MCalDragSourceDetails] instance.
-  const MCalDragSourceDetails({
-    required this.event,
-    required this.sourceDate,
-  });
+  const MCalDragSourceDetails({required this.event, required this.sourceDate});
 }
 
 /// Details object for the drag target preview builder.

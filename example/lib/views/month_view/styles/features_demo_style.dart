@@ -2,24 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 
 import '../../../utils/sample_events.dart';
-import '../../../widgets/day_events_bottom_sheet.dart';
-import '../../../widgets/event_detail_dialog.dart';
 import '../../../widgets/style_description.dart';
 
-/// Features Demo - showcases new MCalMonthView features.
+/// Features Demo - showcases MCalMonthView features and configuration options.
 ///
 /// This demonstrates:
-/// - Keyboard navigation
-/// - Hover feedback
-/// - Week numbers toggle
-/// - maxVisibleEvents slider
-/// - Animation toggle
+/// - All theme-configurable properties via sliders and dropdowns
+/// - Complete tap, long press, and hover handlers for all elements
 /// - Multi-view synchronization
+/// - Keyboard navigation
+/// - Drag-and-drop
 /// - Loading/error states
-/// - PageView swipe navigation (peek preview)
-/// - Multi-day events with contiguous rendering toggle
-/// - Drag-and-drop with cross-month navigation
-/// - Custom multi-day event tile builder
 class FeaturesDemoStyle extends StatefulWidget {
   const FeaturesDemoStyle({
     super.key,
@@ -40,19 +33,35 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   // Shared controller for multi-view sync demo
   late MCalEventController _sharedController;
 
-  // Feature toggles
+  // ============================================================
+  // Feature Toggles
+  // ============================================================
   bool _showWeekNumbers = false;
   bool _enableAnimations = true;
-  int _maxVisibleEvents = 3;
-  
-  // New feature toggles (Part 2)
-  bool _renderMultiDayEventsAsContiguous = true;
   bool _enableDragAndDrop = false;
   int _dragEdgeNavigationDelayMs = 500;
-  bool _useCustomMultiDayTileBuilder = false;
 
-  // Hover state
-  String _hoverStatus = 'Hover over cells or events to see details';
+  // ============================================================
+  // Theme Settings (matching Layout POC levers)
+  // ============================================================
+
+  // Date label settings
+  DateLabelPosition _dateLabelPosition = DateLabelPosition.topLeft;
+  double _dateLabelHeight = 18.0;
+
+  // Event tile settings
+  int _maxVisibleEventsPerDay = 5;
+  double _tileHeight = 18.0;
+  double _tileVerticalSpacing = 2.0;
+  double _tileHorizontalSpacing = 2.0;
+  double _tileCornerRadius = 4.0;
+  double _tileBorderWidth = 0.0;
+
+  // Overflow indicator settings
+  double _overflowIndicatorHeight = 14.0;
+
+  // Control panel expansion state for mobile
+  bool _showControls = false;
 
   @override
   void initState() {
@@ -67,15 +76,125 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     super.dispose();
   }
 
+  // ============================================================
+  // Alert Helpers
+  // ============================================================
+
+  void _showAlert(BuildContext context, String title, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // Handler Callbacks
+  // ============================================================
+
+  void _onCellTap(BuildContext context, MCalCellTapDetails details) {
+    final dateStr = _formatDate(details.date);
+    final isToday = _isSameDay(details.date, DateTime.now());
+    _showAlert(
+      context,
+      'Cell Tapped',
+      'You tapped the cell for $dateStr\n'
+          'Events: ${details.events.length}\n'
+          'Is today: $isToday\n'
+          'Is current month: ${details.isCurrentMonth}',
+    );
+  }
+
+  void _onCellLongPress(BuildContext context, MCalCellTapDetails details) {
+    final dateStr = _formatDate(details.date);
+    _showAlert(
+      context,
+      'Cell Long-Pressed',
+      'You long-pressed the cell for $dateStr\n'
+          'Events: ${details.events.length}',
+    );
+  }
+
+  void _onDateLabelTap(BuildContext context, MCalDateLabelTapDetails details) {
+    final dateStr = _formatDate(details.date);
+    _showAlert(
+      context,
+      'Date Label Tapped',
+      'You tapped the date label for $dateStr\n'
+          'Is today: ${details.isToday}\n'
+          'Is current month: ${details.isCurrentMonth}',
+    );
+  }
+
+  void _onDateLabelLongPress(
+    BuildContext context,
+    MCalDateLabelTapDetails details,
+  ) {
+    final dateStr = _formatDate(details.date);
+    _showAlert(
+      context,
+      'Date Label Long-Pressed',
+      'You long-pressed the date label for $dateStr',
+    );
+  }
+
+  void _onEventTap(BuildContext context, MCalEventTapDetails details) {
+    _showAlert(
+      context,
+      'Event Tapped',
+      'You tapped the event "${details.event.title}"\n'
+          'Date: ${_formatDate(details.displayDate)}\n'
+          'All-day: ${details.event.isAllDay}\n'
+          'Color: ${details.event.color}',
+    );
+  }
+
+  void _onEventLongPress(BuildContext context, MCalEventTapDetails details) {
+    _showAlert(
+      context,
+      'Event Long-Pressed',
+      'You long-pressed the event "${details.event.title}"\n'
+          'Start: ${_formatDate(details.event.start)}\n'
+          'End: ${_formatDate(details.event.end)}',
+    );
+  }
+
+  void _onOverflowTap(BuildContext context, MCalOverflowTapDetails details) {
+    final visibleTitles = details.visibleEvents.map((e) => e.title).join(', ');
+    final hiddenTitles = details.hiddenEvents.map((e) => e.title).join(', ');
+    _showAlert(
+      context,
+      'Overflow Indicator Tapped',
+      'Date: ${_formatDate(details.date)}\n'
+          'Hidden events (${details.hiddenEvents.length}): $hiddenTitles\n'
+          'Visible events (${details.visibleEvents.length}): $visibleTitles\n'
+          'Total: ${details.allEvents.length}',
+    );
+  }
+
+  // ============================================================
+  // Hover Callbacks (with Tooltip in status bar)
+  // ============================================================
+  String _hoverStatus = 'Hover over cells, date labels, or events';
+
   void _onHoverCell(MCalDayCellContext? ctx) {
     setState(() {
       if (ctx == null) {
-        _hoverStatus = 'Hover over cells or events to see details';
+        _hoverStatus = 'Hover over cells, date labels, or events';
       } else {
-        final dateStr =
-            '${ctx.date.year}-${ctx.date.month.toString().padLeft(2, '0')}-${ctx.date.day.toString().padLeft(2, '0')}';
+        final dateStr = _formatDate(ctx.date);
         _hoverStatus =
-            'Cell: $dateStr | Events: ${ctx.events.length} | Today: ${ctx.isToday} | Focused: ${ctx.isFocused}';
+            'CELL: $dateStr | Events: ${ctx.events.length} | '
+            'Today: ${ctx.isToday} | Focused: ${ctx.isFocused} | '
+            'Current month: ${ctx.isCurrentMonth}';
       }
     });
   }
@@ -83,16 +202,40 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   void _onHoverEvent(MCalEventTileContext? ctx) {
     setState(() {
       if (ctx == null) {
-        _hoverStatus = 'Hover over cells or events to see details';
+        _hoverStatus = 'Hover over cells, date labels, or events';
       } else {
         _hoverStatus =
-            'Event: "${ctx.event.title}" | All-day: ${ctx.isAllDay} | Date: ${ctx.displayDate.day}/${ctx.displayDate.month}';
+            'EVENT: "${ctx.event.title}" | '
+            'Date: ${_formatDate(ctx.displayDate)} | '
+            'All-day: ${ctx.isAllDay} | '
+            'Start: ${_formatDate(ctx.event.start)} | '
+            'End: ${_formatDate(ctx.event.end)}';
       }
     });
   }
 
-  // Control panel expansion state for mobile
-  bool _showControls = false;
+  // ============================================================
+  // Build Theme from Settings
+  // ============================================================
+
+  MCalThemeData _buildTheme(ColorScheme colorScheme) {
+    return MCalThemeData(
+      // Date label styling
+      dateLabelPosition: _dateLabelPosition,
+      dateLabelHeight: _dateLabelHeight,
+
+      // Event tile styling
+      eventTileHeight: _tileHeight,
+      eventTileVerticalSpacing: _tileVerticalSpacing,
+      eventTileHorizontalSpacing: _tileHorizontalSpacing,
+      tileCornerRadius: _tileCornerRadius,
+      eventTileBorderWidth: _tileBorderWidth,
+      eventTileBorderColor: _tileBorderWidth > 0 ? colorScheme.outline : null,
+
+      // Overflow indicator
+      overflowIndicatorHeight: _overflowIndicatorHeight,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,13 +243,11 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Use responsive layout based on screen width
         final isWideScreen = constraints.maxWidth > 600;
         final isDesktop = constraints.maxWidth > 900;
         final isMobile = !isWideScreen;
 
         if (isMobile) {
-          // Mobile: Simple calendar with minimal UI and expandable settings
           return _buildMobileLayout(colorScheme);
         }
 
@@ -114,22 +255,16 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
         return Column(
           children: [
             StyleDescription(description: widget.description),
-            // Keyboard shortcuts info - only show on desktop
             if (isDesktop) _buildKeyboardShortcutsBar(colorScheme),
-            // Control panel
             _buildControlPanel(colorScheme),
-            // Hover status bar - only show on desktop (hover doesn't work on mobile)
             if (isDesktop) _buildHoverStatusBar(colorScheme),
-            // Main calendar and secondary view
             Expanded(
               child: Row(
                 children: [
-                  // Primary calendar
                   Expanded(
                     flex: 2,
                     child: _buildPrimaryCalendar(colorScheme, isDesktop),
                   ),
-                  // Secondary calendar (synced)
                   Expanded(
                     flex: 1,
                     child: _buildSecondaryCalendar(colorScheme),
@@ -143,12 +278,13 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     );
   }
 
-  /// Mobile-optimized layout with collapsible settings
+  // ============================================================
+  // Mobile Layout
+  // ============================================================
+
   Widget _buildMobileLayout(ColorScheme colorScheme) {
-    // Get screen height for percentage-based calendar sizing
     final screenHeight = MediaQuery.of(context).size.height;
-    // Calendar takes 60% of screen height
-    final calendarHeight = screenHeight * 0.6;
+    final calendarHeight = screenHeight * 0.55;
 
     return SingleChildScrollView(
       child: Column(
@@ -170,81 +306,77 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                     ),
                   ),
                 ),
-                // Settings toggle
                 IconButton(
                   icon: Icon(
                     _showControls ? Icons.expand_less : Icons.tune,
                     color: colorScheme.primary,
                   ),
-                  onPressed: () => setState(() => _showControls = !_showControls),
+                  onPressed: () =>
+                      setState(() => _showControls = !_showControls),
                   tooltip: 'Toggle settings',
                 ),
               ],
             ),
           ),
-          // Collapsible controls
           if (_showControls) _buildMobileControlPanel(colorScheme),
-          // Calendar with fixed height (60% of screen)
+          // Calendar with fixed height
           SizedBox(
             height: calendarHeight,
-            child: MCalMonthView(
-              controller: _sharedController,
-              showNavigator: true,
-              enableSwipeNavigation: true,
-              locale: widget.locale,
-              showWeekNumbers: _showWeekNumbers,
-              enableAnimations: _enableAnimations,
-              maxVisibleEvents: _maxVisibleEvents,
-              enableKeyboardNavigation: false, // Not useful on mobile
-              // New features
-              renderMultiDayEventsAsContiguous: _renderMultiDayEventsAsContiguous,
-              enableDragAndDrop: _enableDragAndDrop,
-              dragEdgeNavigationDelay: Duration(milliseconds: _dragEdgeNavigationDelayMs),
-              multiDayEventTileBuilder: _useCustomMultiDayTileBuilder
-                  ? _buildCustomMultiDayTile
-                  : null,
-              // Drag-and-drop callbacks
-              onEventDropped: _enableDragAndDrop
-                  ? (context, details) {
-                      // Show snackbar with drop info
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Moved "${details.event.title}" from ${_formatDate(details.oldStartDate)} to ${_formatDate(details.newStartDate)}',
-                          ),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                      return true; // Accept the drop
-                    }
-                  : null,
-              // Tap event tile → show event detail dialog
-              onEventTap: (context, details) {
-                showEventDetailDialog(context, details.event, widget.locale);
-              },
-              // Tap +N overflow → show bottom sheet with all events
-              onOverflowTap: (context, details) {
-                showDayEventsBottomSheet(context, details.date, details.allEvents, widget.locale);
-              },
-              // Cell tap just focuses (no bottom sheet for tile-based view)
+            child: MCalTheme(
+              data: _buildTheme(colorScheme),
+              child: MCalMonthView(
+                controller: _sharedController,
+                showNavigator: true,
+                enableSwipeNavigation: true,
+                locale: widget.locale,
+                showWeekNumbers: _showWeekNumbers,
+                enableAnimations: _enableAnimations,
+                maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
+                enableKeyboardNavigation: false,
+                enableDragAndDrop: _enableDragAndDrop,
+                dragEdgeNavigationDelay: Duration(
+                  milliseconds: _dragEdgeNavigationDelayMs,
+                ),
+                // Tap/LongPress handlers
+                onCellTap: _onCellTap,
+                onCellLongPress: _onCellLongPress,
+                onDateLabelTap: _onDateLabelTap,
+                onDateLabelLongPress: _onDateLabelLongPress,
+                onEventTap: _onEventTap,
+                onEventLongPress: _onEventLongPress,
+                onOverflowTap: _onOverflowTap,
+                // Drag-and-drop callback
+                onEventDropped: _enableDragAndDrop
+                    ? (context, details) {
+                        _showAlert(
+                          context,
+                          'Event Dropped',
+                          'Moved "${details.event.title}" from '
+                              '${_formatDate(details.oldStartDate)} to '
+                              '${_formatDate(details.newStartDate)}',
+                        );
+                        return true;
+                      }
+                    : null,
+              ),
             ),
           ),
-          // Add some padding at the bottom for comfortable scrolling
           const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  /// Compact control panel for mobile
+  // ============================================================
+  // Mobile Control Panel
+  // ============================================================
+
   Widget _buildMobileControlPanel(ColorScheme colorScheme) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
-        border: Border(
-          bottom: BorderSide(color: colorScheme.outlineVariant),
-        ),
+        border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -260,7 +392,6 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                   colorScheme,
                 ),
               ),
-              const SizedBox(width: 16),
               Expanded(
                 child: _buildCompactToggle(
                   'Animate',
@@ -269,21 +400,6 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                   colorScheme,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Row 2: New feature toggles
-          Row(
-            children: [
-              Expanded(
-                child: _buildCompactToggle(
-                  'Multi-Day',
-                  _renderMultiDayEventsAsContiguous,
-                  (v) => setState(() => _renderMultiDayEventsAsContiguous = v),
-                  colorScheme,
-                ),
-              ),
-              const SizedBox(width: 16),
               Expanded(
                 child: _buildCompactToggle(
                   'Drag',
@@ -295,67 +411,300 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
             ],
           ),
           const SizedBox(height: 8),
-          // Row 3: Max events slider
-          Row(
+          // Date label position
+          _buildDropdownRow(
+            'Label:',
+            _dateLabelPosition,
+            DateLabelPosition.values,
+            (v) => setState(() => _dateLabelPosition = v),
+            colorScheme,
+          ),
+          const SizedBox(height: 8),
+          // Sliders
+          _buildSliderRow(
+            'Events',
+            _maxVisibleEventsPerDay.toDouble(),
+            1,
+            10,
+            9,
+            (v) => setState(() => _maxVisibleEventsPerDay = v.round()),
+            colorScheme,
+            suffix: '',
+          ),
+          _buildSliderRow(
+            'Tile H',
+            _tileHeight,
+            10,
+            30,
+            20,
+            (v) => setState(() => _tileHeight = v),
+            colorScheme,
+          ),
+          _buildSliderRow(
+            'Corner',
+            _tileCornerRadius,
+            0,
+            10,
+            10,
+            (v) => setState(() => _tileCornerRadius = v),
+            colorScheme,
+          ),
+          _buildSliderRow(
+            'Border',
+            _tileBorderWidth,
+            0,
+            3,
+            6,
+            (v) => setState(() => _tileBorderWidth = v),
+            colorScheme,
+          ),
+          _buildSliderRow(
+            'V-Space',
+            _tileVerticalSpacing,
+            0,
+            6,
+            6,
+            (v) => setState(() => _tileVerticalSpacing = v),
+            colorScheme,
+          ),
+          _buildSliderRow(
+            'H-Space',
+            _tileHorizontalSpacing,
+            0,
+            6,
+            6,
+            (v) => setState(() => _tileHorizontalSpacing = v),
+            colorScheme,
+          ),
+          _buildSliderRow(
+            'Label H',
+            _dateLabelHeight,
+            12,
+            28,
+            16,
+            (v) => setState(() => _dateLabelHeight = v),
+            colorScheme,
+          ),
+          _buildSliderRow(
+            'Overflow',
+            _overflowIndicatorHeight,
+            10,
+            20,
+            10,
+            (v) => setState(() => _overflowIndicatorHeight = v),
+            colorScheme,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // Desktop Control Panel
+  // ============================================================
+
+  Widget _buildControlPanel(ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withAlpha(100),
+        border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
+      ),
+      child: Column(
+        children: [
+          // Row 1: Feature toggles
+          Wrap(
+            spacing: 24,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text(
-                'Events: $_maxVisibleEvents',
-                style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
+              _buildToggle('Week Numbers', _showWeekNumbers, (v) {
+                setState(() => _showWeekNumbers = v);
+              }, colorScheme),
+              _buildToggle('Animations', _enableAnimations, (v) {
+                setState(() => _enableAnimations = v);
+              }, colorScheme),
+              _buildToggle('Drag & Drop', _enableDragAndDrop, (v) {
+                setState(() => _enableDragAndDrop = v);
+              }, colorScheme),
+              // Loading/Error demo buttons
+              FilledButton.tonal(
+                onPressed: () {
+                  _sharedController.setLoading(true);
+                  Future.delayed(const Duration(seconds: 2), () {
+                    if (mounted) _sharedController.setLoading(false);
+                  });
+                },
+                child: const Text('Show Loading'),
               ),
-              Expanded(
-                child: Slider(
-                  value: _maxVisibleEvents.toDouble(),
-                  min: 1,
-                  max: 5,
-                  divisions: 4,
-                  onChanged: (v) => setState(() => _maxVisibleEvents = v.round()),
-                ),
+              FilledButton.tonal(
+                onPressed: () {
+                  _sharedController.setError(
+                    'Demo error: Something went wrong!',
+                  );
+                },
+                child: const Text('Show Error'),
+              ),
+              OutlinedButton(
+                onPressed: () {
+                  _sharedController.clearError();
+                  _sharedController.setLoading(false);
+                },
+                child: const Text('Clear'),
               ),
             ],
           ),
-          // Row 4: Drag edge delay slider (only when drag is enabled)
-          if (_enableDragAndDrop)
-            Row(
-              children: [
-                Text(
-                  'Edge: ${_dragEdgeNavigationDelayMs}ms',
-                  style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
-                ),
-                Expanded(
-                  child: Slider(
-                    value: _dragEdgeNavigationDelayMs.toDouble(),
-                    min: 200,
-                    max: 1000,
-                    divisions: 8,
-                    onChanged: (v) => setState(() => _dragEdgeNavigationDelayMs = v.round()),
+          const SizedBox(height: 8),
+          // Row 2: Theme settings
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              // Date label position
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Label:',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: colorScheme.onSurface,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  DropdownButton<DateLabelPosition>(
+                    value: _dateLabelPosition,
+                    isDense: true,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: colorScheme.onSurface,
+                    ),
+                    items: DateLabelPosition.values.map((pos) {
+                      return DropdownMenuItem(
+                        value: pos,
+                        child: Text(pos.name),
+                      );
+                    }).toList(),
+                    onChanged: (v) {
+                      if (v != null) setState(() => _dateLabelPosition = v);
+                    },
+                  ),
+                ],
+              ),
+              // Max events slider
+              _buildCompactSlider(
+                'Max Events',
+                _maxVisibleEventsPerDay.toDouble(),
+                1,
+                10,
+                9,
+                (v) => setState(() => _maxVisibleEventsPerDay = v.round()),
+                colorScheme,
+                showValue: _maxVisibleEventsPerDay.toString(),
+              ),
+              // Tile height slider
+              _buildCompactSlider(
+                'Tile Height',
+                _tileHeight,
+                10,
+                30,
+                20,
+                (v) => setState(() => _tileHeight = v),
+                colorScheme,
+                showValue: '${_tileHeight.toInt()}px',
+              ),
+              // Corner radius slider
+              _buildCompactSlider(
+                'Corner',
+                _tileCornerRadius,
+                0,
+                10,
+                10,
+                (v) => setState(() => _tileCornerRadius = v),
+                colorScheme,
+                showValue: '${_tileCornerRadius.toInt()}px',
+              ),
+              // Border width slider
+              _buildCompactSlider(
+                'Border',
+                _tileBorderWidth,
+                0,
+                3,
+                6,
+                (v) => setState(() => _tileBorderWidth = v),
+                colorScheme,
+                showValue: '${_tileBorderWidth.toStringAsFixed(1)}px',
+              ),
+              // Vertical spacing slider
+              _buildCompactSlider(
+                'V-Space',
+                _tileVerticalSpacing,
+                0,
+                6,
+                6,
+                (v) => setState(() => _tileVerticalSpacing = v),
+                colorScheme,
+                showValue: '${_tileVerticalSpacing.toInt()}px',
+              ),
+              // Horizontal spacing slider
+              _buildCompactSlider(
+                'H-Space',
+                _tileHorizontalSpacing,
+                0,
+                6,
+                6,
+                (v) => setState(() => _tileHorizontalSpacing = v),
+                colorScheme,
+                showValue: '${_tileHorizontalSpacing.toInt()}px',
+              ),
+              // Label height slider
+              _buildCompactSlider(
+                'Label H',
+                _dateLabelHeight,
+                12,
+                28,
+                16,
+                (v) => setState(() => _dateLabelHeight = v),
+                colorScheme,
+                showValue: '${_dateLabelHeight.toInt()}px',
+              ),
+              // Overflow indicator height slider
+              _buildCompactSlider(
+                'Overflow H',
+                _overflowIndicatorHeight,
+                10,
+                20,
+                10,
+                (v) => setState(() => _overflowIndicatorHeight = v),
+                colorScheme,
+                showValue: '${_overflowIndicatorHeight.toInt()}px',
+              ),
+            ],
+          ),
+          // Row 3: Drag edge delay (only when drag enabled)
+          if (_enableDragAndDrop)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _buildCompactSlider(
+                'Edge Delay',
+                _dragEdgeNavigationDelayMs.toDouble(),
+                200,
+                1000,
+                8,
+                (v) => setState(() => _dragEdgeNavigationDelayMs = v.round()),
+                colorScheme,
+                showValue: '${_dragEdgeNavigationDelayMs}ms',
+              ),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildCompactToggle(
-    String label,
-    bool value,
-    ValueChanged<bool> onChanged,
-    ColorScheme colorScheme,
-  ) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: TextStyle(fontSize: 13, color: colorScheme.onSurface)),
-        const SizedBox(width: 4),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-      ],
-    );
-  }
+  // ============================================================
+  // Keyboard Shortcuts Bar
+  // ============================================================
 
   Widget _buildKeyboardShortcutsBar(ColorScheme colorScheme) {
     return Container(
@@ -401,172 +750,15 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
         const SizedBox(width: 4),
         Text(
           action,
-          style: TextStyle(
-            fontSize: 11,
-            color: colorScheme.onSurfaceVariant,
-          ),
+          style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
         ),
       ],
     );
   }
 
-  Widget _buildControlPanel(ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withAlpha(100),
-        border: Border(
-          bottom: BorderSide(color: colorScheme.outlineVariant),
-        ),
-      ),
-      child: Wrap(
-        spacing: 24,
-        runSpacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          // Week numbers toggle
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Week Numbers',
-                  style: TextStyle(fontSize: 13, color: colorScheme.onSurface)),
-              const SizedBox(width: 8),
-              Switch(
-                value: _showWeekNumbers,
-                onChanged: (value) => setState(() => _showWeekNumbers = value),
-              ),
-            ],
-          ),
-          // Animations toggle
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Animations',
-                  style: TextStyle(fontSize: 13, color: colorScheme.onSurface)),
-              const SizedBox(width: 8),
-              Switch(
-                value: _enableAnimations,
-                onChanged: (value) => setState(() => _enableAnimations = value),
-              ),
-            ],
-          ),
-          // Max visible events slider
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Max Events: $_maxVisibleEvents',
-                  style: TextStyle(fontSize: 13, color: colorScheme.onSurface)),
-              SizedBox(
-                width: 150,
-                child: Slider(
-                  value: _maxVisibleEvents.toDouble(),
-                  min: 1,
-                  max: 10,
-                  divisions: 9,
-                  label: _maxVisibleEvents.toString(),
-                  onChanged: (value) =>
-                      setState(() => _maxVisibleEvents = value.round()),
-                ),
-              ),
-            ],
-          ),
-          // Multi-day events toggle
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Contiguous Multi-Day',
-                  style: TextStyle(fontSize: 13, color: colorScheme.onSurface)),
-              const SizedBox(width: 8),
-              Switch(
-                value: _renderMultiDayEventsAsContiguous,
-                onChanged: (value) => setState(() => _renderMultiDayEventsAsContiguous = value),
-              ),
-            ],
-          ),
-          // Custom multi-day tile builder toggle
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Custom Tile',
-                  style: TextStyle(fontSize: 13, color: colorScheme.onSurface)),
-              const SizedBox(width: 8),
-              Switch(
-                value: _useCustomMultiDayTileBuilder,
-                onChanged: (value) => setState(() => _useCustomMultiDayTileBuilder = value),
-              ),
-            ],
-          ),
-          // Drag-and-drop toggle
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Drag & Drop',
-                  style: TextStyle(fontSize: 13, color: colorScheme.onSurface)),
-              const SizedBox(width: 8),
-              Switch(
-                value: _enableDragAndDrop,
-                onChanged: (value) => setState(() => _enableDragAndDrop = value),
-              ),
-            ],
-          ),
-          // Drag edge navigation delay slider
-          if (_enableDragAndDrop)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Edge Delay: ${_dragEdgeNavigationDelayMs}ms',
-                    style: TextStyle(fontSize: 13, color: colorScheme.onSurface)),
-                SizedBox(
-                  width: 150,
-                  child: Slider(
-                    value: _dragEdgeNavigationDelayMs.toDouble(),
-                    min: 200,
-                    max: 1000,
-                    divisions: 8,
-                    label: '${_dragEdgeNavigationDelayMs}ms',
-                    onChanged: (value) =>
-                        setState(() => _dragEdgeNavigationDelayMs = value.round()),
-                  ),
-                ),
-              ],
-            ),
-          // Loading/Error demo buttons
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FilledButton.tonal(
-                onPressed: () {
-                  _sharedController.setLoading(true);
-                  // Auto-clear after 2 seconds
-                  Future.delayed(const Duration(seconds: 2), () {
-                    if (mounted) {
-                      _sharedController.setLoading(false);
-                    }
-                  });
-                },
-                child: const Text('Show Loading'),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.tonal(
-                onPressed: () {
-                  _sharedController.setError('Demo error: Something went wrong!');
-                },
-                child: const Text('Show Error'),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton(
-                onPressed: () {
-                  _sharedController.clearError();
-                  _sharedController.setLoading(false);
-                },
-                child: const Text('Clear'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  // ============================================================
+  // Hover Status Bar
+  // ============================================================
 
   Widget _buildHoverStatusBar(ColorScheme colorScheme) {
     return Container(
@@ -593,6 +785,10 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     );
   }
 
+  // ============================================================
+  // Primary Calendar
+  // ============================================================
+
   Widget _buildPrimaryCalendar(ColorScheme colorScheme, bool isDesktop) {
     return Container(
       margin: const EdgeInsets.all(8),
@@ -606,8 +802,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: colorScheme.primaryContainer.withAlpha(100),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(8)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(8),
+              ),
             ),
             child: Row(
               children: [
@@ -629,72 +826,65 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
             ),
           ),
           Expanded(
-            child: MCalMonthView(
-              controller: _sharedController,
-              showNavigator: true,
-              enableSwipeNavigation: true,
-              locale: widget.locale,
-              showWeekNumbers: _showWeekNumbers,
-              enableAnimations: _enableAnimations,
-              maxVisibleEvents: _maxVisibleEvents,
-              enableKeyboardNavigation: isDesktop,
-              onHoverCell: isDesktop ? _onHoverCell : null,
-              onHoverEvent: isDesktop ? _onHoverEvent : null,
-              // New features
-              renderMultiDayEventsAsContiguous: _renderMultiDayEventsAsContiguous,
-              enableDragAndDrop: _enableDragAndDrop,
-              dragEdgeNavigationDelay: Duration(milliseconds: _dragEdgeNavigationDelayMs),
-              multiDayEventTileBuilder: _useCustomMultiDayTileBuilder
-                  ? _buildCustomMultiDayTile
-                  : null,
-              // Drag-and-drop callbacks
-              onEventDropped: _enableDragAndDrop
-                  ? (context, details) {
-                      // Show snackbar with drop info
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Moved "${details.event.title}" from ${_formatDate(details.oldStartDate)} to ${_formatDate(details.newStartDate)}',
-                          ),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                      return true; // Accept the drop
-                    }
-                  : null,
-              // Tap event tile → show event detail dialog
-              onEventTap: (context, details) {
-                showEventDetailDialog(context, details.event, widget.locale);
-              },
-              // Tap +N overflow → show bottom sheet with all events
-              onOverflowTap: (context, details) {
-                showDayEventsBottomSheet(context, details.date, details.allEvents, widget.locale);
-              },
-              // Cell tap just focuses and updates status (no bottom sheet)
-              onCellTap: (context, details) {
-                if (isDesktop) {
-                  setState(() {
-                    _hoverStatus =
-                        'Selected: ${details.date.day}/${details.date.month}/${details.date.year} with ${details.events.length} events';
-                  });
-                }
-              },
-              onFocusedDateChanged: isDesktop
-                  ? (date) {
-                      if (date != null) {
-                        setState(() {
-                          _hoverStatus =
-                              'Focused: ${date.day}/${date.month}/${date.year}';
-                        });
+            child: MCalTheme(
+              data: _buildTheme(colorScheme),
+              child: MCalMonthView(
+                controller: _sharedController,
+                showNavigator: true,
+                enableSwipeNavigation: true,
+                locale: widget.locale,
+                showWeekNumbers: _showWeekNumbers,
+                enableAnimations: _enableAnimations,
+                maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
+                enableKeyboardNavigation: isDesktop,
+                enableDragAndDrop: _enableDragAndDrop,
+                dragEdgeNavigationDelay: Duration(
+                  milliseconds: _dragEdgeNavigationDelayMs,
+                ),
+                // Hover handlers
+                onHoverCell: isDesktop ? _onHoverCell : null,
+                onHoverEvent: isDesktop ? _onHoverEvent : null,
+                // Tap/LongPress handlers
+                onCellTap: _onCellTap,
+                onCellLongPress: _onCellLongPress,
+                onDateLabelTap: _onDateLabelTap,
+                onDateLabelLongPress: _onDateLabelLongPress,
+                onEventTap: _onEventTap,
+                onEventLongPress: _onEventLongPress,
+                onOverflowTap: _onOverflowTap,
+                // Drag-and-drop callback
+                onEventDropped: _enableDragAndDrop
+                    ? (context, details) {
+                        _showAlert(
+                          context,
+                          'Event Dropped',
+                          'Moved "${details.event.title}" from '
+                              '${_formatDate(details.oldStartDate)} to '
+                              '${_formatDate(details.newStartDate)}',
+                        );
+                        return true;
                       }
-                    }
-                  : null,
+                    : null,
+                onFocusedDateChanged: isDesktop
+                    ? (date) {
+                        if (date != null) {
+                          setState(() {
+                            _hoverStatus = 'FOCUSED: ${_formatDate(date)}';
+                          });
+                        }
+                      }
+                    : null,
+              ),
             ),
           ),
         ],
       ),
     );
   }
+
+  // ============================================================
+  // Secondary Calendar (Synced)
+  // ============================================================
 
   Widget _buildSecondaryCalendar(ColorScheme colorScheme) {
     return Container(
@@ -709,8 +899,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: colorScheme.secondaryContainer.withAlpha(100),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(8)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(8),
+              ),
             ),
             child: Row(
               children: [
@@ -730,20 +921,23 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
             ),
           ),
           Expanded(
-            child: MCalMonthView(
-              controller: _sharedController,
-              showNavigator: false, // Controlled by primary
-              locale: widget.locale,
-              showWeekNumbers: _showWeekNumbers,
-              enableAnimations: _enableAnimations,
-              maxVisibleEvents: 2, // Smaller view, fewer events
-              enableKeyboardNavigation: false, // Only primary has keyboard nav
-              // New features - synced with primary
-              renderMultiDayEventsAsContiguous: _renderMultiDayEventsAsContiguous,
-              enableDragAndDrop: false, // Only enable on primary
-              theme: MCalThemeData(
+            child: MCalTheme(
+              data: MCalThemeData(
                 cellBackgroundColor: colorScheme.surfaceContainerLow,
                 cellTextStyle: const TextStyle(fontSize: 12),
+                dateLabelPosition: _dateLabelPosition,
+                eventTileHeight: _tileHeight,
+                tileCornerRadius: _tileCornerRadius,
+              ),
+              child: MCalMonthView(
+                controller: _sharedController,
+                showNavigator: false,
+                locale: widget.locale,
+                showWeekNumbers: _showWeekNumbers,
+                enableAnimations: _enableAnimations,
+                maxVisibleEventsPerDay: 2,
+                enableKeyboardNavigation: false,
+                enableDragAndDrop: false,
               ),
             ),
           ),
@@ -752,93 +946,161 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     );
   }
 
-  /// Custom multi-day event tile builder for demonstration.
-  /// 
-  /// Shows a gradient background with an icon and custom styling.
-  Widget _buildCustomMultiDayTile(BuildContext context, MCalMultiDayTileDetails details) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final event = details.event;
-    final eventColor = event.color ?? colorScheme.primary;
-    
-    // Calculate border radius based on row position (not event position)
-    // This creates the visual continuation effect across week boundaries
-    const radius = Radius.circular(6);
-    BorderRadius borderRadius;
-    if (details.isFirstDayInRow && details.isLastDayInRow) {
-      borderRadius = const BorderRadius.all(radius);
-    } else if (details.isFirstDayInRow) {
-      borderRadius = const BorderRadius.only(topLeft: radius, bottomLeft: radius);
-    } else if (details.isLastDayInRow) {
-      borderRadius = const BorderRadius.only(topRight: radius, bottomRight: radius);
-    } else {
-      borderRadius = BorderRadius.zero;
-    }
+  // ============================================================
+  // Helper Widgets
+  // ============================================================
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 1),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            eventColor.withAlpha(230), // 0.9 * 255 ≈ 230
-            eventColor.withAlpha(179), // 0.7 * 255 ≈ 179
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _buildToggle(
+    String label,
+    bool value,
+    ValueChanged<bool> onChanged,
+    ColorScheme colorScheme,
+  ) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
         ),
-        borderRadius: borderRadius,
-        boxShadow: [
-          BoxShadow(
-            color: eventColor.withAlpha(77), // 0.3 * 255 ≈ 77
-            blurRadius: 2,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        child: Row(
-          children: [
-            // Show icon only on the first day of each row segment
-            if (details.isFirstDayInRow) ...[
-              Icon(
-                event.isAllDay ? Icons.calendar_today : Icons.schedule,
-                size: 12,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 4),
-            ],
-            Expanded(
-              child: Text(
-                // Show title on first day of each row
-                details.isFirstDayInRow ? event.title : '',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ),
-            // Show total days badge on the last day of the event
-            if (details.isLastDayOfEvent && details.totalDaysInEvent > 1) ...[
-              Text(
-                '${details.totalDaysInEvent}d',
-                style: TextStyle(
-                  color: Colors.white.withAlpha(204), // 0.8 * 255 ≈ 204
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+        const SizedBox(width: 8),
+        Switch(value: value, onChanged: onChanged),
+      ],
     );
   }
 
-  /// Format date for display in snackbar
+  Widget _buildCompactToggle(
+    String label,
+    bool value,
+    ValueChanged<bool> onChanged,
+    ColorScheme colorScheme,
+  ) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
+        ),
+        const SizedBox(width: 4),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactSlider(
+    String label,
+    double value,
+    double min,
+    double max,
+    int divisions,
+    ValueChanged<double> onChanged,
+    ColorScheme colorScheme, {
+    required String showValue,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$label: $showValue',
+          style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
+        ),
+        SizedBox(
+          width: 100,
+          child: Slider(
+            value: value,
+            min: min,
+            max: max,
+            divisions: divisions,
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSliderRow(
+    String label,
+    double value,
+    double min,
+    double max,
+    int divisions,
+    ValueChanged<double> onChanged,
+    ColorScheme colorScheme, {
+    String suffix = 'px',
+  }) {
+    final displayValue = suffix.isEmpty
+        ? value.toInt().toString()
+        : '${value.toInt()}$suffix';
+    return Row(
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            '$label: $displayValue',
+            style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
+          ),
+        ),
+        Expanded(
+          child: Slider(
+            value: value,
+            min: min,
+            max: max,
+            divisions: divisions,
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownRow<T>(
+    String label,
+    T value,
+    List<T> items,
+    ValueChanged<T> onChanged,
+    ColorScheme colorScheme,
+  ) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: DropdownButton<T>(
+            value: value,
+            isDense: true,
+            isExpanded: true,
+            style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
+            items: items.map((item) {
+              return DropdownMenuItem(
+                value: item,
+                child: Text(
+                  item.toString().split('.').last,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            onChanged: (v) {
+              if (v != null) onChanged(v);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   String _formatDate(DateTime date) {
     return '${date.month}/${date.day}/${date.year}';
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 }

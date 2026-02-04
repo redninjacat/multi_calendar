@@ -68,7 +68,6 @@ final controller = MCalEventController();
 
 MCalMonthView(
   controller: controller,
-  initialDate: DateTime.now(),
   showNavigator: true,
   enableSwipeNavigation: true,
   locale: widget.currentLocale,

@@ -49,8 +49,8 @@ class MCalEventController extends ChangeNotifier {
   /// The currently displayed date in the calendar view.
   ///
   /// This represents the primary date being shown (e.g., the month being viewed).
-  /// Defaults to the current date.
-  DateTime _displayDate = DateTime.now();
+  /// Initialized from the constructor's initialDate parameter, defaults to today.
+  DateTime _displayDate;
 
   /// The currently focused date in the calendar view.
   ///
@@ -79,7 +79,11 @@ class MCalEventController extends ChangeNotifier {
   bool _animateNextChange = true;
 
   /// Creates a new [MCalEventController] instance.
-  MCalEventController();
+  ///
+  /// [initialDate] sets the initially displayed date. Defaults to today if not provided.
+  /// The view will display the month containing this date.
+  MCalEventController({DateTime? initialDate})
+    : _displayDate = initialDate ?? DateTime.now();
 
   // ============================================================
   // Task 1: Display and Focus Date Getters
@@ -289,7 +293,10 @@ class MCalEventController extends ChangeNotifier {
   ///   }
   /// }
   /// ```
-  Future<List<MCalCalendarEvent>> loadEvents(DateTime start, DateTime end) async {
+  Future<List<MCalCalendarEvent>> loadEvents(
+    DateTime start,
+    DateTime end,
+  ) async {
     // Base implementation returns cached events for the range
     return getEventsForRange(DateTimeRange(start: start, end: end));
   }
@@ -336,7 +343,8 @@ class MCalEventController extends ChangeNotifier {
   /// Gets all cached events.
   ///
   /// Returns an unmodifiable list of all events in the cache.
-  List<MCalCalendarEvent> get allEvents => List.unmodifiable(_eventsById.values);
+  List<MCalCalendarEvent> get allEvents =>
+      List.unmodifiable(_eventsById.values);
 
   /// Gets events that fall within the specified date range.
   ///
@@ -352,8 +360,7 @@ class MCalEventController extends ChangeNotifier {
     return _eventsById.values.where((event) {
       // Event overlaps with range if it starts before range ends
       // and ends after range starts
-      return event.start.isBefore(range.end) &&
-          event.end.isAfter(range.start);
+      return event.start.isBefore(range.end) && event.end.isAfter(range.start);
     }).toList();
   }
 

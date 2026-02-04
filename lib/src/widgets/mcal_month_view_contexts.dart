@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/mcal_calendar_event.dart';
+import 'mcal_week_layout_contexts.dart';
 
 /// Context object for day cell builder callbacks.
 ///
@@ -47,6 +48,34 @@ class MCalDayCellContext {
   /// List of events occurring on this date.
   final List<MCalCalendarEvent> events;
 
+  /// Builder for rendering date labels within the cell.
+  ///
+  /// This builder is pre-wrapped with tap handlers (if configured) so the
+  /// returned widget already responds to [onDateLabelTap]/[onDateLabelLongPress].
+  /// If no tap handlers are configured, the widget is wrapped with [IgnorePointer]
+  /// so taps pass through to the cell's [onCellTap] handler.
+  ///
+  /// Example usage in a custom dayCellBuilder:
+  /// ```dart
+  /// dayCellBuilder: (context, ctx, defaultCell) {
+  ///   final labelContext = MCalDateLabelContext(
+  ///     date: ctx.date,
+  ///     isCurrentMonth: ctx.isCurrentMonth,
+  ///     isToday: ctx.isToday,
+  ///     defaultFormattedString: '${ctx.date.day}',
+  ///     locale: Localizations.localeOf(context),
+  ///   );
+  ///   final label = ctx.dateLabelBuilder?.call(context, labelContext);
+  ///   return Stack(
+  ///     children: [
+  ///       defaultCell,
+  ///       if (label != null) Positioned(top: 4, left: 4, child: label),
+  ///     ],
+  ///   );
+  /// }
+  /// ```
+  final MCalDateLabelBuilder? dateLabelBuilder;
+
   /// Creates a new [MCalDayCellContext] instance.
   const MCalDayCellContext({
     required this.date,
@@ -55,6 +84,7 @@ class MCalDayCellContext {
     required this.isSelectable,
     this.isFocused = false,
     required this.events,
+    this.dateLabelBuilder,
   });
 }
 
@@ -88,11 +118,27 @@ class MCalEventTileContext {
   /// Whether this event is an all-day event.
   final bool isAllDay;
 
+  /// The event segment information for layout purposes.
+  /// Contains position within week, first/last segment flags, and span info.
+  /// May be null for backward compatibility with existing code.
+  final MCalEventSegment? segment;
+
+  /// The computed width for this tile.
+  /// May be null if not available during construction.
+  final double? width;
+
+  /// The computed height for this tile.
+  /// May be null if not available during construction.
+  final double? height;
+
   /// Creates a new [MCalEventTileContext] instance.
   const MCalEventTileContext({
     required this.event,
     required this.displayDate,
     required this.isAllDay,
+    this.segment,
+    this.width,
+    this.height,
   });
 }
 
@@ -129,10 +175,7 @@ class MCalDayHeaderContext {
   final String dayName;
 
   /// Creates a new [MCalDayHeaderContext] instance.
-  const MCalDayHeaderContext({
-    required this.dayOfWeek,
-    required this.dayName,
-  });
+  const MCalDayHeaderContext({required this.dayOfWeek, required this.dayName});
 }
 
 /// Context object for navigator builder callbacks.
@@ -229,6 +272,10 @@ class MCalDateLabelContext {
   /// The locale for formatting dates.
   final Locale locale;
 
+  /// The position of the date label within the cell.
+  /// Used to determine alignment (left/center/right) and vertical position (top/bottom).
+  final DateLabelPosition position;
+
   /// Creates a new [MCalDateLabelContext] instance.
   const MCalDateLabelContext({
     required this.date,
@@ -236,7 +283,23 @@ class MCalDateLabelContext {
     required this.isToday,
     required this.defaultFormattedString,
     required this.locale,
+    this.position = DateLabelPosition.topLeft,
   });
+
+  /// Returns the horizontal alignment based on the position.
+  Alignment get horizontalAlignment {
+    switch (position) {
+      case DateLabelPosition.topLeft:
+      case DateLabelPosition.bottomLeft:
+        return Alignment.centerLeft;
+      case DateLabelPosition.topCenter:
+      case DateLabelPosition.bottomCenter:
+        return Alignment.center;
+      case DateLabelPosition.topRight:
+      case DateLabelPosition.bottomRight:
+        return Alignment.centerRight;
+    }
+  }
 }
 
 /// Context object for week number builder callbacks.

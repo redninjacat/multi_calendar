@@ -53,6 +53,15 @@ export 'src/widgets/mcal_callback_details.dart';
 export 'src/widgets/mcal_multi_day_renderer.dart';
 export 'src/widgets/mcal_multi_day_tile.dart';
 export 'src/widgets/mcal_draggable_event_tile.dart';
+export 'src/widgets/mcal_week_layout_contexts.dart'
+    show
+        MCalEventSegment,
+        MCalWeekLayoutContext,
+        MCalWeekLayoutConfig,
+        MCalOverflowIndicatorContext,
+        DateLabelPosition;
+export 'src/widgets/mcal_default_week_layout.dart'
+    show MCalDefaultWeekLayoutBuilder, MCalSegmentRowAssignment, MCalOverflowInfo;
 
 // Export styles
 export 'src/styles/mcal_theme.dart';
