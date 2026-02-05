@@ -3396,20 +3396,21 @@ class _DayCellWidget extends StatelessWidget {
   /// - builder: Shows visual feedback using [dropTargetCellBuilder] or default overlay
   /// - onAcceptWithDetails: Handles the drop, updates controller, and calls [onEventDropped]
   Widget _wrapWithDragTarget(BuildContext context, Widget child) {
-    return DragTarget<MCalCalendarEvent>(
+    return DragTarget<MCalDragData>(
       onWillAcceptWithDetails: (details) {
-        final event = details.data;
+        final dragData = details.data;
+        final event = dragData.event;
 
         // Calculate proposed new dates by computing the day delta
-        // The source date is stored on the draggable (from MCalDraggableEventTile)
-        // We calculate delta from the event's start to the target cell
-        final eventStartDate = DateTime(
-          event.start.year,
-          event.start.month,
-          event.start.day,
+        // Use the source date (where the drag was initiated) for correct positioning
+        // of multi-day events when dragged from a cell other than the start date
+        final sourceDateNormalized = DateTime(
+          dragData.sourceDate.year,
+          dragData.sourceDate.month,
+          dragData.sourceDate.day,
         );
         final targetCellDate = DateTime(date.year, date.month, date.day);
-        final dayDelta = targetCellDate.difference(eventStartDate).inDays;
+        final dayDelta = targetCellDate.difference(sourceDateNormalized).inDays;
 
         // Calculate proposed new start and end dates
         final proposedStartDate = event.start.add(Duration(days: dayDelta));
@@ -3439,7 +3440,8 @@ class _DayCellWidget extends StatelessWidget {
 
         // Determine if this is a valid drop target
         final isValid = candidateData.isNotEmpty;
-        final draggedEvent = isValid ? candidateData.first : rejectedData.first;
+        final dragData = isValid ? candidateData.first : rejectedData.first;
+        final draggedEvent = dragData?.event;
 
         // Use custom dropTargetCellBuilder if provided
         if (dropTargetCellBuilder != null && draggedEvent != null) {
@@ -3479,16 +3481,19 @@ class _DayCellWidget extends StatelessWidget {
         );
       },
       onAcceptWithDetails: (details) {
-        final event = details.data;
+        final dragData = details.data;
+        final event = dragData.event;
 
-        // Calculate the day delta between event start and target cell
-        final eventStartDate = DateTime(
-          event.start.year,
-          event.start.month,
-          event.start.day,
+        // Calculate the day delta using the source date (where drag was initiated)
+        // This ensures multi-day events are positioned correctly when dragged
+        // from a cell other than the start date
+        final sourceDateNormalized = DateTime(
+          dragData.sourceDate.year,
+          dragData.sourceDate.month,
+          dragData.sourceDate.day,
         );
         final targetCellDate = DateTime(date.year, date.month, date.day);
-        final dayDelta = targetCellDate.difference(eventStartDate).inDays;
+        final dayDelta = targetCellDate.difference(sourceDateNormalized).inDays;
 
         // Calculate new dates
         final newStartDate = event.start.add(Duration(days: dayDelta));

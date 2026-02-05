@@ -646,3 +646,27 @@ class MCalEventDroppedDetails {
     required this.newEndDate,
   });
 }
+
+/// Data object passed during drag-and-drop operations.
+///
+/// This class bundles the event being dragged with the source date
+/// (the cell where the drag was initiated). This allows the drop target
+/// to calculate the correct day delta based on where the user grabbed
+/// the event, not just the event's start date.
+///
+/// For multi-day events, this is crucial: if a user drags from day 3
+/// of a 5-day event, the drop should position the event relative to
+/// where they initiated the drag.
+class MCalDragData {
+  /// The calendar event being dragged.
+  final MCalCalendarEvent event;
+
+  /// The date of the cell where the drag was initiated.
+  ///
+  /// For multi-day events, this may differ from [event.start].
+  /// The drop target uses this to calculate the correct day delta.
+  final DateTime sourceDate;
+
+  /// Creates a new [MCalDragData] instance.
+  const MCalDragData({required this.event, required this.sourceDate});
+}

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/mcal_calendar_event.dart';
+import '../styles/mcal_theme.dart';
 import 'mcal_callback_details.dart';
 
 /// A widget that wraps an event tile with drag-and-drop functionality.
@@ -193,10 +194,14 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
       return widget.child;
     }
 
-    return LongPressDraggable<MCalCalendarEvent>(
-      data: widget.event,
+    // Capture theme data from the current context before entering the overlay.
+    // The overlay context doesn't have access to MCalTheme, so we capture it here.
+    final themeData = MCalTheme.maybeOf(context);
+
+    return LongPressDraggable<MCalDragData>(
+      data: MCalDragData(event: widget.event, sourceDate: widget.sourceDate),
       delay: const Duration(milliseconds: _longPressDelayMs),
-      feedback: _buildFeedback(context),
+      feedback: _buildFeedback(context, themeData),
       childWhenDragging: _buildChildWhenDragging(context),
       onDragStarted: _handleDragStarted,
       onDragEnd: _handleDragEnd,
@@ -207,7 +212,11 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
   }
 
   /// Builds the feedback widget shown while dragging.
-  Widget _buildFeedback(BuildContext context) {
+  ///
+  /// The [capturedTheme] is the theme data captured from the original context
+  /// before entering the overlay. This is necessary because the overlay context
+  /// doesn't have access to the MCalTheme InheritedWidget.
+  Widget _buildFeedback(BuildContext context, MCalThemeData? capturedTheme) {
     // Calculate full event width
     final eventDurationDays = _calculateEventDurationDays();
     final tileWidth =
@@ -215,8 +224,9 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
 
     // If custom builder is provided, use it
     if (widget.draggedTileBuilder != null) {
-      return Builder(
-        builder: (context) {
+      // Wrap in MCalTheme to provide theme data in the overlay context
+      Widget feedback = Builder(
+        builder: (innerContext) {
           final details = MCalDraggedTileDetails(
             event: widget.event,
             sourceDate: widget.sourceDate,
@@ -225,9 +235,16 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
             horizontalSpacing: widget.horizontalSpacing,
             eventDurationDays: eventDurationDays,
           );
-          return widget.draggedTileBuilder!(context, details);
+          return widget.draggedTileBuilder!(innerContext, details);
         },
       );
+
+      // Wrap with MCalTheme if we captured theme data from the original context
+      if (capturedTheme != null) {
+        feedback = MCalTheme(data: capturedTheme, child: feedback);
+      }
+
+      return feedback;
     }
 
     // Use default feedback builder if provided (reuses existing tile builder logic)

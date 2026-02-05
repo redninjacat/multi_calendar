@@ -57,7 +57,7 @@ class ColorfulMonthStyle extends StatelessWidget {
                   color: isDarkMode ? Colors.white70 : gradientStart,
                 ),
                 // Thin pills for elongated event display
-                eventTileHeight: 4.0,
+                eventTileHeight: 6.0,
                 eventTileVerticalSpacing: 3.0,
                 eventTileHorizontalSpacing: 6.0,
                 eventTileCornerRadius: 4,
@@ -67,6 +67,7 @@ class ColorfulMonthStyle extends StatelessWidget {
                 showNavigator: true,
                 enableSwipeNavigation: true,
                 locale: locale,
+                enableDragAndDrop: true,
                 eventTileBuilder: (context, tileContext, defaultTile) {
                   final segment = tileContext.segment;
                   final isAllDay = tileContext.isAllDay;
@@ -116,6 +117,45 @@ class ColorfulMonthStyle extends StatelessWidget {
                 },
                 navigatorBuilder: (context, ctx, defaultNavigator) {
                   return _buildNavigator(context, ctx);
+                },
+                draggedTileBuilder: (context, details) {
+                  final theme = MCalTheme.of(context);
+                  final cornerRadius = theme.eventTileCornerRadius ?? 4.0;
+                  final tileHeight = theme.eventTileHeight ?? 6.0;
+                  final isAllDay = details.event.isAllDay;
+
+                  // Build the pill with Material wrapper for drop shadow
+                  final pill = Material(
+                    elevation: 6.0,
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(cornerRadius),
+                    child: Container(
+                      // Timed events use half width, all-day events use full width
+                      width: isAllDay
+                          ? details.tileWidth
+                          : details.tileWidth / 2,
+                      height: tileHeight,
+                      decoration: BoxDecoration(
+                        color:
+                            details.event.color ??
+                            Theme.of(context).colorScheme.primary,
+                        borderRadius: BorderRadius.all(
+                          Radius.circular(cornerRadius),
+                        ),
+                      ),
+                    ),
+                  );
+
+                  // For timed events, center within a sized container
+                  if (!isAllDay) {
+                    return SizedBox(
+                      width: details.tileWidth,
+                      height: tileHeight,
+                      child: Center(child: pill),
+                    );
+                  }
+
+                  return pill;
                 },
                 onCellTap: (context, details) {
                   onDateSelected(details.date);
