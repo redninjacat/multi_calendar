@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 
@@ -68,6 +70,27 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     super.initState();
     _sharedController = MCalEventController();
     _sharedController.addEvents(createSampleEvents());
+
+    // Set initial focused date on platforms that support keyboard navigation
+    if (_supportsKeyboardNavigation) {
+      final now = DateTime.now();
+      _sharedController.setFocusedDate(DateTime(now.year, now.month, 1));
+    }
+  }
+
+  /// Returns true if the current platform supports keyboard navigation.
+  bool get _supportsKeyboardNavigation {
+    if (kIsWeb) return true;
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.macOS:
+      case TargetPlatform.windows:
+      case TargetPlatform.linux:
+        return true;
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+      case TargetPlatform.fuchsia:
+        return false;
+    }
   }
 
   @override
@@ -234,6 +257,13 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
 
       // Overflow indicator
       overflowIndicatorHeight: _overflowIndicatorHeight,
+
+      // Focused date styling (for keyboard navigation)
+      focusedDateBackgroundColor: colorScheme.primary.withValues(alpha: 0.2),
+      focusedDateTextStyle: TextStyle(
+        color: colorScheme.primary,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 

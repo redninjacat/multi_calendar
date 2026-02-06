@@ -665,10 +665,10 @@ class MCalMultiDayRenderer {
   }
 
   /// Calculates the number of days between two dates (ignoring time).
+  ///
+  /// Uses [daysBetween] from date_utils.dart which is DST-safe.
   static int _daysBetween(DateTime from, DateTime to) {
-    final fromDay = DateTime(from.year, from.month, from.day);
-    final toDay = DateTime(to.year, to.month, to.day);
-    return toDay.difference(fromDay).inDays;
+    return daysBetween(from, to);
   }
 }
 

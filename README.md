@@ -647,7 +647,7 @@ MCalMonthView(
     );
   },
   // Customize the source placeholder
-  dragSourceBuilder: (context, details) {
+  dragSourceTileBuilder: (context, details) {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey, style: BorderStyle.solid),
@@ -671,8 +671,8 @@ MCalMonthView(
 | Class | Properties | Used By |
 |-------|-----------|---------|
 | `MCalDraggedTileDetails` | `event`, `sourceDate`, `currentPosition` | `draggedTileBuilder` |
-| `MCalDragSourceDetails` | `event`, `sourceDate` | `dragSourceBuilder` |
-| `MCalDragTargetDetails` | `event`, `targetDate`, `isValid` | `dragTargetBuilder` |
+| `MCalDragSourceDetails` | `event`, `sourceDate` | `dragSourceTileBuilder` |
+| `MCalDragTargetDetails` | `event`, `targetDate`, `isValid` | `dragTargetTileBuilder` |
 | `MCalDragWillAcceptDetails` | `event`, `proposedStartDate`, `proposedEndDate` | `onDragWillAccept` |
 | `MCalDropTargetCellDetails` | `date`, `isValid`, `draggedEvent` | `dropTargetCellBuilder` |
 | `MCalEventDroppedDetails` | `event`, `oldStartDate`, `oldEndDate`, `newStartDate`, `newEndDate` | `onEventDropped` |

@@ -72,7 +72,11 @@ DateTimeRange getNextMonthRange(DateTime month) {
 /// final dates = generateMonthDates(DateTime(2024, 2, 1), 0); // Sunday = 0
 /// // Returns 35 or 42 dates starting from the Sunday before Feb 1, 2024
 /// ```
-List<DateTime> generateMonthDates(DateTime month, int firstDayOfWeek, {bool showSixthRowIfNeeded = false}) {
+List<DateTime> generateMonthDates(
+  DateTime month,
+  int firstDayOfWeek, {
+  bool showSixthRowIfNeeded = false,
+}) {
   // Normalize month to first day
   final firstDay = DateTime(month.year, month.month, 1);
   final lastDay = DateTime(month.year, month.month + 1, 0); // Last day of month
@@ -80,7 +84,8 @@ List<DateTime> generateMonthDates(DateTime month, int firstDayOfWeek, {bool show
   // Calculate the weekday of the first day
   // DateTime.weekday returns 1 = Monday, 2 = Tuesday, ..., 7 = Sunday
   // Convert to 0-based where 0 = Sunday, 1 = Monday, etc.
-  int firstDayWeekday = firstDay.weekday % 7; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  int firstDayWeekday =
+      firstDay.weekday % 7; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 
   // Calculate offset to align with firstDayOfWeek
   // If firstDayWeekday < firstDayOfWeek, we need to wrap around
@@ -94,7 +99,9 @@ List<DateTime> generateMonthDates(DateTime month, int firstDayOfWeek, {bool show
 
   // Calculate how many weeks we need
   // Check if the 6th week contains any dates from the current month
-  final fifthWeekEnd = gridStart.add(const Duration(days: 34)); // End of 5th week (day 35)
+  final fifthWeekEnd = gridStart.add(
+    const Duration(days: 34),
+  ); // End of 5th week (day 35)
   final needsSixthWeek = showSixthRowIfNeeded || lastDay.isAfter(fifthWeekEnd);
 
   final totalDays = needsSixthWeek ? 42 : 35;
@@ -106,6 +113,48 @@ List<DateTime> generateMonthDates(DateTime month, int firstDayOfWeek, {bool show
   }
 
   return dates;
+}
+
+/// Gets the date range for the visible grid of a month view.
+///
+/// Unlike [getMonthRange], this returns the full range of dates shown in the
+/// calendar grid, including leading days from the previous month and trailing
+/// days from the next month.
+///
+/// This is essential for correctly filtering events that should appear in the
+/// grid, even if they start/end in adjacent months.
+///
+/// Example:
+/// ```dart
+/// // For February 2024 with Sunday as first day of week:
+/// // Grid shows Jan 28 - March 9 (6 weeks)
+/// final range = getVisibleGridRange(DateTime(2024, 2, 1), 0);
+/// ```
+DateTimeRange getVisibleGridRange(
+  DateTime month,
+  int firstDayOfWeek, {
+  bool showSixthRowIfNeeded = false,
+}) {
+  // Generate the grid dates to get the actual range
+  final dates = generateMonthDates(
+    month,
+    firstDayOfWeek,
+    showSixthRowIfNeeded: showSixthRowIfNeeded,
+  );
+
+  if (dates.isEmpty) {
+    // Fallback to month range if dates are empty
+    return getMonthRange(month);
+  }
+
+  final firstDate = dates.first;
+  final lastDate = dates.last;
+
+  // Create range from start of first day to end of last day
+  return DateTimeRange(
+    start: DateTime(firstDate.year, firstDate.month, firstDate.day),
+    end: DateTime(lastDate.year, lastDate.month, lastDate.day, 23, 59, 59, 999),
+  );
 }
 
 /// Calculates the ISO 8601 week number for a given date.
@@ -120,6 +169,30 @@ List<DateTime> generateMonthDates(DateTime month, int firstDayOfWeek, {bool show
 /// final week = getISOWeekNumber(DateTime(2024, 1, 1)); // Returns 1
 /// final week2 = getISOWeekNumber(DateTime(2023, 1, 1)); // Returns 52 (of 2022)
 /// ```
+/// Calculates the number of calendar days between two dates.
+///
+/// This function is DST-safe: it counts calendar days rather than using
+/// duration-based arithmetic which can be off by one hour during DST transitions.
+///
+/// The time components of both dates are ignored - only the date parts
+/// (year, month, day) are considered.
+///
+/// Returns a positive number if [to] is after [from], negative if before,
+/// and 0 if they are the same calendar day.
+///
+/// Example:
+/// ```dart
+/// daysBetween(DateTime(2026, 3, 6), DateTime(2026, 3, 9)); // Returns 3
+/// ```
+int daysBetween(DateTime from, DateTime to) {
+  // Convert to UTC to avoid DST issues with difference()
+  // By creating UTC dates with the same year/month/day, we ensure
+  // the difference is exactly N*24 hours
+  final fromUtc = DateTime.utc(from.year, from.month, from.day);
+  final toUtc = DateTime.utc(to.year, to.month, to.day);
+  return toUtc.difference(fromUtc).inDays;
+}
+
 int getISOWeekNumber(DateTime date) {
   // Calculate day of year (1-366)
   final startOfYear = DateTime(date.year, 1, 1);

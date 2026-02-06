@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' show Offset;
 import 'package:flutter/foundation.dart';
 import '../models/mcal_calendar_event.dart';
+import '../utils/date_utils.dart';
 
 /// A state manager for handling drag-and-drop operations on calendar events.
 ///
@@ -53,6 +54,19 @@ class MCalDragHandler extends ChangeNotifier {
   Offset? _dragPosition;
 
   // ============================================================
+  // Proposed Drop Range (for multi-week highlighting)
+  // ============================================================
+
+  /// The proposed start date if the event were dropped at the current position.
+  DateTime? _proposedStartDate;
+
+  /// The proposed end date if the event were dropped at the current position.
+  DateTime? _proposedEndDate;
+
+  /// Whether the proposed drop is valid.
+  bool _isProposedDropValid = false;
+
+  // ============================================================
   // Edge Navigation State
   // ============================================================
 
@@ -91,6 +105,25 @@ class MCalDragHandler extends ChangeNotifier {
   ///
   /// Returns true if [draggedEvent] is not null.
   bool get isDragging => _draggedEvent != null;
+
+  /// The proposed start date if the event were dropped at the current position.
+  ///
+  /// Used by week rows to determine which cells should be highlighted
+  /// during a drag operation. Returns null if no drag is active or
+  /// the proposed range hasn't been set.
+  DateTime? get proposedStartDate => _proposedStartDate;
+
+  /// The proposed end date if the event were dropped at the current position.
+  ///
+  /// Used by week rows to determine which cells should be highlighted
+  /// during a drag operation. Returns null if no drag is active or
+  /// the proposed range hasn't been set.
+  DateTime? get proposedEndDate => _proposedEndDate;
+
+  /// Whether the proposed drop position is valid.
+  ///
+  /// Used to determine the highlight color (valid = green, invalid = red).
+  bool get isProposedDropValid => _isProposedDropValid;
 
   // ============================================================
   // Drag Lifecycle Methods
@@ -146,7 +179,8 @@ class MCalDragHandler extends ChangeNotifier {
   void updateDrag(DateTime targetDate, bool isValid, Offset position) {
     if (!isDragging) return;
 
-    final changed = _targetDate != targetDate ||
+    final changed =
+        _targetDate != targetDate ||
         _isValidTarget != isValid ||
         _dragPosition != position;
 
@@ -156,6 +190,75 @@ class MCalDragHandler extends ChangeNotifier {
       _dragPosition = position;
       notifyListeners();
     }
+  }
+
+  /// Updates the proposed drop range for multi-week highlighting.
+  ///
+  /// Called by DragTarget widgets when drag data is received. This allows
+  /// all week rows to check if any of their cells fall within the proposed
+  /// date range and highlight accordingly.
+  ///
+  /// Parameters:
+  /// - [proposedStart]: The date where the event would start if dropped
+  /// - [proposedEnd]: The date where the event would end if dropped
+  /// - [isValid]: Whether this drop position is valid
+  ///
+  /// Example:
+  /// ```dart
+  /// dragHandler.updateProposedDropRange(
+  ///   proposedStart: DateTime(2024, 6, 15),
+  ///   proposedEnd: DateTime(2024, 6, 21),
+  ///   isValid: true,
+  /// );
+  /// ```
+  void updateProposedDropRange({
+    required DateTime proposedStart,
+    required DateTime proposedEnd,
+    required bool isValid,
+  }) {
+    // NOTE: We removed the `if (!isDragging) return;` guard here because
+    // onWillAcceptWithDetails can fire before onDragStarted completes,
+    // causing the proposed range to not be updated and showing red indicators.
+    // If this method is called, there IS a drag happening.
+
+    final normalizedStart = DateTime(
+      proposedStart.year,
+      proposedStart.month,
+      proposedStart.day,
+    );
+    final normalizedEnd = DateTime(
+      proposedEnd.year,
+      proposedEnd.month,
+      proposedEnd.day,
+    );
+
+    final changed =
+        _proposedStartDate != normalizedStart ||
+        _proposedEndDate != normalizedEnd ||
+        _isProposedDropValid != isValid;
+
+    if (changed) {
+      _proposedStartDate = normalizedStart;
+      _proposedEndDate = normalizedEnd;
+      _isProposedDropValid = isValid;
+      notifyListeners();
+    }
+  }
+
+  /// Clears the proposed drop range.
+  ///
+  /// Called when the drag leaves the calendar grid or is cancelled.
+  void clearProposedDropRange() {
+    if (_proposedStartDate == null &&
+        _proposedEndDate == null &&
+        !_isProposedDropValid) {
+      return; // Already cleared, no need to notify
+    }
+
+    _proposedStartDate = null;
+    _proposedEndDate = null;
+    _isProposedDropValid = false;
+    notifyListeners();
   }
 
   /// Completes the drag operation and returns the target date.
@@ -213,6 +316,9 @@ class MCalDragHandler extends ChangeNotifier {
     _targetDate = null;
     _isValidTarget = false;
     _dragPosition = null;
+    _proposedStartDate = null;
+    _proposedEndDate = null;
+    _isProposedDropValid = false;
 
     if (wasActive) {
       notifyListeners();
@@ -259,16 +365,13 @@ class MCalDragHandler extends ChangeNotifier {
     if (nearEdge) {
       // Start timer if not already running
       if (_edgeNavigationTimer == null || !_edgeNavigationTimer!.isActive) {
-        final effectiveDelay = delay ?? 
-            const Duration(milliseconds: defaultEdgeNavigationDelayMs);
-        _edgeNavigationTimer = Timer(
-          effectiveDelay,
-          () {
-            if (isDragging) {
-              navigateCallback();
-            }
-          },
-        );
+        final effectiveDelay =
+            delay ?? const Duration(milliseconds: defaultEdgeNavigationDelayMs);
+        _edgeNavigationTimer = Timer(effectiveDelay, () {
+          if (isDragging) {
+            navigateCallback();
+          }
+        });
       }
     } else {
       // Not near edge, cancel any pending navigation
@@ -280,6 +383,15 @@ class MCalDragHandler extends ChangeNotifier {
   void _cancelEdgeNavigationTimer() {
     _edgeNavigationTimer?.cancel();
     _edgeNavigationTimer = null;
+  }
+
+  /// Cancels any pending edge navigation.
+  ///
+  /// Call this immediately when a drop is accepted to prevent the
+  /// edge navigation timer from firing during drop processing.
+  /// This is safe to call even if no timer is active.
+  void cancelEdgeNavigation() {
+    _cancelEdgeNavigationTimer();
   }
 
   // ============================================================
@@ -311,19 +423,8 @@ class MCalDragHandler extends ChangeNotifier {
       return 0;
     }
 
-    // Normalize to date-only (remove time component) for accurate day calculation
-    final sourceDay = DateTime(
-      _sourceDate!.year,
-      _sourceDate!.month,
-      _sourceDate!.day,
-    );
-    final targetDay = DateTime(
-      _targetDate!.year,
-      _targetDate!.month,
-      _targetDate!.day,
-    );
-
-    return targetDay.difference(sourceDay).inDays;
+    // Use DST-safe daysBetween for accurate day calculation
+    return daysBetween(_sourceDate!, _targetDate!);
   }
 
   // ============================================================

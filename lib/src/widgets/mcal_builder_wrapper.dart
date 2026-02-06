@@ -30,7 +30,7 @@ class MCalBuilderWrapper {
     MCalDragHandler? dragHandler,
     // Drag-related parameters
     Widget Function(BuildContext, MCalDraggedTileDetails)? draggedTileBuilder,
-    Widget Function(BuildContext, MCalDragSourceDetails)? dragSourceBuilder,
+    Widget Function(BuildContext, MCalDragSourceDetails)? dragSourceTileBuilder,
     void Function(MCalCalendarEvent, DateTime)? onDragStartedCallback,
     void Function(bool)? onDragEndedCallback,
     VoidCallback? onDragCanceledCallback,
@@ -111,7 +111,7 @@ class MCalBuilderWrapper {
           horizontalSpacing: horizontalSpacing,
           enabled: true,
           draggedTileBuilder: draggedTileBuilder,
-          dragSourceBuilder: dragSourceBuilder,
+          dragSourceTileBuilder: dragSourceTileBuilder,
           onDragStarted: onDragStartedCallback != null
               ? () => onDragStartedCallback(event, displayDate)
               : null,

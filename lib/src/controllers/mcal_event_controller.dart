@@ -358,9 +358,13 @@ class MCalEventController extends ChangeNotifier {
   /// Returns a list of events that overlap with the range.
   List<MCalCalendarEvent> getEventsForRange(DateTimeRange range) {
     return _eventsById.values.where((event) {
-      // Event overlaps with range if it starts before range ends
-      // and ends after range starts
-      return event.start.isBefore(range.end) && event.end.isAfter(range.start);
+      // Event overlaps with range if:
+      // - It starts before or at the same moment as range ends
+      // - It ends after or at the same moment as range starts
+      // Using negated isBefore/isAfter to include exact boundary matches
+      final startsBeforeRangeEnds = !event.start.isAfter(range.end);
+      final endsAfterRangeStarts = !event.end.isBefore(range.start);
+      return startsBeforeRangeEnds && endsAfterRangeStarts;
     }).toList();
   }
 

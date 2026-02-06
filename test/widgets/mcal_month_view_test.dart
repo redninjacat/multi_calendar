@@ -3494,7 +3494,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // LongPressDraggable should not be present when drag is disabled
-      expect(find.byType(LongPressDraggable<MCalCalendarEvent>), findsNothing);
+      expect(find.byType(LongPressDraggable<MCalDragData>), findsNothing);
     });
 
     // ============================================================
@@ -3531,7 +3531,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // LongPressDraggable should be present when drag is enabled
-      expect(find.byType(LongPressDraggable<MCalCalendarEvent>), findsWidgets);
+      expect(find.byType(LongPressDraggable<MCalDragData>), findsWidgets);
     });
 
     // ============================================================
@@ -3910,9 +3910,9 @@ void main() {
     });
 
     // ============================================================
-    // Test 9: Custom dragSourceBuilder receives correct details
+    // Test 9: Custom dragSourceTileBuilder receives correct details
     // ============================================================
-    testWidgets('custom dragSourceBuilder receives correct details', (
+    testWidgets('custom dragSourceTileBuilder receives correct details', (
       tester,
     ) async {
       final testController = MockMCalEventController(
@@ -3938,7 +3938,7 @@ void main() {
               child: MCalMonthView(
                 controller: testController,
                 enableDragAndDrop: true,
-                dragSourceBuilder: (context, details) {
+                dragSourceTileBuilder: (context, details) {
                   builderCalled = true;
                   capturedDetails = details;
                   return Container(
@@ -4088,7 +4088,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Initial month should be January
-      expect(controller.displayDate.month, equals(1));
+      expect(testController.displayDate.month, equals(1));
 
       // Find the event tile
       final eventFinder = find.text('Cross Month Event');
@@ -4274,7 +4274,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // DragTargets should be present for day cells
-      expect(find.byType(DragTarget<MCalCalendarEvent>), findsWidgets);
+      expect(find.byType(DragTarget<MCalDragData>), findsWidgets);
     });
 
     testWidgets('DragTarget is not present when enableDragAndDrop is false', (
@@ -4300,7 +4300,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // DragTargets should NOT be present when disabled
-      expect(find.byType(DragTarget<MCalCalendarEvent>), findsNothing);
+      expect(find.byType(DragTarget<MCalDragData>), findsNothing);
     });
 
     testWidgets('multi-day event can be dragged', (tester) async {
@@ -4386,7 +4386,7 @@ void main() {
 
       // Should render without issues
       expect(find.byType(MCalMonthView), findsOneWidget);
-      expect(find.byType(LongPressDraggable<MCalCalendarEvent>), findsWidgets);
+      expect(find.byType(LongPressDraggable<MCalDragData>), findsWidgets);
     });
 
     testWidgets('dragging same event twice works correctly', (tester) async {

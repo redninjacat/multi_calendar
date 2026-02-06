@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/mcal_calendar_event.dart';
 import '../styles/mcal_theme.dart';
+import '../utils/date_utils.dart';
 import 'mcal_callback_details.dart';
 
 /// A widget that wraps an event tile with drag-and-drop functionality.
@@ -40,7 +41,7 @@ import 'mcal_callback_details.dart';
 ///       ),
 ///     );
 ///   },
-///   dragSourceBuilder: (context, details) {
+///   dragSourceTileBuilder: (context, details) {
 ///     return Container(
 ///       decoration: BoxDecoration(
 ///         border: Border.all(
@@ -107,7 +108,8 @@ class MCalDraggableEventTile extends StatefulWidget {
   ///
   /// If not provided, the default placeholder is the child widget
   /// with 50% opacity (ghost effect).
-  final Widget Function(BuildContext, MCalDragSourceDetails)? dragSourceBuilder;
+  final Widget Function(BuildContext, MCalDragSourceDetails)?
+  dragSourceTileBuilder;
 
   /// Callback invoked when a drag operation starts.
   ///
@@ -160,7 +162,7 @@ class MCalDraggableEventTile extends StatefulWidget {
     required this.horizontalSpacing,
     this.enabled = true,
     this.draggedTileBuilder,
-    this.dragSourceBuilder,
+    this.dragSourceTileBuilder,
     this.onDragStarted,
     this.onDragEnded,
     this.onDragCanceled,
@@ -187,6 +189,20 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
   /// Current drag position, used for the feedback builder.
   Offset _currentDragPosition = Offset.zero;
 
+  /// Mutable holder for the grab offset.
+  ///
+  /// This is used instead of a simple double because the LongPressDraggable
+  /// captures the data at build time, but we need to update the grab offset
+  /// when the pointer down event fires. Using a holder allows the MCalDragData
+  /// to always read the current value.
+  final MCalGrabOffsetHolder _grabOffsetHolder = MCalGrabOffsetHolder();
+
+  /// The offset for the drag feedback to position the tile under the pointer.
+  ///
+  /// Uses the raw tap position so the tile follows the pointer naturally
+  /// at the point where the user grabbed it.
+  Offset _feedbackOffset = Offset.zero;
+
   @override
   Widget build(BuildContext context) {
     // If dragging is disabled, just return the child
@@ -198,16 +214,61 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
     // The overlay context doesn't have access to MCalTheme, so we capture it here.
     final themeData = MCalTheme.maybeOf(context);
 
-    return LongPressDraggable<MCalDragData>(
-      data: MCalDragData(event: widget.event, sourceDate: widget.sourceDate),
-      delay: const Duration(milliseconds: _longPressDelayMs),
-      feedback: _buildFeedback(context, themeData),
-      childWhenDragging: _buildChildWhenDragging(context),
-      onDragStarted: _handleDragStarted,
-      onDragEnd: _handleDragEnd,
-      onDraggableCanceled: _handleDraggableCanceled,
-      onDragUpdate: _handleDragUpdate,
-      child: widget.child,
+    // Wrap in Listener to capture pointer down position before drag starts.
+    // This allows us to calculate where within the tile the user tapped,
+    // which is needed to determine where the tile's left edge is for drop targeting.
+    return Listener(
+      onPointerDown: (event) {
+        // Calculate grabOffsetX: the position from the container's left edge.
+        // The tile content starts at horizontalSpacing from the cell edge,
+        // so we add that to get the position within the full container.
+        final newGrabOffsetX =
+            event.localPosition.dx + widget.horizontalSpacing;
+
+        // Feedback offset positions the feedback so the grabbed point is under
+        // the cursor. We add horizontalSpacing to account for the tile's offset
+        // from the cell edge.
+        final newFeedbackOffset = Offset(
+          -(event.localPosition.dx + widget.horizontalSpacing),
+          -event.localPosition.dy,
+        );
+
+        // DEBUG: Log grab position values
+        debugPrint(
+          'GRAB DEBUG: localPosition.dx=${event.localPosition.dx}, '
+          'horizontalSpacing=${widget.horizontalSpacing}, '
+          'grabOffsetX=$newGrabOffsetX, dayWidth=${widget.dayWidth}, '
+          'eventDuration=${widget.event.end.difference(widget.event.start).inDays + 1} days',
+        );
+
+        // Update the holder directly - no setState needed since MCalDragData
+        // reads from the holder. The holder pattern solves the timing issue
+        // where LongPressDraggable captures data at build time.
+        _grabOffsetHolder.grabOffsetX = newGrabOffsetX;
+
+        // Still need setState for feedbackOffset since it's used in the build
+        if (_feedbackOffset != newFeedbackOffset) {
+          setState(() {
+            _feedbackOffset = newFeedbackOffset;
+          });
+        }
+      },
+      child: LongPressDraggable<MCalDragData>(
+        data: MCalDragData(
+          event: widget.event,
+          sourceDate: widget.sourceDate,
+          grabOffsetHolder: _grabOffsetHolder,
+        ),
+        delay: const Duration(milliseconds: _longPressDelayMs),
+        feedbackOffset: _feedbackOffset,
+        feedback: _buildFeedback(context, themeData),
+        childWhenDragging: _buildChildWhenDragging(context),
+        onDragStarted: _handleDragStarted,
+        onDragEnd: _handleDragEnd,
+        onDraggableCanceled: _handleDraggableCanceled,
+        onDragUpdate: _handleDragUpdate,
+        child: widget.child,
+      ),
     );
   }
 
@@ -216,16 +277,26 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
   /// The [capturedTheme] is the theme data captured from the original context
   /// before entering the overlay. This is necessary because the overlay context
   /// doesn't have access to the MCalTheme InheritedWidget.
+  ///
+  /// All feedback widgets are wrapped in a [SizedBox] with a fixed width of
+  /// `dayWidth * eventDuration`. This ensures reliable positioning math
+  /// regardless of how the actual tile content is styled (e.g., half-width
+  /// timed events in some styles).
   Widget _buildFeedback(BuildContext context, MCalThemeData? capturedTheme) {
-    // Calculate full event width
+    // Calculate the container width: exactly dayWidth * eventDuration
+    // This is the "logical" width of the event span, not accounting for spacing.
+    // Using this consistent width makes grabOffsetX math reliable.
     final eventDurationDays = _calculateEventDurationDays();
-    final tileWidth =
-        (widget.dayWidth * eventDurationDays) - (widget.horizontalSpacing * 2);
+    final containerWidth = widget.dayWidth * eventDurationDays;
+
+    // The actual tile content width (with spacing removed)
+    final tileWidth = containerWidth - (widget.horizontalSpacing * 2);
+
+    Widget feedbackContent;
 
     // If custom builder is provided, use it
     if (widget.draggedTileBuilder != null) {
-      // Wrap in MCalTheme to provide theme data in the overlay context
-      Widget feedback = Builder(
+      feedbackContent = Builder(
         builder: (innerContext) {
           final details = MCalDraggedTileDetails(
             event: widget.event,
@@ -241,55 +312,57 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
 
       // Wrap with MCalTheme if we captured theme data from the original context
       if (capturedTheme != null) {
-        feedback = MCalTheme(data: capturedTheme, child: feedback);
+        feedbackContent = MCalTheme(
+          data: capturedTheme,
+          child: feedbackContent,
+        );
       }
-
-      return feedback;
-    }
-
-    // Use default feedback builder if provided (reuses existing tile builder logic)
-    if (widget.defaultFeedbackBuilder != null) {
-      return Material(
+    } else if (widget.defaultFeedbackBuilder != null) {
+      // Use default feedback builder if provided (reuses existing tile builder logic)
+      feedbackContent = Material(
         elevation: _defaultDraggedTileElevation,
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(4.0),
         child: widget.defaultFeedbackBuilder!(tileWidth),
       );
+    } else {
+      // Fallback: just use the child with elevation
+      feedbackContent = Material(
+        elevation: _defaultDraggedTileElevation,
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(4.0),
+        child: widget.child,
+      );
     }
 
-    // Fallback: just use the child with elevation
-    return Material(
-      elevation: _defaultDraggedTileElevation,
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(4.0),
-      child: widget.child,
+    // Wrap in a SizedBox with the exact container width.
+    // This ensures the feedback widget has a consistent logical size that
+    // matches the event's day span, making grabOffsetX calculations reliable.
+    // The content is left-aligned within this container.
+    return SizedBox(
+      width: containerWidth,
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: feedbackContent,
+      ),
     );
   }
 
   /// Calculates the number of days the event spans.
   int _calculateEventDurationDays() {
-    final startDate = DateTime(
-      widget.event.start.year,
-      widget.event.start.month,
-      widget.event.start.day,
-    );
-    final endDate = DateTime(
-      widget.event.end.year,
-      widget.event.end.month,
-      widget.event.end.day,
-    );
-    return endDate.difference(startDate).inDays + 1;
+    // Use DST-safe daysBetween for accurate day calculation
+    return daysBetween(widget.event.start, widget.event.end) + 1;
   }
 
   /// Builds the placeholder widget shown at the source position while dragging.
   Widget _buildChildWhenDragging(BuildContext context) {
     // If custom builder is provided, use it
-    if (widget.dragSourceBuilder != null) {
+    if (widget.dragSourceTileBuilder != null) {
       final details = MCalDragSourceDetails(
         event: widget.event,
         sourceDate: widget.sourceDate,
       );
-      return widget.dragSourceBuilder!(context, details);
+      return widget.dragSourceTileBuilder!(context, details);
     }
 
     // Build default: child with 50% opacity (ghost effect)

@@ -405,11 +405,11 @@ class MCalDraggedTileDetails {
 ///
 /// Provides context for building the placeholder widget that appears in place
 /// of the original event tile while it is being dragged. This is used by the
-/// [dragSourceBuilder] callback to customize the source cell appearance.
+/// [dragSourceTileBuilder] callback to customize the source cell appearance.
 ///
 /// Example:
 /// ```dart
-/// dragSourceBuilder: (context, details) {
+/// dragSourceTileBuilder: (context, details) {
 ///   // Show a ghost outline where the event was
 ///   return Container(
 ///     decoration: BoxDecoration(
@@ -440,11 +440,11 @@ class MCalDragSourceDetails {
 ///
 /// Provides context for building a preview widget that appears when an event
 /// is being dragged over a potential drop target. This is used by the
-/// [dragTargetBuilder] callback to show where the event would be placed.
+/// [dragTargetTileBuilder] callback to show where the event would be placed.
 ///
 /// Example:
 /// ```dart
-/// dragTargetBuilder: (context, details) {
+/// dragTargetTileBuilder: (context, details) {
 ///   return Container(
 ///     decoration: BoxDecoration(
 ///       color: details.isValid
@@ -647,6 +647,17 @@ class MCalEventDroppedDetails {
   });
 }
 
+/// Mutable holder for grab offset used during drag operations.
+///
+/// This class is used to work around a timing issue with Flutter's
+/// LongPressDraggable where the data parameter is captured at build time
+/// before the pointer down event updates the grab offset. By using a
+/// mutable holder, we can update the offset after the drag data is created.
+class MCalGrabOffsetHolder {
+  /// The X offset in pixels from the tile's left edge where the user tapped.
+  double grabOffsetX = 0.0;
+}
+
 /// Data object passed during drag-and-drop operations.
 ///
 /// This class bundles the event being dragged with the source date
@@ -654,19 +665,37 @@ class MCalEventDroppedDetails {
 /// to calculate the correct day delta based on where the user grabbed
 /// the event, not just the event's start date.
 ///
-/// For multi-day events, this is crucial: if a user drags from day 3
-/// of a 5-day event, the drop should position the event relative to
-/// where they initiated the drag.
+/// The drop position is determined by where the tile's LEFT EDGE lands,
+/// not where the cursor is. This provides intuitive behavior where the
+/// event starts on the cell where the tile visually begins.
 class MCalDragData {
   /// The calendar event being dragged.
   final MCalCalendarEvent event;
 
-  /// The date of the cell where the drag was initiated.
+  /// The date of the segment where the drag was initiated.
   ///
-  /// For multi-day events, this may differ from [event.start].
-  /// The drop target uses this to calculate the correct day delta.
+  /// This is the start date of the visible segment, which may differ
+  /// from [event.start] for multi-week events.
   final DateTime sourceDate;
 
-  /// Creates a new [MCalDragData] instance.
-  const MCalDragData({required this.event, required this.sourceDate});
+  /// Mutable holder for the grab offset.
+  ///
+  /// This is used instead of a final value because the LongPressDraggable
+  /// captures data at build time, but we need to update grabOffsetX when
+  /// the pointer down event fires (after build).
+  final MCalGrabOffsetHolder _grabOffsetHolder;
+
+  /// The X offset in pixels from the tile's left edge where the user tapped.
+  ///
+  /// This is used to calculate which cell the tile's left edge is over
+  /// when determining drop targets. The tile's left edge position relative
+  /// to the cursor is: cursor_x - grabOffsetX
+  double get grabOffsetX => _grabOffsetHolder.grabOffsetX;
+
+  /// Creates a new [MCalDragData] instance with a holder for grab offset.
+  MCalDragData({
+    required this.event,
+    required this.sourceDate,
+    required MCalGrabOffsetHolder grabOffsetHolder,
+  }) : _grabOffsetHolder = grabOffsetHolder;
 }
