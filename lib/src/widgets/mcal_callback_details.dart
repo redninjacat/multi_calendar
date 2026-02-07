@@ -692,10 +692,17 @@ class MCalDragData {
   /// to the cursor is: cursor_x - grabOffsetX
   double get grabOffsetX => _grabOffsetHolder.grabOffsetX;
 
+  /// The horizontal spacing (margin) applied to event tiles.
+  ///
+  /// This is used in drop target calculations to account for the margin
+  /// between the cell edge and the tile edge.
+  final double horizontalSpacing;
+
   /// Creates a new [MCalDragData] instance with a holder for grab offset.
   MCalDragData({
     required this.event,
     required this.sourceDate,
     required MCalGrabOffsetHolder grabOffsetHolder,
+    required this.horizontalSpacing,
   }) : _grabOffsetHolder = grabOffsetHolder;
 }

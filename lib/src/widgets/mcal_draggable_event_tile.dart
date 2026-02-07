@@ -238,6 +238,8 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
           'GRAB DEBUG: localPosition.dx=${event.localPosition.dx}, '
           'horizontalSpacing=${widget.horizontalSpacing}, '
           'grabOffsetX=$newGrabOffsetX, dayWidth=${widget.dayWidth}, '
+          'feedbackOffsetX=${newFeedbackOffset.dx}, '
+          'eventStart=${widget.event.start}, '
           'eventDuration=${widget.event.end.difference(widget.event.start).inDays + 1} days',
         );
 
@@ -258,6 +260,7 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
           event: widget.event,
           sourceDate: widget.sourceDate,
           grabOffsetHolder: _grabOffsetHolder,
+          horizontalSpacing: widget.horizontalSpacing,
         ),
         delay: const Duration(milliseconds: _longPressDelayMs),
         feedbackOffset: _feedbackOffset,
@@ -322,7 +325,9 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
       feedbackContent = Material(
         elevation: _defaultDraggedTileElevation,
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(4.0),
+        borderRadius: BorderRadius.circular(
+          capturedTheme?.eventTileCornerRadius ?? 4.0,
+        ),
         child: widget.defaultFeedbackBuilder!(tileWidth),
       );
     } else {
@@ -330,7 +335,9 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
       feedbackContent = Material(
         elevation: _defaultDraggedTileElevation,
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(4.0),
+        borderRadius: BorderRadius.circular(
+          capturedTheme?.eventTileCornerRadius ?? 4.0,
+        ),
         child: widget.child,
       );
     }
@@ -342,7 +349,7 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
     return SizedBox(
       width: containerWidth,
       child: Align(
-        alignment: AlignmentDirectional.centerStart,
+        alignment: AlignmentDirectional.center,
         child: feedbackContent,
       ),
     );

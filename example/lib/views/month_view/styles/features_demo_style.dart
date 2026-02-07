@@ -40,8 +40,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   // ============================================================
   bool _showWeekNumbers = false;
   bool _enableAnimations = true;
-  bool _enableDragAndDrop = false;
-  int _dragEdgeNavigationDelayMs = 500;
+  bool _enableDragAndDrop = true;
+  int _dragEdgeNavigationDelayMs = 1000;
+  final bool _dragEdgeNavigationEnabled = false;
 
   // ============================================================
   // Theme Settings (matching Layout POC levers)
@@ -364,6 +365,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
                 enableKeyboardNavigation: false,
                 enableDragAndDrop: _enableDragAndDrop,
+                dragEdgeNavigationEnabled: _dragEdgeNavigationEnabled,
                 dragEdgeNavigationDelay: Duration(
                   milliseconds: _dragEdgeNavigationDelayMs,
                 ),
@@ -720,8 +722,8 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 'Edge Delay',
                 _dragEdgeNavigationDelayMs.toDouble(),
                 200,
-                1000,
-                8,
+                1400,
+                12,
                 (v) => setState(() => _dragEdgeNavigationDelayMs = v.round()),
                 colorScheme,
                 showValue: '${_dragEdgeNavigationDelayMs}ms',
@@ -868,6 +870,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
                 enableKeyboardNavigation: isDesktop,
                 enableDragAndDrop: _enableDragAndDrop,
+                dragEdgeNavigationEnabled: _dragEdgeNavigationEnabled,
                 dragEdgeNavigationDelay: Duration(
                   milliseconds: _dragEdgeNavigationDelayMs,
                 ),

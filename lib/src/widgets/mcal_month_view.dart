@@ -3,6 +3,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' hide TextDirection;
+
 import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
 import '../styles/mcal_theme.dart';
@@ -456,6 +457,20 @@ class MCalMonthView extends StatefulWidget {
   /// Only used when [enableDragAndDrop] is true.
   final bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped;
 
+  /// Whether edge navigation is enabled during drag operations.
+  ///
+  /// When true, dragging an event tile near the left or right edge of the
+  /// calendar will trigger navigation to the previous or next month after
+  /// [dragEdgeNavigationDelay].
+  ///
+  /// When false, edge navigation is disabled and the user must manually
+  /// navigate to drop events on other months.
+  ///
+  /// Defaults to true.
+  ///
+  /// Only used when [enableDragAndDrop] is true.
+  final bool dragEdgeNavigationEnabled;
+
   /// The delay before edge navigation triggers during drag operations.
   ///
   /// When the user drags an event tile near the left or right edge of the
@@ -465,9 +480,9 @@ class MCalMonthView extends StatefulWidget {
   /// This enables seamless cross-month drag-and-drop operations without
   /// requiring the user to manually navigate.
   ///
-  /// Defaults to 500 milliseconds.
+  /// Defaults to 1200 milliseconds.
   ///
-  /// Only used when [enableDragAndDrop] is true.
+  /// Only used when [enableDragAndDrop] and [dragEdgeNavigationEnabled] are true.
   final Duration dragEdgeNavigationDelay;
 
   /// Creates a new [MCalMonthView] widget.
@@ -537,6 +552,7 @@ class MCalMonthView extends StatefulWidget {
     this.dropTargetCellBuilder,
     this.onDragWillAccept,
     this.onEventDropped,
+    this.dragEdgeNavigationEnabled = true,
     this.dragEdgeNavigationDelay = const Duration(milliseconds: 1200),
   });
 
@@ -1557,6 +1573,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// starts the edge navigation timer via the drag handler.
   void _checkEdgeProximity(Offset globalPosition, Size calendarSize) {
     if (!_isDragActive || _dragHandler == null) return;
+    if (!widget.dragEdgeNavigationEnabled) return;
 
     // Get the local position within the calendar widget
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;

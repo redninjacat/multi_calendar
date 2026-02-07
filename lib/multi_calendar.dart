@@ -40,19 +40,26 @@
 
 library;
 
-// Export models
-export 'src/models/mcal_calendar_event.dart';
-
 // Export controllers
 export 'src/controllers/mcal_event_controller.dart';
-
+// Export models
+export 'src/models/mcal_calendar_event.dart';
+// Export styles
+export 'src/styles/mcal_theme.dart';
+// Export utilities
+export 'src/utils/mcal_localization.dart';
+export 'src/widgets/mcal_callback_details.dart';
+export 'src/widgets/mcal_default_week_layout.dart'
+    show
+        MCalDefaultWeekLayoutBuilder,
+        MCalSegmentRowAssignment,
+        MCalOverflowInfo;
+export 'src/widgets/mcal_draggable_event_tile.dart';
 // Export widgets
 export 'src/widgets/mcal_month_view.dart';
 export 'src/widgets/mcal_month_view_contexts.dart';
-export 'src/widgets/mcal_callback_details.dart';
 export 'src/widgets/mcal_multi_day_renderer.dart';
 export 'src/widgets/mcal_multi_day_tile.dart';
-export 'src/widgets/mcal_draggable_event_tile.dart';
 export 'src/widgets/mcal_week_layout_contexts.dart'
     show
         MCalEventSegment,
@@ -60,15 +67,7 @@ export 'src/widgets/mcal_week_layout_contexts.dart'
         MCalWeekLayoutConfig,
         MCalOverflowIndicatorContext,
         DateLabelPosition;
-export 'src/widgets/mcal_default_week_layout.dart'
-    show MCalDefaultWeekLayoutBuilder, MCalSegmentRowAssignment, MCalOverflowInfo;
-
-// Export styles
-export 'src/styles/mcal_theme.dart';
-
-// Export utilities
-export 'src/utils/mcal_localization.dart';
 
 // Future exports (to be implemented):
-// export 'src/views/day_view.dart';
-// export 'src/views/multi_day_view.dart';
+// export 'src/views/mcal_day_view.dart';
+// export 'src/views/mcal_multi_day_view.dart';
