@@ -283,13 +283,13 @@ class MCalDefaultWeekLayoutBuilder {
               dayWidth * segment.spanDays - leftSpacing - rightSpacing;
 
           // DEBUG: Log layout builder dayWidth for comparison
-          if (segment.event.title == 'Tech Conference') {
-            debugPrint(
-              'LAYOUT DEBUG: "${segment.event.title}" dayWidth=$dayWidth, '
-              'tileWidth=$tileWidth, spanDays=${segment.spanDays}, '
-              'leftSpacing=$leftSpacing, rightSpacing=$rightSpacing',
-            );
-          }
+          //if (segment.event.title == 'Tech Conference') {
+          //  debugPrint(
+          //    'LAYOUT DEBUG: "${segment.event.title}" dayWidth=$dayWidth, '
+          //    'tileWidth=$tileWidth, spanDays=${segment.spanDays}, '
+          //    'leftSpacing=$leftSpacing, rightSpacing=$rightSpacing',
+          //  );
+          //}
 
           final tileContext = MCalEventTileContext(
             event: segment.event,

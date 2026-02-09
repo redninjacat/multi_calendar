@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:ui' show Offset;
+import 'dart:ui' show Offset, Rect;
 import 'package:flutter/foundation.dart';
 import '../models/mcal_calendar_event.dart';
 import '../utils/date_utils.dart';
+import 'mcal_callback_details.dart';
 
 /// A state manager for handling drag-and-drop operations on calendar events.
 ///
@@ -66,6 +67,13 @@ class MCalDragHandler extends ChangeNotifier {
   /// Whether the proposed drop is valid.
   bool _isProposedDropValid = false;
 
+  /// List of cells to highlight during drag.
+  List<MCalHighlightCellInfo> _highlightedCells = [];
+
+  /// The list of cells that should be highlighted during the current drag.
+  List<MCalHighlightCellInfo> get highlightedCells =>
+      List.unmodifiable(_highlightedCells);
+
   // ============================================================
   // Edge Navigation State
   // ============================================================
@@ -79,6 +87,35 @@ class MCalDragHandler extends ChangeNotifier {
 
   /// Default delay before edge navigation triggers (in milliseconds).
   static const int defaultEdgeNavigationDelayMs = 500;
+
+  // ============================================================
+  // Debounce State (for unified drag target)
+  // ============================================================
+
+  /// Timer for debouncing onMove position updates (legacy, kept for cleanup).
+  Timer? _debounceTimer;
+
+  /// The latest position received from onMove (pending processing).
+  Offset? _latestGlobalPosition;
+
+  // ============================================================
+  // Change Detection State
+  // ============================================================
+
+  /// Previous start cell index for change detection.
+  int? _previousStartCellIndex;
+
+  /// Previous week row index for change detection.
+  int? _previousWeekRowIndex;
+
+  /// Cached day width for position calculations.
+  double _cachedDayWidth = 0;
+
+  /// Cached grab offset X for position calculations.
+  double _cachedGrabOffsetX = 0;
+
+  /// Cached event duration in days.
+  int _cachedEventDurationDays = 0;
 
   // ============================================================
   // Getters
@@ -308,6 +345,7 @@ class MCalDragHandler extends ChangeNotifier {
   /// This is a private method called by [completeDrag] and [cancelDrag].
   void _reset() {
     _cancelEdgeNavigationTimer();
+    _cancelDebounceTimer();
 
     final wasActive = isDragging;
 
@@ -319,6 +357,9 @@ class MCalDragHandler extends ChangeNotifier {
     _proposedStartDate = null;
     _proposedEndDate = null;
     _isProposedDropValid = false;
+    _highlightedCells = [];
+    _previousStartCellIndex = null;
+    _previousWeekRowIndex = null;
 
     if (wasActive) {
       notifyListeners();
@@ -385,6 +426,23 @@ class MCalDragHandler extends ChangeNotifier {
     _edgeNavigationTimer = null;
   }
 
+  /// Cancels the debounce timer if active.
+  void _cancelDebounceTimer() {
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
+  }
+
+  /// Clears the highlighted cells list and resets change detection state.
+  void clearHighlightedCells() {
+    if (_highlightedCells.isNotEmpty) {
+      _highlightedCells = [];
+      // Reset change detection so re-entering triggers an update
+      _previousStartCellIndex = null;
+      _previousWeekRowIndex = null;
+      notifyListeners();
+    }
+  }
+
   /// Cancels any pending edge navigation.
   ///
   /// Call this immediately when a drop is accepted to prevent the
@@ -392,6 +450,205 @@ class MCalDragHandler extends ChangeNotifier {
   /// This is safe to call even if no timer is active.
   void cancelEdgeNavigation() {
     _cancelEdgeNavigationTimer();
+  }
+
+  // ============================================================
+  // Unified Drag Move Handling
+  // ============================================================
+
+  // Pending context for processing
+  int _pendingWeekRowIndex = 0;
+  Rect _pendingWeekRowBounds = Rect.zero;
+  List<DateTime> _pendingWeekDates = [];
+  int _pendingTotalWeekRows = 0;
+  Rect Function(int)? _pendingGetWeekRowBounds;
+  List<DateTime> Function(int)? _pendingGetWeekDates;
+  bool Function(DateTime, DateTime)? _pendingValidationCallback;
+
+  /// Handles drag move events from the unified DragTarget.
+  ///
+  /// This method implements debounced position tracking. It stores the latest
+  /// position and starts a debounce timer. When the timer fires, it processes
+  /// the most recent position, calculates target cells, and updates state
+  /// only if the target has changed.
+  ///
+  /// Parameters:
+  /// - [globalPosition]: The global position of the pointer (feedback position + grabOffsetX)
+  /// - [dayWidth]: Width of each day cell in pixels
+  /// - [horizontalSpacing]: Horizontal margin around event tiles
+  /// - [grabOffsetX]: Offset from tile left edge where drag started
+  /// - [eventDurationDays]: Number of days the event spans
+  /// - [weekRowIndex]: Index of the current week row being hovered
+  /// - [weekRowBounds]: Bounds of the week row in global coordinates
+  /// - [calendarBounds]: Bounds of the full calendar in global coordinates
+  /// - [weekDates]: List of dates for each day in the current week row
+  /// - [totalWeekRows]: Total number of week rows in the month
+  /// - [getWeekRowBounds]: Function to get bounds for a specific week row index
+  /// - [getWeekDates]: Function to get dates for a specific week row index
+  /// - [validationCallback]: Optional callback to validate drop position
+  void handleDragMove({
+    required Offset globalPosition,
+    required double dayWidth,
+    required double grabOffsetX,
+    required int eventDurationDays,
+    required int weekRowIndex,
+    required Rect weekRowBounds,
+    required Rect calendarBounds,
+    required List<DateTime> weekDates,
+    required int totalWeekRows,
+    required Rect Function(int) getWeekRowBounds,
+    required List<DateTime> Function(int) getWeekDates,
+    bool Function(DateTime proposedStart, DateTime proposedEnd)?
+    validationCallback,
+  }) {
+    // Store latest position and calculation context
+    _latestGlobalPosition = globalPosition;
+    _cachedDayWidth = dayWidth;
+    _cachedGrabOffsetX = grabOffsetX;
+    _cachedEventDurationDays = eventDurationDays;
+
+    // Store context for processing
+    _pendingWeekRowIndex = weekRowIndex;
+    _pendingWeekRowBounds = weekRowBounds;
+    // Note: calendarBounds parameter kept for API compatibility but not stored
+    _pendingWeekDates = weekDates;
+    _pendingTotalWeekRows = totalWeekRows;
+    _pendingGetWeekRowBounds = getWeekRowBounds;
+    _pendingGetWeekDates = getWeekDates;
+    _pendingValidationCallback = validationCallback;
+
+    if (_latestGlobalPosition == null || !isDragging) {
+      return;
+    }
+    if (_pendingGetWeekRowBounds == null || _pendingGetWeekDates == null) {
+      return;
+    }
+
+    final globalPos = _latestGlobalPosition!;
+
+    // Convert global position to local position within week row
+    final localX = globalPos.dx - _pendingWeekRowBounds.left;
+
+    // Calculate drop start cell using center-weighted logic:
+    // The drop target is the cell containing >50% of the first day of the tile.
+    // Adding dayWidth/2 shifts the calculation from left-edge to center of first day.
+    // Note: grabOffsetX already includes horizontalSpacing from when drag started.
+    final dropStartCellIndex =
+        ((localX - _cachedGrabOffsetX + _cachedDayWidth / 2) / _cachedDayWidth)
+            .floor();
+
+    // Check if target has changed
+    if (dropStartCellIndex == _previousStartCellIndex &&
+        _pendingWeekRowIndex == _previousWeekRowIndex) {
+      // No change, skip update
+      return;
+    }
+
+    // Update previous state for next comparison
+    _previousStartCellIndex = dropStartCellIndex;
+    _previousWeekRowIndex = _pendingWeekRowIndex;
+
+    // Calculate proposed date range
+    final baseDate = _pendingWeekDates.isNotEmpty
+        ? _pendingWeekDates[0]
+        : DateTime.now();
+    final proposedStartDate = baseDate.add(Duration(days: dropStartCellIndex));
+    final proposedEndDate = proposedStartDate.add(
+      Duration(days: _cachedEventDurationDays - 1),
+    );
+
+    // Validate if callback provided
+    bool isValid = true;
+    if (_pendingValidationCallback != null) {
+      isValid = _pendingValidationCallback!(proposedStartDate, proposedEndDate);
+    }
+
+    // Build highlighted cells list
+    _buildHighlightedCells(
+      dropStartCellIndex: dropStartCellIndex,
+      eventDurationDays: _cachedEventDurationDays,
+      weekRowIndex: _pendingWeekRowIndex,
+      totalWeekRows: _pendingTotalWeekRows,
+      getWeekRowBounds: _pendingGetWeekRowBounds!,
+      getWeekDates: _pendingGetWeekDates!,
+    );
+
+    // Update proposed drop range (reuse existing method)
+    updateProposedDropRange(
+      proposedStart: proposedStartDate,
+      proposedEnd: proposedEndDate,
+      isValid: isValid,
+    );
+  }
+
+  /// Builds the list of highlighted cells spanning across week rows if needed.
+  void _buildHighlightedCells({
+    required int dropStartCellIndex,
+    required int eventDurationDays,
+    required int weekRowIndex,
+    required int totalWeekRows,
+    required Rect Function(int) getWeekRowBounds,
+    required List<DateTime> Function(int) getWeekDates,
+  }) {
+    _highlightedCells = [];
+
+    int remainingDays = eventDurationDays;
+    int currentWeekRow = weekRowIndex;
+    int currentCellIndex = dropStartCellIndex;
+    int cellNumber = 0;
+
+    while (remainingDays > 0 && currentWeekRow < totalWeekRows) {
+      // Handle cells that start before the current week (negative index)
+      if (currentCellIndex < 0) {
+        // Move to previous week row
+        currentWeekRow--;
+        if (currentWeekRow < 0) {
+          // Event starts before visible calendar, adjust
+          currentCellIndex += 7;
+          currentWeekRow = 0;
+          continue;
+        }
+        currentCellIndex += 7;
+        continue;
+      }
+
+      // Get bounds and dates for this week row
+      final rowBounds = getWeekRowBounds(currentWeekRow);
+      final rowDates = getWeekDates(currentWeekRow);
+
+      // Add cells for this week row
+      while (currentCellIndex <= 6 && remainingDays > 0) {
+        if (currentCellIndex >= 0 && currentCellIndex < rowDates.length) {
+          final cellLeft =
+              rowBounds.left + (currentCellIndex * _cachedDayWidth);
+          final cellBounds = Rect.fromLTWH(
+            cellLeft,
+            rowBounds.top,
+            _cachedDayWidth,
+            rowBounds.height,
+          );
+
+          _highlightedCells.add(
+            MCalHighlightCellInfo(
+              date: rowDates[currentCellIndex],
+              cellIndex: currentCellIndex,
+              weekRowIndex: currentWeekRow,
+              bounds: cellBounds,
+              isFirst: cellNumber == 0,
+              isLast: remainingDays == 1,
+            ),
+          );
+        }
+
+        currentCellIndex++;
+        remainingDays--;
+        cellNumber++;
+      }
+
+      // Move to next week row
+      currentWeekRow++;
+      currentCellIndex = 0;
+    }
   }
 
   // ============================================================
@@ -433,10 +690,11 @@ class MCalDragHandler extends ChangeNotifier {
 
   /// Disposes of the drag handler and cleans up resources.
   ///
-  /// Cancels any pending edge navigation timer before disposing.
+  /// Cancels any pending edge navigation and debounce timers before disposing.
   @override
   void dispose() {
     _cancelEdgeNavigationTimer();
+    _cancelDebounceTimer();
     super.dispose();
   }
 }

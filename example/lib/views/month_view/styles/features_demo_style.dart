@@ -204,6 +204,19 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     );
   }
 
+  void _onOverflowLongPress(
+    BuildContext context,
+    MCalOverflowTapDetails details,
+  ) {
+    _showAlert(
+      context,
+      'Overflow Indicator Long-Pressed',
+      'Date: ${_formatDate(details.date)}\n'
+          'Hidden: ${details.hiddenEventCount} events\n'
+          'Total: ${details.allEvents.length} events',
+    );
+  }
+
   // ============================================================
   // Hover Callbacks (with Tooltip in status bar)
   // ============================================================
@@ -377,16 +390,17 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 onEventTap: _onEventTap,
                 onEventLongPress: _onEventLongPress,
                 onOverflowTap: _onOverflowTap,
+                onOverflowLongPress: _onOverflowLongPress,
                 // Drag-and-drop callback
                 onEventDropped: _enableDragAndDrop
                     ? (context, details) {
-                        _showAlert(
-                          context,
-                          'Event Dropped',
-                          'Moved "${details.event.title}" from '
-                              '${_formatDate(details.oldStartDate)} to '
-                              '${_formatDate(details.newStartDate)}',
-                        );
+                        //_showAlert(
+                        //  context,
+                        //  'Event Dropped',
+                        //  'Moved "${details.event.title}" from '
+                        //      '${_formatDate(details.oldStartDate)} to '
+                        //      '${_formatDate(details.newStartDate)}',
+                        //);
                         return true;
                       }
                     : null,
@@ -885,19 +899,52 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 onEventTap: _onEventTap,
                 onEventLongPress: _onEventLongPress,
                 onOverflowTap: _onOverflowTap,
+                onOverflowLongPress: _onOverflowLongPress,
                 // Drag-and-drop callback
                 onEventDropped: _enableDragAndDrop
                     ? (context, details) {
-                        _showAlert(
-                          context,
-                          'Event Dropped',
-                          'Moved "${details.event.title}" from '
-                              '${_formatDate(details.oldStartDate)} to '
-                              '${_formatDate(details.newStartDate)}',
-                        );
+                        //_showAlert(
+                        //  context,
+                        //  'Event Dropped',
+                        //  'Moved "${details.event.title}" from '
+                        //  '${_formatDate(details.oldStartDate)} to '
+                        //  '${_formatDate(details.newStartDate)}',
+                        //);
                         return true;
                       }
                     : null,
+                // Custom drop target cell builder - highlights cells during drag
+                dropTargetCellBuilder: _enableDragAndDrop
+                    ? (context, details) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: details.isValid
+                                ? colorScheme.primary.withOpacity(0.3)
+                                : colorScheme.error.withOpacity(0.3),
+                            borderRadius: BorderRadius.horizontal(
+                              left: details.isFirst
+                                  ? const Radius.circular(8)
+                                  : Radius.zero,
+                              right: details.isLast
+                                  ? const Radius.circular(8)
+                                  : Radius.zero,
+                            ),
+                          ),
+                        );
+                      }
+                    : null,
+                // Example of advanced overlay customization (commented out)
+                // dropTargetOverlayBuilder takes precedence over dropTargetCellBuilder
+                // when both are provided. Use it for custom painting across all cells.
+                // dropTargetOverlayBuilder: (context, details) {
+                //   return CustomPaint(
+                //     painter: _DropHighlightPainter(
+                //       cells: details.highlightedCells,
+                //       isValid: details.isValid,
+                //       color: colorScheme.primary,
+                //     ),
+                //   );
+                // },
                 onFocusedDateChanged: isDesktop
                     ? (date) {
                         if (date != null) {

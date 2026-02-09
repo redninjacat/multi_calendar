@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
@@ -423,16 +425,34 @@ class MCalMonthView extends StatefulWidget {
 
   /// Builder callback for customizing drop target cell appearance.
   ///
-  /// When provided, this builder customizes how cells appear during drag
-  /// when they are potential drop targets. Receives [MCalDropTargetCellDetails]
-  /// with the cell date, validity state, and dragged event.
+  /// When provided, this builder customizes how individual cells appear during
+  /// drag when they are potential drop targets. Receives [MCalDropTargetCellDetails]
+  /// with the cell date, bounds, validity state, and position flags.
   ///
-  /// If not provided, valid targets show a green overlay and invalid targets
-  /// show a red overlay using theme colors.
+  /// This builder has lower precedence than [dropTargetOverlayBuilder]. If both
+  /// are provided, [dropTargetOverlayBuilder] takes precedence.
+  ///
+  /// If neither builder is provided, the default [CustomPainter] implementation
+  /// draws colored rounded rectangles for each highlighted cell.
   ///
   /// Only used when [enableDragAndDrop] is true.
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
   dropTargetCellBuilder;
+
+  /// Builder callback for creating a custom drop target overlay.
+  ///
+  /// When provided, this builder has precedence over [dropTargetCellBuilder]
+  /// and the default CustomPainter implementation. It receives
+  /// [MCalDropOverlayDetails] with the complete list of highlighted cells,
+  /// validity state, and calendar dimensions.
+  ///
+  /// Use this for advanced customization scenarios where you need full control
+  /// over the highlight rendering, such as drawing connected highlights or
+  /// custom animations.
+  ///
+  /// Only used when [enableDragAndDrop] is true.
+  final Widget Function(BuildContext, MCalDropOverlayDetails)?
+  dropTargetOverlayBuilder;
 
   /// Callback to validate whether a drop should be accepted.
   ///
@@ -550,6 +570,7 @@ class MCalMonthView extends StatefulWidget {
     this.dragSourceTileBuilder,
     this.dragTargetTileBuilder,
     this.dropTargetCellBuilder,
+    this.dropTargetOverlayBuilder,
     this.onDragWillAccept,
     this.onEventDropped,
     this.dragEdgeNavigationEnabled = true,
@@ -1115,8 +1136,17 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           dragSourceTileBuilder: widget.dragSourceTileBuilder,
           dragTargetTileBuilder: widget.dragTargetTileBuilder,
           dropTargetCellBuilder: widget.dropTargetCellBuilder,
+          dropTargetOverlayBuilder: widget.dropTargetOverlayBuilder,
           onDragWillAccept: widget.onDragWillAccept,
           onEventDropped: widget.onEventDropped,
+          dragEdgeNavigationEnabled: widget.dragEdgeNavigationEnabled,
+          dragEdgeNavigationDelay: widget.dragEdgeNavigationDelay,
+          onNavigateToPreviousMonth: _canNavigateToPreviousMonth()
+              ? _navigateToPreviousMonth
+              : null,
+          onNavigateToNextMonth: _canNavigateToNextMonth()
+              ? _navigateToNextMonth
+              : null,
           // Drag lifecycle callbacks for cross-month navigation (Task 20)
           // and drag cancellation handling (Task 21)
           onDragStartedCallback: _handleDragStarted,
@@ -1255,12 +1285,10 @@ class _MCalMonthViewState extends State<MCalMonthView> {
                     _handleDragPositionUpdate(event.position, calendarSize);
                   }
                 },
-                onPointerUp: (_) {
-                  // Clean up drag state when pointer is released
-                  if (_isDragActive) {
-                    _handleDragEnded(false);
-                  }
-                },
+                // Note: We intentionally don't use onPointerUp for drag cleanup.
+                // LongPressDraggable.onDragEnd handles this with the correct
+                // wasAccepted value. Using onPointerUp would cause duplicate
+                // _handleDragEnded calls with incorrect wasAccepted=false.
                 onPointerCancel: (_) {
                   // Clean up drag state when pointer is cancelled
                   if (_isDragActive) {
@@ -1547,7 +1575,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Cleans up drag state and cancels any pending edge navigation.
   void _handleDragEnded(bool wasAccepted) {
     _isDragActive = false;
-    _dragHandler?.cancelDrag();
+    // If the drop was accepted, _handleDrop already ran and cleaned up.
+    // We only need to clean up for rejected drops (released outside valid target).
+    if (!wasAccepted) {
+      _dragHandler?.cancelDrag();
+    }
   }
 
   /// Called when a drag operation is cancelled.
@@ -1852,7 +1884,7 @@ class _MCalSnappyPageScrollPhysics extends PageScrollPhysics {
 ///
 /// This widget is used by [MCalMonthView]'s PageView.builder to render
 /// each month's grid. It calculates and displays the dates for the given month.
-class _MonthPageWidget extends StatelessWidget {
+class _MonthPageWidget extends StatefulWidget {
   /// The month to display (first day of month).
   final DateTime month;
 
@@ -1923,9 +1955,15 @@ class _MonthPageWidget extends StatelessWidget {
   dragTargetTileBuilder;
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
   dropTargetCellBuilder;
+  final Widget Function(BuildContext, MCalDropOverlayDetails)?
+  dropTargetOverlayBuilder;
   final bool Function(BuildContext, MCalDragWillAcceptDetails)?
   onDragWillAccept;
   final bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped;
+  final bool dragEdgeNavigationEnabled;
+  final Duration dragEdgeNavigationDelay;
+  final VoidCallback? onNavigateToPreviousMonth;
+  final VoidCallback? onNavigateToNextMonth;
 
   // Drag lifecycle callbacks (Task 21)
   final void Function(MCalCalendarEvent event, DateTime sourceDate)?
@@ -1973,8 +2011,13 @@ class _MonthPageWidget extends StatelessWidget {
     this.dragSourceTileBuilder,
     this.dragTargetTileBuilder,
     this.dropTargetCellBuilder,
+    this.dropTargetOverlayBuilder,
     this.onDragWillAccept,
     this.onEventDropped,
+    this.dragEdgeNavigationEnabled = true,
+    this.dragEdgeNavigationDelay = const Duration(milliseconds: 1200),
+    this.onNavigateToPreviousMonth,
+    this.onNavigateToNextMonth,
     // Drag lifecycle callbacks (Task 21)
     this.onDragStartedCallback,
     this.onDragEndedCallback,
@@ -1983,32 +2026,489 @@ class _MonthPageWidget extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // Generate dates for this month
-    final dates = generateMonthDates(month, firstDayOfWeek);
+  State<_MonthPageWidget> createState() => _MonthPageWidgetState();
+}
 
+/// State class for [_MonthPageWidget].
+///
+/// Handles the unified DragTarget for the entire month grid.
+class _MonthPageWidgetState extends State<_MonthPageWidget> {
+  /// Cached dates for this month.
+  late List<DateTime> _dates;
+
+  /// Cached weeks for this month.
+  late List<List<DateTime>> _weeks;
+
+  /// Number of weeks in this month.
+  int get _weeksInMonth => _weeks.length;
+
+  // ============================================================
+  // Cached Layout Values (for drag performance)
+  // ============================================================
+
+  /// Cached day width - updated when layout changes.
+  double _cachedDayWidth = 0;
+
+  /// Cached week row height - updated when layout changes.
+  double _cachedWeekRowHeight = 0;
+
+  /// Cached calendar size - updated when layout changes.
+  Size _cachedCalendarSize = Size.zero;
+
+  /// Cached calendar global offset - updated when layout changes.
+  Offset _cachedCalendarOffset = Offset.zero;
+
+  /// Cached event duration for the current drag operation.
+  int _cachedEventDuration = 1;
+
+  /// Cached drag data for the current drag operation.
+  MCalDragData? _cachedDragData;
+
+  /// Latest drag details for debounced processing.
+  DragTargetDetails<MCalDragData>? _latestDragDetails;
+
+  /// Debounce timer for drag move processing (16ms = ~60fps).
+  Timer? _dragMoveDebounceTimer;
+
+  /// Whether layout has been cached for the current drag operation.
+  /// Reset when drag ends to force re-caching on next drag.
+  bool _layoutCachedForDrag = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _computeDates();
+    widget.dragHandler?.addListener(_onDragHandlerChanged);
+  }
+
+  @override
+  void didUpdateWidget(_MonthPageWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.month != widget.month ||
+        oldWidget.firstDayOfWeek != widget.firstDayOfWeek) {
+      _computeDates();
+    }
+    if (oldWidget.dragHandler != widget.dragHandler) {
+      oldWidget.dragHandler?.removeListener(_onDragHandlerChanged);
+      widget.dragHandler?.addListener(_onDragHandlerChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    _dragMoveDebounceTimer?.cancel();
+    widget.dragHandler?.removeListener(_onDragHandlerChanged);
+    super.dispose();
+  }
+
+  /// Called when drag handler state changes.
+  void _onDragHandlerChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  /// Compute the dates and weeks for this month.
+  void _computeDates() {
+    _dates = generateMonthDates(widget.month, widget.firstDayOfWeek);
+    _weeks = <List<DateTime>>[];
+    for (int i = 0; i < _dates.length; i += 7) {
+      _weeks.add(_dates.sublist(i, i + 7));
+    }
+  }
+
+  /// Update cached layout values from render box.
+  /// Called once at start of drag and when layout changes.
+  void _updateLayoutCache(RenderBox renderBox) {
+    final size = renderBox.size;
+    final offset = renderBox.localToGlobal(Offset.zero);
+
+    // Only update if changed
+    if (size != _cachedCalendarSize || offset != _cachedCalendarOffset) {
+      _cachedCalendarSize = size;
+      _cachedCalendarOffset = offset;
+      _cachedDayWidth = size.width / 7;
+      _cachedWeekRowHeight = size.height / _weeksInMonth;
+    }
+  }
+
+  /// Whether a drag is currently active.
+  bool get _isDragActive => widget.dragHandler?.isDragging ?? false;
+
+  /// Get week dates for a specific week row index.
+  List<DateTime> _getWeekDates(int weekRowIndex) {
+    if (weekRowIndex < 0 || weekRowIndex >= _weeks.length) return [];
+    return _weeks[weekRowIndex];
+  }
+
+  /// Get bounds for a specific week row (uses cached values).
+  Rect _getWeekRowBounds(int index) {
+    return Rect.fromLTWH(
+      0,
+      index * _cachedWeekRowHeight,
+      _cachedCalendarSize.width,
+      _cachedWeekRowHeight,
+    );
+  }
+
+  /// Calculate event duration in days.
+  int _calculateEventDuration(MCalCalendarEvent event) {
+    return daysBetween(event.start, event.end) + 1;
+  }
+
+  // ============================================================
+  // Unified Drag Target Handlers
+  // ============================================================
+
+  /// Handles drag move events from the unified DragTarget.
+  ///
+  /// This method is called on every frame during drag. To maintain 60fps,
+  /// we only store the latest position here and debounce the expensive
+  /// calculations to run at most once per 16ms.
+  void _handleDragMove(DragTargetDetails<MCalDragData> details) {
+    // Store the latest details for debounced processing
+    _latestDragDetails = details;
+
+    // Start debounce timer if not already running.
+    // Don't cancel - we want to process the latest position every 16ms,
+    // not 16ms after the last move.
+    if (_dragMoveDebounceTimer == null || !_dragMoveDebounceTimer!.isActive) {
+      _dragMoveDebounceTimer = Timer(
+        const Duration(milliseconds: 16),
+        _processDragMove,
+      );
+    }
+  }
+
+  /// Processes the drag move after debounce.
+  ///
+  /// This contains all the expensive calculations that should only
+  /// run at most once per 16ms frame.
+  void _processDragMove() {
+    final details = _latestDragDetails;
+    if (details == null) return;
+
+    final dragHandler = widget.dragHandler;
+    if (dragHandler == null) return;
+
+    final dragData = details.data;
+
+    // Cache drag data and event duration at start of drag (not every frame)
+    if (_cachedDragData != dragData) {
+      _cachedDragData = dragData;
+      _cachedEventDuration = _calculateEventDuration(dragData.event);
+      _layoutCachedForDrag = false; // Reset to force layout cache on new drag
+    }
+
+    // Calculate pointer position (details.offset is feedback position, add grabOffsetX)
+    final pointerGlobalX = details.offset.dx + dragData.grabOffsetX;
+    final pointerGlobalY = details.offset.dy;
+
+    // Cache layout once at drag start - layout doesn't change during drag
+    if (!_layoutCachedForDrag) {
+      final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+      if (renderBox == null) return;
+      _updateLayoutCache(renderBox);
+      _layoutCachedForDrag = true;
+    }
+
+    // Use cached values for fast calculation
+    final localY = pointerGlobalY - _cachedCalendarOffset.dy;
+    final weekRowIndex = (localY / _cachedWeekRowHeight).floor().clamp(
+      0,
+      _weeksInMonth - 1,
+    );
+
+    // Call dragHandler.handleDragMove with cached/minimal parameters
+    dragHandler.handleDragMove(
+      globalPosition: Offset(pointerGlobalX, pointerGlobalY),
+      dayWidth: _cachedDayWidth,
+      grabOffsetX: dragData.grabOffsetX,
+      eventDurationDays: _cachedEventDuration,
+      weekRowIndex: weekRowIndex,
+      weekRowBounds: Rect.fromLTWH(
+        _cachedCalendarOffset.dx,
+        _cachedCalendarOffset.dy + weekRowIndex * _cachedWeekRowHeight,
+        _cachedCalendarSize.width,
+        _cachedWeekRowHeight,
+      ),
+      calendarBounds: _cachedCalendarOffset & _cachedCalendarSize,
+      weekDates: _getWeekDates(weekRowIndex),
+      totalWeekRows: _weeksInMonth,
+      getWeekRowBounds: _getWeekRowBounds,
+      getWeekDates: _getWeekDates,
+      validationCallback: widget.onDragWillAccept != null
+          ? (start, end) => widget.onDragWillAccept!(
+              context,
+              MCalDragWillAcceptDetails(
+                event: dragData.event,
+                proposedStartDate: start,
+                proposedEndDate: end,
+              ),
+            )
+          : null,
+    );
+
+    // Handle edge proximity for month navigation
+    if (widget.dragEdgeNavigationEnabled) {
+      final localX = pointerGlobalX - _cachedCalendarOffset.dx;
+      _checkEdgeProximity(localX, _cachedCalendarSize.width);
+    }
+  }
+
+  /// Handle edge proximity for cross-month navigation.
+  void _checkEdgeProximity(double localX, double calendarWidth) {
+    final dragHandler = widget.dragHandler;
+    if (dragHandler == null) return;
+
+    // Edge threshold is 10% of calendar width
+    final edgeThreshold = calendarWidth * 0.1;
+    final nearLeftEdge = localX < edgeThreshold;
+    final nearRightEdge = localX > (calendarWidth - edgeThreshold);
+
+    if (nearLeftEdge && widget.onNavigateToPreviousMonth != null) {
+      dragHandler.handleEdgeProximity(
+        true,
+        true, // left edge -> previous month
+        widget.onNavigateToPreviousMonth!,
+        delay: widget.dragEdgeNavigationDelay,
+      );
+    } else if (nearRightEdge && widget.onNavigateToNextMonth != null) {
+      dragHandler.handleEdgeProximity(
+        true,
+        false, // right edge -> next month
+        widget.onNavigateToNextMonth!,
+        delay: widget.dragEdgeNavigationDelay,
+      );
+    } else {
+      dragHandler.handleEdgeProximity(false, false, () {});
+    }
+  }
+
+  /// Handles drag leave events from the unified DragTarget.
+  ///
+  /// NOTE: We do NOT clear the proposed drop range here because onLeave
+  /// fires BEFORE onAcceptWithDetails when a drop is accepted. The state
+  /// is cleared in _handleDrop after processing the drop. For genuine
+  /// drag-leave (user drags outside calendar), the highlights will remain
+  /// briefly but will be cleared when the drag ends via the draggable's
+  /// onDragEnd callback or when the next drag starts.
+  void _handleDragLeave() {
+    // Only clear visual highlights, not the proposed drop data.
+    // The drop handler needs the proposed dates to complete the drop.
+    // DO NOT call clearProposedDropRange() here - it would break drop handling
+    // because DragTarget.onLeave fires BEFORE DragTarget.onAcceptWithDetails.
+    widget.dragHandler?.clearHighlightedCells();
+  }
+
+  /// Handles drop events from the unified DragTarget.
+  void _handleDrop(DragTargetDetails<MCalDragData> details) {
+    final dragHandler = widget.dragHandler;
+
+    // Cancel edge navigation immediately
+    dragHandler?.cancelEdgeNavigation();
+
+    // Flush any pending local debounce timer and process immediately
+    if (_dragMoveDebounceTimer?.isActive ?? false) {
+      _dragMoveDebounceTimer?.cancel();
+      _processDragMove();
+    }
+
+    // Check if drop is valid
+    if (dragHandler != null && !dragHandler.isProposedDropValid) {
+      // Invalid drop - clean up and return
+      dragHandler.clearHighlightedCells();
+      dragHandler.clearProposedDropRange();
+      return;
+    }
+
+    final dragData = details.data;
+    final event = dragData.event;
+
+    // Use the proposed dates from the drag handler if available.
+    final proposedStart = dragHandler?.proposedStartDate;
+    final proposedEnd = dragHandler?.proposedEndDate;
+
+    if (proposedStart == null || proposedEnd == null) {
+      // No valid proposed dates, can't complete drop
+      dragHandler?.clearHighlightedCells();
+      dragHandler?.clearProposedDropRange();
+      return;
+    }
+
+    // Calculate new dates preserving time components
+    final normalizedEventStart = DateTime(
+      event.start.year,
+      event.start.month,
+      event.start.day,
+    );
+    final dayDelta = proposedStart.difference(normalizedEventStart).inDays;
+
+    final newStartDate = DateTime(
+      event.start.year,
+      event.start.month,
+      event.start.day + dayDelta,
+      event.start.hour,
+      event.start.minute,
+      event.start.second,
+      event.start.millisecond,
+      event.start.microsecond,
+    );
+    final newEndDate = DateTime(
+      event.end.year,
+      event.end.month,
+      event.end.day + dayDelta,
+      event.end.hour,
+      event.end.minute,
+      event.end.second,
+      event.end.millisecond,
+      event.end.microsecond,
+    );
+
+    // Store old dates for potential revert
+    final oldStartDate = event.start;
+    final oldEndDate = event.end;
+
+    // Create the updated event
+    final updatedEvent = event.copyWith(start: newStartDate, end: newEndDate);
+
+    // Update event in controller
+    widget.controller.addEvents([updatedEvent]);
+
+    // Call onEventDropped callback if provided
+    if (widget.onEventDropped != null) {
+      final shouldKeep = widget.onEventDropped!(
+        context,
+        MCalEventDroppedDetails(
+          event: event,
+          oldStartDate: oldStartDate,
+          oldEndDate: oldEndDate,
+          newStartDate: newStartDate,
+          newEndDate: newEndDate,
+        ),
+      );
+
+      // If callback returns false, revert the change
+      if (!shouldKeep) {
+        final revertedEvent = event.copyWith(
+          start: oldStartDate,
+          end: oldEndDate,
+        );
+        widget.controller.addEvents([revertedEvent]);
+      }
+    }
+
+    // Mark drag as complete - this clears all drag state including isDragging.
+    // This prevents the microtask in _handleDragEnded from doing redundant cleanup.
+    dragHandler?.cancelDrag();
+  }
+
+  // ============================================================
+  // Highlight Overlay Builder
+  // ============================================================
+
+  /// Builds the highlight overlay for drop targets.
+  ///
+  /// Precedence: dropTargetOverlayBuilder > dropTargetCellBuilder > default CustomPainter
+  Widget _buildLayer3HighlightOverlay(BuildContext context) {
+    final dragHandler = widget.dragHandler;
+    if (dragHandler == null) return const SizedBox.shrink();
+
+    final highlightedCells = dragHandler.highlightedCells;
+    if (highlightedCells.isEmpty) return const SizedBox.shrink();
+
+    final isValid = dragHandler.isProposedDropValid;
+
+    // Precedence: dropTargetOverlayBuilder > dropTargetCellBuilder > default
+    if (widget.dropTargetOverlayBuilder != null) {
+      // Use cached values instead of findRenderObject
+      final draggedEvent = dragHandler.draggedEvent;
+      final sourceDate = dragHandler.sourceDate;
+      if (draggedEvent == null || sourceDate == null) {
+        return const SizedBox.shrink();
+      }
+
+      // Reuse cached drag data if available
+      final dragData =
+          _cachedDragData ??
+          MCalDragData(
+            event: draggedEvent,
+            sourceDate: sourceDate,
+            grabOffsetHolder: MCalGrabOffsetHolder(),
+            horizontalSpacing: 0,
+          );
+
+      return widget.dropTargetOverlayBuilder!(
+        context,
+        MCalDropOverlayDetails(
+          highlightedCells: highlightedCells,
+          isValid: isValid,
+          dayWidth: _cachedDayWidth,
+          calendarSize: _cachedCalendarSize,
+          dragData: dragData,
+        ),
+      );
+    }
+
+    if (widget.dropTargetCellBuilder != null) {
+      return Stack(
+        children: [
+          for (final cell in highlightedCells)
+            Positioned.fromRect(
+              rect: cell.bounds,
+              child: widget.dropTargetCellBuilder!(
+                context,
+                MCalDropTargetCellDetails(
+                  date: cell.date,
+                  bounds: cell.bounds,
+                  isValid: isValid,
+                  isFirst: cell.isFirst,
+                  isLast: cell.isLast,
+                  cellIndex: cell.cellIndex,
+                  weekRowIndex: cell.weekRowIndex,
+                ),
+              ),
+            ),
+        ],
+      );
+    }
+
+    // Default: CustomPainter (most performant)
+    return CustomPaint(
+      size: Size.infinite,
+      painter: _DropTargetHighlightPainter(
+        highlightedCells: highlightedCells,
+        isValid: isValid,
+        validColor:
+            widget.theme.dragTargetValidColor ??
+            Colors.green.withValues(alpha: 0.3),
+        invalidColor:
+            widget.theme.dragTargetInvalidColor ??
+            Colors.red.withValues(alpha: 0.3),
+        borderRadius: widget.theme.dragTargetBorderRadius ?? 4.0,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Get events for this specific month (may differ from currentDisplayMonth)
     final monthEvents =
-        (month.year == currentDisplayMonth.year &&
-            month.month == currentDisplayMonth.month)
-        ? events
-        : getEventsForMonth(month);
-
-    // Group dates into weeks (7 dates per week)
-    final weeks = <List<DateTime>>[];
-    for (int i = 0; i < dates.length; i += 7) {
-      weeks.add(dates.sublist(i, i + 7));
-    }
+        (widget.month.year == widget.currentDisplayMonth.year &&
+            widget.month.month == widget.currentDisplayMonth.month)
+        ? widget.events
+        : widget.getEventsForMonth(widget.month);
 
     // Calculate multi-day event layouts
     final multiDayLayouts = MCalMultiDayRenderer.calculateLayouts(
       events: monthEvents,
-      monthStart: month,
-      firstDayOfWeek: firstDayOfWeek,
+      monthStart: widget.month,
+      firstDayOfWeek: widget.firstDayOfWeek,
     );
 
-    return Column(
-      children: weeks.asMap().entries.map((entry) {
+    // Build the week rows
+    Widget weekRowsColumn = Column(
+      children: _weeks.asMap().entries.map((entry) {
         final weekRowIndex = entry.key;
         final weekDates = entry.value;
 
@@ -2024,56 +2524,84 @@ class _MonthPageWidget extends StatelessWidget {
         return Expanded(
           child: _WeekRowWidget(
             dates: weekDates,
-            currentMonth: month, // Use this page's month for styling
+            currentMonth: widget.month,
             events: monthEvents,
-            theme: theme,
-            focusedDate: controller.focusedDate,
-            autoFocusOnCellTap: autoFocusOnCellTap,
+            theme: widget.theme,
+            focusedDate: widget.controller.focusedDate,
+            autoFocusOnCellTap: widget.autoFocusOnCellTap,
             onSetFocusedDate: (date) {
-              controller.setFocusedDate(date);
+              widget.controller.setFocusedDate(date);
             },
-            dayCellBuilder: dayCellBuilder,
-            eventTileBuilder: eventTileBuilder,
-            dateLabelBuilder: dateLabelBuilder,
-            dateFormat: dateFormat,
-            cellInteractivityCallback: cellInteractivityCallback,
-            onCellTap: onCellTap,
-            onCellLongPress: onCellLongPress,
-            onDateLabelTap: onDateLabelTap,
-            onDateLabelLongPress: onDateLabelLongPress,
-            onEventTap: onEventTap,
-            onEventLongPress: onEventLongPress,
-            onHoverCell: onHoverCell,
-            onHoverEvent: onHoverEvent,
-            locale: locale,
-            maxVisibleEventsPerDay: maxVisibleEventsPerDay,
-            onOverflowTap: onOverflowTap,
-            onOverflowLongPress: onOverflowLongPress,
-            showWeekNumbers: showWeekNumbers,
-            weekNumberBuilder: weekNumberBuilder,
-            // Week layout customization
-            weekLayoutBuilder: weekLayoutBuilder,
-            overflowIndicatorBuilder: overflowIndicatorBuilder,
+            dayCellBuilder: widget.dayCellBuilder,
+            eventTileBuilder: widget.eventTileBuilder,
+            dateLabelBuilder: widget.dateLabelBuilder,
+            dateFormat: widget.dateFormat,
+            cellInteractivityCallback: widget.cellInteractivityCallback,
+            onCellTap: widget.onCellTap,
+            onCellLongPress: widget.onCellLongPress,
+            onDateLabelTap: widget.onDateLabelTap,
+            onDateLabelLongPress: widget.onDateLabelLongPress,
+            onEventTap: widget.onEventTap,
+            onEventLongPress: widget.onEventLongPress,
+            onHoverCell: widget.onHoverCell,
+            onHoverEvent: widget.onHoverEvent,
+            locale: widget.locale,
+            maxVisibleEventsPerDay: widget.maxVisibleEventsPerDay,
+            onOverflowTap: widget.onOverflowTap,
+            onOverflowLongPress: widget.onOverflowLongPress,
+            showWeekNumbers: widget.showWeekNumbers,
+            weekNumberBuilder: widget.weekNumberBuilder,
+            weekLayoutBuilder: widget.weekLayoutBuilder,
+            overflowIndicatorBuilder: widget.overflowIndicatorBuilder,
             weekRowIndex: weekRowIndex,
             multiDayLayouts: weekLayouts,
-            // Drag-and-drop
-            enableDragAndDrop: enableDragAndDrop,
-            draggedTileBuilder: draggedTileBuilder,
-            dragSourceTileBuilder: dragSourceTileBuilder,
-            dragTargetTileBuilder: dragTargetTileBuilder,
-            dropTargetCellBuilder: dropTargetCellBuilder,
-            onDragWillAccept: onDragWillAccept,
-            onEventDropped: onEventDropped,
-            controller: controller,
-            // Drag lifecycle callbacks (Task 21)
-            onDragStartedCallback: onDragStartedCallback,
-            onDragEndedCallback: onDragEndedCallback,
-            onDragCanceledCallback: onDragCanceledCallback,
-            dragHandler: dragHandler,
+            // Drag-and-drop - pass builders but NOT drop target handling
+            enableDragAndDrop: widget.enableDragAndDrop,
+            draggedTileBuilder: widget.draggedTileBuilder,
+            dragSourceTileBuilder: widget.dragSourceTileBuilder,
+            dragTargetTileBuilder: widget.dragTargetTileBuilder,
+            dropTargetCellBuilder: widget.dropTargetCellBuilder,
+            onDragWillAccept: widget.onDragWillAccept,
+            onEventDropped: widget.onEventDropped,
+            controller: widget.controller,
+            onDragStartedCallback: widget.onDragStartedCallback,
+            onDragEndedCallback: widget.onDragEndedCallback,
+            onDragCanceledCallback: widget.onDragCanceledCallback,
+            dragHandler: widget.dragHandler,
           ),
         );
       }).toList(),
     );
+
+    // Wrap with unified DragTarget if drag-and-drop is enabled
+    if (widget.enableDragAndDrop) {
+      return DragTarget<MCalDragData>(
+        onMove: _handleDragMove,
+        onLeave: (_) => _handleDragLeave(),
+        onAcceptWithDetails: _handleDrop,
+        builder: (context, candidateData, rejectedData) {
+          return Stack(
+            children: [
+              // Main content (week rows with grid and events)
+              weekRowsColumn,
+
+              // Highlight overlay (only when dragging)
+              // RepaintBoundary prevents highlight changes from repainting calendar
+              if (_isDragActive)
+                Positioned.fill(
+                  child: RepaintBoundary(
+                    child: IgnorePointer(
+                      child: _buildLayer3HighlightOverlay(context),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      );
+    }
+
+    return weekRowsColumn;
   }
 }
 
@@ -2357,38 +2885,9 @@ class _WeekRowWidget extends StatefulWidget {
 }
 
 class _WeekRowWidgetState extends State<_WeekRowWidget> {
-  /// Tracks the currently hovered drop target cell index (0-6) and drag data.
-  /// Null if no drag is hovering over this week row.
-  ({int cellIndex, MCalDragData dragData, bool isValid})? _hoveredDropTarget;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.dragHandler?.addListener(_onDragHandlerChanged);
-  }
-
-  @override
-  void didUpdateWidget(_WeekRowWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.dragHandler != widget.dragHandler) {
-      oldWidget.dragHandler?.removeListener(_onDragHandlerChanged);
-      widget.dragHandler?.addListener(_onDragHandlerChanged);
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.dragHandler?.removeListener(_onDragHandlerChanged);
-    super.dispose();
-  }
-
-  /// Called when the drag handler state changes.
-  /// Triggers a rebuild so that highlighting updates across all week rows.
-  void _onDragHandlerChanged() {
-    if (mounted) {
-      setState(() {});
-    }
-  }
+  // Note: Per-cell drop target state (_hoveredDropTarget) has been removed.
+  // Drop target handling is now done at the _MonthPageWidget level with a
+  // unified DragTarget wrapping all week rows.
 
   @override
   Widget build(BuildContext context) {
@@ -2411,7 +2910,8 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       );
     }
 
-    // Build the 3-layer Stack architecture
+    // Build the 2-layer Stack architecture
+    // Note: Layer 3 (drop targets) has been moved to _MonthPageWidget
     return ClipRect(
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -2426,10 +2926,10 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Week number column (positioned outside the 3-layer Stack)
+              // Week number column (positioned outside the Stack)
               if (weekNumberCell != null && !isRTL) weekNumberCell,
 
-              // Main calendar content with 3-layer Stack
+              // Main calendar content with 2-layer Stack
               Expanded(
                 child: Stack(
                   clipBehavior: Clip.hardEdge,
@@ -2446,11 +2946,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
                       ),
                     ),
 
-                    // Layer 3: Drop targets (on top of everything when drag enabled)
-                    if (widget.enableDragAndDrop)
-                      Positioned.fill(
-                        child: _buildLayer3DropTargets(context, columnWidths),
-                      ),
+                    // Layer 3: Removed - drop targets are now at _MonthPageWidget level
                   ],
                 ),
               ),
@@ -2600,6 +3096,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           developerBuilder: widget.overflowIndicatorBuilder,
           defaultBuilder: _buildDefaultOverflowIndicator,
           onOverflowTap: widget.onOverflowTap,
+          onOverflowLongPress: widget.onOverflowLongPress,
         );
 
     // Create the week layout context
@@ -2625,447 +3122,9 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
     return MCalDefaultWeekLayoutBuilder.build(context, layoutContext);
   }
 
-  /// GlobalKey for calculating cursor position within the drop target grid.
-  final GlobalKey _dropTargetRowKey = GlobalKey();
-
-  /// Layer 3: Drop targets overlay (on top of everything).
-  ///
-  /// This layer renders a transparent grid of [DragTarget] widgets on top of
-  /// Layer 1 (grid cells) and Layer 2 (events). This ensures drop targets
-  /// always receive pointer events, even when hovering over event tiles.
-  ///
-  /// When a multi-day event is being dragged, all cells that would be covered
-  /// by the event are highlighted, not just the cell under the pointer.
-  Widget _buildLayer3DropTargets(
-    BuildContext context,
-    List<double> columnWidths,
-  ) {
-    return Row(
-      key: _dropTargetRowKey,
-      children: List.generate(7, (cellIndex) {
-        final date = widget.dates[cellIndex];
-        final cellWidth = columnWidths[cellIndex];
-
-        return SizedBox(
-          width: cellWidth,
-          child: DragTarget<MCalDragData>(
-            onWillAcceptWithDetails: (details) {
-              final dragData = details.data;
-              final event = dragData.event;
-
-              // Calculate the ACTUAL cell index from the drag's global position.
-              // We can't rely on which DragTarget widget receives the callback
-              // because the hit-testing can be affected by gesture timing.
-              final dayWidth = columnWidths.isNotEmpty ? columnWidths[0] : 50.0;
-
-              // Get the actual cursor position within the row
-              int actualCellIndex = cellIndex; // Fallback to widget's cellIndex
-              final rowRenderBox =
-                  _dropTargetRowKey.currentContext?.findRenderObject()
-                      as RenderBox?;
-
-              // DEBUG: Log position information
-              debugPrint('POSITION DEBUG: details.offset=${details.offset}');
-              if (rowRenderBox != null) {
-                final rowGlobalPos = rowRenderBox.localToGlobal(Offset.zero);
-                debugPrint(
-                  'POSITION DEBUG: rowGlobalPos=$rowGlobalPos, rowSize=${rowRenderBox.size}',
-                );
-
-                // IMPORTANT: details.offset gives the FEEDBACK widget's position,
-                // not the actual pointer position. We need to add grabOffsetX
-                // to get the pointer position.
-                final feedbackLocalPos = rowRenderBox.globalToLocal(
-                  details.offset,
-                );
-                final pointerLocalX =
-                    feedbackLocalPos.dx + dragData.grabOffsetX;
-                debugPrint(
-                  'POSITION DEBUG: feedbackLocalX=${feedbackLocalPos.dx}, '
-                  'grabOffsetX=${dragData.grabOffsetX}, pointerLocalX=$pointerLocalX',
-                );
-                actualCellIndex = (pointerLocalX / dayWidth).floor().clamp(
-                  0,
-                  6,
-                );
-                debugPrint('POSITION DEBUG: actualCellIndex=$actualCellIndex');
-              } else {
-                debugPrint('POSITION DEBUG: rowRenderBox is NULL!');
-              }
-
-              // segmentDayIndex: which day within the segment was grabbed (0-indexed)
-              // e.g., if user grabbed day 4 of a 4-day segment, segmentDayIndex = 3
-              final segmentDayIndex = (dragData.grabOffsetX / dayWidth).floor();
-              final dropStartCellIndex = actualCellIndex - segmentDayIndex;
-
-              // DEBUG: Log drag calculation values
-              debugPrint(
-                'DRAG DEBUG: dayWidth=$dayWidth, grabOffsetX=${dragData.grabOffsetX}, '
-                'segmentDayIndex=$segmentDayIndex, actualCellIndex=$actualCellIndex (widget=$cellIndex), '
-                'dropStartCellIndex=$dropStartCellIndex',
-              );
-
-              // Get the date for the drop start cell.
-              // If dropStartCellIndex is negative, the event would start
-              // before this week row (which is fine for the calculation).
-              final dropStartDate = widget.dates[0].add(
-                Duration(days: dropStartCellIndex),
-              );
-              final normalizedDropDate = DateTime(
-                dropStartDate.year,
-                dropStartDate.month,
-                dropStartDate.day,
-              );
-              final normalizedEventStart = DateTime(
-                event.start.year,
-                event.start.month,
-                event.start.day,
-              );
-              final dayDelta = normalizedDropDate
-                  .difference(normalizedEventStart)
-                  .inDays;
-
-              // Use calendar-aware date arithmetic to avoid DST issues.
-              // Adding Duration(days: N) can result in off-by-one-hour errors
-              // when crossing DST boundaries.
-              final proposedStartDate = DateTime(
-                event.start.year,
-                event.start.month,
-                event.start.day + dayDelta,
-                event.start.hour,
-                event.start.minute,
-                event.start.second,
-                event.start.millisecond,
-                event.start.microsecond,
-              );
-              final proposedEndDate = DateTime(
-                event.end.year,
-                event.end.month,
-                event.end.day + dayDelta,
-                event.end.hour,
-                event.end.minute,
-                event.end.second,
-                event.end.millisecond,
-                event.end.microsecond,
-              );
-
-              // Check if drop is valid
-              bool isValid = true;
-              if (widget.onDragWillAccept != null) {
-                isValid = widget.onDragWillAccept!(
-                  context,
-                  MCalDragWillAcceptDetails(
-                    event: event,
-                    proposedStartDate: proposedStartDate,
-                    proposedEndDate: proposedEndDate,
-                  ),
-                );
-              }
-
-              // Update shared drag handler with proposed drop range
-              // This enables cross-week highlighting
-              widget.dragHandler?.updateProposedDropRange(
-                proposedStart: proposedStartDate,
-                proposedEnd: proposedEndDate,
-                isValid: isValid,
-              );
-
-              // Update local hover state (still needed for drop target builder)
-              setState(() {
-                _hoveredDropTarget = (
-                  cellIndex: actualCellIndex,
-                  dragData: dragData,
-                  isValid: isValid,
-                );
-              });
-
-              return isValid;
-            },
-            onLeave: (_) {
-              // Clear local hover state when leaving this cell
-              // Note: We do NOT clear dragHandler's proposed range here
-              // because the cursor may be moving to another week row's cell.
-              // The proposed range is cleared when the drag ends.
-              if (_hoveredDropTarget?.cellIndex == cellIndex) {
-                setState(() {
-                  _hoveredDropTarget = null;
-                });
-              }
-            },
-            onAcceptWithDetails: (details) {
-              // Cancel any pending edge navigation immediately to prevent
-              // the timer from firing during drop processing
-              widget.dragHandler?.cancelEdgeNavigation();
-
-              final dragData = details.data;
-              final event = dragData.event;
-
-              // Use the proposed dates from the drag handler if available.
-              // This ensures the drop matches what was visually highlighted.
-              final proposedStart = widget.dragHandler?.proposedStartDate;
-              final proposedEnd = widget.dragHandler?.proposedEndDate;
-
-              DateTime newStartDate;
-              DateTime newEndDate;
-
-              if (proposedStart != null && proposedEnd != null) {
-                // Use the proposed dates (matches the green highlighting)
-                newStartDate = proposedStart;
-                newEndDate = proposedEnd;
-
-                // DEBUG: Log drop using proposed dates
-                debugPrint(
-                  'DROP DEBUG: Using proposed dates: $proposedStart to $proposedEnd',
-                );
-              } else {
-                // Fallback: Calculate from current position
-                final dayWidth = columnWidths.isNotEmpty
-                    ? columnWidths[0]
-                    : 50.0;
-
-                int actualCellIndex = cellIndex;
-                final rowRenderBox =
-                    _dropTargetRowKey.currentContext?.findRenderObject()
-                        as RenderBox?;
-                if (rowRenderBox != null) {
-                  final feedbackLocalPos = rowRenderBox.globalToLocal(
-                    details.offset,
-                  );
-                  final pointerLocalX =
-                      feedbackLocalPos.dx + dragData.grabOffsetX;
-                  actualCellIndex = (pointerLocalX / dayWidth).floor().clamp(
-                    0,
-                    6,
-                  );
-                }
-
-                final segmentDayIndex = (dragData.grabOffsetX / dayWidth)
-                    .floor();
-                final dropStartCellIndex = actualCellIndex - segmentDayIndex;
-
-                final dropStartDate = widget.dates[0].add(
-                  Duration(days: dropStartCellIndex),
-                );
-                final normalizedDropDate = DateTime(
-                  dropStartDate.year,
-                  dropStartDate.month,
-                  dropStartDate.day,
-                );
-                final normalizedEventStart = DateTime(
-                  event.start.year,
-                  event.start.month,
-                  event.start.day,
-                );
-                final dayDelta = normalizedDropDate
-                    .difference(normalizedEventStart)
-                    .inDays;
-
-                // Use calendar-aware date arithmetic to avoid DST issues.
-                // Adding Duration(days: N) can result in off-by-one-hour errors
-                // when crossing DST boundaries. Instead, we construct new dates
-                // by adding to the date components directly.
-                newStartDate = DateTime(
-                  event.start.year,
-                  event.start.month,
-                  event.start.day + dayDelta,
-                  event.start.hour,
-                  event.start.minute,
-                  event.start.second,
-                  event.start.millisecond,
-                  event.start.microsecond,
-                );
-                newEndDate = DateTime(
-                  event.end.year,
-                  event.end.month,
-                  event.end.day + dayDelta,
-                  event.end.hour,
-                  event.end.minute,
-                  event.end.second,
-                  event.end.millisecond,
-                  event.end.microsecond,
-                );
-
-                // DEBUG: Log fallback calculation with full details
-                debugPrint(
-                  'DROP DEBUG (fallback): actualCellIndex=$actualCellIndex, '
-                  'dropStartCellIndex=$dropStartCellIndex, '
-                  'weekStart=${widget.dates[0]}, dropDate=$dropStartDate, '
-                  'originalEvent=${event.start} to ${event.end}, '
-                  'dayDelta=$dayDelta, '
-                  'newDates=$newStartDate to $newEndDate',
-                );
-              }
-
-              // Store old dates for potential revert
-              final oldStartDate = event.start;
-              final oldEndDate = event.end;
-
-              // Create the updated event
-              final updatedEvent = event.copyWith(
-                start: newStartDate,
-                end: newEndDate,
-              );
-
-              // DEBUG: Log updated event
-              debugPrint(
-                'DROP EVENT: "${updatedEvent.title}" updated from '
-                '${event.start} - ${event.end} to '
-                '${updatedEvent.start} - ${updatedEvent.end}',
-              );
-
-              // Update event in controller
-              widget.controller.addEvents([updatedEvent]);
-
-              // Call onEventDropped callback if provided
-              if (widget.onEventDropped != null) {
-                final shouldKeep = widget.onEventDropped!(
-                  context,
-                  MCalEventDroppedDetails(
-                    event: event,
-                    oldStartDate: oldStartDate,
-                    oldEndDate: oldEndDate,
-                    newStartDate: newStartDate,
-                    newEndDate: newEndDate,
-                  ),
-                );
-
-                // If callback returns false, revert the change
-                if (!shouldKeep) {
-                  final revertedEvent = event.copyWith(
-                    start: oldStartDate,
-                    end: oldEndDate,
-                  );
-                  widget.controller.addEvents([revertedEvent]);
-                }
-              }
-
-              // Clear hover state after drop
-              setState(() {
-                _hoveredDropTarget = null;
-              });
-            },
-            builder: (context, candidateData, rejectedData) {
-              // Determine if this cell should be highlighted
-              final dayWidth = columnWidths.isNotEmpty ? columnWidths[0] : 50.0;
-              final shouldHighlight = _shouldHighlightCell(cellIndex, dayWidth);
-
-              if (!shouldHighlight) {
-                // Transparent overlay that still receives pointer events
-                return const SizedBox.expand();
-              }
-
-              // Get validity from drag handler (preferred) or local hover state
-              final dragHandler = widget.dragHandler;
-              final isValid =
-                  dragHandler?.isProposedDropValid ??
-                  _hoveredDropTarget?.isValid ??
-                  false;
-
-              // Get dragged event from drag handler (preferred) or local hover state
-              final draggedEvent =
-                  dragHandler?.draggedEvent ??
-                  _hoveredDropTarget?.dragData.event;
-
-              // Use custom dropTargetCellBuilder if provided
-              if (widget.dropTargetCellBuilder != null &&
-                  draggedEvent != null) {
-                return widget.dropTargetCellBuilder!(
-                  context,
-                  MCalDropTargetCellDetails(
-                    date: date,
-                    isValid: isValid,
-                    draggedEvent: draggedEvent,
-                  ),
-                );
-              }
-
-              // Default visual feedback: colored overlay
-              final validColor =
-                  widget.theme.dragTargetValidColor ??
-                  Colors.green.withValues(alpha: 0.3);
-              final invalidColor =
-                  widget.theme.dragTargetInvalidColor ??
-                  Colors.red.withValues(alpha: 0.3);
-              final overlayColor = isValid ? validColor : invalidColor;
-
-              return Container(
-                decoration: BoxDecoration(
-                  color: overlayColor,
-                  border: Border.all(
-                    color: isValid ? Colors.green : Colors.red,
-                    width: 2.0,
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      }),
-    );
-  }
-
-  /// Determines if a cell should be highlighted based on the current drag state.
-  ///
-  /// Uses the shared drag handler's proposed date range to determine highlighting.
-  /// This enables cross-week highlighting: when dragging a multi-day event,
-  /// ALL cells within the proposed date range are highlighted, even if they
-  /// span multiple week rows.
-  ///
-  /// The method compares the actual date of each cell against the proposed
-  /// start and end dates from the drag handler, rather than using cell indices.
-  bool _shouldHighlightCell(int cellIndex, double dayWidth) {
-    // Check if drag handler has a proposed range
-    final dragHandler = widget.dragHandler;
-    if (dragHandler != null &&
-        dragHandler.proposedStartDate != null &&
-        dragHandler.proposedEndDate != null) {
-      // Use date-based comparison for cross-week highlighting
-      final cellDate = widget.dates[cellIndex];
-      final normalizedCellDate = DateTime(
-        cellDate.year,
-        cellDate.month,
-        cellDate.day,
-      );
-
-      // Check if this cell's date falls within the proposed range
-      return !normalizedCellDate.isBefore(dragHandler.proposedStartDate!) &&
-          !normalizedCellDate.isAfter(dragHandler.proposedEndDate!);
-    }
-
-    // Fallback to local hover state if drag handler is not available
-    if (_hoveredDropTarget == null) return false;
-
-    final dragData = _hoveredDropTarget!.dragData;
-    final event = dragData.event;
-    final hoveredCellIndex = _hoveredDropTarget!.cellIndex;
-
-    // Calculate event duration in days
-    final eventStartDate = DateTime(
-      event.start.year,
-      event.start.month,
-      event.start.day,
-    );
-    final eventEndDate = DateTime(
-      event.end.year,
-      event.end.month,
-      event.end.day,
-    );
-    // Use DST-safe daysBetween to calculate duration
-    final eventDurationDays = daysBetween(eventStartDate, eventEndDate) + 1;
-
-    // Calculate how many cells to the left of the cursor the tile's left edge is.
-    final cellsToLeft = (dragData.grabOffsetX / dayWidth).floor();
-
-    // The drop start cell is where the tile's left edge would land
-    final dropStartCell = hoveredCellIndex - cellsToLeft;
-    final dropEndCell = dropStartCell + eventDurationDays - 1;
-
-    // Check if this cell is within the range (clamped to 0-6 for this week row)
-    return cellIndex >= dropStartCell &&
-        cellIndex <= dropEndCell &&
-        cellIndex >= 0 &&
-        cellIndex < 7;
-  }
+  // Note: _buildLayer3DropTargets and _shouldHighlightCell have been removed.
+  // Drop target handling is now done at the _MonthPageWidget level with a
+  // unified DragTarget wrapping all week rows.
 
   /// Builds the default event tile widget.
   Widget _buildDefaultEventTile(
@@ -4767,5 +4826,80 @@ class _NavigatorWidget extends StatelessWidget {
       monthKeys[currentMonth.month - 1],
       locale,
     );
+  }
+}
+
+/// CustomPainter for rendering drop target highlights efficiently.
+///
+/// This is the default highlight renderer used when neither
+/// [MCalMonthView.dropTargetOverlayBuilder] nor [MCalMonthView.dropTargetCellBuilder]
+/// is provided. It draws colored rounded rectangles for each highlighted cell.
+class _DropTargetHighlightPainter extends CustomPainter {
+  /// The list of cells to highlight.
+  final List<MCalHighlightCellInfo> highlightedCells;
+
+  /// Whether the drop target is valid.
+  final bool isValid;
+
+  /// Color for valid drop targets.
+  final Color validColor;
+
+  /// Color for invalid drop targets.
+  final Color invalidColor;
+
+  /// Border radius for the highlight rectangles.
+  final double borderRadius;
+
+  /// Creates a new [_DropTargetHighlightPainter].
+  _DropTargetHighlightPainter({
+    required this.highlightedCells,
+    required this.isValid,
+    this.validColor = const Color(0x4000FF00),
+    this.invalidColor = const Color(0x40FF0000),
+    this.borderRadius = 4.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (highlightedCells.isEmpty) return;
+
+    final paint = Paint()
+      ..color = isValid ? validColor : invalidColor
+      ..style = PaintingStyle.fill;
+
+    for (final cell in highlightedCells) {
+      final rrect = RRect.fromRectAndRadius(
+        cell.bounds,
+        Radius.circular(borderRadius),
+      );
+      canvas.drawRRect(rrect, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DropTargetHighlightPainter oldDelegate) {
+    // Check if we need to repaint
+    if (oldDelegate.isValid != isValid) return true;
+    if (oldDelegate.highlightedCells.length != highlightedCells.length)
+      return true;
+    if (oldDelegate.validColor != validColor) return true;
+    if (oldDelegate.invalidColor != invalidColor) return true;
+    if (oldDelegate.borderRadius != borderRadius) return true;
+
+    // Deep compare cells (by reference should be sufficient if list is rebuilt)
+    if (!identical(oldDelegate.highlightedCells, highlightedCells)) {
+      // Compare bounds of first and last cell as quick check
+      if (highlightedCells.isNotEmpty &&
+          oldDelegate.highlightedCells.isNotEmpty) {
+        if (highlightedCells.first.bounds !=
+                oldDelegate.highlightedCells.first.bounds ||
+            highlightedCells.last.bounds !=
+                oldDelegate.highlightedCells.last.bounds) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 }

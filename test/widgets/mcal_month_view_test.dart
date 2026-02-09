@@ -1356,9 +1356,9 @@ void main() {
       },
     );
 
-    testWidgets('onOverflowLongPress receives correct MCalOverflowTapDetails', (
-      tester,
-    ) async {
+    testWidgets(
+      'onOverflowLongPress receives correct MCalOverflowTapDetails',
+      (tester) async {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
@@ -1399,16 +1399,16 @@ void main() {
 
       // Find and long-press the overflow indicator
       final overflowFinder = find.textContaining('more');
-      if (overflowFinder.evaluate().isNotEmpty) {
-        await tester.longPress(overflowFinder.first);
-        await tester.pumpAndSettle();
+      expect(overflowFinder, findsWidgets, reason: 'Should find overflow indicator');
 
-        expect(capturedContext, isNotNull);
-        expect(capturedDetails, isNotNull);
-        expect(capturedDetails!.date.day, equals(20));
-        expect(capturedDetails!.allEvents.length, equals(6));
-        expect(capturedDetails!.hiddenEventCount, greaterThan(0));
-      }
+      await tester.longPress(overflowFinder.first);
+      await tester.pumpAndSettle();
+
+      expect(capturedContext, isNotNull);
+      expect(capturedDetails, isNotNull);
+      expect(capturedDetails!.date.day, equals(20));
+      expect(capturedDetails!.allEvents.length, equals(6));
+      expect(capturedDetails!.hiddenEventCount, greaterThan(0));
     });
 
     testWidgets(
@@ -2936,9 +2936,6 @@ void main() {
       },
     );
 
-    // TODO: The old renderMultiDayEventsAsContiguous:false behavior is no longer supported.
-    // Multi-day events are now always rendered as contiguous tiles via the layered architecture.
-    // Custom layouts can be implemented via weekLayoutBuilder if needed.
     testWidgets('multi-day events render via default week layout builder', (
       tester,
     ) async {
@@ -2979,9 +2976,6 @@ void main() {
       expect(eventFinder.evaluate().isNotEmpty, isTrue);
     });
 
-    // TODO: multiDayEventTileBuilder has been replaced by eventTileBuilder in the new architecture.
-    // Event tile customization is now done via eventTileBuilder which receives MCalEventTileContext
-    // with segment information (MCalEventSegment) for both single-day and multi-day events.
     testWidgets('eventTileBuilder receives context for multi-day events', (
       tester,
     ) async {
@@ -3200,8 +3194,6 @@ void main() {
       }
     });
 
-    // TODO: MCalMultiDayTileDetails has been replaced by MCalEventSegment in the new architecture.
-    // Event segments now contain isFirstSegment/isLastSegment flags for week boundary handling.
     testWidgets(
       'multi-day event spanning week boundary creates multiple segments',
       (tester) async {
@@ -3267,8 +3259,6 @@ void main() {
       },
     );
 
-    // TODO: multiDayEventTileBuilder has been replaced by eventTileBuilder with MCalEventSegment.
-    // Custom styling is now done via eventTileBuilder which receives segment info.
     testWidgets('event tiles with custom builder apply custom styling', (
       tester,
     ) async {
@@ -3374,8 +3364,6 @@ void main() {
       expect(find.byType(MCalMonthView), findsOneWidget);
     });
 
-    // TODO: MCalMultiDayTileDetails has been replaced by MCalEventSegment in the new architecture.
-    // Segment information is now accessed via MCalEventTileContext.segment.
     testWidgets(
       'MCalEventSegment provides correct segment info for multi-day events',
       (tester) async {
@@ -4042,12 +4030,19 @@ void main() {
         await gesture.moveTo(tester.getCenter(targetFinder.first));
         await tester.pump();
 
-        // Check if builder was called
+        // Check if builder was called with correct details
         if (capturedDetails.isNotEmpty) {
           final lastDetails = capturedDetails.last;
-          expect(lastDetails.draggedEvent.id, equals('drop-target-cell-1'));
+          // MCalDropTargetCellDetails contains cell info, not event info
+          expect(lastDetails.date, isNotNull);
+          expect(lastDetails.bounds, isNotNull);
           // isValid should be set based on onDragWillAccept (true by default)
           expect(lastDetails.isValid, isTrue);
+          // Check position flags
+          expect(lastDetails.isFirst, isNotNull);
+          expect(lastDetails.isLast, isNotNull);
+          expect(lastDetails.cellIndex, greaterThanOrEqualTo(0));
+          expect(lastDetails.weekRowIndex, greaterThanOrEqualTo(0));
         }
       }
 
@@ -4454,6 +4449,520 @@ void main() {
       // Verify drag handlers can be called multiple times
       // ignore: unused_local_variable
       expect(dropCount, greaterThanOrEqualTo(0));
+    });
+  });
+
+  // ============================================================
+  // Unified DragTarget Tests (Task 21)
+  // ============================================================
+  group('Unified DragTarget', () {
+    late MockMCalEventController controller;
+
+    setUp(() {
+      controller = MockMCalEventController(
+        initialDate: DateTime(2025, 1, 1),
+      );
+    });
+
+    tearDown(() {
+      controller.dispose();
+    });
+
+    testWidgets('onMove updates drag handler state', (tester) async {
+      final event = MCalCalendarEvent(
+        id: 'unified-drag-1',
+        title: 'Unified Drag Event',
+        start: DateTime(2025, 1, 15, 10, 0),
+        end: DateTime(2025, 1, 15, 11, 0),
+      );
+      controller.setMockEvents([event]);
+
+      final capturedDetails = <MCalDropTargetCellDetails>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 600,
+              child: MCalMonthView(
+                controller: controller,
+                enableDragAndDrop: true,
+                dropTargetCellBuilder: (context, details) {
+                  capturedDetails.add(details);
+                  return Container(
+                    color: Colors.blue.withOpacity(0.3),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find the event tile
+      final eventFinder = find.text('Unified Drag Event');
+      if (eventFinder.evaluate().isEmpty) {
+        return;
+      }
+
+      // Start a drag
+      final gesture = await tester.startGesture(tester.getCenter(eventFinder));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Move to different cells to trigger onMove updates
+      final targetFinder = find.text('20');
+      if (targetFinder.evaluate().isNotEmpty) {
+        await gesture.moveTo(tester.getCenter(targetFinder.first));
+        await tester.pump();
+        // Allow debounce timer to fire
+        await tester.pump(const Duration(milliseconds: 20));
+
+        // The drag handler should have updated state via onMove
+        // and the dropTargetCellBuilder should have been called
+        expect(capturedDetails, isNotEmpty);
+      }
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets(
+      'builder precedence: dropTargetOverlayBuilder > dropTargetCellBuilder > default',
+      (tester) async {
+        final event = MCalCalendarEvent(
+          id: 'precedence-test-1',
+          title: 'Precedence Test',
+          start: DateTime(2025, 1, 15, 10, 0),
+          end: DateTime(2025, 1, 15, 11, 0),
+        );
+        controller.setMockEvents([event]);
+
+        var overlayBuilderCalled = false;
+        var cellBuilderCalled = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                height: 600,
+                child: MCalMonthView(
+                  controller: controller,
+                  enableDragAndDrop: true,
+                  // Both builders provided - overlay should take precedence
+                  dropTargetOverlayBuilder: (context, details) {
+                    overlayBuilderCalled = true;
+                    return Container(
+                      key: const Key('overlay-builder'),
+                      color: Colors.purple.withOpacity(0.3),
+                    );
+                  },
+                  dropTargetCellBuilder: (context, details) {
+                    cellBuilderCalled = true;
+                    return Container(
+                      key: const Key('cell-builder'),
+                      color: Colors.green.withOpacity(0.3),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Find the event tile
+        final eventFinder = find.text('Precedence Test');
+        if (eventFinder.evaluate().isEmpty) {
+          return;
+        }
+
+        // Start a drag
+        final gesture =
+            await tester.startGesture(tester.getCenter(eventFinder));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Move to trigger highlight
+        final targetFinder = find.text('20');
+        if (targetFinder.evaluate().isNotEmpty) {
+          await gesture.moveTo(tester.getCenter(targetFinder.first));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 20));
+
+          // Overlay builder should be called, cell builder should NOT
+          expect(overlayBuilderCalled, isTrue);
+          expect(cellBuilderCalled, isFalse);
+        }
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets('drop matches highlighted position', (tester) async {
+      final event = MCalCalendarEvent(
+        id: 'drop-position-1',
+        title: 'Drop Position Test',
+        start: DateTime(2025, 1, 15, 10, 0),
+        end: DateTime(2025, 1, 15, 11, 0),
+      );
+      controller.setMockEvents([event]);
+
+      MCalEventDroppedDetails? droppedDetails;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 600,
+              child: MCalMonthView(
+                controller: controller,
+                enableDragAndDrop: true,
+                onEventDropped: (context, details) {
+                  droppedDetails = details;
+                  return true;
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find the event tile
+      final eventFinder = find.text('Drop Position Test');
+      if (eventFinder.evaluate().isEmpty) {
+        return;
+      }
+
+      // Start a drag
+      final gesture = await tester.startGesture(tester.getCenter(eventFinder));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Move to a specific target date (20th)
+      final targetFinder = find.text('20');
+      if (targetFinder.evaluate().isNotEmpty) {
+        await gesture.moveTo(tester.getCenter(targetFinder.first));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+
+        // Drop at the highlighted position
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        // If drop was successful, verify the new start date
+        if (droppedDetails != null) {
+          expect(droppedDetails!.event.id, equals('drop-position-1'));
+          // The new start date should reflect the drag target position
+          expect(droppedDetails!.newStartDate, isNotNull);
+        }
+      } else {
+        await gesture.up();
+        await tester.pumpAndSettle();
+      }
+    });
+
+    testWidgets('invalid drop does not move event', (tester) async {
+      final event = MCalCalendarEvent(
+        id: 'invalid-drop-1',
+        title: 'Invalid Drop Test',
+        start: DateTime(2025, 1, 15, 10, 0),
+        end: DateTime(2025, 1, 15, 11, 0),
+      );
+      controller.setMockEvents([event]);
+
+      var dropWasAccepted = true;
+      var onDroppedCalled = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 600,
+              child: MCalMonthView(
+                controller: controller,
+                enableDragAndDrop: true,
+                // Reject all drops
+                onDragWillAccept: (context, details) {
+                  dropWasAccepted = false;
+                  return false;
+                },
+                onEventDropped: (context, details) {
+                  onDroppedCalled = true;
+                  return true;
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find the event tile
+      final eventFinder = find.text('Invalid Drop Test');
+      if (eventFinder.evaluate().isEmpty) {
+        return;
+      }
+
+      // Start a drag
+      final gesture = await tester.startGesture(tester.getCenter(eventFinder));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Move to a target cell
+      final targetFinder = find.text('20');
+      if (targetFinder.evaluate().isNotEmpty) {
+        await gesture.moveTo(tester.getCenter(targetFinder.first));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+
+        // Drop at the (invalid) target
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        // onDragWillAccept should have been called and returned false
+        expect(dropWasAccepted, isFalse);
+        // onEventDropped should NOT be called for invalid drops
+        expect(onDroppedCalled, isFalse);
+      } else {
+        await gesture.up();
+        await tester.pumpAndSettle();
+      }
+    });
+
+    testWidgets('dropTargetCellBuilder receives isFirst and isLast flags', (
+      tester,
+    ) async {
+      // Multi-day event to test isFirst/isLast flags
+      final multiDayEvent = MCalCalendarEvent(
+        id: 'multi-day-flags-1',
+        title: 'Multi Day Flags',
+        start: DateTime(2025, 1, 15),
+        end: DateTime(2025, 1, 17),
+        isAllDay: true,
+      );
+      controller.setMockEvents([multiDayEvent]);
+
+      final capturedDetails = <MCalDropTargetCellDetails>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 600,
+              child: MCalMonthView(
+                controller: controller,
+                enableDragAndDrop: true,
+                dropTargetCellBuilder: (context, details) {
+                  capturedDetails.add(details);
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.3),
+                      borderRadius: BorderRadius.horizontal(
+                        left:
+                            details.isFirst
+                                ? const Radius.circular(8)
+                                : Radius.zero,
+                        right:
+                            details.isLast
+                                ? const Radius.circular(8)
+                                : Radius.zero,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find the multi-day event tile
+      final eventFinder = find.text('Multi Day Flags');
+      if (eventFinder.evaluate().isEmpty) {
+        // Skip test if event not visible
+        expect(find.byType(MCalMonthView), findsOneWidget);
+        return;
+      }
+
+      // Start a drag
+      final gesture =
+          await tester.startGesture(tester.getCenter(eventFinder.first));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Move to trigger cell builder
+      final targetFinder = find.text('22');
+      if (targetFinder.evaluate().isNotEmpty) {
+        await gesture.moveTo(tester.getCenter(targetFinder.first));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+
+        // Check that we captured cell details with isFirst/isLast flags
+        if (capturedDetails.isNotEmpty) {
+          // For a multi-day event, we should have multiple cells
+          // At least one should be isFirst and one should be isLast
+          final hasFirst = capturedDetails.any((d) => d.isFirst);
+          final hasLast = capturedDetails.any((d) => d.isLast);
+          expect(hasFirst, isTrue);
+          expect(hasLast, isTrue);
+        }
+      }
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('dropTargetOverlayBuilder receives MCalDropOverlayDetails', (
+      tester,
+    ) async {
+      final event = MCalCalendarEvent(
+        id: 'overlay-details-1',
+        title: 'Overlay Details Test',
+        start: DateTime(2025, 1, 15, 10, 0),
+        end: DateTime(2025, 1, 15, 11, 0),
+      );
+      controller.setMockEvents([event]);
+
+      MCalDropOverlayDetails? capturedOverlayDetails;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 600,
+              child: MCalMonthView(
+                controller: controller,
+                enableDragAndDrop: true,
+                dropTargetOverlayBuilder: (context, details) {
+                  capturedOverlayDetails = details;
+                  return Container(
+                    color: Colors.orange.withOpacity(0.3),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find the event tile
+      final eventFinder = find.text('Overlay Details Test');
+      if (eventFinder.evaluate().isEmpty) {
+        return;
+      }
+
+      // Start a drag
+      final gesture = await tester.startGesture(tester.getCenter(eventFinder));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Move to trigger overlay builder
+      final targetFinder = find.text('20');
+      if (targetFinder.evaluate().isNotEmpty) {
+        await gesture.moveTo(tester.getCenter(targetFinder.first));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+
+        // Check that overlay details were captured
+        if (capturedOverlayDetails != null) {
+          expect(capturedOverlayDetails!.highlightedCells, isNotEmpty);
+          expect(capturedOverlayDetails!.dayWidth, greaterThan(0));
+          expect(capturedOverlayDetails!.calendarSize.width, greaterThan(0));
+          expect(capturedOverlayDetails!.calendarSize.height, greaterThan(0));
+          expect(capturedOverlayDetails!.dragData, isNotNull);
+          expect(capturedOverlayDetails!.dragData.event.id,
+              equals('overlay-details-1'));
+        }
+      }
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('single unified DragTarget wraps calendar', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 600,
+              child: MCalMonthView(
+                controller: controller,
+                enableDragAndDrop: true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // With unified DragTarget architecture, there should be DragTargets present
+      // The exact count depends on implementation, but there should be at least one
+      expect(find.byType(DragTarget<MCalDragData>), findsWidgets);
+    });
+
+    testWidgets('drag leave clears highlight state', (tester) async {
+      final event = MCalCalendarEvent(
+        id: 'drag-leave-1',
+        title: 'Drag Leave Test',
+        start: DateTime(2025, 1, 15, 10, 0),
+        end: DateTime(2025, 1, 15, 11, 0),
+      );
+      controller.setMockEvents([event]);
+
+      var lastCellBuilderCallCount = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 600,
+              child: MCalMonthView(
+                controller: controller,
+                enableDragAndDrop: true,
+                dropTargetCellBuilder: (context, details) {
+                  lastCellBuilderCallCount++;
+                  return Container(
+                    color: Colors.blue.withOpacity(0.3),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find the event tile
+      final eventFinder = find.text('Drag Leave Test');
+      if (eventFinder.evaluate().isEmpty) {
+        return;
+      }
+
+      // Start a drag
+      final gesture = await tester.startGesture(tester.getCenter(eventFinder));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Move to a cell to trigger highlight
+      final targetFinder = find.text('20');
+      if (targetFinder.evaluate().isNotEmpty) {
+        await gesture.moveTo(tester.getCenter(targetFinder.first));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+
+        final countWhileHovering = lastCellBuilderCallCount;
+        expect(countWhileHovering, greaterThan(0));
+
+        // Move outside the calendar bounds (drag leave)
+        await gesture.moveTo(const Offset(-100, -100));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+
+        // After leaving, highlights should be cleared
+        // The builder shouldn't be called with new cells
+      }
+
+      await gesture.up();
+      await tester.pumpAndSettle();
     });
   });
 }

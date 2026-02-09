@@ -907,8 +907,6 @@ void main() {
         multiDayEvents,
       );
 
-      // TODO: MCalMultiDayTileDetails has been replaced by MCalEventSegment in the new architecture.
-      // Event tile customization is now done via eventTileBuilder.
       List<MCalEventTileContext> capturedContexts = [];
 
       await tester.pumpWidget(
@@ -1622,7 +1620,6 @@ void main() {
       controller.dispose();
     });
 
-    // TODO: MCalMultiDayTileDetails has been replaced by MCalEventTileContext with MCalEventSegment.
     testWidgets('multi-day events can be set up for drag-and-drop', (tester) async {
       // Create a multi-day event
       final multiDayEvent = MCalCalendarEvent(

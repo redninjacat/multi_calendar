@@ -207,6 +207,9 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
   /// Highlight color for invalid drop target during drag-and-drop.
   final Color? dragTargetInvalidColor;
 
+  /// Border radius for drop target highlights during drag-and-drop.
+  final double? dragTargetBorderRadius;
+
   /// Opacity for the source placeholder during drag-and-drop.
   final double? dragSourceOpacity;
 
@@ -310,6 +313,7 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     this.hoverEventBackgroundColor,
     this.dragTargetValidColor,
     this.dragTargetInvalidColor,
+    this.dragTargetBorderRadius,
     this.dragSourceOpacity,
     this.draggedTileElevation,
     this.multiDayEventBackgroundColor,
@@ -389,6 +393,7 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
       ),
       dragTargetValidColor: Colors.green.withValues(alpha: 0.3),
       dragTargetInvalidColor: Colors.red.withValues(alpha: 0.3),
+      dragTargetBorderRadius: 4.0,
       dragSourceOpacity: 0.5,
       draggedTileElevation: 6.0,
       multiDayEventBackgroundColor: colorScheme.primary.withValues(alpha: 0.8),
@@ -436,6 +441,7 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     Color? hoverEventBackgroundColor,
     Color? dragTargetValidColor,
     Color? dragTargetInvalidColor,
+    double? dragTargetBorderRadius,
     double? dragSourceOpacity,
     double? draggedTileElevation,
     Color? multiDayEventBackgroundColor,
@@ -495,6 +501,8 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
       dragTargetValidColor: dragTargetValidColor ?? this.dragTargetValidColor,
       dragTargetInvalidColor:
           dragTargetInvalidColor ?? this.dragTargetInvalidColor,
+      dragTargetBorderRadius:
+          dragTargetBorderRadius ?? this.dragTargetBorderRadius,
       dragSourceOpacity: dragSourceOpacity ?? this.dragSourceOpacity,
       draggedTileElevation: draggedTileElevation ?? this.draggedTileElevation,
       multiDayEventBackgroundColor:
@@ -646,6 +654,11 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
       dragTargetInvalidColor: Color.lerp(
         dragTargetInvalidColor,
         other.dragTargetInvalidColor,
+        t,
+      ),
+      dragTargetBorderRadius: _lerpDouble(
+        dragTargetBorderRadius,
+        other.dragTargetBorderRadius,
         t,
       ),
       dragSourceOpacity: _lerpDouble(

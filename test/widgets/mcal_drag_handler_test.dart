@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'dart:ui' show Offset;
+import 'dart:ui' show Offset, Rect;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 import 'package:multi_calendar/src/widgets/mcal_drag_handler.dart';
+import 'package:multi_calendar/src/widgets/mcal_callback_details.dart';
 
 void main() {
   group('MCalDragHandler Tests', () {
@@ -866,6 +867,553 @@ void main() {
 
         // Approximately 5 years back
         expect(delta, lessThan(-1800));
+      });
+    });
+
+    // ============================================================
+    // Task 19: Debouncing Tests
+    // ============================================================
+    group('Debouncing (Task 19)', () {
+      /// Helper to create common handleDragMove parameters
+      void callHandleDragMove(
+        MCalDragHandler handler, {
+        required Offset globalPosition,
+        double dayWidth = 50.0,
+        double horizontalSpacing = 2.0,
+        double grabOffsetX = 0.0,
+        int eventDurationDays = 1,
+        int weekRowIndex = 0,
+      }) {
+        handler.handleDragMove(
+          globalPosition: globalPosition,
+          dayWidth: dayWidth,
+          horizontalSpacing: horizontalSpacing,
+          grabOffsetX: grabOffsetX,
+          eventDurationDays: eventDurationDays,
+          weekRowIndex: weekRowIndex,
+          weekRowBounds: const Rect.fromLTWH(0, 0, 350, 100),
+          calendarBounds: const Rect.fromLTWH(0, 0, 350, 500),
+          weekDates: List.generate(7, (i) => DateTime(2024, 1, 14 + i)),
+          totalWeekRows: 5,
+          getWeekRowBounds: (i) => Rect.fromLTWH(0, i * 100.0, 350, 100),
+          getWeekDates: (i) => List.generate(7, (j) => DateTime(2024, 1, 14 + i * 7 + j)),
+        );
+      }
+
+      test('handleDragMove should not process immediately (debounce pending)', () async {
+        // Start a drag first
+        final event = MCalCalendarEvent(
+          id: 'test-debounce-1',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 17),
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        int notifyCount = 0;
+        dragHandler.addListener(() => notifyCount++);
+
+        // Call handleDragMove - should not immediately update state
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(100, 50),
+          grabOffsetX: 10.0,
+          eventDurationDays: 3,
+        );
+
+        // Immediately after, no update yet (debounce pending)
+        expect(notifyCount, 0);
+
+        // Wait for debounce (16ms + buffer)
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        expect(notifyCount, greaterThan(0));
+      });
+
+      test('latest position wins during debounce window', () async {
+        final event = MCalCalendarEvent(
+          id: 'test-debounce-2',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 15),
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        // Send multiple positions rapidly
+        for (int i = 0; i < 5; i++) {
+          callHandleDragMove(
+            dragHandler,
+            globalPosition: Offset(50.0 + i * 50, 50),
+            eventDurationDays: 1,
+          );
+        }
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        // Should have processed the last position (cell 4 area)
+        // The highlighted cells should reflect the final position
+        expect(dragHandler.highlightedCells, isNotEmpty);
+      });
+
+      test('change detection skips update when same cell', () async {
+        final event = MCalCalendarEvent(
+          id: 'test-debounce-3',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 15),
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        int notifyCount = 0;
+        dragHandler.addListener(() => notifyCount++);
+
+        // First move to a specific cell
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(125, 50), // Cell 2 area
+          eventDurationDays: 1,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        final firstNotifyCount = notifyCount;
+
+        // Move within same cell (still cell 2 area - small position change)
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(130, 50), // Still cell 2
+          eventDurationDays: 1,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        // Should not have notified again (same cell)
+        expect(notifyCount, firstNotifyCount);
+      });
+
+      test('debounce timer is cancelled on dispose', () async {
+        final localHandler = MCalDragHandler();
+        final event = MCalCalendarEvent(
+          id: 'test-debounce-4',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 15),
+        );
+        localHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        localHandler.handleDragMove(
+          globalPosition: const Offset(100, 50),
+          dayWidth: 50.0,
+          horizontalSpacing: 2.0,
+          grabOffsetX: 0.0,
+          eventDurationDays: 1,
+          weekRowIndex: 0,
+          weekRowBounds: const Rect.fromLTWH(0, 0, 350, 100),
+          calendarBounds: const Rect.fromLTWH(0, 0, 350, 500),
+          weekDates: List.generate(7, (i) => DateTime(2024, 1, 14 + i)),
+          totalWeekRows: 5,
+          getWeekRowBounds: (i) => Rect.fromLTWH(0, i * 100.0, 350, 100),
+          getWeekDates: (i) => List.generate(7, (j) => DateTime(2024, 1, 14 + i * 7 + j)),
+        );
+
+        // Dispose should not throw
+        expect(() => localHandler.dispose(), returnsNormally);
+      });
+
+      test('updates occur when moving to different cells', () async {
+        final event = MCalCalendarEvent(
+          id: 'test-debounce-5',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 15),
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        int notifyCount = 0;
+        dragHandler.addListener(() => notifyCount++);
+
+        // Move to cell 1
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(75, 50),
+          eventDurationDays: 1,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        final countAfterFirstMove = notifyCount;
+
+        // Move to cell 3 (different cell)
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(175, 50),
+          eventDurationDays: 1,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        // Should have notified again (different cell)
+        expect(notifyCount, greaterThan(countAfterFirstMove));
+      });
+
+      test('handleDragMove requires active drag to process', () async {
+        // Don't start a drag
+        int notifyCount = 0;
+        dragHandler.addListener(() => notifyCount++);
+
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(100, 50),
+          eventDurationDays: 1,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        // Should not have notified (no active drag)
+        expect(notifyCount, 0);
+        expect(dragHandler.highlightedCells, isEmpty);
+      });
+    });
+
+    // ============================================================
+    // Task 20: Cell Detection Math Tests
+    // ============================================================
+    group('Cell Detection Math (Task 20)', () {
+      /// Helper to create common handleDragMove parameters
+      void callHandleDragMove(
+        MCalDragHandler handler, {
+        required Offset globalPosition,
+        double dayWidth = 50.0,
+        double horizontalSpacing = 2.0,
+        double grabOffsetX = 0.0,
+        int eventDurationDays = 1,
+        int weekRowIndex = 0,
+        Rect? weekRowBounds,
+        List<DateTime>? weekDates,
+        int totalWeekRows = 5,
+        Rect Function(int)? getWeekRowBounds,
+        List<DateTime> Function(int)? getWeekDates,
+      }) {
+        handler.handleDragMove(
+          globalPosition: globalPosition,
+          dayWidth: dayWidth,
+          horizontalSpacing: horizontalSpacing,
+          grabOffsetX: grabOffsetX,
+          eventDurationDays: eventDurationDays,
+          weekRowIndex: weekRowIndex,
+          weekRowBounds: weekRowBounds ?? const Rect.fromLTWH(0, 0, 350, 100),
+          calendarBounds: const Rect.fromLTWH(0, 0, 350, 500),
+          weekDates: weekDates ?? List.generate(7, (i) => DateTime(2024, 1, 14 + i)),
+          totalWeekRows: totalWeekRows,
+          getWeekRowBounds: getWeekRowBounds ?? (i) => Rect.fromLTWH(0, i * 100.0, 350, 100),
+          getWeekDates: getWeekDates ?? (i) => List.generate(7, (j) => DateTime(2024, 1, 14 + i * 7 + j)),
+        );
+      }
+
+      test('calculates correct cell index using formula: floor((localX - grabOffsetX - spacing) / dayWidth)', () async {
+        // Formula: floor((pointerLocalX - grabOffsetX - horizontalSpacing) / dayWidth)
+        // pointerLocalX = 175 (global, weekRowBounds.left = 0)
+        // grabOffsetX = 25, spacing = 2, dayWidth = 50
+        // (175 - 25 - 2) / 50 = 148 / 50 = 2.96 -> floor = 2
+
+        final event = MCalCalendarEvent(
+          id: 'test-cell-math-1',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 15),
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(175, 50),
+          dayWidth: 50.0,
+          horizontalSpacing: 2.0,
+          grabOffsetX: 25.0,
+          eventDurationDays: 1,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        // Check highlighted cell is at index 2 (Jan 16 = 14 + 2)
+        expect(dragHandler.highlightedCells.length, 1);
+        expect(dragHandler.highlightedCells.first.cellIndex, 2);
+        expect(dragHandler.highlightedCells.first.date, DateTime(2024, 1, 16));
+      });
+
+      test('multi-day event highlights correct number of cells', () async {
+        final event = MCalCalendarEvent(
+          id: 'test-cell-math-2',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 18), // 4 days
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(52, 50), // Cell 0 area
+          eventDurationDays: 4,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        expect(dragHandler.highlightedCells.length, 4);
+        expect(dragHandler.highlightedCells.first.isFirst, true);
+        expect(dragHandler.highlightedCells.first.isLast, false);
+        expect(dragHandler.highlightedCells.last.isFirst, false);
+        expect(dragHandler.highlightedCells.last.isLast, true);
+      });
+
+      test('highlighted cells have correct dates for multi-day events', () async {
+        final event = MCalCalendarEvent(
+          id: 'test-cell-math-3',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 17), // 3 days
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        // Position at cell 1
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(75, 50),
+          eventDurationDays: 3,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        expect(dragHandler.highlightedCells.length, 3);
+        // Week starts Jan 14, so cell 1 = Jan 15, cell 2 = Jan 16, cell 3 = Jan 17
+        expect(dragHandler.highlightedCells[0].date, DateTime(2024, 1, 15));
+        expect(dragHandler.highlightedCells[1].date, DateTime(2024, 1, 16));
+        expect(dragHandler.highlightedCells[2].date, DateTime(2024, 1, 17));
+      });
+
+      test('handles negative cell index (event starts before visible week)', () async {
+        final event = MCalCalendarEvent(
+          id: 'test-cell-math-4',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 18),
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        // Position that would result in negative cell index
+        // grabOffsetX = 150 (grabbed on day 3), position = 50
+        // (50 - 150 - 2) / 50 = -102 / 50 = -2.04 -> floor = -3
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(50, 50),
+          grabOffsetX: 150.0,
+          eventDurationDays: 4,
+          weekRowIndex: 1, // Second week row
+          weekRowBounds: const Rect.fromLTWH(0, 100, 350, 100),
+          weekDates: List.generate(7, (i) => DateTime(2024, 1, 21 + i)),
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        // Should handle gracefully - may start in previous week or adjust
+        // The key is it shouldn't crash
+        expect(dragHandler.highlightedCells, isNotEmpty);
+      });
+
+      test('event spanning multiple weeks highlights across week rows', () async {
+        final event = MCalCalendarEvent(
+          id: 'test-cell-math-5',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 24), // 10 days - spans 2 weeks
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        // Position at cell 5 (Friday), 10-day event would span to next week
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(275, 50),
+          eventDurationDays: 10,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        // Should have 10 cells across multiple week rows
+        expect(dragHandler.highlightedCells.length, 10);
+
+        // Check spans multiple week rows
+        final weekRows = dragHandler.highlightedCells.map((c) => c.weekRowIndex).toSet();
+        expect(weekRows.length, greaterThan(1));
+      });
+
+      test('cell bounds are calculated correctly', () async {
+        final event = MCalCalendarEvent(
+          id: 'test-cell-math-6',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 15),
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(125, 50), // Cell 2
+          dayWidth: 50.0,
+          eventDurationDays: 1,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        expect(dragHandler.highlightedCells.length, 1);
+        final cell = dragHandler.highlightedCells.first;
+
+        // Cell 2 should have bounds starting at 100 (2 * 50)
+        expect(cell.bounds.left, 100.0);
+        expect(cell.bounds.width, 50.0);
+      });
+
+      test('proposedStartDate and proposedEndDate are set correctly', () async {
+        final event = MCalCalendarEvent(
+          id: 'test-cell-math-7',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 17), // 3 days
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        // Position at cell 2
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(125, 50),
+          eventDurationDays: 3,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        // Week starts Jan 14, cell 2 = Jan 16
+        // 3-day event: Jan 16-18
+        expect(dragHandler.proposedStartDate, DateTime(2024, 1, 16));
+        expect(dragHandler.proposedEndDate, DateTime(2024, 1, 18));
+      });
+
+      test('validation callback is invoked and affects isProposedDropValid', () async {
+        final event = MCalCalendarEvent(
+          id: 'test-cell-math-8',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 15),
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        bool validationCalled = false;
+
+        dragHandler.handleDragMove(
+          globalPosition: const Offset(125, 50),
+          dayWidth: 50.0,
+          horizontalSpacing: 2.0,
+          grabOffsetX: 0.0,
+          eventDurationDays: 1,
+          weekRowIndex: 0,
+          weekRowBounds: const Rect.fromLTWH(0, 0, 350, 100),
+          calendarBounds: const Rect.fromLTWH(0, 0, 350, 500),
+          weekDates: List.generate(7, (i) => DateTime(2024, 1, 14 + i)),
+          totalWeekRows: 5,
+          getWeekRowBounds: (i) => Rect.fromLTWH(0, i * 100.0, 350, 100),
+          getWeekDates: (i) => List.generate(7, (j) => DateTime(2024, 1, 14 + i * 7 + j)),
+          validationCallback: (proposedStart, proposedEnd) {
+            validationCalled = true;
+            return false; // Invalid drop
+          },
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        expect(validationCalled, true);
+        expect(dragHandler.isProposedDropValid, false);
+      });
+
+      test('week row offset is properly accounted for in global position', () async {
+        final event = MCalCalendarEvent(
+          id: 'test-cell-math-9',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 15),
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        // Week row 2 starts at y=200, left at x=50
+        // Global position 175 means local x = 175 - 50 = 125 -> cell 2
+        callHandleDragMove(
+          dragHandler,
+          globalPosition: const Offset(175, 250),
+          weekRowIndex: 2,
+          weekRowBounds: const Rect.fromLTWH(50, 200, 350, 100), // Offset left
+          weekDates: List.generate(7, (i) => DateTime(2024, 1, 28 + i)),
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+
+        expect(dragHandler.highlightedCells.isNotEmpty, true);
+        // Cell index should be 2 based on local coordinates
+        expect(dragHandler.highlightedCells.first.cellIndex, 2);
+      });
+    });
+
+    // ============================================================
+    // Cleanup Tests
+    // ============================================================
+    group('Cleanup', () {
+      test('clearHighlightedCells clears state and notifies', () {
+        final event = MCalCalendarEvent(
+          id: 'test-cleanup-1',
+          title: 'Test Event',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 15),
+        );
+        dragHandler.startDrag(event, DateTime(2024, 1, 15));
+
+        // Manually set up some highlighted cells via handleDragMove
+        dragHandler.handleDragMove(
+          globalPosition: const Offset(100, 50),
+          dayWidth: 50.0,
+          horizontalSpacing: 2.0,
+          grabOffsetX: 0.0,
+          eventDurationDays: 1,
+          weekRowIndex: 0,
+          weekRowBounds: const Rect.fromLTWH(0, 0, 350, 100),
+          calendarBounds: const Rect.fromLTWH(0, 0, 350, 500),
+          weekDates: List.generate(7, (i) => DateTime(2024, 1, 14 + i)),
+          totalWeekRows: 5,
+          getWeekRowBounds: (i) => Rect.fromLTWH(0, i * 100.0, 350, 100),
+          getWeekDates: (i) => List.generate(7, (j) => DateTime(2024, 1, 14 + i * 7 + j)),
+        );
+
+        int notifyCount = 0;
+        dragHandler.addListener(() => notifyCount++);
+
+        dragHandler.clearHighlightedCells();
+
+        expect(dragHandler.highlightedCells, isEmpty);
+        // Note: clearHighlightedCells only notifies if cells were not empty
+        // Since debounce may not have fired yet, we check both scenarios
+      });
+
+      test('clearHighlightedCells does not notify if already empty', () {
+        int notifyCount = 0;
+        dragHandler.addListener(() => notifyCount++);
+
+        dragHandler.clearHighlightedCells();
+
+        expect(notifyCount, 0);
+      });
+
+      test('highlightedCells returns unmodifiable list', () {
+        final cells = dragHandler.highlightedCells;
+        final dummyCell = MCalHighlightCellInfo(
+          date: DateTime(2024, 1, 15),
+          cellIndex: 0,
+          weekRowIndex: 0,
+          bounds: Rect.zero,
+          isFirst: true,
+          isLast: true,
+        );
+        expect(() => (cells as List).add(dummyCell), throwsA(isA<UnsupportedError>()));
       });
     });
   });

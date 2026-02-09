@@ -233,16 +233,6 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
           -event.localPosition.dy,
         );
 
-        // DEBUG: Log grab position values
-        debugPrint(
-          'GRAB DEBUG: localPosition.dx=${event.localPosition.dx}, '
-          'horizontalSpacing=${widget.horizontalSpacing}, '
-          'grabOffsetX=$newGrabOffsetX, dayWidth=${widget.dayWidth}, '
-          'feedbackOffsetX=${newFeedbackOffset.dx}, '
-          'eventStart=${widget.event.start}, '
-          'eventDuration=${widget.event.end.difference(widget.event.start).inDays + 1} days',
-        );
-
         // Update the holder directly - no setState needed since MCalDragData
         // reads from the holder. The holder pattern solves the timing issue
         // where LongPressDraggable captures data at build time.

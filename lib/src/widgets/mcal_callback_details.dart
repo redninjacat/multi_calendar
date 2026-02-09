@@ -1,4 +1,4 @@
-import 'dart:ui' show Offset;
+import 'dart:ui' show Offset, Rect, Size;
 import 'package:flutter/painting.dart' show AxisDirection;
 import 'package:flutter/foundation.dart' show VoidCallback;
 import '../models/mcal_calendar_event.dart';
@@ -536,53 +536,56 @@ class MCalDragWillAcceptDetails {
   });
 }
 
-/// Details object for the drop target cell builder.
+/// Details for building a custom drop target cell.
 ///
-/// Provides context for building a custom cell appearance when a cell is
-/// a potential drop target during a drag operation. This is used by the
-/// [dropTargetCellBuilder] callback to customize how cells look during drag.
+/// Passed to [MCalMonthView.dropTargetCellBuilder] for each highlighted cell
+/// during a drag operation. This provides per-cell customization.
 ///
 /// Example:
 /// ```dart
 /// dropTargetCellBuilder: (context, details) {
 ///   return Container(
 ///     decoration: BoxDecoration(
-///       color: details.isValid
-///           ? Colors.blue.withOpacity(0.1)
-///           : Colors.grey.withOpacity(0.1),
-///       border: Border.all(
-///         color: details.isValid ? Colors.blue : Colors.grey,
-///         width: details.isValid ? 2 : 1,
+///       color: details.isValid ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3),
+///       borderRadius: BorderRadius.horizontal(
+///         left: details.isFirst ? Radius.circular(8) : Radius.zero,
+///         right: details.isLast ? Radius.circular(8) : Radius.zero,
 ///       ),
-///     ),
-///     child: Column(
-///       children: [
-///         Text('${details.date.day}'),
-///         if (details.isValid)
-///           Text('Drop ${details.draggedEvent.title}'),
-///       ],
 ///     ),
 ///   );
 /// }
 /// ```
 class MCalDropTargetCellDetails {
-  /// The date of the cell being rendered as a drop target.
+  /// The date of this cell.
   final DateTime date;
 
-  /// Whether dropping on this cell would be valid.
-  ///
-  /// This reflects the result of the [onDragWillAccept] callback if provided,
-  /// or defaults to true if no validation callback is set.
+  /// The bounds of this cell in local coordinates.
+  final Rect bounds;
+
+  /// Whether this cell represents a valid drop target.
   final bool isValid;
 
-  /// The calendar event currently being dragged.
-  final MCalCalendarEvent draggedEvent;
+  /// Whether this is the first cell in the highlighted range.
+  final bool isFirst;
+
+  /// Whether this is the last cell in the highlighted range.
+  final bool isLast;
+
+  /// The cell's index within the week (0 = first day based on firstDayOfWeek).
+  final int cellIndex;
+
+  /// The week row index within the month grid.
+  final int weekRowIndex;
 
   /// Creates a new [MCalDropTargetCellDetails] instance.
   const MCalDropTargetCellDetails({
     required this.date,
+    required this.bounds,
     required this.isValid,
-    required this.draggedEvent,
+    required this.isFirst,
+    required this.isLast,
+    required this.cellIndex,
+    required this.weekRowIndex,
   });
 }
 
@@ -705,4 +708,160 @@ class MCalDragData {
     required MCalGrabOffsetHolder grabOffsetHolder,
     required this.horizontalSpacing,
   }) : _grabOffsetHolder = grabOffsetHolder;
+}
+
+/// Information about a single cell to highlight during drag-and-drop.
+///
+/// Used by the unified drag overlay system to communicate which cells should be
+/// visually highlighted as potential drop targets. This class is passed within
+/// [MCalDropOverlayDetails.highlightedCells] to the [MCalMonthView.dropTargetOverlayBuilder].
+///
+/// For multi-day events, multiple [MCalHighlightCellInfo] instances are created,
+/// one for each day the event spans. The [isFirst] and [isLast] flags indicate
+/// the event's visual boundaries, useful for applying rounded corners.
+///
+/// Example usage in a custom overlay builder:
+/// ```dart
+/// dropTargetOverlayBuilder: (context, details) {
+///   return Stack(
+///     children: details.highlightedCells.map((cell) {
+///       return Positioned.fromRect(
+///         rect: cell.bounds,
+///         child: Container(
+///           decoration: BoxDecoration(
+///             color: Colors.blue.withOpacity(0.3),
+///             borderRadius: BorderRadius.horizontal(
+///               left: cell.isFirst ? Radius.circular(8) : Radius.zero,
+///               right: cell.isLast ? Radius.circular(8) : Radius.zero,
+///             ),
+///           ),
+///         ),
+///       );
+///     }).toList(),
+///   );
+/// }
+/// ```
+class MCalHighlightCellInfo {
+  /// The date of this cell.
+  ///
+  /// Represents the calendar date for this highlighted cell.
+  final DateTime date;
+
+  /// Cell index within its week row (0-6).
+  ///
+  /// 0 represents the first day of the week (based on [MCalMonthView.firstDayOfWeek]).
+  final int cellIndex;
+
+  /// Week row index within the month grid.
+  ///
+  /// 0 is the first week row of the visible month page.
+  final int weekRowIndex;
+
+  /// Bounds of this cell in calendar-local coordinates.
+  ///
+  /// The [Rect] is relative to the calendar widget's coordinate space
+  /// and can be used directly with [Positioned.fromRect].
+  final Rect bounds;
+
+  /// Whether this is the first cell in the event's span.
+  ///
+  /// True for the leftmost cell of the dragged event.
+  /// Use this to apply left-side rounded corners.
+  final bool isFirst;
+
+  /// Whether this is the last cell in the event's span.
+  ///
+  /// True for the rightmost cell of the dragged event.
+  /// Use this to apply right-side rounded corners.
+  final bool isLast;
+
+  /// Creates a new [MCalHighlightCellInfo] instance.
+  const MCalHighlightCellInfo({
+    required this.date,
+    required this.cellIndex,
+    required this.weekRowIndex,
+    required this.bounds,
+    required this.isFirst,
+    required this.isLast,
+  });
+}
+
+/// Details for building a custom drop target overlay.
+///
+/// Passed to [MCalMonthView.dropTargetOverlayBuilder] when a drag is active.
+/// This provides full control over the entire overlay rendering, including
+/// access to all highlighted cells, validation state, and calendar dimensions.
+///
+/// ## Precedence
+///
+/// When [MCalMonthView.dropTargetOverlayBuilder] is provided, it takes precedence
+/// over [MCalMonthView.dropTargetCellBuilder] and the default [CustomPainter]
+/// implementation. Only one will be used:
+///
+/// 1. [dropTargetOverlayBuilder] (highest priority)
+/// 2. [dropTargetCellBuilder]
+/// 3. Default [CustomPainter] (lowest priority)
+///
+/// ## When to Use
+///
+/// Use [dropTargetOverlayBuilder] when you need:
+/// - Custom animations across all highlighted cells
+/// - Connected/unified highlight rendering
+/// - Access to the complete cell list for complex calculations
+/// - Full control over the paint order
+///
+/// For simpler per-cell customization, prefer [MCalMonthView.dropTargetCellBuilder].
+///
+/// ## Example
+///
+/// ```dart
+/// dropTargetOverlayBuilder: (context, details) {
+///   return CustomPaint(
+///     painter: MyCustomHighlightPainter(
+///       cells: details.highlightedCells,
+///       isValid: details.isValid,
+///       dayWidth: details.dayWidth,
+///     ),
+///   );
+/// }
+/// ```
+class MCalDropOverlayDetails {
+  /// List of cells that should be highlighted.
+  ///
+  /// Contains [MCalHighlightCellInfo] for each day the dragged event
+  /// would span if dropped at the current position. For multi-day events,
+  /// this list contains multiple entries.
+  final List<MCalHighlightCellInfo> highlightedCells;
+
+  /// Whether the current drop position is valid.
+  ///
+  /// Determined by [MCalMonthView.onDragWillAccept] callback if provided,
+  /// otherwise defaults to `true`. Use this to render different colors
+  /// or styles for valid vs. invalid drop targets.
+  final bool isValid;
+
+  /// Width of each day cell in pixels.
+  ///
+  /// Useful for calculating positions or sizing custom highlight elements.
+  final double dayWidth;
+
+  /// Total size of the calendar area.
+  ///
+  /// The dimensions of the calendar widget where the overlay is rendered.
+  final Size calendarSize;
+
+  /// The drag data for the event being dragged.
+  ///
+  /// Contains the [MCalCalendarEvent] being dragged, the source date,
+  /// and grab offset information for precise positioning.
+  final MCalDragData dragData;
+
+  /// Creates a new [MCalDropOverlayDetails] instance.
+  const MCalDropOverlayDetails({
+    required this.highlightedCells,
+    required this.isValid,
+    required this.dayWidth,
+    required this.calendarSize,
+    required this.dragData,
+  });
 }

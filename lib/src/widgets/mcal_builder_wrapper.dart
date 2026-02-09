@@ -204,7 +204,7 @@ class MCalBuilderWrapper {
     };
   }
 
-  /// Wraps an overflow indicator builder with tap handler.
+  /// Wraps an overflow indicator builder with tap and long-press handlers.
   static MCalOverflowIndicatorBuilder wrapOverflowIndicatorBuilder({
     required Widget Function(
       BuildContext,
@@ -215,6 +215,7 @@ class MCalBuilderWrapper {
     required Widget Function(BuildContext, MCalOverflowIndicatorContext)
     defaultBuilder,
     void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap,
+    void Function(BuildContext, MCalOverflowTapDetails)? onOverflowLongPress,
   }) {
     return (
       BuildContext context,
@@ -226,10 +227,20 @@ class MCalBuilderWrapper {
           ? developerBuilder(context, overflowContext, defaultWidget)
           : defaultWidget;
 
-      // Wrap with gesture detector for tap
+      // Wrap with gesture detector for tap and long-press
       return GestureDetector(
         onTap: onOverflowTap != null
             ? () => onOverflowTap(
+                context,
+                MCalOverflowTapDetails(
+                  date: overflowContext.date,
+                  hiddenEvents: overflowContext.hiddenEvents,
+                  visibleEvents: overflowContext.visibleEvents,
+                ),
+              )
+            : null,
+        onLongPress: onOverflowLongPress != null
+            ? () => onOverflowLongPress(
                 context,
                 MCalOverflowTapDetails(
                   date: overflowContext.date,
