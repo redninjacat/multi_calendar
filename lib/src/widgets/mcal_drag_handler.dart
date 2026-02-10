@@ -342,7 +342,9 @@ class MCalDragHandler extends ChangeNotifier {
 
   /// Resets all drag state to initial values.
   ///
-  /// This is a private method called by [completeDrag] and [cancelDrag].
+  /// Clears highlighted cells, proposed drop range, edge navigation timer,
+  /// and all drag-related fields so drop indicators never persist after
+  /// the drag completes or is cancelled. Called by [completeDrag] and [cancelDrag].
   void _reset() {
     _cancelEdgeNavigationTimer();
     _cancelDebounceTimer();
@@ -582,6 +584,9 @@ class MCalDragHandler extends ChangeNotifier {
   }
 
   /// Builds the list of highlighted cells spanning across week rows if needed.
+  ///
+  /// Assigns a new list to [_highlightedCells] on each call to avoid reference
+  /// equality issues for listeners that compare the list instance.
   void _buildHighlightedCells({
     required int dropStartCellIndex,
     required int eventDurationDays,
@@ -590,7 +595,7 @@ class MCalDragHandler extends ChangeNotifier {
     required Rect Function(int) getWeekRowBounds,
     required List<DateTime> Function(int) getWeekDates,
   }) {
-    _highlightedCells = [];
+    final newList = <MCalHighlightCellInfo>[];
 
     int remainingDays = eventDurationDays;
     int currentWeekRow = weekRowIndex;
@@ -628,7 +633,7 @@ class MCalDragHandler extends ChangeNotifier {
             rowBounds.height,
           );
 
-          _highlightedCells.add(
+          newList.add(
             MCalHighlightCellInfo(
               date: rowDates[currentCellIndex],
               cellIndex: currentCellIndex,
@@ -649,6 +654,8 @@ class MCalDragHandler extends ChangeNotifier {
       currentWeekRow++;
       currentCellIndex = 0;
     }
+
+    _highlightedCells = newList;
   }
 
   // ============================================================

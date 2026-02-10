@@ -41,8 +41,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   bool _showWeekNumbers = false;
   bool _enableAnimations = true;
   bool _enableDragAndDrop = true;
-  int _dragEdgeNavigationDelayMs = 1000;
-  final bool _dragEdgeNavigationEnabled = false;
+  bool _useCustomDragTargetTile = false;
+  int _dragEdgeNavigationDelayMs = 900;
+  final bool _dragEdgeNavigationEnabled = true;
 
   // ============================================================
   // Theme Settings (matching Layout POC levers)
@@ -116,6 +117,27 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
             child: const Text('OK'),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Builds a custom drag target tile: same look as default (color, border,
+  /// rounded corners) but without text. Used when "Custom drag target tile" is on.
+  Widget _buildCustomDragTargetTile(
+    BuildContext context,
+    MCalDragTargetDetails details,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: details.isValid
+            ? colorScheme.primary.withOpacity(0.3)
+            : colorScheme.error.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: details.isValid ? colorScheme.primary : colorScheme.error,
+          width: 2,
+        ),
       ),
     );
   }
@@ -404,6 +426,11 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                         return true;
                       }
                     : null,
+                dragTargetTileBuilder:
+                    _enableDragAndDrop && _useCustomDragTargetTile
+                    ? (context, details) =>
+                          _buildCustomDragTargetTile(context, details)
+                    : null,
               ),
             ),
           ),
@@ -427,32 +454,34 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Row 1: Toggles
-          Row(
+          // Row 1: Toggles (Wrap avoids overflow on narrow screens)
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
             children: [
-              Expanded(
-                child: _buildCompactToggle(
-                  'Week #',
-                  _showWeekNumbers,
-                  (v) => setState(() => _showWeekNumbers = v),
-                  colorScheme,
-                ),
+              _buildCompactToggle(
+                'Week #',
+                _showWeekNumbers,
+                (v) => setState(() => _showWeekNumbers = v),
+                colorScheme,
               ),
-              Expanded(
-                child: _buildCompactToggle(
-                  'Animate',
-                  _enableAnimations,
-                  (v) => setState(() => _enableAnimations = v),
-                  colorScheme,
-                ),
+              _buildCompactToggle(
+                'Animate',
+                _enableAnimations,
+                (v) => setState(() => _enableAnimations = v),
+                colorScheme,
               ),
-              Expanded(
-                child: _buildCompactToggle(
-                  'Drag',
-                  _enableDragAndDrop,
-                  (v) => setState(() => _enableDragAndDrop = v),
-                  colorScheme,
-                ),
+              _buildCompactToggle(
+                'Drag',
+                _enableDragAndDrop,
+                (v) => setState(() => _enableDragAndDrop = v),
+                colorScheme,
+              ),
+              _buildCompactToggle(
+                'Custom tile',
+                _useCustomDragTargetTile,
+                (v) => setState(() => _useCustomDragTargetTile = v),
+                colorScheme,
               ),
             ],
           ),
@@ -573,6 +602,14 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
               _buildToggle('Drag & Drop', _enableDragAndDrop, (v) {
                 setState(() => _enableDragAndDrop = v);
               }, colorScheme),
+              _buildToggle(
+                'Custom drag target tile',
+                _useCustomDragTargetTile,
+                (v) {
+                  setState(() => _useCustomDragTargetTile = v);
+                },
+                colorScheme,
+              ),
               // Loading/Error demo buttons
               FilledButton.tonal(
                 onPressed: () {
@@ -919,8 +956,8 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                         return Container(
                           decoration: BoxDecoration(
                             color: details.isValid
-                                ? colorScheme.primary.withOpacity(0.3)
-                                : colorScheme.error.withOpacity(0.3),
+                                ? colorScheme.primary.withValues(alpha: 0.3)
+                                : colorScheme.error.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.horizontal(
                               left: details.isFirst
                                   ? const Radius.circular(8)
@@ -932,6 +969,11 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                           ),
                         );
                       }
+                    : null,
+                dragTargetTileBuilder:
+                    _enableDragAndDrop && _useCustomDragTargetTile
+                    ? (context, details) =>
+                          _buildCustomDragTargetTile(context, details)
                     : null,
                 // Example of advanced overlay customization (commented out)
                 // dropTargetOverlayBuilder takes precedence over dropTargetCellBuilder

@@ -97,6 +97,10 @@ class MCalSwipeNavigationDetails {
 /// Overflow indicators appear when there are more events than can be
 /// displayed in a day cell. This details object provides both the hidden
 /// and visible events so handlers can display all events for the day.
+///
+/// **Note:** The overflow indicator does not support drag-and-drop. Only
+/// visible event tiles can be dragged. Users must tap the overflow indicator
+/// to reveal hidden events in a separate view if they need to drag them.
 class MCalOverflowTapDetails {
   /// The date for which the overflow indicator was tapped.
   final DateTime date;
@@ -784,6 +788,21 @@ class MCalHighlightCellInfo {
     required this.isFirst,
     required this.isLast,
   });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MCalHighlightCellInfo &&
+          date == other.date &&
+          cellIndex == other.cellIndex &&
+          weekRowIndex == other.weekRowIndex &&
+          bounds == other.bounds &&
+          isFirst == other.isFirst &&
+          isLast == other.isLast;
+
+  @override
+  int get hashCode =>
+      Object.hash(date, cellIndex, weekRowIndex, bounds, isFirst, isLast);
 }
 
 /// Details for building a custom drop target overlay.

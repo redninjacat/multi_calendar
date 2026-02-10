@@ -312,6 +312,10 @@ class MCalWeekLayoutConfig {
 ///   );
 /// }
 /// ```
+///
+/// **Note:** The overflow indicator does not support drag-and-drop. Only
+/// visible event tiles can be dragged. Use [onOverflowTap] or [onOverflowLongPress]
+/// to let users view hidden events in a separate UI.
 class MCalOverflowIndicatorContext {
   /// The date for which overflow is occurring.
   final DateTime date;

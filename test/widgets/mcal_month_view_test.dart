@@ -3763,11 +3763,13 @@ void main() {
         initialDate: DateTime(2025, 1, 1),
       );
 
+      final originalStart = DateTime(2025, 1, 15, 10, 0);
+      final originalEnd = DateTime(2025, 1, 15, 11, 0);
       final event = MCalCalendarEvent(
         id: 'revert-1',
         title: 'Revert Test',
-        start: DateTime(2025, 1, 15, 10, 0),
-        end: DateTime(2025, 1, 15, 11, 0),
+        start: originalStart,
+        end: originalEnd,
       );
       testController.setMockEvents([event]);
 
@@ -3806,21 +3808,27 @@ void main() {
       if (targetFinder.evaluate().isNotEmpty) {
         await gesture.moveTo(tester.getCenter(targetFinder.first));
         await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
         await gesture.up();
         await tester.pumpAndSettle();
 
-        // The event should still be in its original position because we returned false
-        // The controller should have been reverted
-        if (dropCallCount > 0) {
-          // Verify event is still on day 15
-          final eventsOnDay15 = testController.getEventsForDate(
-            DateTime(2025, 1, 15),
-          );
-          final originalEventExists = eventsOnDay15.any(
-            (e) => e.id == 'revert-1',
-          );
-          expect(originalEventExists, isTrue);
-        }
+        // onEventDropped should have been called
+        expect(dropCallCount, 1);
+
+        // Event should be reverted to original position with exact dates
+        final eventsOnDay15 = testController.getEventsForDate(
+          DateTime(2025, 1, 15),
+        );
+        final revertedEvents =
+            eventsOnDay15.where((e) => e.id == 'revert-1').toList();
+        expect(revertedEvents, isNotEmpty,
+            reason: 'Event should be reverted to original day 15');
+        final revertedEvent = revertedEvents.first;
+        expect(revertedEvent.start, originalStart);
+        expect(revertedEvent.end, originalEnd);
+
+        // Event should still be visible in original cell
+        expect(find.text('Revert Test'), findsOneWidget);
       } else {
         await gesture.up();
         await tester.pumpAndSettle();
@@ -4112,6 +4120,194 @@ void main() {
       // The test verifies the gesture mechanics work
       await gesture.up();
       await tester.pumpAndSettle();
+    });
+
+    // ============================================================
+    // Test 11b: minDate prevents edge navigation to previous month during drag
+    // ============================================================
+    testWidgets('minDate prevents edge navigation to previous month during drag',
+        (tester) async {
+      final testController = MockMCalEventController(
+        initialDate: DateTime(2025, 1, 15),
+      );
+
+      final event = MCalCalendarEvent(
+        id: 'min-date-edge-1',
+        title: 'MinDate Edge Event',
+        start: DateTime(2025, 1, 15, 10, 0),
+        end: DateTime(2025, 1, 15, 11, 0),
+      );
+      testController.setMockEvents([event]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 600,
+              child: MCalMonthView(
+                controller: testController,
+                enableDragAndDrop: true,
+                minDate: DateTime(2025, 1, 1),
+                dragEdgeNavigationDelay: const Duration(milliseconds: 400),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(testController.displayDate.month, equals(1));
+
+      final eventFinder = find.text('MinDate Edge Event');
+      if (eventFinder.evaluate().isEmpty) return;
+
+      final gesture = await tester.startGesture(tester.getCenter(eventFinder));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final monthViewFinder = find.byType(MCalMonthView);
+      final renderBox = tester.renderObject<RenderBox>(monthViewFinder);
+      final size = renderBox.size;
+      final topLeft = renderBox.localToGlobal(Offset.zero);
+
+      // Move to left edge (within 50px threshold)
+      await gesture.moveTo(Offset(topLeft.dx + 25, topLeft.dy + size.height / 2));
+      await tester.pump();
+
+      // Wait past edge navigation delay
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      // Should still be January (no navigation to Dec 2024)
+      expect(testController.displayDate.month, equals(1));
+      expect(testController.displayDate.year, equals(2025));
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    // ============================================================
+    // Test 11c: maxDate prevents edge navigation to next month during drag
+    // ============================================================
+    testWidgets('maxDate prevents edge navigation to next month during drag',
+        (tester) async {
+      final testController = MockMCalEventController(
+        initialDate: DateTime(2025, 3, 15),
+      );
+
+      final event = MCalCalendarEvent(
+        id: 'max-date-edge-1',
+        title: 'MaxDate Edge Event',
+        start: DateTime(2025, 3, 15, 10, 0),
+        end: DateTime(2025, 3, 15, 11, 0),
+      );
+      testController.setMockEvents([event]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 600,
+              child: MCalMonthView(
+                controller: testController,
+                enableDragAndDrop: true,
+                maxDate: DateTime(2025, 3, 31),
+                dragEdgeNavigationDelay: const Duration(milliseconds: 400),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(testController.displayDate.month, equals(3));
+
+      final eventFinder = find.text('MaxDate Edge Event');
+      if (eventFinder.evaluate().isEmpty) return;
+
+      final gesture = await tester.startGesture(tester.getCenter(eventFinder));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final monthViewFinder = find.byType(MCalMonthView);
+      final renderBox = tester.renderObject<RenderBox>(monthViewFinder);
+      final size = renderBox.size;
+      final topLeft = renderBox.localToGlobal(Offset.zero);
+
+      // Move to right edge (within 50px threshold)
+      await gesture.moveTo(Offset(
+        topLeft.dx + size.width - 25,
+        topLeft.dy + size.height / 2,
+      ));
+      await tester.pump();
+
+      // Wait past edge navigation delay
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      // Should still be March (no navigation to Apr 2025)
+      expect(testController.displayDate.month, equals(3));
+      expect(testController.displayDate.year, equals(2025));
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    // ============================================================
+    // Test 11d: Continuous drag completes within frame-rate budget
+    // ============================================================
+    testWidgets('continuous drag updates complete within frame-rate budget',
+        (tester) async {
+      final testController = MockMCalEventController(
+        initialDate: DateTime(2025, 1, 1),
+      );
+
+      final event = MCalCalendarEvent(
+        id: 'perf-drag-1',
+        title: 'Perf Drag Event',
+        start: DateTime(2025, 1, 15, 10, 0),
+        end: DateTime(2025, 1, 15, 11, 0),
+      );
+      testController.setMockEvents([event]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              height: 600,
+              child: MCalMonthView(
+                controller: testController,
+                enableDragAndDrop: true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final eventFinder = find.text('Perf Drag Event');
+      if (eventFinder.evaluate().isEmpty) return;
+
+      final gesture = await tester.startGesture(tester.getCenter(eventFinder));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final stopwatch = Stopwatch()..start();
+      for (int i = 0; i < 60; i++) {
+        await gesture.moveBy(const Offset(3, 0));
+        await tester.pump();
+      }
+      stopwatch.stop();
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // 60 frames in under 3s => ~50ms per frame (~20fps minimum) in test env
+      expect(
+        stopwatch.elapsedMilliseconds,
+        lessThan(3000),
+        reason: '60 drag frames should complete in <3s for acceptable frame rate',
+      );
     });
 
     // ============================================================
@@ -4655,6 +4851,132 @@ void main() {
           expect(droppedDetails!.event.id, equals('drop-position-1'));
           // The new start date should reflect the drag target position
           expect(droppedDetails!.newStartDate, isNotNull);
+        }
+      } else {
+        await gesture.up();
+        await tester.pumpAndSettle();
+      }
+    });
+
+    testWidgets('widget disposed during active drag does not crash', (
+      tester,
+    ) async {
+      final event = MCalCalendarEvent(
+        id: 'dispose-during-drag-1',
+        title: 'Dispose During Drag',
+        start: DateTime(2025, 1, 15, 10, 0),
+        end: DateTime(2025, 1, 15, 11, 0),
+      );
+      controller.setMockEvents([event]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 600,
+              child: MCalMonthView(
+                controller: controller,
+                enableDragAndDrop: true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final eventFinder = find.text('Dispose During Drag');
+      if (eventFinder.evaluate().isEmpty) {
+        return;
+      }
+
+      // Start a drag
+      final gesture = await tester.startGesture(tester.getCenter(eventFinder));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Move to trigger drag state
+      await gesture.moveBy(const Offset(50, 50));
+      await tester.pump();
+
+      // Replace entire widget tree - disposes MCalMonthView during active drag
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(child: Text('Replaced')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Test passes if no crash - disposal during drag should clean up safely
+      expect(find.text('Replaced'), findsOneWidget);
+    });
+
+    testWidgets('multi-day event drop position matches highlighted range', (
+      tester,
+    ) async {
+      final multiDayEvent = MCalCalendarEvent(
+        id: 'multi-day-drop-1',
+        title: 'Multi Day Drop Test',
+        start: DateTime(2025, 1, 15),
+        end: DateTime(2025, 1, 17),
+        isAllDay: true,
+      );
+      controller.setMockEvents([multiDayEvent]);
+
+      MCalEventDroppedDetails? droppedDetails;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 600,
+              child: MCalMonthView(
+                controller: controller,
+                enableDragAndDrop: true,
+                onEventDropped: (context, details) {
+                  droppedDetails = details;
+                  return true;
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final eventFinder = find.text('Multi Day Drop Test');
+      if (eventFinder.evaluate().isEmpty) {
+        return;
+      }
+
+      // Start a drag on the multi-day event
+      final gesture = await tester.startGesture(tester.getCenter(eventFinder));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Move to date 20 - the 3-day event should highlight 20, 21, 22
+      final targetFinder = find.text('20');
+      if (targetFinder.evaluate().isNotEmpty) {
+        await gesture.moveTo(tester.getCenter(targetFinder.first));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        if (droppedDetails != null) {
+          expect(droppedDetails!.event.id, equals('multi-day-drop-1'));
+          expect(droppedDetails!.oldStartDate, DateTime(2025, 1, 15));
+          expect(droppedDetails!.oldEndDate, DateTime(2025, 1, 17));
+          // Drop position matches highlight - event moved from source
+          expect(droppedDetails!.newStartDate, isNot(equals(droppedDetails!.oldStartDate)));
+          // Duration preserved (3 days inclusive)
+          expect(
+            droppedDetails!.newEndDate.difference(droppedDetails!.newStartDate)
+                .inDays,
+            2,
+          );
+          // New range should be contiguous in same month
+          expect(droppedDetails!.newStartDate.month, droppedDetails!.newEndDate.month);
         }
       } else {
         await gesture.up();

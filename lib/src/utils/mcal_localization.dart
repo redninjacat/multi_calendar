@@ -205,6 +205,10 @@ class MCalLocalizations {
     'nextMonth': 'next month',
     'doubleTapToSelect': 'Double tap to select',
     'calendar': 'Calendar',
+    // Drop target semantics (single announcement for whole overlay)
+    'dropTargetPrefix': 'Drop target',
+    'dropTargetValid': 'valid',
+    'dropTargetInvalid': 'invalid',
   };
 
   static const Map<String, String> _spanishStrings = {
@@ -248,5 +252,9 @@ class MCalLocalizations {
     'nextMonth': 'mes siguiente',
     'doubleTapToSelect': 'Toca dos veces para seleccionar',
     'calendar': 'Calendario',
+    // Drop target semantics (single announcement for whole overlay)
+    'dropTargetPrefix': 'Zona de soltar',
+    'dropTargetValid': 'válido',
+    'dropTargetInvalid': 'no válido',
   };
 }

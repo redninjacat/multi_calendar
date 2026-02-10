@@ -146,7 +146,13 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Receives the [BuildContext] and [MCalCellInteractivityDetails] containing
   /// the date, whether it's in the current month, and whether it's selectable.
-  /// Return false to disable interactions for that cell.
+  /// Return false to disable tap, long-press, and keyboard focus for that cell.
+  ///
+  /// **Interaction with [onDragWillAccept]:** [cellInteractivityCallback] affects
+  /// whether a cell receives tap/long-press; it does not block drag-and-drop.
+  /// A dragged event can still be dropped on a cell that returns false from
+  /// [cellInteractivityCallback]. Use [onDragWillAccept] to validate drop targets
+  /// during drag (e.g., reject drops on disabled cells).
   final bool Function(BuildContext, MCalCellInteractivityDetails)?
   cellInteractivityCallback;
 
@@ -275,6 +281,9 @@ class MCalMonthView extends StatefulWidget {
   /// date of the cell, the complete list of events for that date, and the
   /// number of hidden events. Useful for showing a popup or expanding the
   /// view to show all events.
+  ///
+  /// **Note:** The overflow indicator does not support drag-and-drop. Only
+  /// visible event tiles can be dragged.
   final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap;
 
   /// Callback invoked when the overflow indicator ("+N more") is long-pressed.
@@ -283,6 +292,9 @@ class MCalMonthView extends StatefulWidget {
   /// date of the cell, the complete list of events for that date, and the
   /// number of hidden events. Useful for showing a context menu or
   /// alternative interaction.
+  ///
+  /// **Note:** The overflow indicator does not support drag-and-drop. Only
+  /// visible event tiles can be dragged.
   final void Function(BuildContext, MCalOverflowTapDetails)?
   onOverflowLongPress;
 
@@ -376,6 +388,9 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Receives the build context, [MCalOverflowIndicatorContext] with overflow data,
   /// and the default indicator widget. Return a custom widget to override the default.
+  ///
+  /// **Note:** The overflow indicator does not support drag-and-drop. Only
+  /// visible event tiles can be dragged.
   final Widget Function(BuildContext, MCalOverflowIndicatorContext, Widget)?
   overflowIndicatorBuilder;
 
@@ -462,6 +477,10 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// If not provided, all drops are accepted by default.
   ///
+  /// **Interaction with [cellInteractivityCallback]:** [cellInteractivityCallback]
+  /// disables tap/long-press but does not block drops. Use [onDragWillAccept] to
+  /// reject drops on cells you consider disabled (e.g., past dates, weekends).
+  ///
   /// Only used when [enableDragAndDrop] is true.
   final bool Function(BuildContext, MCalDragWillAcceptDetails)?
   onDragWillAccept;
@@ -504,6 +523,17 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Only used when [enableDragAndDrop] and [dragEdgeNavigationEnabled] are true.
   final Duration dragEdgeNavigationDelay;
+
+  /// The long-press delay before a drag operation starts.
+  ///
+  /// When the user long-presses an event tile, the drag begins after this
+  /// duration. A shorter delay makes drags start faster; a longer delay
+  /// reduces accidental drags when tapping.
+  ///
+  /// Defaults to 200 milliseconds.
+  ///
+  /// Only used when [enableDragAndDrop] is true.
+  final Duration dragLongPressDelay;
 
   /// Creates a new [MCalMonthView] widget.
   ///
@@ -575,6 +605,7 @@ class MCalMonthView extends StatefulWidget {
     this.onEventDropped,
     this.dragEdgeNavigationEnabled = true,
     this.dragEdgeNavigationDelay = const Duration(milliseconds: 1200),
+    this.dragLongPressDelay = const Duration(milliseconds: 200),
   });
 
   @override
@@ -1141,6 +1172,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           onEventDropped: widget.onEventDropped,
           dragEdgeNavigationEnabled: widget.dragEdgeNavigationEnabled,
           dragEdgeNavigationDelay: widget.dragEdgeNavigationDelay,
+          dragLongPressDelay: widget.dragLongPressDelay,
           onNavigateToPreviousMonth: _canNavigateToPreviousMonth()
               ? _navigateToPreviousMonth
               : null,
@@ -1572,11 +1604,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
 
   /// Called when a drag operation ends.
   ///
-  /// Cleans up drag state and cancels any pending edge navigation.
+  /// Cleans up drag state and cancels any pending edge navigation so drop
+  /// indicators are always cleared. When the drop was accepted, _handleDrop
+  /// already ran and called cancelDrag(); we only need to clean up when the
+  /// drop was rejected (released outside the calendar).
   void _handleDragEnded(bool wasAccepted) {
     _isDragActive = false;
-    // If the drop was accepted, _handleDrop already ran and cleaned up.
-    // We only need to clean up for rejected drops (released outside valid target).
     if (!wasAccepted) {
       _dragHandler?.cancelDrag();
     }
@@ -1962,6 +1995,7 @@ class _MonthPageWidget extends StatefulWidget {
   final bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped;
   final bool dragEdgeNavigationEnabled;
   final Duration dragEdgeNavigationDelay;
+  final Duration dragLongPressDelay;
   final VoidCallback? onNavigateToPreviousMonth;
   final VoidCallback? onNavigateToNextMonth;
 
@@ -2016,6 +2050,7 @@ class _MonthPageWidget extends StatefulWidget {
     this.onEventDropped,
     this.dragEdgeNavigationEnabled = true,
     this.dragEdgeNavigationDelay = const Duration(milliseconds: 1200),
+    this.dragLongPressDelay = const Duration(milliseconds: 200),
     this.onNavigateToPreviousMonth,
     this.onNavigateToNextMonth,
     // Drag lifecycle callbacks (Task 21)
@@ -2028,6 +2063,7 @@ class _MonthPageWidget extends StatefulWidget {
   @override
   State<_MonthPageWidget> createState() => _MonthPageWidgetState();
 }
+
 
 /// State class for [_MonthPageWidget].
 ///
@@ -2103,9 +2139,14 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
   /// Called when drag handler state changes.
   void _onDragHandlerChanged() {
-    if (mounted) {
-      setState(() {});
+    if (!mounted) return;
+    final dragHandler = widget.dragHandler;
+    if (dragHandler != null && !dragHandler.isDragging) {
+      // Drag ended or cancelled - clear caches so drop indicators never stick
+      _cachedDragData = null;
+      _layoutCachedForDrag = false;
     }
+    setState(() {});
   }
 
   /// Compute the dates and weeks for this month.
@@ -2316,9 +2357,8 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
     // Check if drop is valid
     if (dragHandler != null && !dragHandler.isProposedDropValid) {
-      // Invalid drop - clean up and return
-      dragHandler.clearHighlightedCells();
-      dragHandler.clearProposedDropRange();
+      // Invalid drop - clear all drag state so drop indicators disappear
+      dragHandler.cancelDrag();
       return;
     }
 
@@ -2330,9 +2370,8 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     final proposedEnd = dragHandler?.proposedEndDate;
 
     if (proposedStart == null || proposedEnd == null) {
-      // No valid proposed dates, can't complete drop
-      dragHandler?.clearHighlightedCells();
-      dragHandler?.clearProposedDropRange();
+      // No valid proposed dates, can't complete drop - clear all drag state
+      dragHandler?.cancelDrag();
       return;
     }
 
@@ -2409,7 +2448,9 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
   /// Builds the highlight overlay for drop targets.
   ///
-  /// Precedence: dropTargetOverlayBuilder > dropTargetCellBuilder > default CustomPainter
+  /// Precedence: dropTargetOverlayBuilder > dropTargetCellBuilder > default CustomPainter.
+  /// All paths are wrapped in a single [Semantics] that announces the drop target
+  /// state (valid/invalid) and the first date of the proposed range.
   Widget _buildLayer3HighlightOverlay(BuildContext context) {
     final dragHandler = widget.dragHandler;
     if (dragHandler == null) return const SizedBox.shrink();
@@ -2418,7 +2459,18 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     if (highlightedCells.isEmpty) return const SizedBox.shrink();
 
     final isValid = dragHandler.isProposedDropValid;
+    final firstDate = highlightedCells.first.date;
+    final locale = widget.locale;
+    final localizations = MCalLocalizations();
+    final dateStr = localizations.formatDate(firstDate, locale);
+    final prefix = localizations.getLocalizedString('dropTargetPrefix', locale);
+    final validStr = localizations.getLocalizedString(
+      isValid ? 'dropTargetValid' : 'dropTargetInvalid',
+      locale,
+    );
+    final dropTargetSemanticLabel = '$prefix, $dateStr, $validStr';
 
+    Widget overlay;
     // Precedence: dropTargetOverlayBuilder > dropTargetCellBuilder > default
     if (widget.dropTargetOverlayBuilder != null) {
       // Use cached values instead of findRenderObject
@@ -2438,7 +2490,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             horizontalSpacing: 0,
           );
 
-      return widget.dropTargetOverlayBuilder!(
+      overlay = widget.dropTargetOverlayBuilder!(
         context,
         MCalDropOverlayDetails(
           highlightedCells: highlightedCells,
@@ -2448,10 +2500,8 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
           dragData: dragData,
         ),
       );
-    }
-
-    if (widget.dropTargetCellBuilder != null) {
-      return Stack(
+    } else if (widget.dropTargetCellBuilder != null) {
+      overlay = Stack(
         children: [
           for (final cell in highlightedCells)
             Positioned.fromRect(
@@ -2471,22 +2521,33 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             ),
         ],
       );
+    } else {
+      // Default: CustomPainter (most performant)
+      final first = highlightedCells.first;
+      final last = highlightedCells.last;
+      overlay = CustomPaint(
+        size: Size.infinite,
+        painter: _DropTargetHighlightPainter(
+          highlightedCells: highlightedCells,
+          dropStartWeekRow: first.weekRowIndex,
+          dropStartCellIndex: first.cellIndex,
+          dropEndWeekRow: last.weekRowIndex,
+          dropEndCellIndex: last.cellIndex,
+          isValid: isValid,
+          validColor:
+              widget.theme.dragTargetValidColor ??
+              Colors.green.withValues(alpha: 0.3),
+          invalidColor:
+              widget.theme.dragTargetInvalidColor ??
+              Colors.red.withValues(alpha: 0.3),
+          borderRadius: widget.theme.dragTargetBorderRadius ?? 4.0,
+        ),
+      );
     }
 
-    // Default: CustomPainter (most performant)
-    return CustomPaint(
-      size: Size.infinite,
-      painter: _DropTargetHighlightPainter(
-        highlightedCells: highlightedCells,
-        isValid: isValid,
-        validColor:
-            widget.theme.dragTargetValidColor ??
-            Colors.green.withValues(alpha: 0.3),
-        invalidColor:
-            widget.theme.dragTargetInvalidColor ??
-            Colors.red.withValues(alpha: 0.3),
-        borderRadius: widget.theme.dragTargetBorderRadius ?? 4.0,
-      ),
+    return Semantics(
+      label: dropTargetSemanticLabel,
+      child: overlay,
     );
   }
 
@@ -2568,6 +2629,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             onDragEndedCallback: widget.onDragEndedCallback,
             onDragCanceledCallback: widget.onDragCanceledCallback,
             dragHandler: widget.dragHandler,
+            dragLongPressDelay: widget.dragLongPressDelay,
           ),
         );
       }).toList(),
@@ -2832,6 +2894,9 @@ class _WeekRowWidget extends StatefulWidget {
   /// The drag handler for coordinating drag state across week rows.
   final MCalDragHandler? dragHandler;
 
+  /// Long-press delay before drag starts.
+  final Duration dragLongPressDelay;
+
   const _WeekRowWidget({
     required this.dates,
     required this.currentMonth,
@@ -2878,6 +2943,7 @@ class _WeekRowWidget extends StatefulWidget {
     this.onDragEndedCallback,
     this.onDragCanceledCallback,
     this.dragHandler,
+    this.dragLongPressDelay = const Duration(milliseconds: 200),
   });
 
   @override
@@ -3024,6 +3090,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           onDragStartedCallback: widget.onDragStartedCallback,
           onDragEndedCallback: widget.onDragEndedCallback,
           onDragCanceledCallback: widget.onDragCanceledCallback,
+          dragLongPressDelay: widget.dragLongPressDelay,
         ),
       );
     }).toList();
@@ -3078,6 +3145,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       onDragStartedCallback: widget.onDragStartedCallback,
       onDragEndedCallback: widget.onDragEndedCallback,
       onDragCanceledCallback: widget.onDragCanceledCallback,
+      dragLongPressDelay: widget.dragLongPressDelay,
       // Tile sizing for dragged feedback (styling comes from theme via defaultBuilder)
       dayWidth: dayWidth,
       tileHeight: widget.theme.eventTileHeight,
@@ -3362,6 +3430,9 @@ class _DayCellWidget extends StatelessWidget {
   final void Function(bool wasAccepted)? onDragEndedCallback;
   final VoidCallback? onDragCanceledCallback;
 
+  /// Long-press delay before drag starts.
+  final Duration dragLongPressDelay;
+
   /// Reserved height for multi-day events above single-day events.
   /// When > 0, single-day events are pushed down by this amount.
   final double multiDayReservedHeight;
@@ -3414,6 +3485,7 @@ class _DayCellWidget extends StatelessWidget {
     this.onDragStartedCallback,
     this.onDragEndedCallback,
     this.onDragCanceledCallback,
+    this.dragLongPressDelay = const Duration(milliseconds: 200),
   });
 
   /// Gets the events to use for rendering tiles.
@@ -3490,9 +3562,6 @@ class _DayCellWidget extends StatelessWidget {
           tileHeight: tileHeight,
         );
 
-        // DEBUG: Set to true to visualize cell structure
-        const bool debugCellSpacing = false;
-
         // Cell structure:
         // - Outer container with decoration (cell background/border)
         // - Column with:
@@ -3502,12 +3571,6 @@ class _DayCellWidget extends StatelessWidget {
         //     tiles handle their own margins)
         return Container(
           decoration: decoration,
-          // DEBUG: Green border shows the cell boundary
-          foregroundDecoration: debugCellSpacing
-              ? BoxDecoration(
-                  border: Border.all(color: Colors.green, width: 0.5),
-                )
-              : null,
           clipBehavior: Clip.hardEdge,
           child: Opacity(
             opacity: isInteractive ? 1.0 : 0.5,
@@ -3531,13 +3594,7 @@ class _DayCellWidget extends StatelessWidget {
                   // Spacer for multi-day events (if any reserved space)
                   // No horizontal padding - aligns with multi-day overlay
                   if (multiDayReservedHeight > 0)
-                    Container(
-                      height: multiDayReservedHeight,
-                      // DEBUG: Purple shows multi-day reserved space within cell
-                      color: debugCellSpacing
-                          ? Colors.purple.withValues(alpha: 0.2)
-                          : null,
-                    ),
+                    SizedBox(height: multiDayReservedHeight),
                   // Single-day events - NO horizontal padding
                   // Each tile handles its own 1px margin via the Padding wrapper
                   ...effectiveTiles,
@@ -3867,6 +3924,7 @@ class _DayCellWidget extends StatelessWidget {
               dayWidth: cellWidth,
               horizontalSpacing: hSpacing,
               enabled: true,
+              dragLongPressDelay: dragLongPressDelay,
               draggedTileBuilder: draggedTileBuilder,
               dragSourceTileBuilder: dragSourceTileBuilder,
               onDragStarted: onDragStartedCallback != null
@@ -4273,6 +4331,9 @@ class _EventTileWidget extends StatelessWidget {
 /// than can be shown in a day cell. It supports tap and long-press interactions:
 /// - On tap: calls [onOverflowTap] if provided, otherwise shows a default bottom sheet
 /// - On long-press: calls [onOverflowLongPress] if provided
+///
+/// Drag-and-drop is not supported on the overflow indicator. Only visible
+/// event tiles can be dragged.
 class _OverflowIndicatorWidget extends StatelessWidget {
   /// The number of hidden events.
   final int count;
@@ -4834,9 +4895,24 @@ class _NavigatorWidget extends StatelessWidget {
 /// This is the default highlight renderer used when neither
 /// [MCalMonthView.dropTargetOverlayBuilder] nor [MCalMonthView.dropTargetCellBuilder]
 /// is provided. It draws colored rounded rectangles for each highlighted cell.
+///
+/// [shouldRepaint] uses index-based comparison (drop start/end week row and cell
+/// indices) instead of list reference or Rect comparison for better performance.
 class _DropTargetHighlightPainter extends CustomPainter {
   /// The list of cells to highlight.
   final List<MCalHighlightCellInfo> highlightedCells;
+
+  /// Week row index of the first highlighted cell (for [shouldRepaint]).
+  final int dropStartWeekRow;
+
+  /// Cell index of the first highlighted cell (for [shouldRepaint]).
+  final int dropStartCellIndex;
+
+  /// Week row index of the last highlighted cell (for [shouldRepaint]).
+  final int dropEndWeekRow;
+
+  /// Cell index of the last highlighted cell (for [shouldRepaint]).
+  final int dropEndCellIndex;
 
   /// Whether the drop target is valid.
   final bool isValid;
@@ -4853,6 +4929,10 @@ class _DropTargetHighlightPainter extends CustomPainter {
   /// Creates a new [_DropTargetHighlightPainter].
   _DropTargetHighlightPainter({
     required this.highlightedCells,
+    required this.dropStartWeekRow,
+    required this.dropStartCellIndex,
+    required this.dropEndWeekRow,
+    required this.dropEndCellIndex,
     required this.isValid,
     this.validColor = const Color(0x4000FF00),
     this.invalidColor = const Color(0x40FF0000),
@@ -4878,26 +4958,20 @@ class _DropTargetHighlightPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DropTargetHighlightPainter oldDelegate) {
-    // Check if we need to repaint
     if (oldDelegate.isValid != isValid) return true;
-    if (oldDelegate.highlightedCells.length != highlightedCells.length)
-      return true;
     if (oldDelegate.validColor != validColor) return true;
     if (oldDelegate.invalidColor != invalidColor) return true;
     if (oldDelegate.borderRadius != borderRadius) return true;
+    if (oldDelegate.highlightedCells.length != highlightedCells.length) {
+      return true;
+    }
 
-    // Deep compare cells (by reference should be sufficient if list is rebuilt)
-    if (!identical(oldDelegate.highlightedCells, highlightedCells)) {
-      // Compare bounds of first and last cell as quick check
-      if (highlightedCells.isNotEmpty &&
-          oldDelegate.highlightedCells.isNotEmpty) {
-        if (highlightedCells.first.bounds !=
-                oldDelegate.highlightedCells.first.bounds ||
-            highlightedCells.last.bounds !=
-                oldDelegate.highlightedCells.last.bounds) {
-          return true;
-        }
-      }
+    // Index-based comparison: repaint only when drop target cell indices change.
+    if (oldDelegate.dropStartWeekRow != dropStartWeekRow ||
+        oldDelegate.dropStartCellIndex != dropStartCellIndex ||
+        oldDelegate.dropEndWeekRow != dropEndWeekRow ||
+        oldDelegate.dropEndCellIndex != dropEndCellIndex) {
+      return true;
     }
 
     return false;

@@ -11,9 +11,9 @@ import 'mcal_callback_details.dart';
 /// a long-press gesture. It supports customization of both the dragged tile
 /// appearance and the source placeholder.
 ///
-/// The drag operation is initiated after a 200ms long-press delay, allowing
-/// users to still tap on event tiles for selection without accidentally
-/// starting a drag.
+/// The drag operation is initiated after a configurable long-press delay
+/// (default 200ms), allowing users to still tap on event tiles for selection
+/// without accidentally starting a drag.
 ///
 /// Example:
 /// ```dart
@@ -149,6 +149,11 @@ class MCalDraggableEventTile extends StatefulWidget {
   /// The horizontal spacing around the tile.
   final double horizontalSpacing;
 
+  /// The long-press delay before a drag operation starts.
+  ///
+  /// Defaults to 200 milliseconds. Only used when the tile is enabled for dragging.
+  final Duration dragLongPressDelay;
+
   /// Creates a new [MCalDraggableEventTile] widget.
   ///
   /// The [child], [event], [sourceDate], [dayWidth], and [horizontalSpacing]
@@ -161,6 +166,7 @@ class MCalDraggableEventTile extends StatefulWidget {
     required this.dayWidth,
     required this.horizontalSpacing,
     this.enabled = true,
+    this.dragLongPressDelay = const Duration(milliseconds: 200),
     this.draggedTileBuilder,
     this.dragSourceTileBuilder,
     this.onDragStarted,
@@ -182,9 +188,6 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
 
   /// Default opacity for the source placeholder ghost effect.
   static const double _defaultSourceOpacity = 0.5;
-
-  /// The long-press delay before drag starts (in milliseconds).
-  static const int _longPressDelayMs = 200;
 
   /// Current drag position, used for the feedback builder.
   Offset _currentDragPosition = Offset.zero;
@@ -252,7 +255,7 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
           grabOffsetHolder: _grabOffsetHolder,
           horizontalSpacing: widget.horizontalSpacing,
         ),
-        delay: const Duration(milliseconds: _longPressDelayMs),
+        delay: widget.dragLongPressDelay,
         feedbackOffset: _feedbackOffset,
         feedback: _buildFeedback(context, themeData),
         childWhenDragging: _buildChildWhenDragging(context),

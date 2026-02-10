@@ -323,6 +323,8 @@ MCalMonthView(
 )
 ```
 
+**Note:** The overflow indicator does not support drag-and-drop. Only visible event tiles can be dragged. Users must tap the overflow indicator to reveal hidden events in a separate view if they need to drag them.
+
 **MCalOverflowIndicatorContext properties:**
 
 | Property | Description |
@@ -623,7 +625,7 @@ MCalMonthView(
 ```
 
 **Drag behaviors:**
-- Long-press (200ms) initiates drag
+- Long-press (default 200ms, configurable via `dragLongPressDelay`) initiates drag
 - Visual feedback shows valid/invalid drop targets
 - Events preserve duration when moved
 - Escape key cancels drag
@@ -680,6 +682,12 @@ MCalMonthView(
 **Cross-month drag navigation:**
 
 When dragging near the left/right edges, the calendar auto-navigates to the adjacent month after `dragEdgeNavigationDelay`. The drag continues seamlessly across months, respecting `minDate`/`maxDate` boundaries.
+
+**cellInteractivityCallback and onDragWillAccept together:**
+
+- `cellInteractivityCallback` controls whether a cell receives tap, long-press, and keyboard focus. Returning `false` disables those interactions for that cell.
+- `onDragWillAccept` validates drop targets during drag. It is called when the proposed drop range changes. Return `false` to reject the drop (red highlight, drop reverted on release).
+- `cellInteractivityCallback` does **not** block drag-and-drop. A cell that returns `false` from `cellInteractivityCallback` can still receive dropped events unless you also return `false` from `onDragWillAccept` for that target. Use both together when you want to disable both tap and drop (e.g., past dates, weekends).
 
 ### Event Display Control
 
@@ -780,6 +788,15 @@ See the [example](example/) directory for a complete example application demonst
 
 - Flutter SDK: `>=1.17.0`
 - Dart SDK: `^3.10.4`
+
+## Performance Expectations
+
+- **Drag-and-drop:** The month view targets **60fps** during continuous drag (pointer move and highlight updates). Drag state and drop-target highlighting are updated synchronously; avoid heavy work in `onDragWillAccept` or `onEventDropped` on the UI thread to keep frame times under ~16ms. The package includes performance-style tests that assert drag-move updates complete within a frame-rate budget.
+
+## Known Limitations
+
+- **Recurring events:** Drag-and-drop moves the displayed instance only. The recurrence rule is not updated. Use `onEventDropped` to persist changes in your backend (e.g., create an exception or update the rule).
+- **Overflow indicator:** The "+N more" overflow indicator does not support drag-and-drop. Only visible event tiles can be dragged. Users must tap the overflow indicator to reveal hidden events in a separate view if they need to drag them.
 
 ## Contributing
 

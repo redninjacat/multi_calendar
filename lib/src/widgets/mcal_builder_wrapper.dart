@@ -38,6 +38,7 @@ class MCalBuilderWrapper {
     required double dayWidth,
     double? tileHeight,
     double horizontalSpacing = 2.0,
+    Duration dragLongPressDelay = const Duration(milliseconds: 200),
   }) {
     return (BuildContext context, MCalEventTileContext tileContext) {
       // Get the default visual widget
@@ -110,6 +111,7 @@ class MCalBuilderWrapper {
           dayWidth: dayWidth,
           horizontalSpacing: horizontalSpacing,
           enabled: true,
+          dragLongPressDelay: dragLongPressDelay,
           draggedTileBuilder: draggedTileBuilder,
           dragSourceTileBuilder: dragSourceTileBuilder,
           onDragStarted: onDragStartedCallback != null
