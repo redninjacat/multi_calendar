@@ -502,6 +502,67 @@ class MCalEventController extends ChangeNotifier {
     return DateTime(date.year, date.month, date.day);
   }
 
+  /// Advances a recurrence DTSTART close to [target] while staying aligned
+  /// with the recurrence pattern defined by [rule].
+  ///
+  /// Only applied to **daily** and **weekly** frequencies whose iteration in
+  /// teno_rrule simply adds days (preserving alignment). Monthly and yearly
+  /// rules are left unchanged because teno_rrule resets the day to 1 during
+  /// `_getNextInstance` and relies on ByXXX chain expansion relative to the
+  /// original DTSTART — changing it would break implicit by-rule defaults.
+  /// Monthly (≤12 iter/year) and yearly (≤1 iter/year) iteration counts are
+  /// already negligible, so there is no performance concern.
+  ///
+  /// A one-period safety margin is kept so that by-rule expansions within
+  /// a period (e.g. BYDAY=MO,WE,FR inside a WEEKLY period) are not missed.
+  ///
+  /// Returns [dtStart] unchanged when [target] is not after [dtStart] or
+  /// when the frequency is monthly/yearly.
+  DateTime _advanceDtStart(
+    DateTime dtStart,
+    MCalRecurrenceRule rule,
+    DateTime target,
+  ) {
+    if (!target.isAfter(dtStart)) return dtStart;
+
+    switch (rule.frequency) {
+      case MCalFrequency.daily:
+        final daysDiff = target.difference(dtStart).inDays;
+        final periods = daysDiff ~/ rule.interval;
+        // Keep one period of margin for safety.
+        final safePeriods = (periods - 1).clamp(0, periods);
+        return DateTime(
+          dtStart.year,
+          dtStart.month,
+          dtStart.day + safePeriods * rule.interval,
+          dtStart.hour,
+          dtStart.minute,
+          dtStart.second,
+          dtStart.millisecond,
+        );
+
+      case MCalFrequency.weekly:
+        final daysDiff = target.difference(dtStart).inDays;
+        final weekPeriod = rule.interval * 7;
+        final periods = daysDiff ~/ weekPeriod;
+        final safePeriods = (periods - 1).clamp(0, periods);
+        return DateTime(
+          dtStart.year,
+          dtStart.month,
+          dtStart.day + safePeriods * weekPeriod,
+          dtStart.hour,
+          dtStart.minute,
+          dtStart.second,
+          dtStart.millisecond,
+        );
+
+      // Monthly and yearly: return unchanged (see doc comment above).
+      case MCalFrequency.monthly:
+      case MCalFrequency.yearly:
+        return dtStart;
+    }
+  }
+
   // ============================================================
   // Task 8: Recurrence Expansion Engine
   // ============================================================
@@ -515,6 +576,10 @@ class MCalEventController extends ChangeNotifier {
   /// - **deleted**: the occurrence is skipped
   /// - **rescheduled**: the occurrence's start/end are moved to [newDate]
   /// - **modified**: the occurrence is replaced with [modifiedEvent]
+  ///
+  /// For multi-day events, the query start is padded backwards by the event
+  /// duration so that occurrences starting before the range but ending
+  /// within it are included. An overlap check filters false positives.
   ///
   /// Each occurrence gets a deterministic ID of the form
   /// `"{masterId}_{normalizedDateIso8601}"` and an [occurrenceId] set to
@@ -538,9 +603,24 @@ class MCalEventController extends ChangeNotifier {
 
     // Expand using MCalRecurrenceRule.getOccurrences()
     final duration = master.end.difference(master.start);
+
+    // Pad the query start backwards by the event duration so that multi-day
+    // occurrences whose start is before the range but whose end overlaps
+    // into it are captured. For single-day events the pad is effectively
+    // zero, so there is no performance penalty.
+    final paddedAfter = range.start.subtract(duration);
+
+    // Advance the DTSTART close to the query window to avoid a linear walk
+    // from the real master start (which could be years in the past).
+    // Only safe when there is no `count` — count-based rules must iterate
+    // from the real start to count occurrences correctly.
+    final optimizedStart = master.recurrenceRule!.count == null
+        ? _advanceDtStart(master.start, master.recurrenceRule!, paddedAfter)
+        : master.start;
+
     final occurrenceDates = master.recurrenceRule!.getOccurrences(
-      start: master.start,
-      after: range.start,
+      start: optimizedStart,
+      after: paddedAfter,
       before: range.end,
     );
 
@@ -583,12 +663,18 @@ class MCalEventController extends ChangeNotifier {
             break;
         }
       } else {
-        expanded.add(master.copyWith(
-          id: '${master.id}_${dateKey.toIso8601String()}',
-          start: date,
-          end: date.add(duration),
-          occurrenceId: dateKey.toIso8601String(),
-        ));
+        final occEnd = date.add(duration);
+        // Only include if the occurrence overlaps the original query range.
+        // Occurrences in the padded zone whose end is still before the
+        // range start are filtered out here.
+        if (!date.isAfter(range.end) && !occEnd.isBefore(range.start)) {
+          expanded.add(master.copyWith(
+            id: '${master.id}_${dateKey.toIso8601String()}',
+            start: date,
+            end: occEnd,
+            occurrenceId: dateKey.toIso8601String(),
+          ));
+        }
       }
     }
 
@@ -729,10 +815,20 @@ class MCalEventController extends ChangeNotifier {
   ) {
     _exceptionsBySeriesId.putIfAbsent(seriesId, () => {});
     final dateKey = _normalizeDate(exception.originalDate);
+    final isOverwrite = _exceptionsBySeriesId[seriesId]!.containsKey(dateKey);
     _exceptionsBySeriesId[seriesId]![dateKey] = exception;
 
-    // Patch cache in O(1) instead of re-expanding
-    _patchCacheForException(seriesId, exception);
+    if (isOverwrite) {
+      // When overwriting an existing exception, the previous O(1) cache
+      // patch may have already modified the cached list (e.g. a deleted
+      // exception removed the entry). A second patch for the new type
+      // can't reliably find or restore the entry, so invalidate the
+      // series cache to force a clean re-expansion on the next query.
+      _expandedBySeriesId.remove(seriesId);
+    } else {
+      // First exception for this date — O(1) cache patch is safe.
+      _patchCacheForException(seriesId, exception);
+    }
 
     _lastChange = MCalEventChangeInfo(
       type: MCalChangeType.exceptionAdded,

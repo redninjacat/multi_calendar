@@ -314,7 +314,37 @@ class MCalRecurrenceRule {
   /// Converts this [MCalRecurrenceRule] to a `teno_rrule` [RecurrenceRule].
   ///
   /// [dtStart] is the series start date used as the DTSTART.
+  ///
+  /// Applies RFC 5545 defaults that `teno_rrule` does not handle itself:
+  /// * **MONTHLY** without explicit BYMONTHDAY — defaults to DTSTART's day
+  ///   of month. Without this, `teno_rrule`'s `_getNextInstance` resets the
+  ///   day to 1 and the `ByMonthDaysHandler` never activates.
+  /// * **YEARLY** without explicit BYMONTH / BYMONTHDAY — defaults to
+  ///   DTSTART's month and day so that yearly events land on the same date.
   teno_rrule.RecurrenceRule _toTenoRrule(DateTime dtStart) {
+    // RFC 5545 §3.3.10: When BYMONTHDAY is absent for MONTHLY, default to
+    // DTSTART's day-of-month — but only when BYDAY is also absent. When
+    // BYDAY is set (e.g. "first Friday"), the weekday rule defines which
+    // days to expand to, so adding a BYMONTHDAY default would conflict.
+    Set<int>? effectiveByMonthDays = byMonthDays?.toSet();
+    if (frequency == MCalFrequency.monthly &&
+        effectiveByMonthDays == null &&
+        byWeekDays == null) {
+      effectiveByMonthDays = {dtStart.day};
+    }
+
+    // RFC 5545 §3.3.10: When BYMONTH is absent for YEARLY, default to
+    // DTSTART's month. When BYMONTHDAY is absent for YEARLY (and no BYDAY),
+    // default to DTSTART's day.
+    Set<int>? effectiveByMonths = byMonths?.toSet();
+    Set<int>? effectiveByMonthDaysYearly = effectiveByMonthDays;
+    if (frequency == MCalFrequency.yearly) {
+      effectiveByMonths ??= {dtStart.month};
+      if (effectiveByMonthDaysYearly == null && byWeekDays == null) {
+        effectiveByMonthDaysYearly = {dtStart.day};
+      }
+    }
+
     return teno_rrule.RecurrenceRule(
       frequency: _toTenoFrequency(frequency),
       startDate: dtStart,
@@ -329,8 +359,10 @@ class MCalRecurrenceRule {
               )
               .toSet()
           : null,
-      byMonthDays: byMonthDays?.toSet(),
-      byMonths: byMonths?.toSet(),
+      byMonthDays: frequency == MCalFrequency.yearly
+          ? effectiveByMonthDaysYearly
+          : effectiveByMonthDays,
+      byMonths: effectiveByMonths,
       bySetPositions: bySetPositions?.toSet(),
       byYearDays: byYearDays?.toSet(),
       byWeeks: byWeekNumbers?.toSet(),
