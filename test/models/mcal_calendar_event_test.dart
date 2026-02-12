@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:multi_calendar/src/models/mcal_calendar_event.dart';
+import 'package:multi_calendar/multi_calendar.dart';
 
 void main() {
   group('MCalCalendarEvent', () {
@@ -215,6 +215,191 @@ void main() {
       expect(str, contains('comment: null'));
       expect(str, contains('externalId: null'));
       expect(str, contains('occurrenceId: null'));
+    });
+
+    group('recurrenceRule', () {
+      final weeklyRule = MCalRecurrenceRule(
+        frequency: MCalFrequency.weekly,
+        interval: 1,
+        byWeekDays: {MCalWeekDay.every(DateTime.monday)},
+      );
+
+      final dailyRule = MCalRecurrenceRule(
+        frequency: MCalFrequency.daily,
+        interval: 1,
+      );
+
+      test('event with recurrenceRule stores it correctly', () {
+        final event = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: weeklyRule,
+        );
+        expect(event.recurrenceRule, weeklyRule);
+      });
+
+      test('event without recurrenceRule has null', () {
+        final event = MCalCalendarEvent(
+          id: 'event-1',
+          title: 'Test',
+          start: testStart,
+          end: testEnd,
+        );
+        expect(event.recurrenceRule, isNull);
+      });
+
+      test('copyWith preserves recurrenceRule when not passed', () {
+        final event = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: weeklyRule,
+        );
+        final copied = event.copyWith(title: 'Updated');
+        expect(copied.recurrenceRule, weeklyRule);
+        expect(copied.title, 'Updated');
+      });
+
+      test('copyWith replaces recurrenceRule', () {
+        final event = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: weeklyRule,
+        );
+        final copied = event.copyWith(recurrenceRule: dailyRule);
+        expect(copied.recurrenceRule, dailyRule);
+      });
+
+      test('copyWith can set recurrenceRule to null', () {
+        final event = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: weeklyRule,
+        );
+        final copied = event.copyWith(recurrenceRule: null);
+        expect(copied.recurrenceRule, isNull);
+      });
+
+      test('== returns true when both have same recurrenceRule', () {
+        final event1 = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: weeklyRule,
+        );
+        final event2 = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: weeklyRule,
+        );
+        expect(event1, equals(event2));
+      });
+
+      test('== returns false when recurrenceRules differ', () {
+        final event1 = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: weeklyRule,
+        );
+        final event2 = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: dailyRule,
+        );
+        expect(event1, isNot(equals(event2)));
+      });
+
+      test('== returns false when one has recurrenceRule and other does not',
+          () {
+        final event1 = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: weeklyRule,
+        );
+        final event2 = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+        );
+        expect(event1, isNot(equals(event2)));
+      });
+
+      test('hashCode is equal for events with same recurrenceRule', () {
+        final event1 = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: weeklyRule,
+        );
+        final event2 = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: weeklyRule,
+        );
+        expect(event1.hashCode, equals(event2.hashCode));
+      });
+
+      test('hashCode differs for events with different recurrenceRule', () {
+        final event1 = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: weeklyRule,
+        );
+        final event2 = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: dailyRule,
+        );
+        expect(event1.hashCode, isNot(equals(event2.hashCode)));
+      });
+
+      test('toString includes recurrenceRule', () {
+        final event = MCalCalendarEvent(
+          id: 'recurring-1',
+          title: 'Recurring',
+          start: testStart,
+          end: testEnd,
+          recurrenceRule: weeklyRule,
+        );
+        final str = event.toString();
+        expect(str, contains('recurrenceRule:'));
+        expect(str, contains('MCalRecurrenceRule'));
+      });
+
+      test('toString shows null recurrenceRule', () {
+        final event = MCalCalendarEvent(
+          id: 'event-1',
+          title: 'Test',
+          start: testStart,
+          end: testEnd,
+        );
+        final str = event.toString();
+        expect(str, contains('recurrenceRule: null'));
+      });
     });
   });
 }

@@ -631,13 +631,54 @@ MCalMonthView(
 - Escape key cancels drag
 - Cross-month dragging supported with edge navigation
 
-**Custom Drag Visuals:**
+#### Validation and Revert
+
+Two callbacks control whether a drop succeeds and whether the UI reverts:
+
+- **`onDragWillAccept`** (validation): Called as the pointer moves over potential drop targets. Return `false` to reject the proposed range (cells show invalid/red highlight; releasing does nothing). Return `true` (or omit the callback) to accept.
+
+- **`onEventDropped`** (revert): Called when the user releases over a valid target. Return `true` to confirm the move; the event stays at the new dates. Return `false` to revert; the package restores the event to its original position.
+
+```dart
+onEventDropped: (context, details) {
+  // If persistence fails, return false to revert
+  final success = persistToBackend(details);
+  return success;
+}
+```
+
+#### Async Persistence
+
+`onEventDropped` is synchronous and must return `bool` immediately. For async persistence:
+
+1. **Optimistic confirm**: Return `true` right away, persist in the background, and if the operation fails, revert via the controller (e.g. `controller.addEvents` with the original event).
+
+2. **Blocking wait**: If you can afford to block the UI, use a synchronous wrapper (e.g. `Future.value(...).then((v) => v)` with a run-loop wait—not recommended for long operations).
+
+3. **Loading + confirm**: Show a loading overlay before/during the drop, perform the async work, then either let the move stand or revert via the controller. The callback itself still returns `true` or `false` synchronously based on your immediate decision.
+
+#### Drop Target Builder Precedence
+
+Drop target visuals come from two layers, each with its own builders:
+
+| Layer | Purpose | Builder | Precedence |
+|-------|---------|---------|------------|
+| Layer 3 | Phantom event tiles (where the event would land) | `dropTargetTileBuilder` | Builder or default tile |
+| Layer 4 | Cell highlight overlay | `dropTargetOverlayBuilder` | **1.** overlay builder |
+| Layer 4 | Cell highlight overlay | `dropTargetCellBuilder` | **2.** cell builder (per-cell) |
+| Layer 4 | Cell highlight overlay | (default) | **3.** built-in `CustomPainter` |
+
+For Layer 4, only one path is used: `dropTargetOverlayBuilder` > `dropTargetCellBuilder` > default. If both overlay and cell builders are provided, the overlay builder is used.
+
+Toggle layers with `showDropTargetTiles` (Layer 3) and `showDropTargetOverlay` (Layer 4). Both default to `true`.
+
+#### Custom Drag Visuals
 
 ```dart
 MCalMonthView(
   controller: controller,
   enableDragAndDrop: true,
-  // Customize the dragged tile appearance
+  // Dragged tile (follows pointer)
   draggedTileBuilder: (context, details) {
     return Material(
       elevation: 8,
@@ -648,7 +689,7 @@ MCalMonthView(
       ),
     );
   },
-  // Customize the source placeholder
+  // Source placeholder (where the tile was)
   dragSourceTileBuilder: (context, details) {
     return Container(
       decoration: BoxDecoration(
@@ -657,12 +698,45 @@ MCalMonthView(
       ),
     );
   },
-  // Customize drop target cell appearance
+  // Layer 3: Phantom tiles showing drop position
+  dropTargetTileBuilder: (context, tileContext) {
+    return Container(
+      decoration: BoxDecoration(
+        color: (tileContext.dropValid ?? true)
+            ? Colors.blue.withOpacity(0.3)
+            : Colors.red.withOpacity(0.3),
+      ),
+    );
+  },
+  // Layer 4 (per-cell): Highlight each target cell
   dropTargetCellBuilder: (context, details) {
     return Container(
-      color: details.isValid
-          ? Colors.green.withOpacity(0.2)
-          : Colors.red.withOpacity(0.2),
+      decoration: BoxDecoration(
+        color: details.isValid
+            ? Colors.green.withOpacity(0.2)
+            : Colors.red.withOpacity(0.2),
+        borderRadius: BorderRadius.horizontal(
+          left: details.isFirst ? Radius.circular(8) : Radius.zero,
+          right: details.isLast ? Radius.circular(8) : Radius.zero,
+        ),
+      ),
+    );
+  },
+  // Layer 4 (full overlay): Alternative to dropTargetCellBuilder
+  dropTargetOverlayBuilder: (context, details) {
+    return Stack(
+      children: details.highlightedCells.map((cell) {
+        return Positioned.fromRect(
+          rect: cell.bounds,
+          child: Container(
+            decoration: BoxDecoration(
+              color: details.isValid
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.red.withOpacity(0.3),
+            ),
+          ),
+        );
+      }).toList(),
     );
   },
 )
@@ -676,7 +750,8 @@ MCalMonthView(
 | `MCalDragSourceDetails` | `event`, `sourceDate` | `dragSourceTileBuilder` |
 | `MCalEventTileContext` (drop target) | `event`, `displayDate`, `isDropTargetPreview`, `dropValid`, `proposedStartDate`, `proposedEndDate` | `dropTargetTileBuilder` |
 | `MCalDragWillAcceptDetails` | `event`, `proposedStartDate`, `proposedEndDate` | `onDragWillAccept` |
-| `MCalDropTargetCellDetails` | `date`, `isValid`, `draggedEvent` | `dropTargetCellBuilder` |
+| `MCalDropTargetCellDetails` | `date`, `bounds`, `isValid`, `isFirst`, `isLast`, `cellIndex`, `weekRowIndex` | `dropTargetCellBuilder` |
+| `MCalDropOverlayDetails` | `highlightedCells`, `isValid`, `dayWidth`, `calendarSize`, `dragData` | `dropTargetOverlayBuilder` |
 | `MCalEventDroppedDetails` | `event`, `oldStartDate`, `oldEndDate`, `newStartDate`, `newEndDate` | `onEventDropped` |
 
 **Cross-month drag navigation:**

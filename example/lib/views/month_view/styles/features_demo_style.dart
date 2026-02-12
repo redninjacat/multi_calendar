@@ -1,9 +1,12 @@
+import 'package:example/widgets/day_events_bottom_sheet.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 
 import '../../../utils/sample_events.dart';
+import '../../../widgets/recurrence_edit_scope_dialog.dart';
+import '../../../widgets/recurrence_editor_dialog.dart';
 import '../../../widgets/style_description.dart';
 
 /// Features Demo - showcases MCalMonthView features and configuration options.
@@ -45,8 +48,13 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   bool _showDropTargetTiles = true;
   bool _showDropTargetOverlay = true;
   bool _dropTargetTilesAboveOverlay = false;
+  bool _enableBlackoutDays = false;
   int _dragEdgeNavigationDelayMs = 900;
   final bool _dragEdgeNavigationEnabled = true;
+
+  /// Blackout dates (2 in initial month, 2 in following month) that reject drops.
+  /// Computed at init to avoid dates where sample events exist.
+  late Set<DateTime> _blackoutDates;
 
   // ============================================================
   // Theme Settings (matching Layout POC levers)
@@ -74,13 +82,79 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   void initState() {
     super.initState();
     _sharedController = MCalEventController();
-    _sharedController.addEvents(createSampleEvents());
+    final sampleEvents = createSampleEvents();
+    _sharedController.addEvents(sampleEvents);
+    _blackoutDates = _computeBlackoutDates();
 
     // Set initial focused date on platforms that support keyboard navigation
     if (_supportsKeyboardNavigation) {
       final now = DateTime.now();
       _sharedController.setFocusedDate(DateTime(now.year, now.month, 1));
     }
+  }
+
+  /// Computes 2 blackout days in the current month and 2 in the following month,
+  /// excluding any dates where events exist (including recurring occurrences).
+  Set<DateTime> _computeBlackoutDates() {
+    final now = DateTime.now();
+    final rangeStart = DateTime(now.year, now.month, 1);
+    final rangeEnd = DateTime(now.year, now.month + 2, 0);
+    final expandedEvents = _sharedController.getEventsForRange(
+      DateTimeRange(start: rangeStart, end: rangeEnd),
+    );
+
+    final datesWithEvents = <DateTime>{};
+    for (final event in expandedEvents) {
+      var d = DateTime(event.start.year, event.start.month, event.start.day);
+      final endDay = DateTime(event.end.year, event.end.month, event.end.day);
+      while (d.isBefore(endDay) || _isSameDay(d, endDay)) {
+        datesWithEvents.add(DateTime(d.year, d.month, d.day));
+        d = DateTime(d.year, d.month, d.day + 1);
+      }
+    }
+
+    final lastDayCurrent = DateTime(now.year, now.month + 1, 0).day;
+    final lastDayNext = DateTime(now.year, now.month + 2, 0).day;
+
+    final result = <DateTime>{};
+    for (int day = 1; day <= lastDayCurrent && result.length < 2; day++) {
+      final dt = DateTime(now.year, now.month, day);
+      if (!datesWithEvents.any((e) => _isSameDay(e, dt))) {
+        result.add(dt);
+      }
+    }
+    for (int day = 1; day <= lastDayNext && result.length < 4; day++) {
+      final dt = DateTime(now.year, now.month + 1, day);
+      if (!datesWithEvents.any((e) => _isSameDay(e, dt))) {
+        result.add(dt);
+      }
+    }
+    return result;
+  }
+
+  bool _isBlackoutDate(DateTime date) {
+    return _blackoutDates.any((d) => _isSameDay(d, date));
+  }
+
+  bool _proposedRangeOverlapsBlackout(
+    DateTime proposedStart,
+    DateTime proposedEnd,
+  ) {
+    var d = DateTime(
+      proposedStart.year,
+      proposedStart.month,
+      proposedStart.day,
+    );
+    final endDay = DateTime(
+      proposedEnd.year,
+      proposedEnd.month,
+      proposedEnd.day,
+    );
+    while (d.isBefore(endDay) || _isSameDay(d, endDay)) {
+      if (_isBlackoutDate(d)) return true;
+      d = DateTime(d.year, d.month, d.day + 1);
+    }
+    return false;
   }
 
   /// Returns true if the current platform supports keyboard navigation.
@@ -121,6 +195,42 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Builds a day cell with blackout styling when the date is a blackout day.
+  Widget _buildDayCellWithBlackout(
+    BuildContext context,
+    MCalDayCellContext ctx,
+    Widget defaultCell,
+    ColorScheme colorScheme,
+  ) {
+    if (!_isBlackoutDate(ctx.date)) return defaultCell;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        defaultCell,
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.75,
+              ),
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 0.4),
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.block,
+                size: 20,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -197,37 +307,820 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   }
 
   void _onEventTap(BuildContext context, MCalEventTapDetails details) {
-    _showAlert(
-      context,
-      'Event Tapped',
-      'You tapped the event "${details.event.title}"\n'
-          'Date: ${_formatDate(details.displayDate)}\n'
-          'All-day: ${details.event.isAllDay}\n'
-          'Color: ${details.event.color}',
-    );
+    _showEventActionMenu(context, details.event);
   }
 
   void _onEventLongPress(BuildContext context, MCalEventTapDetails details) {
-    _showAlert(
-      context,
-      'Event Long-Pressed',
-      'You long-pressed the event "${details.event.title}"\n'
-          'Start: ${_formatDate(details.event.start)}\n'
-          'End: ${_formatDate(details.event.end)}',
+    final event = details.event;
+    final isRecurring = event.occurrenceId != null;
+
+    if (isRecurring) {
+      _handleRecurringEventDelete(context, event);
+    } else {
+      _handleNonRecurringEventDelete(context, event);
+    }
+  }
+
+  /// Shows a bottom sheet with Edit and Delete options for the tapped event.
+  void _showEventActionMenu(
+    BuildContext outerContext,
+    MCalCalendarEvent event,
+  ) {
+    final isRecurring = event.occurrenceId != null;
+    showModalBottomSheet(
+      context: outerContext,
+      builder: (ctx) {
+        final colorScheme = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.title,
+                      style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (isRecurring)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.repeat,
+                              size: 14,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Recurring event',
+                              style: Theme.of(ctx).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Icon(Icons.edit_outlined, color: colorScheme.primary),
+                title: const Text('Edit'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  if (isRecurring) {
+                    _handleRecurringEventTap(outerContext, event);
+                  } else {
+                    _handleNonRecurringEventEdit(outerContext, event);
+                  }
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.delete_outline, color: colorScheme.error),
+                title: const Text('Delete'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  if (isRecurring) {
+                    _handleRecurringEventDelete(outerContext, event);
+                  } else {
+                    _handleNonRecurringEventDelete(outerContext, event);
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  void _onOverflowTap(BuildContext context, MCalOverflowTapDetails details) {
-    final visibleTitles = details.visibleEvents.map((e) => e.title).join(', ');
-    final hiddenTitles = details.hiddenEvents.map((e) => e.title).join(', ');
-    _showAlert(
-      context,
-      'Overflow Indicator Tapped',
-      'Date: ${_formatDate(details.date)}\n'
-          'Hidden events (${details.hiddenEvents.length}): $hiddenTitles\n'
-          'Visible events (${details.visibleEvents.length}): $visibleTitles\n'
-          'Total: ${details.allEvents.length}',
+  /// Handles edit for a non-recurring event.
+  Future<void> _handleNonRecurringEventEdit(
+    BuildContext context,
+    MCalCalendarEvent event,
+  ) async {
+    final edited = await _showEventEditDialog(context, event);
+    if (edited != null && mounted) {
+      _sharedController.removeEvents([event.id]);
+      _sharedController.addEvents([edited]);
+    }
+  }
+
+  // ============================================================
+  // Recurring Event Helpers
+  // ============================================================
+
+  /// Extracts the series (master) ID from a recurring occurrence's event ID.
+  ///
+  /// Occurrence IDs follow the pattern `"{masterId}_{iso8601Date}"`, so we
+  /// strip the last `_<iso8601>` suffix to recover the master ID.
+  String _extractSeriesId(MCalCalendarEvent event) {
+    final occId = event.occurrenceId!;
+    final suffix = '_$occId';
+    final id = event.id;
+    if (id.endsWith(suffix)) {
+      return id.substring(0, id.length - suffix.length);
+    }
+    return id;
+  }
+
+  /// Parses the occurrence date from an occurrence's [occurrenceId].
+  DateTime _parseOccurrenceDate(String occurrenceId) {
+    return DateTime.parse(occurrenceId);
+  }
+
+  // ── Add Recurring Event ────────────────────────────────────────────────
+
+  Future<void> _onAddRecurringEvent(BuildContext context) async {
+    final rule = await RecurrenceEditorDialog.show(context);
+    if (rule == null || !mounted) return;
+
+    final now = DateTime.now();
+    final newId = 'recurring-user-${now.millisecondsSinceEpoch}';
+    final event = MCalCalendarEvent(
+      id: newId,
+      title: 'New Recurring Event',
+      start: DateTime(now.year, now.month, now.day, now.hour + 1, 0),
+      end: DateTime(now.year, now.month, now.day, now.hour + 2, 0),
+      isAllDay: false,
+      color: const Color(0xFF6366F1),
+      recurrenceRule: rule,
     );
+    _sharedController.addEvents([event]);
+  }
+
+  // ── Recurring Event Tap (Edit) — Google Calendar "edit-then-prompt" ────
+
+  Future<void> _handleRecurringEventTap(
+    BuildContext context,
+    MCalCalendarEvent event,
+  ) async {
+    final seriesId = _extractSeriesId(event);
+    final occurrenceDate = _parseOccurrenceDate(event.occurrenceId!);
+    final master = _sharedController.getEventById(seriesId);
+
+    // Detect whether this occurrence is an existing exception
+    final exceptions = _sharedController.getExceptions(seriesId);
+    final normalizedOccDate = DateTime(
+      occurrenceDate.year,
+      occurrenceDate.month,
+      occurrenceDate.day,
+    );
+    final isException = exceptions.any((ex) {
+      final d = ex.originalDate;
+      return DateTime(d.year, d.month, d.day) == normalizedOccDate;
+    });
+
+    // Step 1: Open edit dialog IMMEDIATELY (shows occurrence data)
+    final result = await _showRecurringEventEditDialog(
+      context,
+      occurrence: event,
+      masterRule: master?.recurrenceRule,
+      isException: isException,
+    );
+    if (result == null || !mounted) return;
+
+    final (editedEvent, editedRule) = result;
+
+    // Step 2: Ask scope AFTER editing (Google Calendar pattern)
+    if (!mounted) return;
+    final scope = await RecurrenceEditScopeDialog.show(this.context);
+    if (scope == null || !mounted) return;
+
+    // Step 3: Apply based on scope
+    switch (scope) {
+      case RecurrenceEditScope.thisEvent:
+        // Apply title/color only as modified exception (RRULE changes ignored)
+        _sharedController.modifyOccurrence(
+          seriesId,
+          occurrenceDate,
+          editedEvent,
+        );
+
+      case RecurrenceEditScope.thisAndFollowing:
+        final newSeriesId = _sharedController.splitSeries(
+          seriesId,
+          occurrenceDate,
+        );
+        final newMaster = _sharedController.getEventById(newSeriesId);
+        if (newMaster != null && mounted) {
+          _sharedController.updateRecurringEvent(
+            newMaster.copyWith(
+              title: editedEvent.title,
+              color: editedEvent.color,
+              recurrenceRule: editedRule ?? newMaster.recurrenceRule,
+            ),
+          );
+        }
+
+      case RecurrenceEditScope.allEvents:
+        if (master != null && mounted) {
+          _sharedController.updateRecurringEvent(
+            master.copyWith(
+              title: editedEvent.title,
+              color: editedEvent.color,
+              recurrenceRule: editedRule ?? master.recurrenceRule,
+            ),
+          );
+        }
+    }
+  }
+
+  // ── Recurring Event Long-Press (Delete) ─────────────────────────────────
+
+  Future<void> _handleRecurringEventDelete(
+    BuildContext context,
+    MCalCalendarEvent event,
+  ) async {
+    final seriesId = _extractSeriesId(event);
+    final occurrenceDate = _parseOccurrenceDate(event.occurrenceId!);
+
+    // Ask scope
+    final scope = await _showDeleteScopeDialog(context, event.title);
+    if (scope == null || !mounted) return;
+
+    switch (scope) {
+      case RecurrenceEditScope.thisEvent:
+        _sharedController.addException(
+          seriesId,
+          MCalRecurrenceException.deleted(originalDate: occurrenceDate),
+        );
+
+      case RecurrenceEditScope.thisAndFollowing:
+        final newSeriesId = _sharedController.splitSeries(
+          seriesId,
+          occurrenceDate,
+        );
+        _sharedController.deleteRecurringEvent(newSeriesId);
+
+      case RecurrenceEditScope.allEvents:
+        _sharedController.deleteRecurringEvent(seriesId);
+    }
+  }
+
+  /// Handles delete for a non-recurring event.
+  Future<void> _handleNonRecurringEventDelete(
+    BuildContext context,
+    MCalCalendarEvent event,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Event'),
+        content: Text('Delete "${event.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      _sharedController.removeEvents([event.id]);
+    }
+  }
+
+  /// Shows a delete-scope dialog for recurring events, combining the scope
+  /// choice with a delete confirmation.
+  Future<RecurrenceEditScope?> _showDeleteScopeDialog(
+    BuildContext context,
+    String eventTitle,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return showDialog<RecurrenceEditScope>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete recurring event'),
+        contentPadding: const EdgeInsets.only(top: 12, bottom: 0),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'How would you like to delete "$eventTitle"?',
+                style: Theme.of(ctx).textTheme.bodyMedium,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: Icon(Icons.event_busy, color: colorScheme.error),
+              title: const Text('This event only'),
+              subtitle: const Text('Remove just this occurrence'),
+              onTap: () => Navigator.of(ctx).pop(RecurrenceEditScope.thisEvent),
+            ),
+            ListTile(
+              leading: Icon(Icons.arrow_forward, color: colorScheme.error),
+              title: const Text('This and following events'),
+              subtitle: const Text('Remove this and all future occurrences'),
+              onTap: () =>
+                  Navigator.of(ctx).pop(RecurrenceEditScope.thisAndFollowing),
+            ),
+            ListTile(
+              leading: Icon(Icons.delete_forever, color: colorScheme.error),
+              title: const Text('All events'),
+              subtitle: const Text('Remove the entire series'),
+              onTap: () => Navigator.of(ctx).pop(RecurrenceEditScope.allEvents),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Shows a recurring-event edit dialog following the Google Calendar
+  /// "edit-then-prompt" pattern.
+  ///
+  /// Displays the tapped [occurrence]'s data (title, color, date/time) along
+  /// with a recurrence context banner. When [isException] is true the banner
+  /// indicates a modified occurrence and the recurrence-rule editor is hidden.
+  ///
+  /// Returns a record of (editedEvent, rule) or null if cancelled.
+  /// - `editedEvent` contains the edited title/color.
+  /// - `rule` is the (possibly changed) recurrence rule, or the unchanged
+  ///   [masterRule] if the user didn't interact with the recurrence editor.
+  Future<(MCalCalendarEvent, MCalRecurrenceRule?)?>
+  _showRecurringEventEditDialog(
+    BuildContext context, {
+    required MCalCalendarEvent occurrence,
+    required MCalRecurrenceRule? masterRule,
+    required bool isException,
+  }) {
+    final titleController = TextEditingController(text: occurrence.title);
+    final colors = <Color>[
+      const Color(0xFF6366F1), // Indigo
+      const Color(0xFF10B981), // Emerald
+      const Color(0xFFF59E0B), // Amber
+      const Color(0xFFEF4444), // Red
+      const Color(0xFF8B5CF6), // Violet
+      const Color(0xFF06B6D4), // Cyan
+      const Color(0xFFEC4899), // Pink
+      const Color(0xFF0EA5E9), // Sky
+      const Color(0xFFF97316), // Orange
+      const Color(0xFFD946EF), // Fuchsia
+    ];
+    Color selectedColor = occurrence.color ?? colors.first;
+    MCalRecurrenceRule? currentRule = masterRule;
+
+    return showDialog<(MCalCalendarEvent, MCalRecurrenceRule?)>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final colorScheme = Theme.of(ctx).colorScheme;
+            final textTheme = Theme.of(ctx).textTheme;
+
+            return AlertDialog(
+              titlePadding: EdgeInsets.zero,
+              title: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: isException
+                      ? colorScheme.errorContainer.withAlpha(100)
+                      : colorScheme.primaryContainer.withAlpha(100),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          isException ? Icons.edit_note : Icons.repeat,
+                          size: 20,
+                          color: isException
+                              ? colorScheme.error
+                              : colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            isException
+                                ? 'Modified Occurrence'
+                                : 'Edit Recurring Event',
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: isException
+                                  ? colorScheme.onErrorContainer
+                                  : colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isException
+                          ? 'This occurrence has been individually modified'
+                          : masterRule != null
+                          ? _describeRule(masterRule)
+                          : 'Recurring event',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: isException
+                            ? colorScheme.onErrorContainer.withAlpha(180)
+                            : colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Date / time display ───────────────────────────
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest.withAlpha(
+                          60,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 18,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${_formatDate(occurrence.start)}'
+                              '  ${_formatTime(occurrence.start)}'
+                              ' \u2013 ${_formatTime(occurrence.end)}',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // ── Title field ───────────────────────────────────
+                    TextField(
+                      controller: titleController,
+                      decoration: InputDecoration(
+                        labelText: 'Title',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // ── Color picker ──────────────────────────────────
+                    Text(
+                      'Color',
+                      style: textTheme.labelLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: colors.map((c) {
+                        final isSelected = c == selectedColor;
+                        return GestureDetector(
+                          onTap: () => setDialogState(() => selectedColor = c),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: c,
+                              shape: BoxShape.circle,
+                              border: isSelected
+                                  ? Border.all(
+                                      color: colorScheme.onSurface,
+                                      width: 3,
+                                    )
+                                  : null,
+                            ),
+                            child: isSelected
+                                ? Icon(
+                                    Icons.check,
+                                    size: 18,
+                                    color:
+                                        ThemeData.estimateBrightnessForColor(
+                                              c,
+                                            ) ==
+                                            Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black,
+                                  )
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    // ── Recurrence section (hidden for exceptions) ───
+                    if (!isException) ...[
+                      const SizedBox(height: 20),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Recurrence',
+                        style: textTheme.labelLarge?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withAlpha(
+                            80,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: colorScheme.outlineVariant),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              currentRule != null
+                                  ? _describeRule(currentRule!)
+                                  : 'No recurrence',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () async {
+                                      final newRule =
+                                          await RecurrenceEditorDialog.show(
+                                            ctx,
+                                            existing: currentRule,
+                                          );
+                                      if (newRule != null) {
+                                        setDialogState(
+                                          () => currentRule = newRule,
+                                        );
+                                      }
+                                    },
+                                    icon: const Icon(Icons.edit, size: 16),
+                                    label: Text(
+                                      currentRule != null
+                                          ? 'Change Rule'
+                                          : 'Add Rule',
+                                    ),
+                                  ),
+                                ),
+                                if (currentRule != null) ...[
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    onPressed: () {
+                                      setDialogState(() => currentRule = null);
+                                    },
+                                    icon: Icon(
+                                      Icons.close,
+                                      size: 18,
+                                      color: colorScheme.error,
+                                    ),
+                                    tooltip: 'Remove recurrence',
+                                    style: IconButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final edited = occurrence.copyWith(
+                      title: titleController.text.trim().isNotEmpty
+                          ? titleController.text.trim()
+                          : occurrence.title,
+                      color: selectedColor,
+                    );
+                    Navigator.of(ctx).pop((edited, currentRule));
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Shows a simple event-editing dialog for non-recurring events (title and
+  /// color only).
+  Future<MCalCalendarEvent?> _showEventEditDialog(
+    BuildContext context,
+    MCalCalendarEvent event,
+  ) {
+    final titleController = TextEditingController(text: event.title);
+    final colors = <Color>[
+      const Color(0xFF6366F1), // Indigo
+      const Color(0xFF10B981), // Emerald
+      const Color(0xFFF59E0B), // Amber
+      const Color(0xFFEF4444), // Red
+      const Color(0xFF8B5CF6), // Violet
+      const Color(0xFF06B6D4), // Cyan
+      const Color(0xFFEC4899), // Pink
+      const Color(0xFF0EA5E9), // Sky
+      const Color(0xFFF97316), // Orange
+      const Color(0xFFD946EF), // Fuchsia
+    ];
+    Color selectedColor = event.color ?? colors.first;
+
+    return showDialog<MCalCalendarEvent>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final colorScheme = Theme.of(ctx).colorScheme;
+            return AlertDialog(
+              title: const Text('Edit Event'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(
+                      labelText: 'Title',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Color',
+                    style: Theme.of(ctx).textTheme.labelLarge?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: colors.map((c) {
+                      final isSelected = c == selectedColor;
+                      return GestureDetector(
+                        onTap: () => setDialogState(() => selectedColor = c),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: c,
+                            shape: BoxShape.circle,
+                            border: isSelected
+                                ? Border.all(
+                                    color: colorScheme.onSurface,
+                                    width: 3,
+                                  )
+                                : null,
+                          ),
+                          child: isSelected
+                              ? Icon(
+                                  Icons.check,
+                                  size: 18,
+                                  color:
+                                      ThemeData.estimateBrightnessForColor(c) ==
+                                          Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black,
+                                )
+                              : null,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final edited = event.copyWith(
+                      title: titleController.text.trim().isNotEmpty
+                          ? titleController.text.trim()
+                          : event.title,
+                      color: selectedColor,
+                    );
+                    Navigator.of(ctx).pop(edited);
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Produces a human-readable summary of a recurrence rule.
+  String _describeRule(MCalRecurrenceRule rule) {
+    final freq = switch (rule.frequency) {
+      MCalFrequency.daily => 'Daily',
+      MCalFrequency.weekly => 'Weekly',
+      MCalFrequency.monthly => 'Monthly',
+      MCalFrequency.yearly => 'Yearly',
+    };
+    final buffer = StringBuffer(freq);
+
+    if (rule.interval > 1) {
+      buffer.write(' (every ${rule.interval})');
+    }
+
+    if (rule.byWeekDays != null && rule.byWeekDays!.isNotEmpty) {
+      final dayNames = rule.byWeekDays!
+          .map((wd) {
+            return switch (wd.dayOfWeek) {
+              DateTime.monday => 'Mon',
+              DateTime.tuesday => 'Tue',
+              DateTime.wednesday => 'Wed',
+              DateTime.thursday => 'Thu',
+              DateTime.friday => 'Fri',
+              DateTime.saturday => 'Sat',
+              DateTime.sunday => 'Sun',
+              _ => '?',
+            };
+          })
+          .join(', ');
+      buffer.write(' on $dayNames');
+    }
+
+    if (rule.byMonthDays != null && rule.byMonthDays!.isNotEmpty) {
+      buffer.write(' on day ${rule.byMonthDays!.join(", ")}');
+    }
+
+    if (rule.byYearDays != null && rule.byYearDays!.isNotEmpty) {
+      buffer.write(' on year-day ${rule.byYearDays!.join(", ")}');
+    }
+
+    if (rule.byWeekNumbers != null && rule.byWeekNumbers!.isNotEmpty) {
+      buffer.write(' in week ${rule.byWeekNumbers!.join(", ")}');
+    }
+
+    if (rule.count != null) {
+      buffer.write(' \u00d7${rule.count}');
+    } else if (rule.until != null) {
+      buffer.write(
+        ' until ${rule.until!.month}/${rule.until!.day}/${rule.until!.year}',
+      );
+    }
+
+    return buffer.toString();
   }
 
   void _onOverflowLongPress(
@@ -418,8 +1311,29 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 onDateLabelLongPress: _onDateLabelLongPress,
                 onEventTap: _onEventTap,
                 onEventLongPress: _onEventLongPress,
-                onOverflowTap: _onOverflowTap,
+                onOverflowTap: (context, details) {
+                  showDayEventsBottomSheet(
+                    context,
+                    details.date,
+                    details.allEvents,
+                    widget.locale,
+                  );
+                },
                 onOverflowLongPress: _onOverflowLongPress,
+                dayCellBuilder: _enableBlackoutDays
+                    ? (context, ctx, defaultCell) => _buildDayCellWithBlackout(
+                        context,
+                        ctx,
+                        defaultCell,
+                        colorScheme,
+                      )
+                    : null,
+                onDragWillAccept: _enableDragAndDrop && _enableBlackoutDays
+                    ? (context, details) => !_proposedRangeOverlapsBlackout(
+                        details.proposedStartDate,
+                        details.proposedEndDate,
+                      )
+                    : null,
                 // Drag-and-drop callback
                 onEventDropped: _enableDragAndDrop
                     ? (context, details) {
@@ -508,6 +1422,12 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 (v) => setState(() => _dropTargetTilesAboveOverlay = v),
                 colorScheme,
               ),
+              _buildCompactToggle(
+                'Blackout days',
+                _enableBlackoutDays,
+                (v) => setState(() => _enableBlackoutDays = v),
+                colorScheme,
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -594,6 +1514,19 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
             (v) => setState(() => _overflowIndicatorHeight = v),
             colorScheme,
           ),
+          const SizedBox(height: 12),
+          // ── Action buttons ──────────────────────────────────────
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => _onAddRecurringEvent(context),
+                  icon: const Icon(Icons.repeat, size: 18),
+                  label: const Text('Add Recurring Event'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -643,6 +1576,12 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 },
                 colorScheme,
               ),
+              _buildToggle(
+                'Blackout days',
+                _enableBlackoutDays,
+                (v) => setState(() => _enableBlackoutDays = v),
+                colorScheme,
+              ),
               // Loading/Error demo buttons
               FilledButton.tonal(
                 onPressed: () {
@@ -667,6 +1606,12 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                   _sharedController.setLoading(false);
                 },
                 child: const Text('Clear'),
+              ),
+              // Recurring event creation
+              FilledButton.icon(
+                onPressed: () => _onAddRecurringEvent(context),
+                icon: const Icon(Icons.repeat, size: 18),
+                label: const Text('Add Recurring Event'),
               ),
             ],
           ),
@@ -971,8 +1916,29 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 onDateLabelLongPress: _onDateLabelLongPress,
                 onEventTap: _onEventTap,
                 onEventLongPress: _onEventLongPress,
-                onOverflowTap: _onOverflowTap,
+                onOverflowTap: (context, details) {
+                  showDayEventsBottomSheet(
+                    context,
+                    details.date,
+                    details.allEvents,
+                    widget.locale,
+                  );
+                },
                 onOverflowLongPress: _onOverflowLongPress,
+                dayCellBuilder: _enableBlackoutDays
+                    ? (context, ctx, defaultCell) => _buildDayCellWithBlackout(
+                        context,
+                        ctx,
+                        defaultCell,
+                        colorScheme,
+                      )
+                    : null,
+                onDragWillAccept: _enableDragAndDrop && _enableBlackoutDays
+                    ? (context, details) => !_proposedRangeOverlapsBlackout(
+                        details.proposedStartDate,
+                        details.proposedEndDate,
+                      )
+                    : null,
                 // Drag-and-drop callback
                 onEventDropped: _enableDragAndDrop
                     ? (context, details) {
@@ -1256,6 +2222,17 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
 
   String _formatDate(DateTime date) {
     return '${date.month}/${date.day}/${date.year}';
+  }
+
+  String _formatTime(DateTime dt) {
+    final h = dt.hour == 0
+        ? 12
+        : dt.hour > 12
+        ? dt.hour - 12
+        : dt.hour;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final ampm = dt.hour < 12 ? 'AM' : 'PM';
+    return '$h:$m $ampm';
   }
 
   bool _isSameDay(DateTime a, DateTime b) {

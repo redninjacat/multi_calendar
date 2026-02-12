@@ -282,19 +282,26 @@ class MCalDragHandler extends ChangeNotifier {
     }
   }
 
-  /// Clears the proposed drop range.
+  /// Clears the proposed drop range (highlighted cells, proposed dates, validity).
   ///
-  /// Called when the drag leaves the calendar grid or is cancelled.
+  /// Called when the drag leaves the calendar grid, is cancelled, or when the
+  /// displayed month changes during drag (e.g. edge navigation). In the latter
+  /// case, the user must move the pointer to re-trigger [handleDragMove] and
+  /// re-show the drop target for the new month.
   void clearProposedDropRange() {
-    if (_proposedStartDate == null &&
-        _proposedEndDate == null &&
-        !_isProposedDropValid) {
-      return; // Already cleared, no need to notify
-    }
+    final hadState =
+        _highlightedCells.isNotEmpty ||
+        _proposedStartDate != null ||
+        _proposedEndDate != null ||
+        _isProposedDropValid;
+    if (!hadState) return;
 
+    _highlightedCells = [];
     _proposedStartDate = null;
     _proposedEndDate = null;
     _isProposedDropValid = false;
+    _previousStartCellIndex = null;
+    _previousWeekRowIndex = null;
     notifyListeners();
   }
 
@@ -550,13 +557,21 @@ class MCalDragHandler extends ChangeNotifier {
     _previousStartCellIndex = dropStartCellIndex;
     _previousWeekRowIndex = _pendingWeekRowIndex;
 
-    // Calculate proposed date range
+    // Calculate proposed date range using calendar-day arithmetic (not Duration)
+    // to avoid DST bugs: on Nov 2 when DST ends, Duration(days: 1) = 24h lands
+    // on Nov 2 23:00 instead of Nov 3.
     final baseDate = _pendingWeekDates.isNotEmpty
         ? _pendingWeekDates[0]
         : DateTime.now();
-    final proposedStartDate = baseDate.add(Duration(days: dropStartCellIndex));
-    final proposedEndDate = proposedStartDate.add(
-      Duration(days: _cachedEventDurationDays - 1),
+    final proposedStartDate = DateTime(
+      baseDate.year,
+      baseDate.month,
+      baseDate.day + dropStartCellIndex,
+    );
+    final proposedEndDate = DateTime(
+      proposedStartDate.year,
+      proposedStartDate.month,
+      proposedStartDate.day + _cachedEventDurationDays - 1,
     );
 
     // Validate if callback provided

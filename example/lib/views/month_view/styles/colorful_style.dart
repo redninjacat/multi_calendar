@@ -157,6 +157,50 @@ class ColorfulMonthStyle extends StatelessWidget {
 
                   return pill;
                 },
+                dropTargetOverlayBuilder: (context, details) {
+                  return Stack(
+                    children: details.highlightedCells.map((cell) {
+                      return Positioned.fromRect(
+                        rect: cell.bounds,
+                        child: Container(
+                          margin: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: details.isValid
+                                  ? [
+                                      gradientStart.withAlpha(80),
+                                      gradientEnd.withAlpha(80),
+                                    ]
+                                  : [
+                                      Colors.red.withAlpha(80),
+                                      Colors.red.withAlpha(60),
+                                    ],
+                            ),
+                            borderRadius: BorderRadius.horizontal(
+                              left: cell.isFirst
+                                  ? const Radius.circular(16)
+                                  : Radius.zero,
+                              right: cell.isLast
+                                  ? const Radius.circular(16)
+                                  : Radius.zero,
+                            ),
+                            boxShadow: details.isValid
+                                ? [
+                                    BoxShadow(
+                                      color: gradientEnd.withAlpha(60),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
                 onCellTap: (context, details) {
                   onDateSelected(details.date);
                   showDayEventsBottomSheet(

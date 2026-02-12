@@ -154,5 +154,61 @@ List<MCalCalendarEvent> createSampleEvents() {
       comment: '2-day hackathon event',
       color: _eventColors[0], // Indigo
     ),
+
+    // ============ Recurring events ============
+    // Weekly standup every Monday at 10:00, 30min
+    MCalCalendarEvent(
+      id: 'recurring-standup',
+      title: 'Weekly Standup',
+      start: _previousOrCurrentMonday(now).copyWith(hour: 10, minute: 0),
+      end: _previousOrCurrentMonday(now).copyWith(hour: 10, minute: 30),
+      isAllDay: false,
+      color: const Color(0xFF0EA5E9), // Sky blue
+      recurrenceRule: MCalRecurrenceRule(
+        frequency: MCalFrequency.weekly,
+        byWeekDays: {MCalWeekDay.every(DateTime.monday)},
+      ),
+    ),
+    // Monthly review on the 1st of each month at 14:00, 1hr
+    MCalCalendarEvent(
+      id: 'recurring-review',
+      title: 'Monthly Review',
+      start: DateTime(now.year, now.month, 1, 14, 0),
+      end: DateTime(now.year, now.month, 1, 15, 0),
+      isAllDay: false,
+      color: const Color(0xFFF97316), // Orange
+      recurrenceRule: MCalRecurrenceRule(
+        frequency: MCalFrequency.monthly,
+        byMonthDays: const [1],
+      ),
+    ),
+    // Bi-weekly Friday retrospective at 16:00, 45min
+    MCalCalendarEvent(
+      id: 'recurring-retro',
+      title: 'Bi-Weekly Retro',
+      start: _previousOrCurrentFriday(now).copyWith(hour: 16, minute: 0),
+      end: _previousOrCurrentFriday(now).copyWith(hour: 16, minute: 45),
+      isAllDay: false,
+      color: const Color(0xFFD946EF), // Fuchsia
+      recurrenceRule: MCalRecurrenceRule(
+        frequency: MCalFrequency.weekly,
+        interval: 2,
+        byWeekDays: {MCalWeekDay.every(DateTime.friday)},
+      ),
+    ),
   ];
+}
+
+/// Returns the most recent Monday on or before [date].
+DateTime _previousOrCurrentMonday(DateTime date) {
+  final daysFromMonday = (date.weekday - DateTime.monday) % 7;
+  final monday = date.subtract(Duration(days: daysFromMonday));
+  return DateTime(monday.year, monday.month, monday.day);
+}
+
+/// Returns the most recent Friday on or before [date].
+DateTime _previousOrCurrentFriday(DateTime date) {
+  final daysFromFriday = (date.weekday - DateTime.friday + 7) % 7;
+  final friday = date.subtract(Duration(days: daysFromFriday));
+  return DateTime(friday.year, friday.month, friday.day);
 }

@@ -1,5 +1,15 @@
 import 'dart:ui' show Color;
 
+import 'package:multi_calendar/src/models/mcal_recurrence_rule.dart';
+
+/// Sentinel value used by [MCalCalendarEvent.copyWith] to distinguish between
+/// "not passed" and "explicitly passed as null" for the [MCalCalendarEvent.recurrenceRule] field.
+const _sentinel = _Sentinel();
+
+class _Sentinel {
+  const _Sentinel();
+}
+
 /// A data model representing a calendar event.
 ///
 /// This class provides a simple, immutable representation of a calendar event
@@ -60,6 +70,13 @@ class MCalCalendarEvent {
   /// default event color or the color from an [eventTileBuilder].
   final Color? color;
 
+  /// Optional recurrence rule defining how this event repeats.
+  ///
+  /// When non-null, this event is the master event for a recurring series.
+  /// The controller will expand occurrences based on this rule.
+  /// When null, this is a standalone (non-recurring) event.
+  final MCalRecurrenceRule? recurrenceRule;
+
   /// Creates a new [MCalCalendarEvent] instance.
   ///
   /// The [id], [title], [start], and [end] parameters are required.
@@ -74,9 +91,15 @@ class MCalCalendarEvent {
     this.externalId,
     this.occurrenceId,
     this.color,
+    this.recurrenceRule,
   });
 
   /// Creates a copy of this event with the given fields replaced.
+  ///
+  /// The [recurrenceRule] parameter uses a sentinel value internally so that
+  /// callers can explicitly set it to `null` (to remove recurrence from an
+  /// event). Passing nothing preserves the current value; passing `null`
+  /// clears it.
   MCalCalendarEvent copyWith({
     String? id,
     String? title,
@@ -87,6 +110,7 @@ class MCalCalendarEvent {
     String? externalId,
     String? occurrenceId,
     Color? color,
+    Object? recurrenceRule = _sentinel,
   }) {
     return MCalCalendarEvent(
       id: id ?? this.id,
@@ -98,6 +122,9 @@ class MCalCalendarEvent {
       externalId: externalId ?? this.externalId,
       occurrenceId: occurrenceId ?? this.occurrenceId,
       color: color ?? this.color,
+      recurrenceRule: recurrenceRule == _sentinel
+          ? this.recurrenceRule
+          : recurrenceRule as MCalRecurrenceRule?,
     );
   }
 
@@ -105,7 +132,8 @@ class MCalCalendarEvent {
   String toString() {
     return 'MCalCalendarEvent(id: $id, title: $title, start: $start, end: $end, '
         'isAllDay: $isAllDay, comment: $comment, externalId: $externalId, '
-        'occurrenceId: $occurrenceId, color: $color)';
+        'occurrenceId: $occurrenceId, color: $color, '
+        'recurrenceRule: $recurrenceRule)';
   }
 
   @override
@@ -120,7 +148,8 @@ class MCalCalendarEvent {
         other.comment == comment &&
         other.externalId == externalId &&
         other.occurrenceId == occurrenceId &&
-        other.color == color;
+        other.color == color &&
+        other.recurrenceRule == recurrenceRule;
   }
 
   @override
@@ -135,6 +164,7 @@ class MCalCalendarEvent {
       externalId,
       occurrenceId,
       color,
+      recurrenceRule,
     );
   }
 }

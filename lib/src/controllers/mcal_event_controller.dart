@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/mcal_calendar_event.dart';
+import '../models/mcal_event_change_info.dart';
+import '../models/mcal_recurrence_exception.dart';
+import '../models/mcal_recurrence_rule.dart';
 
 /// Controller for managing calendar events and view state.
 ///
@@ -78,6 +81,32 @@ class MCalEventController extends ChangeNotifier {
   /// navigation to optionally skip animation.
   bool _animateNextChange = true;
 
+  // ============================================================
+  // Recurrence Foundation State
+  // ============================================================
+
+  /// Exception store: seriesId -> {normalizedOriginalDate -> exception}.
+  ///
+  /// Stores recurrence exceptions keyed by series ID and then by normalized
+  /// original date for O(1) lookup during expansion.
+  final Map<String, Map<DateTime, MCalRecurrenceException>>
+      _exceptionsBySeriesId = {};
+
+  /// Expansion cache: seriesId -> expanded occurrence list.
+  ///
+  /// Caches expanded occurrences for each recurring series so that
+  /// repeated calls to [getEventsForRange] don't re-expand.
+  final Map<String, List<MCalCalendarEvent>> _expandedBySeriesId = {};
+
+  /// The date range for which [_expandedBySeriesId] is valid.
+  DateTimeRange? _expandedRange;
+
+  /// Metadata describing the last mutation performed on the controller.
+  ///
+  /// Set before [notifyListeners] by mutation methods to enable targeted
+  /// view rebuilds.
+  MCalEventChangeInfo? _lastChange;
+
   /// Creates a new [MCalEventController] instance.
   ///
   /// [initialDate] sets the initially displayed date. Defaults to today if not provided.
@@ -118,6 +147,17 @@ class MCalEventController extends ChangeNotifier {
   /// determine whether to animate or jump directly to the new date.
   /// After reading this value, call [consumeAnimationFlag] to reset it.
   bool get shouldAnimateNextChange => _animateNextChange;
+
+  // ============================================================
+  // Recurrence Foundation Getters
+  // ============================================================
+
+  /// The last change info describing the most recent mutation.
+  ///
+  /// Returns null if no mutation has been performed yet. Updated before
+  /// [notifyListeners] by methods like [addEvents], [clearEvents], and
+  /// future recurrence mutation methods.
+  MCalEventChangeInfo? get lastChange => _lastChange;
 
   // ============================================================
   // Task 1: Display and Focus Date Methods
@@ -314,6 +354,10 @@ class MCalEventController extends ChangeNotifier {
     for (final event in events) {
       _eventsById[event.id] = event;
     }
+    _lastChange = MCalEventChangeInfo(
+      type: MCalChangeType.bulkChange,
+      affectedEventIds: events.map((e) => e.id).toSet(),
+    );
     notifyListeners();
   }
 
@@ -329,6 +373,10 @@ class MCalEventController extends ChangeNotifier {
     for (final id in eventIds) {
       _eventsById.remove(id);
     }
+    _lastChange = MCalEventChangeInfo(
+      type: MCalChangeType.bulkChange,
+      affectedEventIds: eventIds.toSet(),
+    );
     notifyListeners();
   }
 
@@ -336,7 +384,12 @@ class MCalEventController extends ChangeNotifier {
   ///
   /// Notifies listeners after clearing events.
   void clearEvents() {
+    final clearedIds = _eventsById.keys.toSet();
     _eventsById.clear();
+    _lastChange = MCalEventChangeInfo(
+      type: MCalChangeType.bulkChange,
+      affectedEventIds: clearedIds,
+    );
     notifyListeners();
   }
 
@@ -346,26 +399,57 @@ class MCalEventController extends ChangeNotifier {
   List<MCalCalendarEvent> get allEvents =>
       List.unmodifiable(_eventsById.values);
 
+  /// Gets a single cached event by its ID.
+  ///
+  /// Returns the [MCalCalendarEvent] with the given [id], or `null` if
+  /// no event with that ID exists in the cache.
+  MCalCalendarEvent? getEventById(String id) => _eventsById[id];
+
   /// Gets events that fall within the specified date range.
   ///
-  /// An event is included if it overlaps with the specified range, meaning:
-  /// - Event starts before range ends, AND
-  /// - Event ends after range starts
+  /// Non-recurring events are included if they overlap with the specified range
+  /// (event starts before range ends AND event ends after range starts).
+  ///
+  /// Recurring events are expanded into individual occurrences using
+  /// [MCalRecurrenceRule.getOccurrences], with exceptions from
+  /// [_exceptionsBySeriesId] applied (deleted occurrences are skipped,
+  /// rescheduled occurrences are moved, modified occurrences are replaced).
+  /// Expanded occurrences are cached in [_expandedBySeriesId] for efficient
+  /// subsequent queries within the same range.
   ///
   /// Parameters:
   /// - [range]: The date range to query
   ///
   /// Returns a list of events that overlap with the range.
   List<MCalCalendarEvent> getEventsForRange(DateTimeRange range) {
-    return _eventsById.values.where((event) {
-      // Event overlaps with range if:
-      // - It starts before or at the same moment as range ends
-      // - It ends after or at the same moment as range starts
-      // Using negated isBefore/isAfter to include exact boundary matches
-      final startsBeforeRangeEnds = !event.start.isAfter(range.end);
-      final endsAfterRangeStarts = !event.end.isBefore(range.start);
-      return startsBeforeRangeEnds && endsAfterRangeStarts;
-    }).toList();
+    // If the query range differs from the cached range, invalidate expansion cache
+    if (_expandedRange != null &&
+        (_expandedRange!.start != range.start ||
+            _expandedRange!.end != range.end)) {
+      _expandedBySeriesId.clear();
+    }
+
+    final results = <MCalCalendarEvent>[];
+
+    for (final event in _eventsById.values) {
+      if (event.recurrenceRule != null) {
+        // Expand recurring event into occurrences
+        final occurrences = _getExpandedOccurrences(event, range);
+        results.addAll(occurrences);
+      } else {
+        // Existing logic for standalone events: overlap check
+        final startsBeforeRangeEnds = !event.start.isAfter(range.end);
+        final endsAfterRangeStarts = !event.end.isBefore(range.start);
+        if (startsBeforeRangeEnds && endsAfterRangeStarts) {
+          results.add(event);
+        }
+      }
+    }
+
+    // Update the cached range
+    _expandedRange = range;
+
+    return results;
   }
 
   /// Gets events for a specific date.
@@ -404,5 +488,482 @@ class MCalEventController extends ChangeNotifier {
   void setVisibleDateRange(DateTimeRange range) {
     _visibleDateRange = range;
     notifyListeners();
+  }
+
+  // ============================================================
+  // Recurrence Foundation Helpers
+  // ============================================================
+
+  /// Normalizes a [DateTime] to midnight (strips time components).
+  ///
+  /// Returns `DateTime(date.year, date.month, date.day)` for consistent
+  /// map keying in the exception store and expansion cache.
+  DateTime _normalizeDate(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
+
+  // ============================================================
+  // Task 8: Recurrence Expansion Engine
+  // ============================================================
+
+  /// Expands a recurring [master] event into individual occurrences for the
+  /// given [range].
+  ///
+  /// Checks [_expandedBySeriesId] for a cache hit before expanding. When
+  /// expanding, calls [MCalRecurrenceRule.getOccurrences] and applies
+  /// exceptions from [_exceptionsBySeriesId]:
+  /// - **deleted**: the occurrence is skipped
+  /// - **rescheduled**: the occurrence's start/end are moved to [newDate]
+  /// - **modified**: the occurrence is replaced with [modifiedEvent]
+  ///
+  /// Each occurrence gets a deterministic ID of the form
+  /// `"{masterId}_{normalizedDateIso8601}"` and an [occurrenceId] set to
+  /// the normalized date's ISO 8601 string.
+  ///
+  /// Results are cached in [_expandedBySeriesId] for the current range.
+  List<MCalCalendarEvent> _getExpandedOccurrences(
+    MCalCalendarEvent master,
+    DateTimeRange range,
+  ) {
+    // Check cache — if the expanded range matches, filter cached results.
+    if (_expandedRange != null &&
+        _expandedBySeriesId.containsKey(master.id) &&
+        _expandedRange!.start == range.start &&
+        _expandedRange!.end == range.end) {
+      return _expandedBySeriesId[master.id]!
+          .where((e) =>
+              !e.start.isAfter(range.end) && !e.end.isBefore(range.start))
+          .toList();
+    }
+
+    // Expand using MCalRecurrenceRule.getOccurrences()
+    final duration = master.end.difference(master.start);
+    final occurrenceDates = master.recurrenceRule!.getOccurrences(
+      start: master.start,
+      after: range.start,
+      before: range.end,
+    );
+
+    final exceptions = _exceptionsBySeriesId[master.id] ?? {};
+    final expanded = <MCalCalendarEvent>[];
+    final processedDateKeys = <DateTime>{};
+
+    for (final date in occurrenceDates) {
+      final dateKey = _normalizeDate(date);
+      processedDateKeys.add(dateKey);
+      final exception = exceptions[dateKey];
+
+      if (exception != null) {
+        switch (exception.type) {
+          case MCalExceptionType.deleted:
+            continue; // Skip this occurrence
+          case MCalExceptionType.rescheduled:
+            final newStart = exception.newDate!;
+            final newEnd = newStart.add(duration);
+            // Only include if the rescheduled date falls within query range
+            if (!newStart.isAfter(range.end) &&
+                !newEnd.isBefore(range.start)) {
+              expanded.add(master.copyWith(
+                id: '${master.id}_${dateKey.toIso8601String()}',
+                start: newStart,
+                end: newEnd,
+                occurrenceId: dateKey.toIso8601String(),
+              ));
+            }
+            break;
+          case MCalExceptionType.modified:
+            final modEvent = exception.modifiedEvent!.copyWith(
+              occurrenceId: dateKey.toIso8601String(),
+            );
+            // Only include if the modified event overlaps the query range
+            if (!modEvent.start.isAfter(range.end) &&
+                !modEvent.end.isBefore(range.start)) {
+              expanded.add(modEvent);
+            }
+            break;
+        }
+      } else {
+        expanded.add(master.copyWith(
+          id: '${master.id}_${dateKey.toIso8601String()}',
+          start: date,
+          end: date.add(duration),
+          occurrenceId: dateKey.toIso8601String(),
+        ));
+      }
+    }
+
+    // Include rescheduled occurrences whose original date falls outside the
+    // query range but whose new date lands inside it.
+    for (final entry in exceptions.entries) {
+      final exception = entry.value;
+      if (exception.type == MCalExceptionType.rescheduled &&
+          !processedDateKeys.contains(entry.key)) {
+        final newStart = exception.newDate!;
+        final newEnd = newStart.add(duration);
+        if (!newStart.isAfter(range.end) && !newEnd.isBefore(range.start)) {
+          expanded.add(master.copyWith(
+            id: '${master.id}_${entry.key.toIso8601String()}',
+            start: newStart,
+            end: newEnd,
+            occurrenceId: entry.key.toIso8601String(),
+          ));
+        }
+      }
+    }
+
+    // Cache results for this series
+    _expandedBySeriesId[master.id] = expanded;
+    return expanded;
+  }
+
+  /// Patches the expansion cache in O(1) when an exception is added.
+  ///
+  /// For **deleted** exceptions: removes the matching occurrence from cache.
+  /// For **rescheduled** exceptions: finds and updates the matching
+  /// occurrence's start/end.
+  /// For **modified** exceptions: finds and replaces the matching occurrence.
+  ///
+  /// This avoids a full re-expansion of the series when a single exception
+  /// is added.
+  void _patchCacheForException(
+    String seriesId,
+    MCalRecurrenceException exception,
+  ) {
+    final cached = _expandedBySeriesId[seriesId];
+    if (cached == null) return;
+
+    final dateKey = _normalizeDate(exception.originalDate);
+    final dateKeyIso = dateKey.toIso8601String();
+
+    switch (exception.type) {
+      case MCalExceptionType.deleted:
+        cached.removeWhere((e) => e.occurrenceId == dateKeyIso);
+        break;
+      case MCalExceptionType.rescheduled:
+        final idx = cached.indexWhere((e) => e.occurrenceId == dateKeyIso);
+        if (idx >= 0) {
+          final master = _eventsById[seriesId]!;
+          final duration = master.end.difference(master.start);
+          cached[idx] = master.copyWith(
+            id: '${seriesId}_$dateKeyIso',
+            start: exception.newDate,
+            end: exception.newDate!.add(duration),
+            occurrenceId: dateKeyIso,
+          );
+        }
+        break;
+      case MCalExceptionType.modified:
+        final idx = cached.indexWhere((e) => e.occurrenceId == dateKeyIso);
+        if (idx >= 0) {
+          cached[idx] = exception.modifiedEvent!.copyWith(
+            occurrenceId: dateKeyIso,
+          );
+        }
+        break;
+    }
+  }
+
+  /// Invalidates the expansion cache for a series when an exception is removed.
+  ///
+  /// Uses the simplest correct approach: removes the series from
+  /// [_expandedBySeriesId] so it will be re-expanded on the next query.
+  void _patchCacheForExceptionRemoval(
+    String seriesId,
+    MCalRecurrenceException exception,
+  ) {
+    _expandedBySeriesId.remove(seriesId);
+  }
+
+  /// Computes the [DateTimeRange] affected by the given [exception].
+  ///
+  /// Returns a range covering the affected dates:
+  /// - **deleted**: covers just the original date
+  /// - **rescheduled**: covers the original date through the new date (or vice
+  ///   versa if the new date is earlier)
+  /// - **modified**: covers just the original date (the modified event may
+  ///   have different dates, but the original occurrence date is the anchor)
+  DateTimeRange _computeAffectedRange(MCalRecurrenceException exception) {
+    final originalDay = _normalizeDate(exception.originalDate);
+
+    switch (exception.type) {
+      case MCalExceptionType.deleted:
+      case MCalExceptionType.modified:
+        // Use calendar-day arithmetic (not Duration) to avoid DST issues.
+        // Duration(days: 1) = 24h can land on the same day at 23:00 on
+        // DST fall-back (e.g. Nov 2, 2025 US).
+        return DateTimeRange(
+          start: originalDay,
+          end: DateTime(originalDay.year, originalDay.month, originalDay.day + 1),
+        );
+      case MCalExceptionType.rescheduled:
+        final newDay = _normalizeDate(exception.newDate!);
+        final start = originalDay.isBefore(newDay) ? originalDay : newDay;
+        final end = originalDay.isBefore(newDay) ? newDay : originalDay;
+        return DateTimeRange(
+          start: start,
+          end: DateTime(end.year, end.month, end.day + 1),
+        );
+    }
+  }
+
+  // ============================================================
+  // Task 9: Exception CRUD Methods
+  // ============================================================
+
+  /// Adds a recurrence exception for a series.
+  ///
+  /// Stores the [exception] in [_exceptionsBySeriesId] keyed by
+  /// `_normalizeDate(exception.originalDate)`, patches the expansion cache
+  /// in O(1) via [_patchCacheForException], sets [_lastChange] with type
+  /// [MCalChangeType.exceptionAdded], and notifies listeners.
+  ///
+  /// Returns the [exception] that was added, enabling callers to chain or
+  /// persist the result.
+  ///
+  /// Parameters:
+  /// - [seriesId]: The ID of the recurring event master
+  /// - [exception]: The exception to add
+  MCalRecurrenceException addException(
+    String seriesId,
+    MCalRecurrenceException exception,
+  ) {
+    _exceptionsBySeriesId.putIfAbsent(seriesId, () => {});
+    final dateKey = _normalizeDate(exception.originalDate);
+    _exceptionsBySeriesId[seriesId]![dateKey] = exception;
+
+    // Patch cache in O(1) instead of re-expanding
+    _patchCacheForException(seriesId, exception);
+
+    _lastChange = MCalEventChangeInfo(
+      type: MCalChangeType.exceptionAdded,
+      affectedEventIds: {seriesId},
+      affectedDateRange: _computeAffectedRange(exception),
+    );
+    notifyListeners();
+    return exception;
+  }
+
+  /// Adds multiple recurrence exceptions for a series in batch.
+  ///
+  /// Stores all [exceptions] in [_exceptionsBySeriesId], then invalidates
+  /// the series expansion cache (batch re-expansion is cheaper than N
+  /// individual patches). Sets [_lastChange] with type
+  /// [MCalChangeType.bulkChange] and notifies listeners.
+  ///
+  /// Parameters:
+  /// - [seriesId]: The ID of the recurring event master
+  /// - [exceptions]: The list of exceptions to add
+  void addExceptions(
+    String seriesId,
+    List<MCalRecurrenceException> exceptions,
+  ) {
+    _exceptionsBySeriesId.putIfAbsent(seriesId, () => {});
+    for (final ex in exceptions) {
+      _exceptionsBySeriesId[seriesId]![_normalizeDate(ex.originalDate)] = ex;
+    }
+    // Invalidate series cache (batch = re-expand is more efficient than N patches)
+    _expandedBySeriesId.remove(seriesId);
+    _lastChange = MCalEventChangeInfo(
+      type: MCalChangeType.bulkChange,
+      affectedEventIds: {seriesId},
+    );
+    notifyListeners();
+  }
+
+  /// Removes a recurrence exception for a series by its original date.
+  ///
+  /// Removes the exception keyed by `_normalizeDate(originalDate)` from
+  /// [_exceptionsBySeriesId]. If found, invalidates the series expansion
+  /// cache via [_patchCacheForExceptionRemoval], sets [_lastChange] with
+  /// type [MCalChangeType.exceptionRemoved], and notifies listeners.
+  ///
+  /// Returns the removed [MCalRecurrenceException], or `null` if no
+  /// exception was found for the given [originalDate].
+  ///
+  /// Parameters:
+  /// - [seriesId]: The ID of the recurring event master
+  /// - [originalDate]: The original occurrence date of the exception to remove
+  MCalRecurrenceException? removeException(
+    String seriesId,
+    DateTime originalDate,
+  ) {
+    final dateKey = _normalizeDate(originalDate);
+    final removed = _exceptionsBySeriesId[seriesId]?.remove(dateKey);
+    if (removed != null) {
+      _patchCacheForExceptionRemoval(seriesId, removed);
+      _lastChange = MCalEventChangeInfo(
+        type: MCalChangeType.exceptionRemoved,
+        affectedEventIds: {seriesId},
+        affectedDateRange: _computeAffectedRange(removed),
+      );
+      notifyListeners();
+    }
+    return removed;
+  }
+
+  /// Returns all recurrence exceptions for a series.
+  ///
+  /// Returns an empty list if no exceptions exist for the given [seriesId].
+  /// This is a read-only operation with no side effects.
+  ///
+  /// Parameters:
+  /// - [seriesId]: The ID of the recurring event master
+  List<MCalRecurrenceException> getExceptions(String seriesId) {
+    return _exceptionsBySeriesId[seriesId]?.values.toList() ?? [];
+  }
+
+  /// Convenience method that creates a modified exception and adds it.
+  ///
+  /// Creates an [MCalRecurrenceException.modified] for the given
+  /// [originalDate] with [modifiedEvent] and delegates to [addException].
+  ///
+  /// Returns the created [MCalRecurrenceException].
+  ///
+  /// Parameters:
+  /// - [seriesId]: The ID of the recurring event master
+  /// - [originalDate]: The original occurrence date to modify
+  /// - [modifiedEvent]: The replacement event for this occurrence
+  MCalRecurrenceException modifyOccurrence(
+    String seriesId,
+    DateTime originalDate,
+    MCalCalendarEvent modifiedEvent,
+  ) {
+    return addException(
+      seriesId,
+      MCalRecurrenceException.modified(
+        originalDate: originalDate,
+        modifiedEvent: modifiedEvent,
+      ),
+    );
+  }
+
+  // ============================================================
+  // Task 10: Series Management Methods
+  // ============================================================
+
+  /// Replaces a recurring master event and invalidates its expansion cache.
+  ///
+  /// Updates the master event in [_eventsById], removes the series from
+  /// [_expandedBySeriesId] so it will be re-expanded on the next query,
+  /// sets [_lastChange] with type [MCalChangeType.eventUpdated], and
+  /// notifies listeners.
+  ///
+  /// Parameters:
+  /// - [event]: The updated master event (must have a non-null [recurrenceRule])
+  void updateRecurringEvent(MCalCalendarEvent event) {
+    _eventsById[event.id] = event;
+    _expandedBySeriesId.remove(event.id);
+    _lastChange = MCalEventChangeInfo(
+      type: MCalChangeType.eventUpdated,
+      affectedEventIds: {event.id},
+    );
+    notifyListeners();
+  }
+
+  /// Removes a recurring master event and all associated data.
+  ///
+  /// Removes the event from [_eventsById], its exceptions from
+  /// [_exceptionsBySeriesId], and its expansion cache from
+  /// [_expandedBySeriesId]. Sets [_lastChange] with type
+  /// [MCalChangeType.eventRemoved] and notifies listeners.
+  ///
+  /// Parameters:
+  /// - [eventId]: The ID of the recurring master event to delete
+  void deleteRecurringEvent(String eventId) {
+    _eventsById.remove(eventId);
+    _exceptionsBySeriesId.remove(eventId);
+    _expandedBySeriesId.remove(eventId);
+    _lastChange = MCalEventChangeInfo(
+      type: MCalChangeType.eventRemoved,
+      affectedEventIds: {eventId},
+    );
+    notifyListeners();
+  }
+
+  /// Splits a recurring series into two at [fromDate].
+  ///
+  /// 1. **Truncates** the original master by setting its recurrence rule's
+  ///    `until` to the day before [fromDate] (clearing any `count`).
+  /// 2. **Creates a new master** starting at [fromDate] with the same
+  ///    recurrence pattern as the original (before truncation), preserving
+  ///    the original event's time-of-day and duration.
+  /// 3. **Moves exceptions** whose `originalDate` is on or after [fromDate]
+  ///    from the original series to the new series.
+  /// 4. **Invalidates** expansion caches for both series.
+  /// 5. Sets [_lastChange] with type [MCalChangeType.seriesSplit] and
+  ///    notifies listeners.
+  ///
+  /// Throws [StateError] if no event with [seriesId] exists.
+  /// Throws [ArgumentError] if the event is not recurring.
+  ///
+  /// Returns the new master event's ID.
+  ///
+  /// Parameters:
+  /// - [seriesId]: The ID of the recurring master event to split
+  /// - [fromDate]: The date at which to split the series
+  String splitSeries(String seriesId, DateTime fromDate) {
+    final master = _eventsById[seriesId];
+    if (master == null) {
+      throw StateError('No event found with id "$seriesId".');
+    }
+    if (master.recurrenceRule == null) {
+      throw ArgumentError('Event "$seriesId" is not a recurring event.');
+    }
+
+    // 1. Truncate original series to end before fromDate
+    // Use calendar-day arithmetic (not Duration) to avoid DST issues.
+    final dayBefore = DateTime(fromDate.year, fromDate.month, fromDate.day - 1);
+    final truncatedRule = master.recurrenceRule!.copyWith(
+      until: () => dayBefore,
+      count: () => null, // clear count, use until instead
+    );
+    _eventsById[seriesId] = master.copyWith(recurrenceRule: truncatedRule);
+
+    // 2. Create new master starting at fromDate
+    final newId = '${seriesId}_split_${fromDate.toIso8601String()}';
+    final duration = master.end.difference(master.start);
+    final newStart = DateTime(
+      fromDate.year,
+      fromDate.month,
+      fromDate.day,
+      master.start.hour,
+      master.start.minute,
+      master.start.second,
+      master.start.millisecond,
+    );
+    final newMaster = master.copyWith(
+      id: newId,
+      start: newStart,
+      end: newStart.add(duration),
+      recurrenceRule: master.recurrenceRule, // original pattern (no truncation)
+    );
+    _eventsById[newId] = newMaster;
+
+    // 3. Move exceptions on or after fromDate to new series
+    final originalExceptions = _exceptionsBySeriesId[seriesId];
+    if (originalExceptions != null) {
+      final toMove = <DateTime, MCalRecurrenceException>{};
+      originalExceptions.removeWhere((date, ex) {
+        if (!date.isBefore(fromDate)) {
+          toMove[date] = ex;
+          return true;
+        }
+        return false;
+      });
+      if (toMove.isNotEmpty) {
+        _exceptionsBySeriesId[newId] = toMove;
+      }
+    }
+
+    // 4. Invalidate caches for both series
+    _expandedBySeriesId.remove(seriesId);
+    _expandedBySeriesId.remove(newId);
+
+    _lastChange = MCalEventChangeInfo(
+      type: MCalChangeType.seriesSplit,
+      affectedEventIds: {seriesId, newId},
+    );
+    notifyListeners();
+    return newId;
   }
 }

@@ -207,6 +207,7 @@ class MCalLocalizations {
     'calendar': 'Calendar',
     // Drop target semantics (single announcement for whole overlay)
     'dropTargetPrefix': 'Drop target',
+    'dropTargetDateRangeTo': 'to',
     'dropTargetValid': 'valid',
     'dropTargetInvalid': 'invalid',
   };
@@ -254,6 +255,7 @@ class MCalLocalizations {
     'calendar': 'Calendario',
     // Drop target semantics (single announcement for whole overlay)
     'dropTargetPrefix': 'Zona de soltar',
+    'dropTargetDateRangeTo': 'a',
     'dropTargetValid': 'válido',
     'dropTargetInvalid': 'no válido',
   };

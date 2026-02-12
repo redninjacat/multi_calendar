@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/mcal_calendar_event.dart';
+import '../models/mcal_recurrence_rule.dart';
 import 'mcal_week_layout_contexts.dart';
 
 /// Context object for day cell builder callbacks.
@@ -150,6 +151,35 @@ class MCalEventTileContext {
   /// Only set for Layer 3; null for Layer 2.
   final DateTime? proposedEndDate;
 
+  /// Whether this tile represents a recurring event occurrence.
+  ///
+  /// Defaults to `false` for non-recurring events.
+  final bool isRecurring;
+
+  /// The master event's ID for recurring events.
+  ///
+  /// This is the ID of the original master event that generated this
+  /// occurrence. `null` for non-recurring events.
+  final String? seriesId;
+
+  /// The recurrence rule from the master event.
+  ///
+  /// Provides access to the recurrence pattern (frequency, interval, etc.)
+  /// for use in builder callbacks. `null` for non-recurring events.
+  final MCalRecurrenceRule? recurrenceRule;
+
+  /// Reference to the original master event for recurring events.
+  ///
+  /// Provides access to the full master event data (e.g., original title,
+  /// color, etc.) for use in builder callbacks. `null` for non-recurring events.
+  final MCalCalendarEvent? masterEvent;
+
+  /// Whether this occurrence has an exception applied.
+  ///
+  /// `true` when this occurrence has been modified, rescheduled, or otherwise
+  /// differs from the default recurrence pattern. Defaults to `false`.
+  final bool isException;
+
   /// Creates a new [MCalEventTileContext] instance.
   const MCalEventTileContext({
     required this.event,
@@ -162,6 +192,11 @@ class MCalEventTileContext {
     this.dropValid,
     this.proposedStartDate,
     this.proposedEndDate,
+    this.isRecurring = false,
+    this.seriesId,
+    this.recurrenceRule,
+    this.masterEvent,
+    this.isException = false,
   });
 }
 

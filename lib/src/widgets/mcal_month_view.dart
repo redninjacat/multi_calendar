@@ -8,6 +8,8 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
+import '../models/mcal_recurrence_exception.dart';
+import '../models/mcal_recurrence_rule.dart';
 import '../styles/mcal_theme.dart';
 import '../utils/date_utils.dart';
 import '../utils/mcal_localization.dart';
@@ -43,6 +45,75 @@ enum MCalSwipeDirection {
 
   /// Navigated to the next period (triggered by swipe left or up).
   next,
+}
+
+/// Returns recurrence metadata for an event.
+///
+/// For recurring occurrences (identified by non-null [MCalCalendarEvent.occurrenceId]),
+/// extracts seriesId from the event ID, looks up the master event via the
+/// controller, and checks for exceptions.
+///
+/// For non-recurring events, returns default values (isRecurring: false, all
+/// others null/false).
+({
+  bool isRecurring,
+  String? seriesId,
+  MCalRecurrenceRule? recurrenceRule,
+  MCalCalendarEvent? masterEvent,
+  bool isException,
+})
+_getRecurrenceMetadata(
+  MCalCalendarEvent event,
+  MCalEventController controller,
+) {
+  if (event.occurrenceId == null) {
+    return (
+      isRecurring: false,
+      seriesId: null,
+      recurrenceRule: null,
+      masterEvent: null,
+      isException: false,
+    );
+  }
+
+  // Recurring occurrence — extract seriesId from the event ID.
+  // The ID scheme is "{masterId}_{normalizedDateIso8601}".
+  // The occurrenceId IS the date part, so seriesId = id without the
+  // trailing "_{occurrenceId}".
+  final occId = event.occurrenceId!;
+  final seriesId = event.id.endsWith('_$occId')
+      ? event.id.substring(0, event.id.length - occId.length - 1)
+      : event.id;
+
+  // Look up master event from controller
+  final masterEvent = controller.getEventById(seriesId);
+
+  // Check if an exception exists for this occurrence
+  final exceptions = controller.getExceptions(seriesId);
+  final normalizedOccDate = DateTime.tryParse(occId);
+  final isException =
+      normalizedOccDate != null &&
+      exceptions.any((e) {
+        final eDate = DateTime(
+          e.originalDate.year,
+          e.originalDate.month,
+          e.originalDate.day,
+        );
+        final oDate = DateTime(
+          normalizedOccDate.year,
+          normalizedOccDate.month,
+          normalizedOccDate.day,
+        );
+        return eDate == oDate;
+      });
+
+  return (
+    isRecurring: true,
+    seriesId: seriesId,
+    recurrenceRule: masterEvent?.recurrenceRule,
+    masterEvent: masterEvent,
+    isException: isException,
+  );
 }
 
 /// A widget that displays a month calendar grid with events.
@@ -904,6 +975,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     if (displayDateChanged) {
       _previousDisplayDate = currentDisplayDate;
 
+      // Clear drop target when month changes during drag (edge nav or programmatic).
+      // User must move pointer to re-trigger onMove and re-show drop target.
+      if (_isDragActive) {
+        _dragHandler?.clearProposedDropRange();
+      }
+
       // Sync PageView to the new month if needed (Task 8)
       // This handles external navigation from the controller
       _syncPageViewToMonth(currentDisplayDate);
@@ -1403,17 +1480,36 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     bool handled = false;
 
     // Arrow key navigation
+    // Use calendar-day arithmetic (not Duration) to avoid DST issues.
+    // On DST fall-back (e.g. Nov 2, 2025 US), Duration(days: 1) = 24h can
+    // land on the same calendar day at 23:00 instead of the next day.
     if (key == LogicalKeyboardKey.arrowLeft) {
-      newFocusedDate = focusedDate.subtract(const Duration(days: 1));
+      newFocusedDate = DateTime(
+        focusedDate.year,
+        focusedDate.month,
+        focusedDate.day - 1,
+      );
       handled = true;
     } else if (key == LogicalKeyboardKey.arrowRight) {
-      newFocusedDate = focusedDate.add(const Duration(days: 1));
+      newFocusedDate = DateTime(
+        focusedDate.year,
+        focusedDate.month,
+        focusedDate.day + 1,
+      );
       handled = true;
     } else if (key == LogicalKeyboardKey.arrowUp) {
-      newFocusedDate = focusedDate.subtract(const Duration(days: 7));
+      newFocusedDate = DateTime(
+        focusedDate.year,
+        focusedDate.month,
+        focusedDate.day - 7,
+      );
       handled = true;
     } else if (key == LogicalKeyboardKey.arrowDown) {
-      newFocusedDate = focusedDate.add(const Duration(days: 7));
+      newFocusedDate = DateTime(
+        focusedDate.year,
+        focusedDate.month,
+        focusedDate.day + 7,
+      );
       handled = true;
     }
     // Home - first day of current month
@@ -2096,7 +2192,6 @@ class _MonthPageWidget extends StatefulWidget {
   State<_MonthPageWidget> createState() => _MonthPageWidgetState();
 }
 
-
 /// State class for [_MonthPageWidget].
 ///
 /// Handles the unified DragTarget for the entire month grid.
@@ -2176,6 +2271,46 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     super.dispose();
   }
 
+  /// Builds the semantic label for the drop target during an active drag.
+  ///
+  /// Returns null when there is no drop target state to announce (e.g. no
+  /// highlighted cells). For multi-day events, includes the full date range
+  /// (e.g. "January 20, 2025 to January 22, 2025").
+  String? _buildDropTargetSemanticLabel() {
+    final dragHandler = widget.dragHandler;
+    if (dragHandler == null) return null;
+
+    final highlightedCells = dragHandler.highlightedCells;
+    if (highlightedCells.isEmpty) return null;
+
+    final isValid = dragHandler.isProposedDropValid;
+    final locale = widget.locale;
+    final localizations = MCalLocalizations();
+    final prefix = localizations.getLocalizedString('dropTargetPrefix', locale);
+    final validStr = localizations.getLocalizedString(
+      isValid ? 'dropTargetValid' : 'dropTargetInvalid',
+      locale,
+    );
+
+    final firstDate = highlightedCells.first.date;
+    final firstDateStr = localizations.formatDate(firstDate, locale);
+
+    final String dateRangeStr;
+    if (highlightedCells.length == 1) {
+      dateRangeStr = firstDateStr;
+    } else {
+      final lastDate = highlightedCells.last.date;
+      final lastDateStr = localizations.formatDate(lastDate, locale);
+      final toStr = localizations.getLocalizedString(
+        'dropTargetDateRangeTo',
+        locale,
+      );
+      dateRangeStr = '$firstDateStr $toStr $lastDateStr';
+    }
+
+    return '$prefix, $dateRangeStr, $validStr';
+  }
+
   /// Called when drag handler state changes.
   void _onDragHandlerChanged() {
     if (!mounted) return;
@@ -2205,8 +2340,9 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     _cachedCalendarSize = renderBox.size;
     _cachedCalendarOffset = renderBox.localToGlobal(Offset.zero);
     // Account for week number column: day width is computed from content area only
-    final weekNumberWidth =
-        widget.showWeekNumbers ? _WeekNumberCell.columnWidth : 0.0;
+    final weekNumberWidth = widget.showWeekNumbers
+        ? _WeekNumberCell.columnWidth
+        : 0.0;
     _cachedWeekNumberWidth = weekNumberWidth;
     // In LTR, week numbers are on the left → content starts at weekNumberWidth.
     // In RTL, week numbers are on the right → content starts at 0.
@@ -2376,18 +2512,27 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
   /// Handles drag leave events from the unified DragTarget.
   ///
-  /// NOTE: We do NOT clear the proposed drop range here because onLeave
-  /// fires BEFORE onAcceptWithDetails when a drop is accepted. The state
-  /// is cleared in _handleDrop after processing the drop. For genuine
-  /// drag-leave (user drags outside calendar), the highlights will remain
-  /// briefly but will be cleared when the drag ends via the draggable's
-  /// onDragEnd callback or when the next drag starts.
+  /// Cancels the debounce timer and clears stale drag details to prevent
+  /// a pending [_processDragMove] from re-creating drop indicators after
+  /// they've been cleared. Then clears the full proposed drop range so both
+  /// Layer 3 (phantom tiles) and Layer 4 (cell overlay) disappear.
+  ///
+  /// NOTE: DragTarget.onLeave fires BEFORE onAcceptWithDetails when a drop
+  /// is accepted. This is safe because [_handleDrop] sets fresh
+  /// [_latestDragDetails] and calls [_processDragMove] to recalculate
+  /// the proposed range from scratch before reading proposed dates.
   void _handleDragLeave() {
-    // Only clear visual highlights, not the proposed drop data.
-    // The drop handler needs the proposed dates to complete the drop.
-    // DO NOT call clearProposedDropRange() here - it would break drop handling
-    // because DragTarget.onLeave fires BEFORE DragTarget.onAcceptWithDetails.
-    widget.dragHandler?.clearHighlightedCells();
+    // Cancel pending debounce timer to prevent it from re-creating
+    // drop indicators with stale position data after we clear them.
+    _dragMoveDebounceTimer?.cancel();
+    _dragMoveDebounceTimer = null;
+    _latestDragDetails = null;
+
+    // Do not cancel edge navigation during drag leave
+    // to allow edge navigation during drag leave.
+
+    // Clear the proposed drop range to remove any stale highlight cells.
+    widget.dragHandler?.clearProposedDropRange();
   }
 
   /// Handles drop events from the unified DragTarget.
@@ -2397,11 +2542,16 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     // Cancel edge navigation immediately
     dragHandler?.cancelEdgeNavigation();
 
-    // Flush any pending local debounce timer and process immediately
+    // Flush any pending local debounce timer and process immediately.
+    // If the month changed during drag (edge nav) without an onMove, we may have
+    // stale proposed dates from the previous page. Use the drop position to
+    // recalculate with this page's layout so the drop lands on the visible month.
     if (_dragMoveDebounceTimer?.isActive ?? false) {
       _dragMoveDebounceTimer?.cancel();
-      _processDragMove();
     }
+    _latestDragDetails = details;
+    _layoutCachedForDrag = false;
+    _processDragMove();
 
     // Check if drop is valid
     if (dragHandler != null && !dragHandler.isProposedDropValid) {
@@ -2423,13 +2573,14 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
       return;
     }
 
-    // Calculate new dates preserving time components
+    // Calculate new dates preserving time components.
+    // Use DST-safe daysBetween (not .difference().inDays) for day delta.
     final normalizedEventStart = DateTime(
       event.start.year,
       event.start.month,
       event.start.day,
     );
-    final dayDelta = proposedStart.difference(normalizedEventStart).inDays;
+    final dayDelta = daysBetween(normalizedEventStart, proposedStart);
 
     final newStartDate = DateTime(
       event.start.year,
@@ -2459,29 +2610,76 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     // Create the updated event
     final updatedEvent = event.copyWith(start: newStartDate, end: newEndDate);
 
-    // Update event in controller
-    widget.controller.addEvents([updatedEvent]);
+    // Detect recurring occurrence
+    final isRecurring = event.occurrenceId != null;
+    String? seriesId;
+    if (isRecurring) {
+      final occId = event.occurrenceId!;
+      seriesId = event.id.endsWith('_$occId')
+          ? event.id.substring(0, event.id.length - occId.length - 1)
+          : event.id;
+    }
 
-    // Call onEventDropped callback if provided
-    if (widget.onEventDropped != null) {
-      final shouldKeep = widget.onEventDropped!(
-        context,
-        MCalEventDroppedDetails(
-          event: event,
-          oldStartDate: oldStartDate,
-          oldEndDate: oldEndDate,
-          newStartDate: newStartDate,
-          newEndDate: newEndDate,
-        ),
-      );
-
-      // If callback returns false, revert the change
-      if (!shouldKeep) {
-        final revertedEvent = event.copyWith(
-          start: oldStartDate,
-          end: oldEndDate,
+    if (isRecurring && seriesId != null) {
+      // Recurring occurrence: use addException instead of addEvents
+      if (widget.onEventDropped != null) {
+        final shouldKeep = widget.onEventDropped!(
+          context,
+          MCalEventDroppedDetails(
+            event: event,
+            oldStartDate: oldStartDate,
+            oldEndDate: oldEndDate,
+            newStartDate: newStartDate,
+            newEndDate: newEndDate,
+            isRecurring: true,
+            seriesId: seriesId,
+          ),
         );
-        widget.controller.addEvents([revertedEvent]);
+
+        if (shouldKeep) {
+          widget.controller.addException(
+            seriesId,
+            MCalRecurrenceException.rescheduled(
+              originalDate: DateTime.parse(event.occurrenceId!),
+              newDate: newStartDate,
+            ),
+          );
+        }
+      } else {
+        // No callback provided — auto-create reschedule exception
+        widget.controller.addException(
+          seriesId,
+          MCalRecurrenceException.rescheduled(
+            originalDate: DateTime.parse(event.occurrenceId!),
+            newDate: newStartDate,
+          ),
+        );
+      }
+    } else {
+      // Non-recurring event: existing behavior
+      widget.controller.addEvents([updatedEvent]);
+
+      // Call onEventDropped callback if provided
+      if (widget.onEventDropped != null) {
+        final shouldKeep = widget.onEventDropped!(
+          context,
+          MCalEventDroppedDetails(
+            event: event,
+            oldStartDate: oldStartDate,
+            oldEndDate: oldEndDate,
+            newStartDate: newStartDate,
+            newEndDate: newEndDate,
+          ),
+        );
+
+        // If callback returns false, revert the change
+        if (!shouldKeep) {
+          final revertedEvent = event.copyWith(
+            start: oldStartDate,
+            end: oldEndDate,
+          );
+          widget.controller.addEvents([revertedEvent]);
+        }
       }
     }
 
@@ -2504,6 +2702,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     return (BuildContext context, MCalEventTileContext tileContext) {
       final event = dragHandler.draggedEvent;
       if (event == null) return const SizedBox.shrink();
+      final meta = _getRecurrenceMetadata(event, widget.controller);
       final newContext = MCalEventTileContext(
         event: event,
         displayDate: tileContext.displayDate,
@@ -2515,6 +2714,11 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
         dropValid: dragHandler.isProposedDropValid,
         proposedStartDate: dragHandler.proposedStartDate,
         proposedEndDate: dragHandler.proposedEndDate,
+        isRecurring: meta.isRecurring,
+        seriesId: meta.seriesId,
+        recurrenceRule: meta.recurrenceRule,
+        masterEvent: meta.masterEvent,
+        isException: meta.isException,
       );
       if (customBuilder != null) return customBuilder(context, newContext);
       return _buildDefaultDropTargetTile(context, newContext);
@@ -2533,25 +2737,23 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     final valid = tileContext.dropValid ?? true;
 
     final cornerRadius =
-        theme.dropTargetTileCornerRadius ??
-        theme.eventTileCornerRadius ??
-        4.0;
+        theme.dropTargetTileCornerRadius ?? theme.eventTileCornerRadius ?? 4.0;
     final leftRadius = segment?.isFirstSegment ?? true ? cornerRadius : 0.0;
     final rightRadius = segment?.isLastSegment ?? true ? cornerRadius : 0.0;
 
     final tileColor = valid
         ? (theme.dropTargetTileBackgroundColor ??
-            theme.eventTileBackgroundColor ??
-            event.color ??
-            Colors.blue)
+              theme.eventTileBackgroundColor ??
+              event.color ??
+              Colors.blue)
         : (theme.dropTargetTileInvalidBackgroundColor ??
-            theme.eventTileBackgroundColor ??
-            Colors.red.withValues(alpha: 0.5));
+              theme.eventTileBackgroundColor ??
+              Colors.red.withValues(alpha: 0.5));
 
     final borderWidth =
         theme.dropTargetTileBorderWidth ?? theme.eventTileBorderWidth ?? 0.0;
-    final borderColor = theme.dropTargetTileBorderColor ??
-        theme.eventTileBorderColor;
+    final borderColor =
+        theme.dropTargetTileBorderColor ?? theme.eventTileBorderColor;
     final hasBorder = borderWidth > 0 && borderColor != null;
     final isFirstSegment = segment?.isFirstSegment ?? true;
     final isLastSegment = segment?.isLastSegment ?? true;
@@ -2591,9 +2793,14 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   // ============================================================
 
   /// Builds Layer 3: drop target preview tiles (phantom segments, same week layout as Layer 2).
+  ///
+  /// Tiles are only shown when the drop target is valid ([isProposedDropValid]).
+  /// This matches overlay and drop handling: invalid targets (e.g. conflicts, or
+  /// dragged out of range) should not show tiles.
   Widget _buildDropTargetTilesLayer(BuildContext context) {
     final dragHandler = widget.dragHandler;
     if (dragHandler == null ||
+        !dragHandler.isProposedDropValid ||
         dragHandler.proposedStartDate == null ||
         dragHandler.proposedEndDate == null) {
       return const SizedBox.shrink();
@@ -2605,8 +2812,9 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final weekNumberWidth =
-            widget.showWeekNumbers ? _WeekNumberCell.columnWidth : 0.0;
+        final weekNumberWidth = widget.showWeekNumbers
+            ? _WeekNumberCell.columnWidth
+            : 0.0;
         final contentWidth = constraints.maxWidth - weekNumberWidth;
         final dayWidth = _weeks.isNotEmpty ? contentWidth / 7 : 0.0;
         final rowHeight = _weeks.isNotEmpty
@@ -2620,8 +2828,9 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
           monthStart: monthStart,
           firstDayOfWeek: firstDayOfWeek,
         );
-        final dropTargetTileBuilder =
-            _buildDropTargetTileEventBuilder(dragHandler);
+        final dropTargetTileBuilder = _buildDropTargetTileEventBuilder(
+          dragHandler,
+        );
         final dateLabelPlaceholder = _buildDropTargetDateLabelPlaceholder(
           dateLabelHeight: dateLabelHeight,
           dayWidth: dayWidth,
@@ -2633,8 +2842,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
         Widget noOpOverflow(
           BuildContext ctx,
           MCalOverflowIndicatorContext overflowContext,
-        ) =>
-            const SizedBox.shrink();
+        ) => const SizedBox.shrink();
 
         return Column(
           children: List.generate(_weeks.length, (weekRowIndex) {
@@ -2663,9 +2871,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (widget.showWeekNumbers)
-                    SizedBox(
-                      width: _WeekNumberCell.columnWidth,
-                    ),
+                    SizedBox(width: _WeekNumberCell.columnWidth),
                   Expanded(child: weekLayout),
                 ],
               ),
@@ -2679,8 +2885,8 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   /// Builds the Layer 4 highlight overlay for drop target cells.
   ///
   /// Precedence: dropTargetOverlayBuilder > dropTargetCellBuilder > default CustomPainter.
-  /// All paths are wrapped in a single [Semantics] that announces the drop target
-  /// state (valid/invalid) and the first date of the proposed range.
+  /// Semantics for the drop target are applied at the DragTarget level (see
+  /// [build]) so they remain when the overlay is disabled.
   Widget _buildDropTargetOverlayLayer(BuildContext context) {
     final dragHandler = widget.dragHandler;
     if (dragHandler == null) return const SizedBox.shrink();
@@ -2689,16 +2895,6 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     if (highlightedCells.isEmpty) return const SizedBox.shrink();
 
     final isValid = dragHandler.isProposedDropValid;
-    final firstDate = highlightedCells.first.date;
-    final locale = widget.locale;
-    final localizations = MCalLocalizations();
-    final dateStr = localizations.formatDate(firstDate, locale);
-    final prefix = localizations.getLocalizedString('dropTargetPrefix', locale);
-    final validStr = localizations.getLocalizedString(
-      isValid ? 'dropTargetValid' : 'dropTargetInvalid',
-      locale,
-    );
-    final dropTargetSemanticLabel = '$prefix, $dateStr, $validStr';
 
     Widget overlay;
     // Precedence: dropTargetOverlayBuilder > dropTargetCellBuilder > default
@@ -2775,10 +2971,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
       );
     }
 
-    return Semantics(
-      label: dropTargetSemanticLabel,
-      child: overlay,
-    );
+    return overlay;
   }
 
   @override
@@ -2883,16 +3076,15 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
                 )
               : null;
 
-          final overlayLayer =
-              (widget.showDropTargetOverlay && _isDragActive)
-                  ? Positioned.fill(
-                      child: RepaintBoundary(
-                        child: IgnorePointer(
-                          child: _buildDropTargetOverlayLayer(context),
-                        ),
-                      ),
-                    )
-                  : null;
+          final overlayLayer = (widget.showDropTargetOverlay && _isDragActive)
+              ? Positioned.fill(
+                  child: RepaintBoundary(
+                    child: IgnorePointer(
+                      child: _buildDropTargetOverlayLayer(context),
+                    ),
+                  ),
+                )
+              : null;
 
           // By default (dropTargetTilesAboveOverlay: false), tiles are Layer 3
           // (below) and overlay is Layer 4 (above). When true, the order reverses.
@@ -2903,7 +3095,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
               ? tilesLayer
               : overlayLayer;
 
-          return Stack(
+          final stack = Stack(
             children: [
               // Layer 1+2: Main content (week rows with grid and events)
               weekRowsColumn,
@@ -2911,6 +3103,16 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
               if (secondLayer != null) secondLayer,
             ],
           );
+
+          // Semantics at DragTarget level so drop target state is announced
+          // even when overlay is disabled. Includes full date range for multi-day.
+          final dropTargetLabel = _isDragActive
+              ? _buildDropTargetSemanticLabel()
+              : null;
+          if (dropTargetLabel != null) {
+            return Semantics(label: dropTargetLabel, child: stack);
+          }
+          return stack;
         },
       );
     }
@@ -4145,6 +4347,7 @@ class _DayCellWidget extends StatelessWidget {
         onEventLongPress: onEventLongPress,
         onHoverEvent: onHoverEvent,
         locale: locale,
+        controller: controller,
       );
 
       // Wrap with MCalDraggableEventTile when drag-and-drop is enabled
@@ -4347,6 +4550,7 @@ class _EventTileWidget extends StatelessWidget {
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final ValueChanged<MCalEventTileContext?>? onHoverEvent;
   final Locale locale;
+  final MCalEventController controller;
 
   const _EventTileWidget({
     required this.event,
@@ -4361,6 +4565,7 @@ class _EventTileWidget extends StatelessWidget {
     required this.onEventLongPress,
     this.onHoverEvent,
     required this.locale,
+    required this.controller,
   });
 
   @override
@@ -4509,10 +4714,16 @@ class _EventTileWidget extends StatelessWidget {
 
     // Apply builder callback if provided (takes precedence over theme styling)
     if (eventTileBuilder != null) {
+      final meta = _getRecurrenceMetadata(event, controller);
       final contextObj = MCalEventTileContext(
         event: event,
         displayDate: displayDate,
         isAllDay: isAllDay,
+        isRecurring: meta.isRecurring,
+        seriesId: meta.seriesId,
+        recurrenceRule: meta.recurrenceRule,
+        masterEvent: meta.masterEvent,
+        isException: meta.isException,
       );
       tile = eventTileBuilder!(context, contextObj, tile);
     }
@@ -4538,10 +4749,16 @@ class _EventTileWidget extends StatelessWidget {
     if (onHoverEvent != null) {
       result = MouseRegion(
         onEnter: (_) {
+          final meta = _getRecurrenceMetadata(event, controller);
           final contextObj = MCalEventTileContext(
             event: event,
             displayDate: displayDate,
             isAllDay: isAllDay,
+            isRecurring: meta.isRecurring,
+            seriesId: meta.seriesId,
+            recurrenceRule: meta.recurrenceRule,
+            masterEvent: meta.masterEvent,
+            isException: meta.isException,
           );
           onHoverEvent!(contextObj);
         },
@@ -5148,8 +5365,16 @@ List<List<MCalEventSegment>> _getPhantomSegmentsForDropTarget({
   required DateTime monthStart,
   required int firstDayOfWeek,
 }) {
-  final startDay = DateTime(proposedStartDate.year, proposedStartDate.month, proposedStartDate.day);
-  final endDay = DateTime(proposedEndDate.year, proposedEndDate.month, proposedEndDate.day);
+  final startDay = DateTime(
+    proposedStartDate.year,
+    proposedStartDate.month,
+    proposedStartDate.day,
+  );
+  final endDay = DateTime(
+    proposedEndDate.year,
+    proposedEndDate.month,
+    proposedEndDate.day,
+  );
   final synthetic = MCalCalendarEvent(
     id: '__drop_target_phantom__',
     title: '',

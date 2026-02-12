@@ -592,6 +592,17 @@ class MCalEventDroppedDetails {
   /// [oldEndDate] and [oldStartDate].
   final DateTime newEndDate;
 
+  /// Whether the dropped event is a recurring occurrence.
+  ///
+  /// When `true`, the event was expanded from a recurring series and
+  /// [seriesId] will contain the master event's ID.
+  final bool isRecurring;
+
+  /// The master event's ID, if the dropped event is a recurring occurrence.
+  ///
+  /// Only non-null when [isRecurring] is `true`.
+  final String? seriesId;
+
   /// Creates a new [MCalEventDroppedDetails] instance.
   const MCalEventDroppedDetails({
     required this.event,
@@ -599,6 +610,8 @@ class MCalEventDroppedDetails {
     required this.oldEndDate,
     required this.newStartDate,
     required this.newEndDate,
+    this.isRecurring = false,
+    this.seriesId,
   });
 }
 

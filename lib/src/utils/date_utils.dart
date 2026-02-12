@@ -95,21 +95,23 @@ List<DateTime> generateMonthDates(
   }
 
   // Calculate the first day of the grid (may be from previous month)
-  final gridStart = firstDay.subtract(Duration(days: offset));
+  // Use calendar-day arithmetic (not Duration) to avoid DST issues; e.g. on
+  // Nov 2 when DST ends, adding Duration(days: 1) = 24h can land on Nov 2 23:00.
+  final gridStart =
+      DateTime(firstDay.year, firstDay.month, firstDay.day - offset);
 
   // Calculate how many weeks we need
   // Check if the 6th week contains any dates from the current month
-  final fifthWeekEnd = gridStart.add(
-    const Duration(days: 34),
-  ); // End of 5th week (day 35)
+  final fifthWeekEnd =
+      DateTime(gridStart.year, gridStart.month, gridStart.day + 34);
   final needsSixthWeek = showSixthRowIfNeeded || lastDay.isAfter(fifthWeekEnd);
 
   final totalDays = needsSixthWeek ? 42 : 35;
 
-  // Generate the dates
+  // Generate the dates (calendar-day arithmetic for DST correctness)
   final dates = <DateTime>[];
   for (int i = 0; i < totalDays; i++) {
-    dates.add(gridStart.add(Duration(days: i)));
+    dates.add(DateTime(gridStart.year, gridStart.month, gridStart.day + i));
   }
 
   return dates;

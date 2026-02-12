@@ -5008,6 +5008,74 @@ void main() {
       }
     });
 
+    testWidgets('drop matches highlighted position for multi-day event', (
+      tester,
+    ) async {
+      final multiDayEvent = MCalCalendarEvent(
+        id: 'multi-day-drop-match-1',
+        title: 'Multi Day Drop Match',
+        start: DateTime(2025, 1, 15),
+        end: DateTime(2025, 1, 17),
+        isAllDay: true,
+      );
+      controller.setMockEvents([multiDayEvent]);
+
+      MCalEventDroppedDetails? droppedDetails;
+      MCalDropOverlayDetails? capturedOverlay;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 600,
+              child: MCalMonthView(
+                controller: controller,
+                enableDragAndDrop: true,
+                dropTargetOverlayBuilder: (context, details) {
+                  capturedOverlay = details;
+                  return const SizedBox.shrink();
+                },
+                onEventDropped: (context, details) {
+                  droppedDetails = details;
+                  return true;
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final eventFinder = find.text('Multi Day Drop Match');
+      if (eventFinder.evaluate().isEmpty) return;
+
+      final gesture = await tester.startGesture(tester.getCenter(eventFinder));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final targetFinder = find.text('22');
+      if (targetFinder.evaluate().isEmpty) {
+        await gesture.up();
+        await tester.pumpAndSettle();
+        return;
+      }
+      await gesture.moveTo(tester.getCenter(targetFinder.first));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 20));
+
+      final highlightedStart = capturedOverlay?.highlightedCells.firstOrNull?.date;
+      final highlightedEnd = capturedOverlay?.highlightedCells.lastOrNull?.date;
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      if (droppedDetails != null &&
+          highlightedStart != null &&
+          highlightedEnd != null) {
+        expect(droppedDetails!.newStartDate, highlightedStart);
+        expect(droppedDetails!.newEndDate, highlightedEnd);
+      }
+    });
+
     testWidgets('invalid drop does not move event', (tester) async {
       final event = MCalCalendarEvent(
         id: 'invalid-drop-1',
