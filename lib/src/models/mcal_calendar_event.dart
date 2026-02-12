@@ -96,10 +96,9 @@ class MCalCalendarEvent {
 
   /// Creates a copy of this event with the given fields replaced.
   ///
-  /// The [recurrenceRule] parameter uses a sentinel value internally so that
-  /// callers can explicitly set it to `null` (to remove recurrence from an
-  /// event). Passing nothing preserves the current value; passing `null`
-  /// clears it.
+  /// The [recurrenceRule] parameter uses a sentinel pattern so you can
+  /// explicitly pass `null` to clear recurrence (remove it from the event).
+  /// Passing nothing preserves the current value; passing `null` clears it.
   MCalCalendarEvent copyWith({
     String? id,
     String? title,

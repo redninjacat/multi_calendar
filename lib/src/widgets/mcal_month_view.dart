@@ -144,7 +144,6 @@ class MCalMonthView extends StatefulWidget {
   /// events for the visible date range and notifying the widget of changes.
   final MCalEventController controller;
 
-  /// The initial date to display (defaults to today).
   /// The minimum date that can be displayed.
   ///
   /// If provided, navigation to dates before this date will be disabled.
@@ -162,7 +161,7 @@ class MCalMonthView extends StatefulWidget {
 
   /// Whether to show the month navigator (month/year display and controls).
   ///
-  /// Defaults to true.
+  /// Defaults to false.
   final bool showNavigator;
 
   /// Whether swipe gestures are enabled for navigation.

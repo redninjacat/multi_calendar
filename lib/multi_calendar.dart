@@ -1,42 +1,59 @@
-/// Multi Calendar - A flexible Flutter package for displaying calendar views.
+/// Multi Calendar — A flexible Flutter package for displaying calendar views
+/// with full RFC 5545 RRULE recurring event support.
 ///
-/// This package provides customizable calendar widgets for displaying events
-/// with full RFC 5545 RRULE support. The package focuses on event display
-/// and RRULE handling while delegating event storage and management to
-/// external systems.
+/// The package focuses on event display and recurrence expansion while
+/// delegating event storage and management to external systems. This makes
+/// it ideal for applications that need calendar UI without being locked into
+/// a specific data persistence strategy.
 ///
-/// ## Usage
+/// ## Key features
+///
+/// - **Month view** ([MCalMonthView]) with drag-and-drop, multi-day events,
+///   and customizable builders.
+/// - **Recurring events** via [MCalRecurrenceRule] — daily, weekly, monthly,
+///   yearly with RFC 5545 RRULE string interop.
+/// - **Exception handling** — delete, reschedule, or modify individual
+///   occurrences without reloading from the database.
+/// - **Delegation pattern** — override [MCalEventController.loadEvents] to
+///   integrate with any backend (Drift, Firestore, REST API, etc.).
+///
+/// ## Quick start
 ///
 /// ```dart
 /// import 'package:multi_calendar/multi_calendar.dart';
 ///
-/// // Create an event controller
+/// // Create a controller and add events
 /// final controller = MCalEventController();
+/// controller.addEvents([
+///   MCalCalendarEvent(
+///     id: 'meeting',
+///     title: 'Team Meeting',
+///     start: DateTime(2024, 1, 15, 10, 0),
+///     end: DateTime(2024, 1, 15, 11, 0),
+///   ),
+///   MCalCalendarEvent(
+///     id: 'standup',
+///     title: 'Daily Standup',
+///     start: DateTime(2024, 1, 1, 9, 0),
+///     end: DateTime(2024, 1, 1, 9, 15),
+///     recurrenceRule: MCalRecurrenceRule(frequency: MCalFrequency.daily),
+///   ),
+/// ]);
 ///
-/// // Create calendar events
-/// final event = MCalCalendarEvent(
-///   id: 'event-1',
-///   title: 'Team Meeting',
-///   start: DateTime(2024, 1, 15, 10, 0),
-///   end: DateTime(2024, 1, 15, 11, 0),
-///   isAllDay: false,
-/// );
-///
-/// // Create an all-day event
-/// final allDayEvent = MCalCalendarEvent(
-///   id: 'event-2',
-///   title: 'Holiday',
-///   start: DateTime(2024, 1, 20, 0, 0),
-///   end: DateTime(2024, 1, 20, 0, 0),
-///   isAllDay: true,
+/// // Query — recurring events are expanded automatically
+/// final events = controller.getEventsForRange(
+///   DateTimeRange(
+///     start: DateTime(2024, 1, 1),
+///     end: DateTime(2024, 1, 31, 23, 59, 59),
+///   ),
 /// );
 /// ```
 ///
-/// ## Future Exports
+/// ## Future exports
 ///
 /// The following will be exported in future releases:
-/// - View widgets: DayView, MultiDayView, MonthView
-/// - Style/theme classes: CalendarTheme, ViewStyles
+/// - Day view (MCalDayView)
+/// - Multi-day view (MCalMultiDayView)
 
 library;
 

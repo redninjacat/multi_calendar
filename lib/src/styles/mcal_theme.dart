@@ -437,6 +437,10 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     );
   }
 
+  /// Creates a copy of this [MCalThemeData] with the given fields replaced.
+  ///
+  /// All parameters are optional; omitted fields retain their current values.
+  /// Use this for incremental theme customization.
   @override
   MCalThemeData copyWith({
     Color? cellBackgroundColor,
@@ -567,6 +571,10 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     );
   }
 
+  /// Linearly interpolates between this theme and [other] by [t].
+  ///
+  /// Used for animated theme transitions. Returns this instance unchanged
+  /// if [other] is not an [MCalThemeData].
   @override
   MCalThemeData lerp(ThemeExtension<MCalThemeData>? other, double t) {
     if (other is! MCalThemeData) {

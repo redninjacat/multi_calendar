@@ -62,6 +62,10 @@ class MCalWeekDay {
   const MCalWeekDay.nth(this.dayOfWeek, int n) : occurrence = n;
 
   /// Creates a copy of this [MCalWeekDay] with the given fields replaced.
+  ///
+  /// The [occurrence] parameter uses a callback so you can explicitly set it
+  /// to `null` (e.g., `occurrence: () => null` to clear). Passing nothing
+  /// preserves the current value.
   MCalWeekDay copyWith({
     int? dayOfWeek,
     int? Function()? occurrence,
@@ -277,11 +281,12 @@ class MCalRecurrenceRule {
   /// Expands this rule into a list of occurrence dates within the given range.
   ///
   /// **Required: [start] as DTSTART** — [start] is the series start date
-  /// (DTSTART in RFC 5545). It defines the first instance in the recurrence
-  /// set and anchors all recurrence calculations. The [start] value MUST be
-  /// synchronized with the recurrence rule (e.g., for BYDAY=TU,TH, [start]
-  /// should fall on a Tuesday or Thursday). Pass the master event's [start]
-  /// when expanding recurring events.
+  /// (DTSTART in RFC 5545). It anchors the recurrence pattern: it defines
+  /// the first instance and all recurrence calculations (e.g., BYMONTHDAY,
+  /// BYDAY) are relative to it. The [start] value MUST be synchronized with
+  /// the rule (e.g., for BYDAY=TU,TH, [start] should fall on Tuesday or
+  /// Thursday). Pass the master event's [start] when expanding recurring
+  /// events.
   ///
   /// [after] is the beginning of the query range (inclusive).
   /// [before] is the end of the query range (exclusive).
@@ -315,12 +320,13 @@ class MCalRecurrenceRule {
   ///
   /// [dtStart] is the series start date used as the DTSTART.
   ///
-  /// Applies RFC 5545 defaults that `teno_rrule` does not handle itself:
-  /// * **MONTHLY** without explicit BYMONTHDAY — defaults to DTSTART's day
-  ///   of month. Without this, `teno_rrule`'s `_getNextInstance` resets the
-  ///   day to 1 and the `ByMonthDaysHandler` never activates.
-  /// * **YEARLY** without explicit BYMONTH / BYMONTHDAY — defaults to
-  ///   DTSTART's month and day so that yearly events land on the same date.
+  /// Applies RFC 5545 defaults when those fields are null and no BYDAY is set:
+  /// * **MONTHLY** — when [byMonthDays] and [byWeekDays] are null, defaults
+  ///   to DTSTART's day of month. Without this, `teno_rrule`'s expansion
+  ///   would reset the day to 1.
+  /// * **YEARLY** — when [byMonths], [byMonthDays], and [byWeekDays] are null,
+  ///   defaults to DTSTART's month and day so that yearly events land on the
+  ///   same date.
   teno_rrule.RecurrenceRule _toTenoRrule(DateTime dtStart) {
     // RFC 5545 §3.3.10: When BYMONTHDAY is absent for MONTHLY, default to
     // DTSTART's day-of-month — but only when BYDAY is also absent. When

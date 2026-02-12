@@ -4,17 +4,32 @@ import 'mcal_month_view_contexts.dart';
 import 'mcal_week_layout_contexts.dart';
 
 /// Assignment of an event segment to a row index.
+///
+/// Used by [MCalDefaultWeekLayoutBuilder.assignRows] to communicate which
+/// row each [MCalEventSegment] occupies in the week layout grid.
 class MCalSegmentRowAssignment {
+  /// The [MCalEventSegment] being assigned.
   final MCalEventSegment segment;
+
+  /// The zero-based row index where this segment is placed.
   final int row;
 
   const MCalSegmentRowAssignment({required this.segment, required this.row});
 }
 
 /// Overflow information for a single day column.
+///
+/// Returned by [MCalDefaultWeekLayoutBuilder.calculateOverflow] when more
+/// events exist in a day than can be displayed. Counts hidden events per
+/// day, not hidden rows.
 class MCalOverflowInfo {
+  /// Number of events hidden due to overflow for this day.
   final int hiddenCount;
+
+  /// [MCalCalendarEvent] instances that are hidden and not displayed.
   final List<MCalCalendarEvent> hiddenEvents;
+
+  /// [MCalCalendarEvent] instances that are visible in the day cell.
   final List<MCalCalendarEvent> visibleEvents;
 
   const MCalOverflowInfo({
@@ -137,6 +152,10 @@ class MCalDefaultWeekLayoutBuilder {
   }
 
   /// Builds the default week layout widget.
+  ///
+  /// Returns a [Widget] that displays the week row with event tiles, date
+  /// labels, and overflow indicators. Uses [MCalWeekLayoutContext] for
+  /// layout data and builder callbacks.
   static Widget build(
     BuildContext context,
     MCalWeekLayoutContext layoutContext,

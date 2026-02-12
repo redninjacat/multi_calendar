@@ -27,12 +27,15 @@ enum MCalChangeType {
   bulkChange,
 }
 
-/// Metadata describing a change to calendar events.
+/// Metadata describing mutations to calendar events.
 ///
 /// Produced by mutation methods on the event controller to enable
 /// targeted view rebuilds. Consumers can inspect [type] to determine
 /// what changed, [affectedEventIds] to know which events were involved,
 /// and [affectedDateRange] to know which dates may need re-rendering.
+///
+/// [affectedDateRange] can be null for bulk changes (e.g., [MCalChangeType.bulkChange])
+/// or when the affected range cannot be determined.
 ///
 /// Example:
 /// ```dart

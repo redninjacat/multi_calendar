@@ -43,13 +43,19 @@ class MCalMultiDayTile extends StatelessWidget {
   /// Optional custom builder for the tile.
   ///
   /// When provided, this builder is called instead of the default tile
-  /// rendering. The builder receives the build context and details object.
+  /// rendering. The builder receives the build context and [MCalMultiDayTileDetails].
   final Widget Function(BuildContext, MCalMultiDayTileDetails)? customBuilder;
 
   /// Callback invoked when the tile is tapped.
+  ///
+  /// Receives the [BuildContext] and [MCalEventTapDetails] containing the
+  /// event and display date.
   final void Function(BuildContext, MCalEventTapDetails)? onTap;
 
   /// Callback invoked when the tile is long-pressed.
+  ///
+  /// Receives the [BuildContext] and [MCalEventTapDetails] containing the
+  /// event and display date.
   final void Function(BuildContext, MCalEventTapDetails)? onLongPress;
 
   /// Creates a new [MCalMultiDayTile] widget.

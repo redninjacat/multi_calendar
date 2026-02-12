@@ -4,38 +4,75 @@ import '../models/mcal_event_change_info.dart';
 import '../models/mcal_recurrence_exception.dart';
 import '../models/mcal_recurrence_rule.dart';
 
-/// Controller for managing calendar events and view state.
+/// Controller for managing calendar events, recurring event expansion, and
+/// view state.
 ///
-/// This controller manages calendar events with efficient caching and retrieval.
-/// It extends [ChangeNotifier] to support reactive state management, allowing
-/// widgets to rebuild when events are loaded or the visible range changes.
+/// Extends [ChangeNotifier] for reactive state management — widgets rebuild
+/// when events are loaded, modified, or the visible range changes.
 ///
-/// The controller supports:
-/// - Loading events for date ranges (override [loadEvents] for custom loading)
-/// - Caching events in memory for efficient retrieval
-/// - Querying events by date range
-/// - Managing the visible date range for view synchronization
+/// ## Core capabilities
 ///
-/// Example:
+/// - **Event storage**: In-memory cache indexed by event ID. Add events with
+///   [addEvents], remove with [removeEvents] or [clearEvents].
+/// - **Recurring event expansion**: Events with a non-null
+///   [MCalCalendarEvent.recurrenceRule] are automatically expanded into
+///   individual occurrences when queried via [getEventsForRange]. Multi-day
+///   events that start before the query range but overlap into it are included
+///   automatically — consumers do not need to pad the range.
+/// - **Exception handling**: Add, remove, or overwrite per-occurrence
+///   exceptions (deletions, reschedules, modifications) via [addException],
+///   [removeException], and [modifyOccurrence]. Single-exception edits use
+///   O(1) cache patching; overwrites invalidate the series cache.
+/// - **Series management**: [updateRecurringEvent], [deleteRecurringEvent],
+///   and [splitSeries] for full recurring event lifecycle management.
+/// - **Change metadata**: [lastChange] describes each mutation for targeted
+///   view rebuilds.
+/// - **Delegation pattern**: Override [loadEvents] to integrate with any
+///   database, API, or persistence layer. The controller handles expansion
+///   and caching; the consumer handles storage.
+///
+/// ## Performance
+///
+/// - Expansion is lazy — only occurrences within the requested range.
+/// - For daily/weekly events that started far in the past, the DTSTART is
+///   advanced close to the query window to avoid a linear walk.
+/// - Expanded occurrences are cached per series; repeated queries on the
+///   same range are O(1).
+///
+/// ## Example
+///
 /// ```dart
 /// final controller = MCalEventController();
 ///
-/// // Add events directly
+/// // Add standalone and recurring events
 /// controller.addEvents([
 ///   MCalCalendarEvent(
-///     id: '1',
+///     id: 'meeting',
 ///     title: 'Meeting',
 ///     start: DateTime(2024, 6, 15, 10, 0),
 ///     end: DateTime(2024, 6, 15, 11, 0),
 ///   ),
+///   MCalCalendarEvent(
+///     id: 'standup',
+///     title: 'Daily Standup',
+///     start: DateTime(2024, 6, 1, 9, 0),
+///     end: DateTime(2024, 6, 1, 9, 15),
+///     recurrenceRule: MCalRecurrenceRule(frequency: MCalFrequency.daily),
+///   ),
 /// ]);
 ///
-/// // Get events for a specific date range
+/// // Query — recurring events are expanded automatically
 /// final events = controller.getEventsForRange(
 ///   DateTimeRange(
 ///     start: DateTime(2024, 6, 1),
 ///     end: DateTime(2024, 6, 30),
 ///   ),
+/// );
+///
+/// // Add an exception (delete a single occurrence)
+/// controller.addException(
+///   'standup',
+///   MCalRecurrenceException.deleted(originalDate: DateTime(2024, 6, 10)),
 /// );
 /// ```
 class MCalEventController extends ChangeNotifier {
@@ -343,13 +380,27 @@ class MCalEventController extends ChangeNotifier {
 
   /// Adds events to the controller's cache.
   ///
-  /// Events are indexed by their ID for efficient lookup. If an event with
-  /// the same ID already exists, it will be replaced.
+  /// Events are indexed by their ID for O(1) lookup. If an event with the
+  /// same ID already exists, it will be replaced. Recurring events (those
+  /// with a non-null [MCalCalendarEvent.recurrenceRule]) are stored as master
+  /// events and expanded lazily when [getEventsForRange] is called.
   ///
-  /// Notifies listeners after adding events.
+  /// Sets [lastChange] with type [MCalChangeType.bulkChange] and calls
+  /// [notifyListeners].
   ///
-  /// Parameters:
-  /// - [events]: The list of events to add
+  /// ## Example
+  ///
+  /// ```dart
+  /// controller.addEvents([
+  ///   MCalCalendarEvent(
+  ///     id: 'weekly-meeting',
+  ///     title: 'Team Meeting',
+  ///     start: DateTime(2024, 1, 2, 10, 0),
+  ///     end: DateTime(2024, 1, 2, 11, 0),
+  ///     recurrenceRule: MCalRecurrenceRule(frequency: MCalFrequency.weekly),
+  ///   ),
+  /// ]);
+  /// ```
   void addEvents(List<MCalCalendarEvent> events) {
     for (final event in events) {
       _eventsById[event.id] = event;
@@ -407,20 +458,35 @@ class MCalEventController extends ChangeNotifier {
 
   /// Gets events that fall within the specified date range.
   ///
-  /// Non-recurring events are included if they overlap with the specified range
-  /// (event starts before range ends AND event ends after range starts).
+  /// **Standalone events** are included if they overlap with [range] (event
+  /// starts before range ends AND event ends after range starts).
   ///
-  /// Recurring events are expanded into individual occurrences using
-  /// [MCalRecurrenceRule.getOccurrences], with exceptions from
-  /// [_exceptionsBySeriesId] applied (deleted occurrences are skipped,
-  /// rescheduled occurrences are moved, modified occurrences are replaced).
-  /// Expanded occurrences are cached in [_expandedBySeriesId] for efficient
-  /// subsequent queries within the same range.
+  /// **Recurring events** are expanded into individual
+  /// [MCalCalendarEvent] occurrences. The expansion engine:
+  /// - Generates occurrences via [MCalRecurrenceRule.getOccurrences].
+  /// - Pads the query backwards by the event's duration so that multi-day
+  ///   events whose start is before [range] but whose end overlaps into it
+  ///   are included automatically. Consumers do **not** need to pad the range.
+  /// - For daily/weekly events from the far past, advances the DTSTART
+  ///   close to the query window for O(1) iteration.
+  /// - Applies exceptions: deleted occurrences are skipped, rescheduled
+  ///   occurrences are moved, modified occurrences are replaced.
+  /// - Caches expanded occurrences per series; repeated queries on the same
+  ///   range are served from cache.
   ///
-  /// Parameters:
-  /// - [range]: The date range to query
+  /// ## Example
   ///
-  /// Returns a list of events that overlap with the range.
+  /// ```dart
+  /// final events = controller.getEventsForRange(
+  ///   DateTimeRange(
+  ///     start: DateTime(2024, 6, 1),
+  ///     end: DateTime(2024, 6, 30, 23, 59, 59),
+  ///   ),
+  /// );
+  /// ```
+  ///
+  /// Returns a list of events (standalone + expanded occurrences) that
+  /// overlap with [range].
   List<MCalCalendarEvent> getEventsForRange(DateTimeRange range) {
     // If the query range differs from the cached range, invalidate expansion cache
     if (_expandedRange != null &&
@@ -798,17 +864,38 @@ class MCalEventController extends ChangeNotifier {
 
   /// Adds a recurrence exception for a series.
   ///
-  /// Stores the [exception] in [_exceptionsBySeriesId] keyed by
-  /// `_normalizeDate(exception.originalDate)`, patches the expansion cache
-  /// in O(1) via [_patchCacheForException], sets [_lastChange] with type
-  /// [MCalChangeType.exceptionAdded], and notifies listeners.
+  /// Stores the [exception] keyed by its normalized original date. For the
+  /// **first** exception on a given date, the expansion cache is patched
+  /// in O(1). If an exception for the same original date already exists
+  /// (an overwrite — e.g., changing a deletion to a reschedule), the entire
+  /// series cache is invalidated to ensure correctness.
   ///
-  /// Returns the [exception] that was added, enabling callers to chain or
-  /// persist the result.
+  /// Sets [lastChange] with type [MCalChangeType.exceptionAdded] and calls
+  /// [notifyListeners].
   ///
-  /// Parameters:
-  /// - [seriesId]: The ID of the recurring event master
-  /// - [exception]: The exception to add
+  /// Returns the [exception] that was added, enabling callers to persist it
+  /// to their backend.
+  ///
+  /// See also: [removeException], [modifyOccurrence], [addExceptions].
+  ///
+  /// ## Example
+  ///
+  /// ```dart
+  /// // Delete a single occurrence
+  /// controller.addException(
+  ///   'weekly-meeting',
+  ///   MCalRecurrenceException.deleted(originalDate: DateTime(2024, 6, 10)),
+  /// );
+  ///
+  /// // Reschedule an occurrence
+  /// controller.addException(
+  ///   'weekly-meeting',
+  ///   MCalRecurrenceException.rescheduled(
+  ///     originalDate: DateTime(2024, 6, 17),
+  ///     newDate: DateTime(2024, 6, 18),
+  ///   ),
+  /// );
+  /// ```
   MCalRecurrenceException addException(
     String seriesId,
     MCalRecurrenceException exception,
@@ -939,13 +1026,25 @@ class MCalEventController extends ChangeNotifier {
 
   /// Replaces a recurring master event and invalidates its expansion cache.
   ///
-  /// Updates the master event in [_eventsById], removes the series from
-  /// [_expandedBySeriesId] so it will be re-expanded on the next query,
-  /// sets [_lastChange] with type [MCalChangeType.eventUpdated], and
-  /// notifies listeners.
+  /// Updates the master event in the cache and forces re-expansion on the
+  /// next [getEventsForRange] call. Existing exceptions for the series are
+  /// preserved — they continue to apply to the updated rule.
   ///
-  /// Parameters:
-  /// - [event]: The updated master event (must have a non-null [recurrenceRule])
+  /// Sets [lastChange] with type [MCalChangeType.eventUpdated] and calls
+  /// [notifyListeners].
+  ///
+  /// ## Example
+  ///
+  /// ```dart
+  /// // Change a weekly meeting to bi-weekly
+  /// final master = controller.getEventById('weekly-meeting')!;
+  /// controller.updateRecurringEvent(master.copyWith(
+  ///   recurrenceRule: MCalRecurrenceRule(
+  ///     frequency: MCalFrequency.weekly,
+  ///     interval: 2,
+  ///   ),
+  /// ));
+  /// ```
   void updateRecurringEvent(MCalCalendarEvent event) {
     _eventsById[event.id] = event;
     _expandedBySeriesId.remove(event.id);
@@ -977,6 +1076,9 @@ class MCalEventController extends ChangeNotifier {
   }
 
   /// Splits a recurring series into two at [fromDate].
+  ///
+  /// This is the "this and following events" operation in calendar UIs.
+  /// Uses calendar-day arithmetic (not [Duration]) for DST safety.
   ///
   /// 1. **Truncates** the original master by setting its recurrence rule's
   ///    `until` to the day before [fromDate] (clearing any `count`).

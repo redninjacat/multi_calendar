@@ -330,7 +330,7 @@ class MCalDateLabelContext {
   /// The locale for formatting dates.
   final Locale locale;
 
-  /// The position of the date label within the cell.
+  /// The position of the date label within the cell ([DateLabelPosition]).
   /// Used to determine alignment (left/center/right) and vertical position (top/bottom).
   final DateLabelPosition position;
 
