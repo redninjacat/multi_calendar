@@ -42,6 +42,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   bool _enableAnimations = true;
   bool _enableDragAndDrop = true;
   bool _useCustomDragTargetTile = false;
+  bool _showDropTargetTiles = true;
+  bool _showDropTargetOverlay = true;
+  bool _dropTargetTilesAboveOverlay = false;
   int _dragEdgeNavigationDelayMs = 900;
   final bool _dragEdgeNavigationEnabled = true;
 
@@ -121,21 +124,22 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     );
   }
 
-  /// Builds a custom drag target tile: same look as default (color, border,
+  /// Builds a custom drop target tile: same look as default (color, border,
   /// rounded corners) but without text. Used when "Custom drag target tile" is on.
-  Widget _buildCustomDragTargetTile(
+  Widget _buildCustomDropTargetTile(
     BuildContext context,
-    MCalDragTargetDetails details,
+    MCalEventTileContext tileContext,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
+    final valid = tileContext.dropValid ?? true;
     return Container(
       decoration: BoxDecoration(
-        color: details.isValid
+        color: valid
             ? colorScheme.primary.withOpacity(0.3)
             : colorScheme.error.withOpacity(0.3),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: details.isValid ? colorScheme.primary : colorScheme.error,
+          color: valid ? colorScheme.primary : colorScheme.error,
           width: 2,
         ),
       ),
@@ -400,6 +404,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
                 enableKeyboardNavigation: false,
                 enableDragAndDrop: _enableDragAndDrop,
+                showDropTargetTiles: _showDropTargetTiles,
+                showDropTargetOverlay: _showDropTargetOverlay,
+                dropTargetTilesAboveOverlay: _dropTargetTilesAboveOverlay,
                 dragEdgeNavigationEnabled: _dragEdgeNavigationEnabled,
                 dragEdgeNavigationDelay: Duration(
                   milliseconds: _dragEdgeNavigationDelayMs,
@@ -426,10 +433,10 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                         return true;
                       }
                     : null,
-                dragTargetTileBuilder:
+                dropTargetTileBuilder:
                     _enableDragAndDrop && _useCustomDragTargetTile
-                    ? (context, details) =>
-                          _buildCustomDragTargetTile(context, details)
+                    ? (context, tileContext) =>
+                          _buildCustomDropTargetTile(context, tileContext)
                     : null,
               ),
             ),
@@ -481,6 +488,24 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 'Custom tile',
                 _useCustomDragTargetTile,
                 (v) => setState(() => _useCustomDragTargetTile = v),
+                colorScheme,
+              ),
+              _buildCompactToggle(
+                'Drop tiles',
+                _showDropTargetTiles,
+                (v) => setState(() => _showDropTargetTiles = v),
+                colorScheme,
+              ),
+              _buildCompactToggle(
+                'Drop overlay',
+                _showDropTargetOverlay,
+                (v) => setState(() => _showDropTargetOverlay = v),
+                colorScheme,
+              ),
+              _buildCompactToggle(
+                'Tiles above',
+                _dropTargetTilesAboveOverlay,
+                (v) => setState(() => _dropTargetTilesAboveOverlay = v),
                 colorScheme,
               ),
             ],
@@ -607,6 +632,14 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 _useCustomDragTargetTile,
                 (v) {
                   setState(() => _useCustomDragTargetTile = v);
+                },
+                colorScheme,
+              ),
+              _buildToggle(
+                'Tiles above overlay',
+                _dropTargetTilesAboveOverlay,
+                (v) {
+                  setState(() => _dropTargetTilesAboveOverlay = v);
                 },
                 colorScheme,
               ),
@@ -921,6 +954,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
                 enableKeyboardNavigation: isDesktop,
                 enableDragAndDrop: _enableDragAndDrop,
+                showDropTargetTiles: _showDropTargetTiles,
+                showDropTargetOverlay: _showDropTargetOverlay,
+                dropTargetTilesAboveOverlay: _dropTargetTilesAboveOverlay,
                 dragEdgeNavigationEnabled: _dragEdgeNavigationEnabled,
                 dragEdgeNavigationDelay: Duration(
                   milliseconds: _dragEdgeNavigationDelayMs,
@@ -970,10 +1006,10 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                         );
                       }
                     : null,
-                dragTargetTileBuilder:
+                dropTargetTileBuilder:
                     _enableDragAndDrop && _useCustomDragTargetTile
-                    ? (context, details) =>
-                          _buildCustomDragTargetTile(context, details)
+                    ? (context, tileContext) =>
+                          _buildCustomDropTargetTile(context, tileContext)
                     : null,
                 // Example of advanced overlay customization (commented out)
                 // dropTargetOverlayBuilder takes precedence over dropTargetCellBuilder

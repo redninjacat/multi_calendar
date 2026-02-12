@@ -91,7 +91,10 @@ class MCalDayCellContext {
 /// Context object for event tile builder callbacks.
 ///
 /// Provides all necessary data for customizing the rendering of individual
-/// event tiles displayed within day cells.
+/// event tiles displayed within day cells. The same type is used for both
+/// normal event tiles (Layer 2) and drop target preview tiles (Layer 3).
+/// When building a drop target tile, [isDropTargetPreview], [dropValid],
+/// [proposedStartDate], and [proposedEndDate] are set; otherwise they are null.
 ///
 /// Theme data is accessed via `MCalTheme.of(context)` from within the builder
 /// callback, rather than being passed through this context object.
@@ -131,6 +134,22 @@ class MCalEventTileContext {
   /// May be null if not available during construction.
   final double? height;
 
+  /// True when this context is used to build a drop target preview tile (Layer 3).
+  /// Null or false for normal event tiles (Layer 2).
+  final bool? isDropTargetPreview;
+
+  /// True when the proposed drop is valid; false when invalid.
+  /// Only set for Layer 3 (drop target tiles); null otherwise.
+  final bool? dropValid;
+
+  /// Full start date of the proposed drop range (where the event would land if dropped).
+  /// Only set for Layer 3; null for Layer 2. Use with [proposedEndDate] for the full range.
+  final DateTime? proposedStartDate;
+
+  /// Full end date of the proposed drop range (where the event would land if dropped).
+  /// Only set for Layer 3; null for Layer 2.
+  final DateTime? proposedEndDate;
+
   /// Creates a new [MCalEventTileContext] instance.
   const MCalEventTileContext({
     required this.event,
@@ -139,6 +158,10 @@ class MCalEventTileContext {
     this.segment,
     this.width,
     this.height,
+    this.isDropTargetPreview,
+    this.dropValid,
+    this.proposedStartDate,
+    this.proposedEndDate,
   });
 }
 

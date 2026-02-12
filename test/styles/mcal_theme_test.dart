@@ -358,6 +358,30 @@ void main() {
       expect(updated.todayBackgroundColor, Colors.blue);
     });
 
+    test('dropTargetCell and dropTargetTile theme properties are supported', () {
+      const theme = MCalThemeData(
+        dropTargetCellValidColor: Color(0xFF00FF00),
+        dropTargetCellInvalidColor: Color(0xFFFF0000),
+        dropTargetCellBorderRadius: 8.0,
+        dropTargetTileBackgroundColor: Color(0xFF0000FF),
+        dropTargetTileInvalidBackgroundColor: Color(0xFFFF00FF),
+        dropTargetTileCornerRadius: 4.0,
+      );
+      expect(theme.dropTargetCellValidColor?.toARGB32(), 0xFF00FF00);
+      expect(theme.dropTargetCellInvalidColor?.toARGB32(), 0xFFFF0000);
+      expect(theme.dropTargetCellBorderRadius, 8.0);
+      expect(theme.dropTargetTileBackgroundColor?.toARGB32(), 0xFF0000FF);
+      expect(theme.dropTargetTileInvalidBackgroundColor?.toARGB32(), 0xFFFF00FF);
+      expect(theme.dropTargetTileCornerRadius, 4.0);
+
+      final updated = theme.copyWith(
+        dropTargetTileBorderColor: Colors.amber,
+        dropTargetTileBorderWidth: 2.0,
+      );
+      expect(updated.dropTargetTileBorderColor, Colors.amber);
+      expect(updated.dropTargetTileBorderWidth, 2.0);
+    });
+
     test('lerp interpolates between themes correctly (t = 0.0)', () {
       final theme1 = MCalThemeData(
         cellBackgroundColor: Colors.white,

@@ -118,6 +118,30 @@ void main() {
       expect(find.byType(MCalMonthView), findsOneWidget);
     });
 
+    testWidgets('accepts showDropTargetTiles, showDropTargetOverlay, dropTargetTileBuilder', (tester) async {
+      bool dropTargetTileBuilderCalled = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MCalMonthView(
+              controller: controller,
+              enableDragAndDrop: true,
+              showDropTargetTiles: false,
+              showDropTargetOverlay: false,
+              dropTargetTileBuilder: (context, tileContext) {
+                dropTargetTileBuilderCalled = true;
+                expect(tileContext.isDropTargetPreview, isTrue);
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(MCalMonthView), findsOneWidget);
+      // dropTargetTileBuilder is only invoked during drag; params are accepted
+      expect(dropTargetTileBuilderCalled, isFalse);
+    });
+
     testWidgets('displays calendar grid', (tester) async {
       await tester.pumpWidget(
         MaterialApp(

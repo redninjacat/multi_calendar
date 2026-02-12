@@ -201,14 +201,14 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
   /// Background color for event tiles on hover.
   final Color? hoverEventBackgroundColor;
 
-  /// Highlight color for valid drop target during drag-and-drop.
-  final Color? dragTargetValidColor;
+  /// Highlight color for valid drop target cell overlay during drag-and-drop (Layer 4).
+  final Color? dropTargetCellValidColor;
 
-  /// Highlight color for invalid drop target during drag-and-drop.
-  final Color? dragTargetInvalidColor;
+  /// Highlight color for invalid drop target cell overlay during drag-and-drop (Layer 4).
+  final Color? dropTargetCellInvalidColor;
 
-  /// Border radius for drop target highlights during drag-and-drop.
-  final double? dragTargetBorderRadius;
+  /// Border radius for drop target cell overlay highlights during drag-and-drop (Layer 4).
+  final double? dropTargetCellBorderRadius;
 
   /// Opacity for the source placeholder during drag-and-drop.
   final double? dragSourceOpacity;
@@ -282,6 +282,26 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
   /// Defaults to 0.0 (no border).
   final double? eventTileBorderWidth;
 
+  /// Background color for drop target preview tiles (Layer 3).
+  /// Falls back to [eventTileBackgroundColor] then theme default when null.
+  final Color? dropTargetTileBackgroundColor;
+
+  /// Background color for invalid drop target preview tiles (Layer 3).
+  /// Falls back to [eventTileBackgroundColor] or a red tint when null.
+  final Color? dropTargetTileInvalidBackgroundColor;
+
+  /// Corner radius for drop target preview tiles (Layer 3).
+  /// Falls back to [eventTileCornerRadius] then 3.0 when null.
+  final double? dropTargetTileCornerRadius;
+
+  /// Border color for drop target preview tiles (Layer 3).
+  /// Falls back to [eventTileBorderColor] when null.
+  final Color? dropTargetTileBorderColor;
+
+  /// Border width for drop target preview tiles (Layer 3).
+  /// Falls back to [eventTileBorderWidth] then 0.0 when null.
+  final double? dropTargetTileBorderWidth;
+
   /// Creates a new [MCalThemeData] instance.
   ///
   /// All parameters are optional, allowing partial customization.
@@ -311,9 +331,9 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     this.weekNumberBackgroundColor,
     this.hoverCellBackgroundColor,
     this.hoverEventBackgroundColor,
-    this.dragTargetValidColor,
-    this.dragTargetInvalidColor,
-    this.dragTargetBorderRadius,
+    this.dropTargetCellValidColor,
+    this.dropTargetCellInvalidColor,
+    this.dropTargetCellBorderRadius,
     this.dragSourceOpacity,
     this.draggedTileElevation,
     this.multiDayEventBackgroundColor,
@@ -328,6 +348,11 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     this.ignoreEventColors = false,
     this.eventTileBorderColor,
     this.eventTileBorderWidth,
+    this.dropTargetTileBackgroundColor,
+    this.dropTargetTileInvalidBackgroundColor,
+    this.dropTargetTileCornerRadius,
+    this.dropTargetTileBorderColor,
+    this.dropTargetTileBorderWidth,
   });
 
   /// Creates a [MCalThemeData] instance with default values derived
@@ -391,9 +416,9 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
       hoverEventBackgroundColor: colorScheme.primaryContainer.withValues(
         alpha: 0.8,
       ),
-      dragTargetValidColor: Colors.green.withValues(alpha: 0.3),
-      dragTargetInvalidColor: Colors.red.withValues(alpha: 0.3),
-      dragTargetBorderRadius: 4.0,
+      dropTargetCellValidColor: Colors.green.withValues(alpha: 0.3),
+      dropTargetCellInvalidColor: Colors.red.withValues(alpha: 0.3),
+      dropTargetCellBorderRadius: 4.0,
       dragSourceOpacity: 0.5,
       draggedTileElevation: 6.0,
       multiDayEventBackgroundColor: colorScheme.primary.withValues(alpha: 0.8),
@@ -439,9 +464,9 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     Color? weekNumberBackgroundColor,
     Color? hoverCellBackgroundColor,
     Color? hoverEventBackgroundColor,
-    Color? dragTargetValidColor,
-    Color? dragTargetInvalidColor,
-    double? dragTargetBorderRadius,
+    Color? dropTargetCellValidColor,
+    Color? dropTargetCellInvalidColor,
+    double? dropTargetCellBorderRadius,
     double? dragSourceOpacity,
     double? draggedTileElevation,
     Color? multiDayEventBackgroundColor,
@@ -456,6 +481,11 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     bool? ignoreEventColors,
     Color? eventTileBorderColor,
     double? eventTileBorderWidth,
+    Color? dropTargetTileBackgroundColor,
+    Color? dropTargetTileInvalidBackgroundColor,
+    double? dropTargetTileCornerRadius,
+    Color? dropTargetTileBorderColor,
+    double? dropTargetTileBorderWidth,
   }) {
     return MCalThemeData(
       cellBackgroundColor: cellBackgroundColor ?? this.cellBackgroundColor,
@@ -498,11 +528,12 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
           hoverCellBackgroundColor ?? this.hoverCellBackgroundColor,
       hoverEventBackgroundColor:
           hoverEventBackgroundColor ?? this.hoverEventBackgroundColor,
-      dragTargetValidColor: dragTargetValidColor ?? this.dragTargetValidColor,
-      dragTargetInvalidColor:
-          dragTargetInvalidColor ?? this.dragTargetInvalidColor,
-      dragTargetBorderRadius:
-          dragTargetBorderRadius ?? this.dragTargetBorderRadius,
+      dropTargetCellValidColor:
+          dropTargetCellValidColor ?? this.dropTargetCellValidColor,
+      dropTargetCellInvalidColor:
+          dropTargetCellInvalidColor ?? this.dropTargetCellInvalidColor,
+      dropTargetCellBorderRadius:
+          dropTargetCellBorderRadius ?? this.dropTargetCellBorderRadius,
       dragSourceOpacity: dragSourceOpacity ?? this.dragSourceOpacity,
       draggedTileElevation: draggedTileElevation ?? this.draggedTileElevation,
       multiDayEventBackgroundColor:
@@ -523,6 +554,16 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
       ignoreEventColors: ignoreEventColors ?? this.ignoreEventColors,
       eventTileBorderColor: eventTileBorderColor ?? this.eventTileBorderColor,
       eventTileBorderWidth: eventTileBorderWidth ?? this.eventTileBorderWidth,
+      dropTargetTileBackgroundColor: dropTargetTileBackgroundColor ??
+          this.dropTargetTileBackgroundColor,
+      dropTargetTileInvalidBackgroundColor: dropTargetTileInvalidBackgroundColor ??
+          this.dropTargetTileInvalidBackgroundColor,
+      dropTargetTileCornerRadius: dropTargetTileCornerRadius ??
+          this.dropTargetTileCornerRadius,
+      dropTargetTileBorderColor: dropTargetTileBorderColor ??
+          this.dropTargetTileBorderColor,
+      dropTargetTileBorderWidth: dropTargetTileBorderWidth ??
+          this.dropTargetTileBorderWidth,
     );
   }
 
@@ -646,19 +687,19 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
         other.hoverEventBackgroundColor,
         t,
       ),
-      dragTargetValidColor: Color.lerp(
-        dragTargetValidColor,
-        other.dragTargetValidColor,
+      dropTargetCellValidColor: Color.lerp(
+        dropTargetCellValidColor,
+        other.dropTargetCellValidColor,
         t,
       ),
-      dragTargetInvalidColor: Color.lerp(
-        dragTargetInvalidColor,
-        other.dragTargetInvalidColor,
+      dropTargetCellInvalidColor: Color.lerp(
+        dropTargetCellInvalidColor,
+        other.dropTargetCellInvalidColor,
         t,
       ),
-      dragTargetBorderRadius: _lerpDouble(
-        dragTargetBorderRadius,
-        other.dragTargetBorderRadius,
+      dropTargetCellBorderRadius: _lerpDouble(
+        dropTargetCellBorderRadius,
+        other.dropTargetCellBorderRadius,
         t,
       ),
       dragSourceOpacity: _lerpDouble(
@@ -713,6 +754,31 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
       eventTileBorderWidth: _lerpDouble(
         eventTileBorderWidth,
         other.eventTileBorderWidth,
+        t,
+      ),
+      dropTargetTileBackgroundColor: Color.lerp(
+        dropTargetTileBackgroundColor,
+        other.dropTargetTileBackgroundColor,
+        t,
+      ),
+      dropTargetTileInvalidBackgroundColor: Color.lerp(
+        dropTargetTileInvalidBackgroundColor,
+        other.dropTargetTileInvalidBackgroundColor,
+        t,
+      ),
+      dropTargetTileCornerRadius: _lerpDouble(
+        dropTargetTileCornerRadius,
+        other.dropTargetTileCornerRadius,
+        t,
+      ),
+      dropTargetTileBorderColor: Color.lerp(
+        dropTargetTileBorderColor,
+        other.dropTargetTileBorderColor,
+        t,
+      ),
+      dropTargetTileBorderWidth: _lerpDouble(
+        dropTargetTileBorderWidth,
+        other.dropTargetTileBorderWidth,
         t,
       ),
     );

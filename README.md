@@ -674,7 +674,7 @@ MCalMonthView(
 |-------|-----------|---------|
 | `MCalDraggedTileDetails` | `event`, `sourceDate`, `currentPosition` | `draggedTileBuilder` |
 | `MCalDragSourceDetails` | `event`, `sourceDate` | `dragSourceTileBuilder` |
-| `MCalDragTargetDetails` | `event`, `targetDate`, `isValid` | `dragTargetTileBuilder` |
+| `MCalEventTileContext` (drop target) | `event`, `displayDate`, `isDropTargetPreview`, `dropValid`, `proposedStartDate`, `proposedEndDate` | `dropTargetTileBuilder` |
 | `MCalDragWillAcceptDetails` | `event`, `proposedStartDate`, `proposedEndDate` | `onDragWillAccept` |
 | `MCalDropTargetCellDetails` | `date`, `isValid`, `draggedEvent` | `dropTargetCellBuilder` |
 | `MCalEventDroppedDetails` | `event`, `oldStartDate`, `oldEndDate`, `newStartDate`, `newEndDate` | `onEventDropped` |

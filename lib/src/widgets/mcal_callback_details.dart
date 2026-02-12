@@ -440,58 +440,6 @@ class MCalDragSourceDetails {
   const MCalDragSourceDetails({required this.event, required this.sourceDate});
 }
 
-/// Details object for the drag target preview builder.
-///
-/// Provides context for building a preview widget that appears when an event
-/// is being dragged over a potential drop target. This is used by the
-/// [dragTargetTileBuilder] callback to show where the event would be placed.
-///
-/// Example:
-/// ```dart
-/// dragTargetTileBuilder: (context, details) {
-///   return Container(
-///     decoration: BoxDecoration(
-///       color: details.isValid
-///           ? Colors.green.withOpacity(0.3)
-///           : Colors.red.withOpacity(0.3),
-///       borderRadius: BorderRadius.circular(4),
-///       border: Border.all(
-///         color: details.isValid ? Colors.green : Colors.red,
-///         width: 2,
-///       ),
-///     ),
-///     child: Center(
-///       child: Text(
-///         details.event.title,
-///         style: TextStyle(
-///           color: details.isValid ? Colors.green : Colors.red,
-///         ),
-///       ),
-///     ),
-///   );
-/// }
-/// ```
-class MCalDragTargetDetails {
-  /// The calendar event being dragged.
-  final MCalCalendarEvent event;
-
-  /// The date of the cell currently being hovered over.
-  final DateTime targetDate;
-
-  /// Whether dropping on this target would be valid.
-  ///
-  /// This is determined by the [onDragWillAccept] callback if provided,
-  /// or defaults to true if no validation callback is set.
-  final bool isValid;
-
-  /// Creates a new [MCalDragTargetDetails] instance.
-  const MCalDragTargetDetails({
-    required this.event,
-    required this.targetDate,
-    required this.isValid,
-  });
-}
-
 /// Details object for the drop validation callback.
 ///
 /// Provides context for determining whether a drag operation should be

@@ -430,13 +430,34 @@ class MCalMonthView extends StatefulWidget {
 
   /// Builder callback for customizing the drag target preview widget.
   ///
-  /// When provided, this builder creates a preview widget shown when
-  /// hovering over a potential drop target. Receives [MCalDragTargetDetails]
-  /// with the event, target date, and validity state.
+  /// When true (and [enableDragAndDrop] is true), drop target preview tiles
+  /// (Layer 3) are shown during drag. Defaults to true.
+  final bool showDropTargetTiles;
+
+  /// When true (and [enableDragAndDrop] is true), the drop target cell overlay
+  /// (Layer 4) is shown during drag. Defaults to true.
+  final bool showDropTargetOverlay;
+
+  /// When true, the drop target tiles layer renders above the drop target
+  /// overlay layer during drag-and-drop. When false (default), tiles render
+  /// below the overlay.
   ///
-  /// Only used when [enableDragAndDrop] is true.
-  final Widget Function(BuildContext, MCalDragTargetDetails)?
-  dragTargetTileBuilder;
+  /// By default, drop target tiles are Layer 3 and the overlay is Layer 4.
+  /// Setting this to true reverses their order.
+  ///
+  /// Only relevant when both [showDropTargetTiles] and [showDropTargetOverlay]
+  /// are true and [enableDragAndDrop] is true.
+  final bool dropTargetTilesAboveOverlay;
+
+  /// Optional builder for drop target preview tiles (Layer 3).
+  ///
+  /// When provided, this builder creates a preview widget shown when
+  /// hovering over a potential drop target. Receives [MCalEventTileContext]
+  /// with [isDropTargetPreview] true and [dropValid], [proposedStartDate],
+  /// [proposedEndDate] set. If null, a default tile (same shape, no text) is used.
+  ///
+  /// Only used when [enableDragAndDrop] and [showDropTargetTiles] are true.
+  final MCalEventTileBuilder? dropTargetTileBuilder;
 
   /// Builder callback for customizing drop target cell appearance.
   ///
@@ -596,9 +617,12 @@ class MCalMonthView extends StatefulWidget {
     this.overflowIndicatorBuilder,
     // Drag-and-drop
     this.enableDragAndDrop = false,
+    this.showDropTargetTiles = true,
+    this.showDropTargetOverlay = true,
+    this.dropTargetTilesAboveOverlay = false,
     this.draggedTileBuilder,
     this.dragSourceTileBuilder,
-    this.dragTargetTileBuilder,
+    this.dropTargetTileBuilder,
     this.dropTargetCellBuilder,
     this.dropTargetOverlayBuilder,
     this.onDragWillAccept,
@@ -1163,9 +1187,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           overflowIndicatorBuilder: widget.overflowIndicatorBuilder,
           // Drag-and-drop
           enableDragAndDrop: widget.enableDragAndDrop,
+          showDropTargetTiles: widget.showDropTargetTiles,
+          showDropTargetOverlay: widget.showDropTargetOverlay,
+          dropTargetTilesAboveOverlay: widget.dropTargetTilesAboveOverlay,
           draggedTileBuilder: widget.draggedTileBuilder,
           dragSourceTileBuilder: widget.dragSourceTileBuilder,
-          dragTargetTileBuilder: widget.dragTargetTileBuilder,
+          dropTargetTileBuilder: widget.dropTargetTileBuilder,
           dropTargetCellBuilder: widget.dropTargetCellBuilder,
           dropTargetOverlayBuilder: widget.dropTargetOverlayBuilder,
           onDragWillAccept: widget.onDragWillAccept,
@@ -1980,12 +2007,14 @@ class _MonthPageWidget extends StatefulWidget {
 
   // Drag-and-drop parameters
   final bool enableDragAndDrop;
+  final bool showDropTargetTiles;
+  final bool showDropTargetOverlay;
+  final bool dropTargetTilesAboveOverlay;
   final Widget Function(BuildContext, MCalDraggedTileDetails)?
   draggedTileBuilder;
   final Widget Function(BuildContext, MCalDragSourceDetails)?
   dragSourceTileBuilder;
-  final Widget Function(BuildContext, MCalDragTargetDetails)?
-  dragTargetTileBuilder;
+  final MCalEventTileBuilder? dropTargetTileBuilder;
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
   dropTargetCellBuilder;
   final Widget Function(BuildContext, MCalDropOverlayDetails)?
@@ -2041,9 +2070,12 @@ class _MonthPageWidget extends StatefulWidget {
     this.overflowIndicatorBuilder,
     // Drag-and-drop
     this.enableDragAndDrop = false,
+    this.showDropTargetTiles = true,
+    this.showDropTargetOverlay = true,
+    this.dropTargetTilesAboveOverlay = false,
     this.draggedTileBuilder,
     this.dragSourceTileBuilder,
-    this.dragTargetTileBuilder,
+    this.dropTargetTileBuilder,
     this.dropTargetCellBuilder,
     this.dropTargetOverlayBuilder,
     this.onDragWillAccept,
@@ -2082,17 +2114,24 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   // Cached Layout Values (for drag performance)
   // ============================================================
 
-  /// Cached day width - updated when layout changes.
+  /// Cached day width (content area only, excludes week number column).
   double _cachedDayWidth = 0;
 
   /// Cached week row height - updated when layout changes.
   double _cachedWeekRowHeight = 0;
 
-  /// Cached calendar size - updated when layout changes.
+  /// Cached calendar size (full widget including week number column).
   Size _cachedCalendarSize = Size.zero;
 
   /// Cached calendar global offset - updated when layout changes.
   Offset _cachedCalendarOffset = Offset.zero;
+
+  /// Cached week number column width (0 when week numbers hidden).
+  double _cachedWeekNumberWidth = 0;
+
+  /// Cached X offset from widget left to content area start.
+  /// In LTR: equals week number width; in RTL: 0 (week numbers on right).
+  double _cachedContentOffsetX = 0;
 
   /// Cached event duration for the current drag operation.
   int _cachedEventDuration = 1;
@@ -2159,18 +2198,22 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   }
 
   /// Update cached layout values from render box.
-  /// Called once at start of drag and when layout changes.
+  /// Called once at start of each drag (guarded by [_layoutCachedForDrag]).
+  /// Always recomputes — the formula depends on [widget.showWeekNumbers] and
+  /// text direction, which can change without affecting overall widget size.
   void _updateLayoutCache(RenderBox renderBox) {
-    final size = renderBox.size;
-    final offset = renderBox.localToGlobal(Offset.zero);
-
-    // Only update if changed
-    if (size != _cachedCalendarSize || offset != _cachedCalendarOffset) {
-      _cachedCalendarSize = size;
-      _cachedCalendarOffset = offset;
-      _cachedDayWidth = size.width / 7;
-      _cachedWeekRowHeight = size.height / _weeksInMonth;
-    }
+    _cachedCalendarSize = renderBox.size;
+    _cachedCalendarOffset = renderBox.localToGlobal(Offset.zero);
+    // Account for week number column: day width is computed from content area only
+    final weekNumberWidth =
+        widget.showWeekNumbers ? _WeekNumberCell.columnWidth : 0.0;
+    _cachedWeekNumberWidth = weekNumberWidth;
+    // In LTR, week numbers are on the left → content starts at weekNumberWidth.
+    // In RTL, week numbers are on the right → content starts at 0.
+    final isRTL = Directionality.maybeOf(context) == TextDirection.rtl;
+    _cachedContentOffsetX = isRTL ? 0.0 : weekNumberWidth;
+    _cachedDayWidth = (_cachedCalendarSize.width - weekNumberWidth) / 7;
+    _cachedWeekRowHeight = _cachedCalendarSize.height / _weeksInMonth;
   }
 
   /// Whether a drag is currently active.
@@ -2183,11 +2226,12 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   }
 
   /// Get bounds for a specific week row (uses cached values).
+  /// Returns the content area bounds (excluding week number column).
   Rect _getWeekRowBounds(int index) {
     return Rect.fromLTWH(
-      0,
+      _cachedContentOffsetX,
       index * _cachedWeekRowHeight,
-      _cachedCalendarSize.width,
+      _cachedCalendarSize.width - _cachedWeekNumberWidth,
       _cachedWeekRowHeight,
     );
   }
@@ -2260,7 +2304,11 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
       _weeksInMonth - 1,
     );
 
-    // Call dragHandler.handleDragMove with cached/minimal parameters
+    // Call dragHandler.handleDragMove with cached/minimal parameters.
+    // weekRowBounds uses content area (excluding week number column) so that
+    // cell index and highlight bounds are computed correctly.
+    final contentLeft = _cachedCalendarOffset.dx + _cachedContentOffsetX;
+    final contentWidth = _cachedCalendarSize.width - _cachedWeekNumberWidth;
     dragHandler.handleDragMove(
       globalPosition: Offset(pointerGlobalX, pointerGlobalY),
       dayWidth: _cachedDayWidth,
@@ -2268,9 +2316,9 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
       eventDurationDays: _cachedEventDuration,
       weekRowIndex: weekRowIndex,
       weekRowBounds: Rect.fromLTWH(
-        _cachedCalendarOffset.dx,
+        contentLeft,
         _cachedCalendarOffset.dy + weekRowIndex * _cachedWeekRowHeight,
-        _cachedCalendarSize.width,
+        contentWidth,
         _cachedWeekRowHeight,
       ),
       calendarBounds: _cachedCalendarOffset & _cachedCalendarSize,
@@ -2443,15 +2491,197 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   }
 
   // ============================================================
+  // Layer 3 Drop Target Tile Builder
+  // ============================================================
+
+  /// Returns an [MCalEventTileBuilder] for Layer 3 that builds [MCalEventTileContext]
+  /// with [isDropTargetPreview], [dropValid], [proposedStartDate], [proposedEndDate]
+  /// from [dragHandler], then calls [widget.dropTargetTileBuilder] or default tile.
+  MCalEventTileBuilder _buildDropTargetTileEventBuilder(
+    MCalDragHandler dragHandler,
+  ) {
+    final customBuilder = widget.dropTargetTileBuilder;
+    return (BuildContext context, MCalEventTileContext tileContext) {
+      final event = dragHandler.draggedEvent;
+      if (event == null) return const SizedBox.shrink();
+      final newContext = MCalEventTileContext(
+        event: event,
+        displayDate: tileContext.displayDate,
+        isAllDay: tileContext.isAllDay,
+        segment: tileContext.segment,
+        width: tileContext.width,
+        height: tileContext.height,
+        isDropTargetPreview: true,
+        dropValid: dragHandler.isProposedDropValid,
+        proposedStartDate: dragHandler.proposedStartDate,
+        proposedEndDate: dragHandler.proposedEndDate,
+      );
+      if (customBuilder != null) return customBuilder(context, newContext);
+      return _buildDefaultDropTargetTile(context, newContext);
+    };
+  }
+
+  /// Default drop target tile: same shape as default event tile, no text.
+  /// Style: dropTargetTile* → eventTile* → event.color → fallback.
+  Widget _buildDefaultDropTargetTile(
+    BuildContext context,
+    MCalEventTileContext tileContext,
+  ) {
+    final theme = widget.theme;
+    final event = tileContext.event;
+    final segment = tileContext.segment;
+    final valid = tileContext.dropValid ?? true;
+
+    final cornerRadius =
+        theme.dropTargetTileCornerRadius ??
+        theme.eventTileCornerRadius ??
+        4.0;
+    final leftRadius = segment?.isFirstSegment ?? true ? cornerRadius : 0.0;
+    final rightRadius = segment?.isLastSegment ?? true ? cornerRadius : 0.0;
+
+    final tileColor = valid
+        ? (theme.dropTargetTileBackgroundColor ??
+            theme.eventTileBackgroundColor ??
+            event.color ??
+            Colors.blue)
+        : (theme.dropTargetTileInvalidBackgroundColor ??
+            theme.eventTileBackgroundColor ??
+            Colors.red.withValues(alpha: 0.5));
+
+    final borderWidth =
+        theme.dropTargetTileBorderWidth ?? theme.eventTileBorderWidth ?? 0.0;
+    final borderColor = theme.dropTargetTileBorderColor ??
+        theme.eventTileBorderColor;
+    final hasBorder = borderWidth > 0 && borderColor != null;
+    final isFirstSegment = segment?.isFirstSegment ?? true;
+    final isLastSegment = segment?.isLastSegment ?? true;
+
+    Border? tileBorder;
+    if (hasBorder) {
+      final topBorder = BorderSide(color: borderColor, width: borderWidth);
+      final bottomBorder = BorderSide(color: borderColor, width: borderWidth);
+      final leftBorder = isFirstSegment
+          ? BorderSide(color: borderColor, width: borderWidth)
+          : BorderSide.none;
+      final rightBorder = isLastSegment
+          ? BorderSide(color: borderColor, width: borderWidth)
+          : BorderSide.none;
+      tileBorder = Border(
+        top: topBorder,
+        bottom: bottomBorder,
+        left: leftBorder,
+        right: rightBorder,
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: tileColor,
+        borderRadius: BorderRadius.horizontal(
+          left: Radius.circular(leftRadius),
+          right: Radius.circular(rightRadius),
+        ),
+        border: tileBorder,
+      ),
+    );
+  }
+
+  // ============================================================
   // Highlight Overlay Builder
   // ============================================================
 
-  /// Builds the highlight overlay for drop targets.
+  /// Builds Layer 3: drop target preview tiles (phantom segments, same week layout as Layer 2).
+  Widget _buildDropTargetTilesLayer(BuildContext context) {
+    final dragHandler = widget.dragHandler;
+    if (dragHandler == null ||
+        dragHandler.proposedStartDate == null ||
+        dragHandler.proposedEndDate == null) {
+      return const SizedBox.shrink();
+    }
+    final proposedStart = dragHandler.proposedStartDate!;
+    final proposedEnd = dragHandler.proposedEndDate!;
+    final monthStart = DateTime(widget.month.year, widget.month.month, 1);
+    final firstDayOfWeek = widget.firstDayOfWeek;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final weekNumberWidth =
+            widget.showWeekNumbers ? _WeekNumberCell.columnWidth : 0.0;
+        final contentWidth = constraints.maxWidth - weekNumberWidth;
+        final dayWidth = _weeks.isNotEmpty ? contentWidth / 7 : 0.0;
+        final rowHeight = _weeks.isNotEmpty
+            ? constraints.maxHeight / _weeks.length
+            : 0.0;
+        final dateLabelHeight = widget.theme.dateLabelHeight ?? 18.0;
+
+        final phantomSegments = _getPhantomSegmentsForDropTarget(
+          proposedStartDate: proposedStart,
+          proposedEndDate: proposedEnd,
+          monthStart: monthStart,
+          firstDayOfWeek: firstDayOfWeek,
+        );
+        final dropTargetTileBuilder =
+            _buildDropTargetTileEventBuilder(dragHandler);
+        final dateLabelPlaceholder = _buildDropTargetDateLabelPlaceholder(
+          dateLabelHeight: dateLabelHeight,
+          dayWidth: dayWidth,
+        );
+        final config = MCalWeekLayoutConfig.fromTheme(
+          widget.theme,
+          maxVisibleEventsPerDay: widget.maxVisibleEventsPerDay,
+        );
+        Widget noOpOverflow(
+          BuildContext ctx,
+          MCalOverflowIndicatorContext overflowContext,
+        ) =>
+            const SizedBox.shrink();
+
+        return Column(
+          children: List.generate(_weeks.length, (weekRowIndex) {
+            final weekDates = _weeks[weekRowIndex];
+            final columnWidths = List.filled(7, dayWidth);
+            final segments = weekRowIndex < phantomSegments.length
+                ? phantomSegments[weekRowIndex]
+                : <MCalEventSegment>[];
+            final layoutContext = MCalWeekLayoutContext(
+              segments: segments,
+              dates: weekDates,
+              columnWidths: columnWidths,
+              rowHeight: rowHeight,
+              weekRowIndex: weekRowIndex,
+              currentMonth: widget.month,
+              config: config,
+              eventTileBuilder: dropTargetTileBuilder,
+              dateLabelBuilder: dateLabelPlaceholder,
+              overflowIndicatorBuilder: noOpOverflow,
+            );
+            final weekLayout = widget.weekLayoutBuilder != null
+                ? widget.weekLayoutBuilder!(context, layoutContext)
+                : MCalDefaultWeekLayoutBuilder.build(context, layoutContext);
+            return Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (widget.showWeekNumbers)
+                    SizedBox(
+                      width: _WeekNumberCell.columnWidth,
+                    ),
+                  Expanded(child: weekLayout),
+                ],
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
+  /// Builds the Layer 4 highlight overlay for drop target cells.
   ///
   /// Precedence: dropTargetOverlayBuilder > dropTargetCellBuilder > default CustomPainter.
   /// All paths are wrapped in a single [Semantics] that announces the drop target
   /// state (valid/invalid) and the first date of the proposed range.
-  Widget _buildLayer3HighlightOverlay(BuildContext context) {
+  Widget _buildDropTargetOverlayLayer(BuildContext context) {
     final dragHandler = widget.dragHandler;
     if (dragHandler == null) return const SizedBox.shrink();
 
@@ -2535,12 +2765,12 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
           dropEndCellIndex: last.cellIndex,
           isValid: isValid,
           validColor:
-              widget.theme.dragTargetValidColor ??
+              widget.theme.dropTargetCellValidColor ??
               Colors.green.withValues(alpha: 0.3),
           invalidColor:
-              widget.theme.dragTargetInvalidColor ??
+              widget.theme.dropTargetCellInvalidColor ??
               Colors.red.withValues(alpha: 0.3),
-          borderRadius: widget.theme.dragTargetBorderRadius ?? 4.0,
+          borderRadius: widget.theme.dropTargetCellBorderRadius ?? 4.0,
         ),
       );
     }
@@ -2620,7 +2850,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             enableDragAndDrop: widget.enableDragAndDrop,
             draggedTileBuilder: widget.draggedTileBuilder,
             dragSourceTileBuilder: widget.dragSourceTileBuilder,
-            dragTargetTileBuilder: widget.dragTargetTileBuilder,
+            dropTargetTileBuilder: widget.dropTargetTileBuilder,
             dropTargetCellBuilder: widget.dropTargetCellBuilder,
             onDragWillAccept: widget.onDragWillAccept,
             onEventDropped: widget.onEventDropped,
@@ -2642,21 +2872,43 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
         onLeave: (_) => _handleDragLeave(),
         onAcceptWithDetails: _handleDrop,
         builder: (context, candidateData, rejectedData) {
-          return Stack(
-            children: [
-              // Main content (week rows with grid and events)
-              weekRowsColumn,
-
-              // Highlight overlay (only when dragging)
-              // RepaintBoundary prevents highlight changes from repainting calendar
-              if (_isDragActive)
-                Positioned.fill(
+          // Build drop-feedback layers (order controlled by dropTargetTilesAboveOverlay)
+          final tilesLayer = (widget.showDropTargetTiles && _isDragActive)
+              ? Positioned.fill(
                   child: RepaintBoundary(
                     child: IgnorePointer(
-                      child: _buildLayer3HighlightOverlay(context),
+                      child: _buildDropTargetTilesLayer(context),
                     ),
                   ),
-                ),
+                )
+              : null;
+
+          final overlayLayer =
+              (widget.showDropTargetOverlay && _isDragActive)
+                  ? Positioned.fill(
+                      child: RepaintBoundary(
+                        child: IgnorePointer(
+                          child: _buildDropTargetOverlayLayer(context),
+                        ),
+                      ),
+                    )
+                  : null;
+
+          // By default (dropTargetTilesAboveOverlay: false), tiles are Layer 3
+          // (below) and overlay is Layer 4 (above). When true, the order reverses.
+          final firstLayer = widget.dropTargetTilesAboveOverlay
+              ? overlayLayer
+              : tilesLayer;
+          final secondLayer = widget.dropTargetTilesAboveOverlay
+              ? tilesLayer
+              : overlayLayer;
+
+          return Stack(
+            children: [
+              // Layer 1+2: Main content (week rows with grid and events)
+              weekRowsColumn,
+              if (firstLayer != null) firstLayer,
+              if (secondLayer != null) secondLayer,
             ],
           );
         },
@@ -2876,8 +3128,7 @@ class _WeekRowWidget extends StatefulWidget {
   draggedTileBuilder;
   final Widget Function(BuildContext, MCalDragSourceDetails)?
   dragSourceTileBuilder;
-  final Widget Function(BuildContext, MCalDragTargetDetails)?
-  dragTargetTileBuilder;
+  final MCalEventTileBuilder? dropTargetTileBuilder;
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
   dropTargetCellBuilder;
   final bool Function(BuildContext, MCalDragWillAcceptDetails)?
@@ -2933,7 +3184,7 @@ class _WeekRowWidget extends StatefulWidget {
     this.enableDragAndDrop = false,
     this.draggedTileBuilder,
     this.dragSourceTileBuilder,
-    this.dragTargetTileBuilder,
+    this.dropTargetTileBuilder,
     this.dropTargetCellBuilder,
     this.onDragWillAccept,
     this.onEventDropped,
@@ -3082,7 +3333,6 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           enableDragAndDrop: widget.enableDragAndDrop,
           draggedTileBuilder: widget.draggedTileBuilder,
           dragSourceTileBuilder: widget.dragSourceTileBuilder,
-          dragTargetTileBuilder: widget.dragTargetTileBuilder,
           dropTargetCellBuilder: widget.dropTargetCellBuilder,
           onDragWillAccept: widget.onDragWillAccept,
           onEventDropped: widget.onEventDropped,
@@ -3190,7 +3440,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
     return MCalDefaultWeekLayoutBuilder.build(context, layoutContext);
   }
 
-  // Note: _buildLayer3DropTargets and _shouldHighlightCell have been removed.
+  // Note: _buildDropTargetTilesLayer and _shouldHighlightCell have been removed.
   // Drop target handling is now done at the _MonthPageWidget level with a
   // unified DragTarget wrapping all week rows.
 
@@ -3415,8 +3665,6 @@ class _DayCellWidget extends StatelessWidget {
   draggedTileBuilder;
   final Widget Function(BuildContext, MCalDragSourceDetails)?
   dragSourceTileBuilder;
-  final Widget Function(BuildContext, MCalDragTargetDetails)?
-  dragTargetTileBuilder;
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
   dropTargetCellBuilder;
   final bool Function(BuildContext, MCalDragWillAcceptDetails)?
@@ -3476,7 +3724,6 @@ class _DayCellWidget extends StatelessWidget {
     this.enableDragAndDrop = false,
     this.draggedTileBuilder,
     this.dragSourceTileBuilder,
-    this.dragTargetTileBuilder,
     this.dropTargetCellBuilder,
     this.onDragWillAccept,
     this.onEventDropped,
@@ -4888,6 +5135,45 @@ class _NavigatorWidget extends StatelessWidget {
       locale,
     );
   }
+}
+
+/// Returns phantom event segments for the proposed drop range (Layer 3).
+///
+/// Creates a synthetic all-day event from [proposedStartDate] to [proposedEndDate],
+/// then uses [MCalMultiDayRenderer.calculateAllEventSegments] to get one segment
+/// per week row that the range intersects.
+List<List<MCalEventSegment>> _getPhantomSegmentsForDropTarget({
+  required DateTime proposedStartDate,
+  required DateTime proposedEndDate,
+  required DateTime monthStart,
+  required int firstDayOfWeek,
+}) {
+  final startDay = DateTime(proposedStartDate.year, proposedStartDate.month, proposedStartDate.day);
+  final endDay = DateTime(proposedEndDate.year, proposedEndDate.month, proposedEndDate.day);
+  final synthetic = MCalCalendarEvent(
+    id: '__drop_target_phantom__',
+    title: '',
+    start: startDay,
+    end: endDay,
+    isAllDay: true,
+  );
+  return MCalMultiDayRenderer.calculateAllEventSegments(
+    events: [synthetic],
+    monthStart: monthStart,
+    firstDayOfWeek: firstDayOfWeek,
+  );
+}
+
+/// Creates a [MCalDateLabelBuilder] for Layer 3 that reserves the same space as
+/// the default date label but draws nothing (SizedBox with [dateLabelHeight] and
+/// [dayWidth] - 4 to match default layout).
+MCalDateLabelBuilder _buildDropTargetDateLabelPlaceholder({
+  required double dateLabelHeight,
+  required double dayWidth,
+}) {
+  return (BuildContext context, MCalDateLabelContext labelContext) {
+    return SizedBox(height: dateLabelHeight, width: dayWidth - 4);
+  };
 }
 
 /// CustomPainter for rendering drop target highlights efficiently.
