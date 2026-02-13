@@ -1211,4 +1211,324 @@ void main() {
       expect(controller.lastChange!.affectedEventIds, containsAll(['a', 'b']));
     });
   });
+
+  // ==========================================================================
+  // 16. Modified exception cross-range visibility
+  // ==========================================================================
+  group('Modified exception cross-range visibility', () {
+    test('modified occurrence whose original date is outside query range but '
+        'modified event overlaps is included', () {
+      // Monthly event on the 1st of each month at 14:00-15:00
+      final controller = MCalEventController();
+      controller.addEvents([
+        MCalCalendarEvent(
+          id: 'monthly1',
+          title: 'Monthly Review',
+          start: DateTime(2026, 1, 1, 14, 0),
+          end: DateTime(2026, 1, 1, 15, 0),
+          recurrenceRule: MCalRecurrenceRule(
+            frequency: MCalFrequency.monthly,
+            byMonthDays: [1],
+          ),
+        ),
+      ]);
+
+      // Modify the Feb 1 occurrence to span Jan 22 – Feb 1 (cross-month resize)
+      controller.addException(
+        'monthly1',
+        MCalRecurrenceException.modified(
+          originalDate: DateTime(2026, 2, 1),
+          modifiedEvent: MCalCalendarEvent(
+            id: 'monthly1_modified',
+            title: 'Monthly Review',
+            start: DateTime(2026, 1, 22, 14, 0),
+            end: DateTime(2026, 2, 1, 15, 0),
+          ),
+        ),
+      );
+
+      // Query January: Feb 1 is outside range, but modified event starts Jan 22
+      final janRange = DateTimeRange(
+        start: DateTime(2026, 1, 1),
+        end: DateTime(2026, 1, 31, 23, 59, 59),
+      );
+      final janEvents = controller.getEventsForRange(janRange);
+
+      // Should include the Jan 1 regular occurrence AND the modified Feb 1
+      // occurrence (which now starts Jan 22)
+      final modifiedInJan = janEvents.where(
+        (e) => e.start.day == 22 && e.start.month == 1,
+      );
+      expect(modifiedInJan.length, 1,
+          reason: 'Modified occurrence starting Jan 22 should appear in January');
+    });
+
+    test('modified occurrence that does NOT overlap the query range is excluded',
+        () {
+      final controller = MCalEventController();
+      controller.addEvents([
+        MCalCalendarEvent(
+          id: 'monthly1',
+          title: 'Monthly Review',
+          start: DateTime(2026, 1, 1, 14, 0),
+          end: DateTime(2026, 1, 1, 15, 0),
+          recurrenceRule: MCalRecurrenceRule(
+            frequency: MCalFrequency.monthly,
+            byMonthDays: [1],
+          ),
+        ),
+      ]);
+
+      // Modify Feb 1 occurrence to span Feb 5 – Feb 6 (still in February)
+      controller.addException(
+        'monthly1',
+        MCalRecurrenceException.modified(
+          originalDate: DateTime(2026, 2, 1),
+          modifiedEvent: MCalCalendarEvent(
+            id: 'monthly1_modified',
+            title: 'Monthly Review',
+            start: DateTime(2026, 2, 5, 14, 0),
+            end: DateTime(2026, 2, 6, 15, 0),
+          ),
+        ),
+      );
+
+      // Query January: modified event is entirely in Feb, should NOT appear
+      final janRange = DateTimeRange(
+        start: DateTime(2026, 1, 1),
+        end: DateTime(2026, 1, 31, 23, 59, 59),
+      );
+      final janEvents = controller.getEventsForRange(janRange);
+
+      final modifiedInJan = janEvents.where(
+        (e) => e.start.month == 2 && e.start.day == 5,
+      );
+      expect(modifiedInJan, isEmpty,
+          reason: 'Modified event entirely in Feb should not appear in Jan');
+    });
+
+    test('modified occurrence in query range from earlier month', () {
+      final controller = MCalEventController();
+      controller.addEvents([
+        MCalCalendarEvent(
+          id: 'monthly1',
+          title: 'Monthly Review',
+          start: DateTime(2026, 1, 1, 14, 0),
+          end: DateTime(2026, 1, 1, 15, 0),
+          recurrenceRule: MCalRecurrenceRule(
+            frequency: MCalFrequency.monthly,
+            byMonthDays: [1],
+          ),
+        ),
+      ]);
+
+      // Modify Jan 1 occurrence to span into February (Jan 28 – Feb 3)
+      controller.addException(
+        'monthly1',
+        MCalRecurrenceException.modified(
+          originalDate: DateTime(2026, 1, 1),
+          modifiedEvent: MCalCalendarEvent(
+            id: 'monthly1_modified',
+            title: 'Monthly Review',
+            start: DateTime(2026, 1, 28, 14, 0),
+            end: DateTime(2026, 2, 3, 15, 0),
+          ),
+        ),
+      );
+
+      // Query February: Jan 1 original is outside range, but modified event
+      // ends Feb 3, which overlaps
+      final febRange = DateTimeRange(
+        start: DateTime(2026, 2, 1),
+        end: DateTime(2026, 2, 28, 23, 59, 59),
+      );
+      final febEvents = controller.getEventsForRange(febRange);
+
+      // Should include the modified occurrence (starts Jan 28, ends Feb 3)
+      final modifiedInFeb = febEvents.where(
+        (e) => e.start.month == 1 && e.start.day == 28,
+      );
+      expect(modifiedInFeb.length, 1,
+          reason: 'Modified occurrence ending in Feb should appear in February');
+    });
+
+    test('modified occurrence has correct occurrenceId', () {
+      final controller = MCalEventController();
+      controller.addEvents([
+        MCalCalendarEvent(
+          id: 'monthly1',
+          title: 'Monthly Review',
+          start: DateTime(2026, 1, 1, 14, 0),
+          end: DateTime(2026, 1, 1, 15, 0),
+          recurrenceRule: MCalRecurrenceRule(
+            frequency: MCalFrequency.monthly,
+            byMonthDays: [1],
+          ),
+        ),
+      ]);
+
+      controller.addException(
+        'monthly1',
+        MCalRecurrenceException.modified(
+          originalDate: DateTime(2026, 2, 1),
+          modifiedEvent: MCalCalendarEvent(
+            id: 'monthly1_modified',
+            title: 'Monthly Review Extended',
+            start: DateTime(2026, 1, 22, 14, 0),
+            end: DateTime(2026, 2, 1, 15, 0),
+          ),
+        ),
+      );
+
+      final janRange = DateTimeRange(
+        start: DateTime(2026, 1, 1),
+        end: DateTime(2026, 1, 31, 23, 59, 59),
+      );
+      final janEvents = controller.getEventsForRange(janRange);
+
+      final modified = janEvents.where(
+        (e) => e.start.day == 22 && e.start.month == 1,
+      );
+      expect(modified.length, 1);
+      // The occurrenceId should be the ISO string of the original date (Feb 1)
+      expect(
+        modified.first.occurrenceId,
+        DateTime(2026, 2, 1).toIso8601String(),
+      );
+    });
+
+    test('modified exception replaces previous exception for same date', () {
+      final controller = MCalEventController();
+      controller.addEvents([
+        MCalCalendarEvent(
+          id: 'monthly1',
+          title: 'Monthly Review',
+          start: DateTime(2026, 1, 1, 14, 0),
+          end: DateTime(2026, 1, 1, 15, 0),
+          recurrenceRule: MCalRecurrenceRule(
+            frequency: MCalFrequency.monthly,
+            byMonthDays: [1],
+          ),
+        ),
+      ]);
+
+      // First modification: resize Feb 1 to span Jan 22 – Feb 4
+      controller.addException(
+        'monthly1',
+        MCalRecurrenceException.modified(
+          originalDate: DateTime(2026, 2, 1),
+          modifiedEvent: MCalCalendarEvent(
+            id: 'monthly1_mod1',
+            title: 'Monthly Review',
+            start: DateTime(2026, 1, 22, 14, 0),
+            end: DateTime(2026, 2, 4, 15, 0),
+          ),
+        ),
+      );
+
+      // Second modification: move the already-modified occurrence to Feb 2
+      // (simulating resize then move, preserving duration)
+      controller.addException(
+        'monthly1',
+        MCalRecurrenceException.modified(
+          originalDate: DateTime(2026, 2, 1),
+          modifiedEvent: MCalCalendarEvent(
+            id: 'monthly1_mod2',
+            title: 'Monthly Review',
+            start: DateTime(2026, 1, 23, 14, 0),
+            end: DateTime(2026, 2, 5, 15, 0),
+          ),
+        ),
+      );
+
+      final janRange = DateTimeRange(
+        start: DateTime(2026, 1, 1),
+        end: DateTime(2026, 1, 31, 23, 59, 59),
+      );
+      final janEvents = controller.getEventsForRange(janRange);
+
+      // Should have the second modification (Jan 23), not the first (Jan 22)
+      final jan22 = janEvents.where(
+        (e) => e.start.day == 22 && e.start.month == 1,
+      );
+      final jan23 = janEvents.where(
+        (e) => e.start.day == 23 && e.start.month == 1,
+      );
+      expect(jan22, isEmpty, reason: 'First modification should be replaced');
+      expect(jan23.length, 1, reason: 'Second modification should be active');
+    });
+
+    test('move after resize preserves duration using modified exception', () {
+      // This tests the exact scenario from the bug report:
+      // 1. Recurring event on 1st of month, 14:00-15:00 (1 hour)
+      // 2. Resize to span Feb 1 14:00 – Feb 2 15:00 (multi-day)
+      // 3. Move to Feb 3 → should become Feb 3 14:00 – Feb 4 15:00 (same duration)
+      final controller = MCalEventController();
+      controller.addEvents([
+        MCalCalendarEvent(
+          id: 'monthly1',
+          title: 'Monthly Review',
+          start: DateTime(2026, 1, 1, 14, 0),
+          end: DateTime(2026, 1, 1, 15, 0),
+          recurrenceRule: MCalRecurrenceRule(
+            frequency: MCalFrequency.monthly,
+            byMonthDays: [1],
+          ),
+        ),
+      ]);
+
+      // Step 1: Resize Feb 1 occurrence to be 2 days
+      controller.addException(
+        'monthly1',
+        MCalRecurrenceException.modified(
+          originalDate: DateTime(2026, 2, 1),
+          modifiedEvent: MCalCalendarEvent(
+            id: 'monthly1',
+            title: 'Monthly Review',
+            start: DateTime(2026, 2, 1, 14, 0),
+            end: DateTime(2026, 2, 2, 15, 0),
+          ),
+        ),
+      );
+
+      // Step 2: Move to Feb 3 (preserving the 2-day duration via modified)
+      controller.addException(
+        'monthly1',
+        MCalRecurrenceException.modified(
+          originalDate: DateTime(2026, 2, 1),
+          modifiedEvent: MCalCalendarEvent(
+            id: 'monthly1',
+            title: 'Monthly Review',
+            start: DateTime(2026, 2, 3, 14, 0),
+            end: DateTime(2026, 2, 4, 15, 0),
+          ),
+        ),
+      );
+
+      final febRange = DateTimeRange(
+        start: DateTime(2026, 2, 1),
+        end: DateTime(2026, 2, 28, 23, 59, 59),
+      );
+      final febEvents = controller.getEventsForRange(febRange);
+
+      // Find the moved occurrence
+      final movedEvent = febEvents.where(
+        (e) =>
+            e.start.day == 3 && e.start.month == 2 && e.start.hour == 14,
+      );
+      expect(movedEvent.length, 1, reason: 'Should find the moved occurrence');
+
+      // Verify the duration is preserved (Feb 3 14:00 – Feb 4 15:00)
+      final event = movedEvent.first;
+      expect(event.start, DateTime(2026, 2, 3, 14, 0));
+      expect(event.end, DateTime(2026, 2, 4, 15, 0));
+
+      // Verify the original Feb 1 occurrence is NOT present (replaced by exception)
+      final feb1 = febEvents.where(
+        (e) => e.start.day == 1 && e.start.month == 2 && e.start.hour == 14,
+      );
+      expect(feb1, isEmpty,
+          reason: 'Original Feb 1 occurrence should be replaced by exception');
+    });
+  });
 }

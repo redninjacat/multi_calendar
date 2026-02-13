@@ -1218,9 +1218,12 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
         // Tablet/Desktop: Full feature layout
         return Column(
           children: [
-            StyleDescription(description: widget.description),
+            StyleDescription(
+              description: widget.description,
+              compact: isDesktop,
+            ),
             if (isDesktop) _buildKeyboardShortcutsBar(colorScheme),
-            _buildControlPanel(colorScheme),
+            _buildControlPanel(colorScheme, isDesktop),
             if (isDesktop) _buildHoverStatusBar(colorScheme),
             Expanded(
               child: Row(
@@ -1561,51 +1564,61 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   // Desktop Control Panel
   // ============================================================
 
-  Widget _buildControlPanel(ColorScheme colorScheme) {
+  Widget _buildControlPanel(ColorScheme colorScheme, bool isDesktop) {
+    final padding = isDesktop
+        ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
+        : const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
+    final toggleSpacing = isDesktop ? 14.0 : 24.0;
+    final rowGap = isDesktop ? 4.0 : 8.0;
+    final sliderWidth = isDesktop ? 72.0 : 100.0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: padding,
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withAlpha(100),
         border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Row 1: Feature toggles
           Wrap(
-            spacing: 24,
-            runSpacing: 8,
+            spacing: toggleSpacing,
+            runSpacing: rowGap,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              _buildToggle('Week Numbers', _showWeekNumbers, (v) {
-                setState(() => _showWeekNumbers = v);
-              }, colorScheme),
+              _buildToggle(
+                isDesktop ? 'Week #' : 'Week Numbers',
+                _showWeekNumbers,
+                (v) => setState(() => _showWeekNumbers = v),
+                colorScheme,
+              ),
               _buildToggle('Animations', _enableAnimations, (v) {
                 setState(() => _enableAnimations = v);
               }, colorScheme),
-              _buildToggle('Drag & Drop', _enableDragAndDrop, (v) {
-                setState(() => _enableDragAndDrop = v);
-              }, colorScheme),
+              _buildToggle(
+                isDesktop ? 'Drag' : 'Drag & Drop',
+                _enableDragAndDrop,
+                (v) => setState(() => _enableDragAndDrop = v),
+                colorScheme,
+              ),
               _buildToggle('Resize', _enableResize, (v) {
                 setState(() => _enableResize = v);
               }, colorScheme),
               _buildToggle(
-                'Custom drag target tile',
+                isDesktop ? 'Custom tile' : 'Custom drag target tile',
                 _useCustomDragTargetTile,
-                (v) {
-                  setState(() => _useCustomDragTargetTile = v);
-                },
+                (v) => setState(() => _useCustomDragTargetTile = v),
                 colorScheme,
               ),
               _buildToggle(
-                'Tiles above overlay',
+                isDesktop ? 'Tiles above' : 'Tiles above overlay',
                 _dropTargetTilesAboveOverlay,
-                (v) {
-                  setState(() => _dropTargetTilesAboveOverlay = v);
-                },
+                (v) => setState(() => _dropTargetTilesAboveOverlay = v),
                 colorScheme,
               ),
               _buildToggle(
-                'Blackout days',
+                isDesktop ? 'Blackout' : 'Blackout days',
                 _enableBlackoutDays,
                 (v) => setState(() => _enableBlackoutDays = v),
                 colorScheme,
@@ -1618,7 +1631,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                     if (mounted) _sharedController.setLoading(false);
                   });
                 },
-                child: const Text('Show Loading'),
+                child: Text(isDesktop ? 'Loading' : 'Show Loading'),
               ),
               FilledButton.tonal(
                 onPressed: () {
@@ -1626,7 +1639,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                     'Demo error: Something went wrong!',
                   );
                 },
-                child: const Text('Show Error'),
+                child: Text(isDesktop ? 'Error' : 'Show Error'),
               ),
               OutlinedButton(
                 onPressed: () {
@@ -1638,16 +1651,16 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
               // Recurring event creation
               FilledButton.icon(
                 onPressed: () => _onAddRecurringEvent(context),
-                icon: const Icon(Icons.repeat, size: 18),
-                label: const Text('Add Recurring Event'),
+                icon: Icon(Icons.repeat, size: isDesktop ? 16 : 18),
+                label: Text(isDesktop ? 'Add Recurring' : 'Add Recurring Event'),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: rowGap),
           // Row 2: Theme settings
           Wrap(
-            spacing: 16,
-            runSpacing: 8,
+            spacing: isDesktop ? 10.0 : 16.0,
+            runSpacing: rowGap,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               // Date label position
@@ -1691,6 +1704,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 (v) => setState(() => _maxVisibleEventsPerDay = v.round()),
                 colorScheme,
                 showValue: _maxVisibleEventsPerDay.toString(),
+                sliderWidth: sliderWidth,
               ),
               // Tile height slider
               _buildCompactSlider(
@@ -1702,6 +1716,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 (v) => setState(() => _tileHeight = v),
                 colorScheme,
                 showValue: '${_tileHeight.toInt()}px',
+                sliderWidth: sliderWidth,
               ),
               // Corner radius slider
               _buildCompactSlider(
@@ -1713,6 +1728,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 (v) => setState(() => _eventTileCornerRadius = v),
                 colorScheme,
                 showValue: '${_eventTileCornerRadius.toInt()}px',
+                sliderWidth: sliderWidth,
               ),
               // Border width slider
               _buildCompactSlider(
@@ -1724,6 +1740,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 (v) => setState(() => _tileBorderWidth = v),
                 colorScheme,
                 showValue: '${_tileBorderWidth.toStringAsFixed(1)}px',
+                sliderWidth: sliderWidth,
               ),
               // Vertical spacing slider
               _buildCompactSlider(
@@ -1735,6 +1752,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 (v) => setState(() => _tileVerticalSpacing = v),
                 colorScheme,
                 showValue: '${_tileVerticalSpacing.toInt()}px',
+                sliderWidth: sliderWidth,
               ),
               // Horizontal spacing slider
               _buildCompactSlider(
@@ -1746,6 +1764,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 (v) => setState(() => _tileHorizontalSpacing = v),
                 colorScheme,
                 showValue: '${_tileHorizontalSpacing.toInt()}px',
+                sliderWidth: sliderWidth,
               ),
               // Label height slider
               _buildCompactSlider(
@@ -1757,6 +1776,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 (v) => setState(() => _dateLabelHeight = v),
                 colorScheme,
                 showValue: '${_dateLabelHeight.toInt()}px',
+                sliderWidth: sliderWidth,
               ),
               // Overflow indicator height slider
               _buildCompactSlider(
@@ -1768,13 +1788,14 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 (v) => setState(() => _overflowIndicatorHeight = v),
                 colorScheme,
                 showValue: '${_overflowIndicatorHeight.toInt()}px',
+                sliderWidth: sliderWidth,
               ),
             ],
           ),
           // Row 3: Drag edge delay (only when drag enabled)
           if (_enableDragAndDrop)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: EdgeInsets.only(top: rowGap),
               child: _buildCompactSlider(
                 'Edge Delay',
                 _dragEdgeNavigationDelayMs.toDouble(),
@@ -1784,6 +1805,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 (v) => setState(() => _dragEdgeNavigationDelayMs = v.round()),
                 colorScheme,
                 showValue: '${_dragEdgeNavigationDelayMs}ms',
+                sliderWidth: sliderWidth,
               ),
             ),
         ],
@@ -1798,46 +1820,28 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   Widget _buildKeyboardShortcutsBar(ColorScheme colorScheme) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       color: colorScheme.primaryContainer.withAlpha(100),
-      child: Column(
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 2,
+        alignment: WrapAlignment.center,
         children: [
-          // Row 1: Navigation shortcuts
-          Wrap(
-            spacing: 16,
-            runSpacing: 4,
-            alignment: WrapAlignment.center,
-            children: [
-              _shortcutChip('←→↑↓', 'Navigate cells', colorScheme),
-              _shortcutChip('Enter/Space', 'Select cell', colorScheme),
-              _shortcutChip('Home', 'First day', colorScheme),
-              _shortcutChip('End', 'Last day', colorScheme),
-              _shortcutChip('PgUp/PgDn', 'Prev/Next month', colorScheme),
-            ],
-          ),
-          // Row 2: Event move & resize shortcuts
+          _shortcutChip('←→↑↓', 'Navigate cells', colorScheme),
+          _shortcutChip('Enter/Space', 'Select cell', colorScheme),
+          _shortcutChip('Home', 'First day', colorScheme),
+          _shortcutChip('End', 'Last day', colorScheme),
+          _shortcutChip('PgUp/PgDn', 'Prev/Next month', colorScheme),
           if (_enableDragAndDrop) ...[
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 16,
-              runSpacing: 4,
-              alignment: WrapAlignment.center,
-              children: [
-                _shortcutChip(
-                  'Enter/Space',
-                  'Select event for moving',
-                  colorScheme,
-                ),
-                _shortcutChip('Arrows', 'Move event between dates', colorScheme),
-                if (_enableResize) ...[
-                  _shortcutChip('R', 'Enter resize mode', colorScheme),
-                  _shortcutChip('S / E', 'Switch start/end edge', colorScheme),
-                  _shortcutChip('M', 'Return to move mode', colorScheme),
-                ],
-                _shortcutChip('Enter', 'Confirm', colorScheme),
-                _shortcutChip('Esc', 'Cancel', colorScheme),
-              ],
-            ),
+            _shortcutChip('Enter/Space', 'Select event', colorScheme),
+            _shortcutChip('Arrows', 'Move event', colorScheme),
+            if (_enableResize) ...[
+              _shortcutChip('R', 'Resize mode', colorScheme),
+              _shortcutChip('S/E', 'Start/end edge', colorScheme),
+              _shortcutChip('M', 'Move mode', colorScheme),
+            ],
+            _shortcutChip('Enter', 'Confirm', colorScheme),
+            _shortcutChip('Esc', 'Cancel', colorScheme),
           ],
         ],
       ),
@@ -1849,26 +1853,29 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
           decoration: BoxDecoration(
             color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(3),
             border: Border.all(color: colorScheme.outline.withAlpha(100)),
           ),
           child: Text(
             key,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
               fontFamily: 'monospace',
               color: colorScheme.onSurface,
             ),
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 3),
         Text(
           action,
-          style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+          style: TextStyle(
+            fontSize: 10,
+            color: colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -1881,17 +1888,17 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   Widget _buildHoverStatusBar(ColorScheme colorScheme) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       color: colorScheme.surfaceContainerLow,
       child: Row(
         children: [
-          Icon(Icons.mouse, size: 16, color: colorScheme.onSurfaceVariant),
-          const SizedBox(width: 8),
+          Icon(Icons.mouse, size: 14, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: 6),
           Expanded(
             child: Text(
               _hoverStatus,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 color: colorScheme.onSurfaceVariant,
                 fontFamily: 'monospace',
               ),
@@ -2200,16 +2207,20 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     ValueChanged<double> onChanged,
     ColorScheme colorScheme, {
     required String showValue,
+    double sliderWidth = 100,
   }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           '$label: $showValue',
-          style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
+          style: TextStyle(
+            fontSize: 13,
+            color: colorScheme.onSurface,
+          ),
         ),
         SizedBox(
-          width: 100,
+          width: sliderWidth,
           child: Slider(
             value: value,
             min: min,

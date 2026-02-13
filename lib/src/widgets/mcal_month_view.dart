@@ -12,6 +12,7 @@ import '../models/mcal_calendar_event.dart';
 import '../models/mcal_recurrence_exception.dart';
 import '../models/mcal_recurrence_rule.dart';
 import '../styles/mcal_theme.dart';
+import '../utils/color_utils.dart';
 import '../utils/date_utils.dart';
 import '../utils/mcal_localization.dart';
 import 'mcal_builder_wrapper.dart';
@@ -836,6 +837,43 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   static const double _edgeProximityThreshold = 50.0;
 
   // ============================================================
+  // Resize Pointer Tracking State (parent-level, survives page changes)
+  // ============================================================
+
+  /// GlobalKey for the grid area (the Expanded wrapping the PageView) to
+  /// obtain its render box for position-to-date conversion during resize.
+  final GlobalKey _gridAreaKey = GlobalKey();
+
+  /// The pointer ID currently involved in a resize gesture, or null.
+  int? _resizeActivePointer;
+
+  /// Whether the drag threshold has been crossed and the resize has started.
+  bool _resizeGestureStarted = false;
+
+  /// Accumulated horizontal movement during the threshold phase.
+  double _resizeDxAccumulated = 0.0;
+
+  /// The event targeted by the pending/active resize.
+  MCalCalendarEvent? _pendingResizeEvent;
+
+  /// The edge targeted by the pending/active resize.
+  MCalResizeEdge? _pendingResizeEdge;
+
+  /// Scroll hold controller that freezes the [PageView] during resize.
+  ScrollHoldController? _resizeScrollHold;
+
+  /// Whether a resize is in progress, used to set NeverScrollableScrollPhysics
+  /// on the PageView to prevent user swiping during the gesture.
+  bool _isResizeInProgress = false;
+
+  /// The last known global pointer position during resize, used to
+  /// recompute the resize preview after cross-month edge navigation.
+  Offset? _lastResizePointerPosition;
+
+  /// Minimum pointer movement (in logical pixels) before a resize starts.
+  static const double _resizeDragThreshold = 4.0;
+
+  // ============================================================
   // Keyboard Event Move Mode State (Task 9 — month-view-polish)
   // ============================================================
 
@@ -953,6 +991,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     _pageController.dispose();
     // Clean up keyboard move mode state (Task 9 — month-view-polish)
     _exitKeyboardMoveMode();
+    // Clean up resize pointer tracking state
+    _cleanupResizePointerState();
     // Dispose drag handler if created (Task 21)
     _dragHandler?.dispose();
     super.dispose();
@@ -1130,6 +1170,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // "setState during build" errors when multiple widgets share a controller.
     _scheduleSetState(() {
       _events = _getEventsForMonth(_currentMonth);
+      debugPrint('[MONTH-VIEW] _scheduleSetState: refreshed events for '
+          '$_currentMonth => ${_events.length} events');
+      for (final e in _events) {
+        debugPrint('[MONTH-VIEW]   ${e.id}: ${e.start} - ${e.end}');
+      }
     });
   }
 
@@ -1341,9 +1386,14 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final localizations = MCalLocalizations();
     final isRTL = localizations.isRTL(resolvedLocale);
 
-    // Task 9: Determine scroll physics based on swipe navigation setting and boundaries
+    // Task 9: Determine scroll physics based on swipe navigation setting and boundaries.
+    // During an active resize, use NeverScrollableScrollPhysics to prevent the
+    // PageView from stealing the horizontal drag gesture. Programmatic navigation
+    // (jumpToPage) still works regardless of the physics setting.
     final ScrollPhysics physics;
-    if (widget.enableSwipeNavigation) {
+    if (_isResizeInProgress) {
+      physics = const NeverScrollableScrollPhysics();
+    } else if (widget.enableSwipeNavigation) {
       // Use custom boundary physics with snappy (non-bouncy) page snapping
       physics = _MCalBoundaryScrollPhysics(
         parent: const _MCalSnappyPageScrollPhysics(),
@@ -1438,6 +1488,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           enableResize: _resolveEnableResize(context),
           onResizeWillAccept: widget.onResizeWillAccept,
           onEventResized: widget.onEventResized,
+          onResizePointerDownCallback: _handleResizePointerDownFromChild,
         );
       },
     );
@@ -1487,7 +1538,10 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           locale: locale,
           showWeekNumbers: widget.showWeekNumbers,
         ),
-        Expanded(child: _buildMonthGridWithRTL(context, theme, locale)),
+        Expanded(
+          key: _gridAreaKey,
+          child: _buildMonthGridWithRTL(context, theme, locale),
+        ),
       ],
     );
 
@@ -1569,16 +1623,23 @@ class _MCalMonthViewState extends State<MCalMonthView> {
                   if (widget.enableDragAndDrop && _isDragActive) {
                     _handleDragPositionUpdate(event.position, calendarSize);
                   }
+                  // Track resize pointer events at parent level so the
+                  // gesture survives across page transitions.
+                  _handleResizePointerMoveFromParent(event);
                 },
-                // Note: We intentionally don't use onPointerUp for drag cleanup.
-                // LongPressDraggable.onDragEnd handles this with the correct
-                // wasAccepted value. Using onPointerUp would cause duplicate
-                // _handleDragEnded calls with incorrect wasAccepted=false.
-                onPointerCancel: (_) {
+                onPointerUp: (event) {
+                  // Handle resize pointer up at parent level.
+                  // Note: drag-to-move cleanup uses LongPressDraggable.onDragEnd,
+                  // not onPointerUp, so this doesn't interfere.
+                  _handleResizePointerUpFromParent(event);
+                },
+                onPointerCancel: (event) {
                   // Clean up drag state when pointer is cancelled
                   if (_isDragActive) {
                     _handleDragCancelled();
                   }
+                  // Clean up resize state when pointer is cancelled
+                  _handleResizePointerCancelFromParent(event);
                 },
                 child: content,
               );
@@ -2258,7 +2319,14 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     if (isRecurring && seriesId != null) {
-      // Recurring occurrence: use addException instead of addEvents
+      // Recurring occurrence: use a `modified` exception so the full event
+      // state (including any prior resize or other modifications) is preserved.
+      // A `rescheduled` exception only carries a newDate and would revert the
+      // occurrence to the master event's original duration.
+      final exception = MCalRecurrenceException.modified(
+        originalDate: DateTime.parse(event.occurrenceId!),
+        modifiedEvent: updatedEvent,
+      );
       if (widget.onEventDropped != null) {
         final shouldKeep = widget.onEventDropped!(
           context,
@@ -2274,23 +2342,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         );
 
         if (shouldKeep) {
-          widget.controller.addException(
-            seriesId,
-            MCalRecurrenceException.rescheduled(
-              originalDate: DateTime.parse(event.occurrenceId!),
-              newDate: newStartDate,
-            ),
-          );
+          widget.controller.addException(seriesId, exception);
         }
       } else {
-        // No callback provided — auto-create reschedule exception
-        widget.controller.addException(
-          seriesId,
-          MCalRecurrenceException.rescheduled(
-            originalDate: DateTime.parse(event.occurrenceId!),
-            newDate: newStartDate,
-          ),
-        );
+        // No callback provided — auto-create modified exception
+        widget.controller.addException(seriesId, exception);
       }
     } else {
       // Non-recurring event: update via controller
@@ -2498,6 +2554,16 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         Directionality.of(context),
       );
 
+      // Navigate to new month if active edge date leaves the visible month
+      final activeMonth = DateTime(activeDate.year, activeDate.month, 1);
+      if (activeMonth.year != _currentMonth.year ||
+          activeMonth.month != _currentMonth.month) {
+        _navigateToMonth(activeMonth);
+      }
+
+      // Track focus on the active edge date
+      widget.controller.setFocusedDate(activeDate);
+
       setState(() {});
       return KeyEventResult.handled;
     }
@@ -2541,7 +2607,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
 
   /// Confirms the keyboard-initiated event resize.
   ///
-  /// Mirrors the logic of [_MonthPageWidgetState._handleResizeEnd], reusing
+  /// Mirrors the logic of [_handleResizeEndFromParent], reusing
   /// the same [MCalDragHandler.completeResize] state machine and
   /// [MCalEventResizedDetails] callback flow.
   void _handleKeyboardResizeEnd() {
@@ -2645,27 +2711,21 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final updatedEvent = event.copyWith(start: newStartDate, end: newEndDate);
 
     if (isRecurring && seriesId != null) {
-      // Recurring occurrence: create a modified exception
+      // Recurring occurrence: create a modified exception with the full
+      // updated event so both start and end date changes are preserved.
+      final exception = MCalRecurrenceException.modified(
+        originalDate: DateTime.parse(event.occurrenceId!),
+        modifiedEvent: updatedEvent,
+      );
+
       if (widget.onEventResized != null) {
         final shouldKeep = widget.onEventResized!(context, details);
         if (shouldKeep) {
-          widget.controller.addException(
-            seriesId,
-            MCalRecurrenceException.rescheduled(
-              originalDate: DateTime.parse(event.occurrenceId!),
-              newDate: newStartDate,
-            ),
-          );
+          widget.controller.addException(seriesId, exception);
         }
       } else {
         // No callback — auto-create exception
-        widget.controller.addException(
-          seriesId,
-          MCalRecurrenceException.rescheduled(
-            originalDate: DateTime.parse(event.occurrenceId!),
-            newDate: newStartDate,
-          ),
-        );
+        widget.controller.addException(seriesId, exception);
       }
     } else {
       // Non-recurring event: update via controller
@@ -2887,6 +2947,516 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final maxMonth = DateTime(widget.maxDate!.year, widget.maxDate!.month, 1);
 
     return !nextMonth.isAfter(maxMonth);
+  }
+
+  // ============================================================
+  // Parent-Level Resize Pointer Tracking
+  // ============================================================
+  //
+  // Resize pointer events are handled at the _MCalMonthViewState level
+  // (not _MonthPageWidgetState) so the gesture survives across page
+  // transitions during edge auto-navigation.  The parent Listener wraps
+  // the entire calendar content and is in the hit-test from pointer-down,
+  // so it receives move/up/cancel events even after the PageView changes
+  // its child page.
+
+  /// Called by [_MonthPageWidgetState._handleResizePointerDown] via a
+  /// callback on [_MonthPageWidget] when the user presses on a resize handle.
+  void _handleResizePointerDownFromChild(
+    MCalCalendarEvent event,
+    MCalResizeEdge edge,
+    int pointer,
+  ) {
+    debugPrint('[RESIZE-PARENT] pointerDown pointer=$pointer event=${event.title} edge=$edge');
+
+    _resizeActivePointer = pointer;
+    _resizeGestureStarted = false;
+    _resizeDxAccumulated = 0.0;
+    _pendingResizeEvent = event;
+    _pendingResizeEdge = edge;
+
+    // Disable PageView scrolling by switching to NeverScrollableScrollPhysics.
+    // This prevents the PageView's gesture recognizer from stealing the
+    // horizontal drag. The scroll hold provides immediate protection for the
+    // current frame while the physics change takes effect next frame.
+    if (!_isResizeInProgress) {
+      _isResizeInProgress = true;
+      setState(() {});
+    }
+
+    // Acquire scroll hold as belt-and-suspenders for the current frame.
+    _releaseResizeScrollHold();
+    try {
+      debugPrint('[RESIZE-PARENT] holding scroll position');
+      _resizeScrollHold = _pageController.position.hold(() {
+        debugPrint('[RESIZE-PARENT] scroll hold broken externally');
+        _resizeScrollHold = null;
+      });
+    } catch (e) {
+      debugPrint('[RESIZE-PARENT] failed to hold scroll: $e');
+    }
+  }
+
+  /// Releases the scroll hold that freezes the [PageView] during resize.
+  void _releaseResizeScrollHold() {
+    _resizeScrollHold?.cancel();
+    _resizeScrollHold = null;
+  }
+
+  /// Called by the parent [Listener.onPointerMove].
+  /// Implements a manual drag threshold, then delegates to
+  /// [_processResizeUpdateFromParent].
+  void _handleResizePointerMoveFromParent(PointerMoveEvent pointerEvent) {
+    if (pointerEvent.pointer != _resizeActivePointer) return;
+
+    if (!_resizeGestureStarted) {
+      _resizeDxAccumulated += pointerEvent.delta.dx;
+      if (_resizeDxAccumulated.abs() < _resizeDragThreshold) return;
+
+      _resizeGestureStarted = true;
+      final event = _pendingResizeEvent;
+      final edge = _pendingResizeEdge;
+      if (event == null || edge == null) return;
+
+      debugPrint('[RESIZE-PARENT] threshold crossed, starting resize');
+      _ensureDragHandler.startResize(event, edge);
+      return;
+    }
+
+    // Resize in progress — use absolute pointer position to find date
+    _lastResizePointerPosition = pointerEvent.position;
+    _processResizeUpdateFromParent(pointerEvent.position);
+  }
+
+  /// Called by the parent [Listener.onPointerUp].
+  void _handleResizePointerUpFromParent(PointerUpEvent pointerEvent) {
+    if (pointerEvent.pointer != _resizeActivePointer) return;
+
+    debugPrint('[RESIZE-PARENT] pointerUp pointer=${pointerEvent.pointer} gestureStarted=$_resizeGestureStarted');
+
+    if (_resizeGestureStarted) {
+      _handleResizeEndFromParent();
+    } else {
+      _dragHandler?.cancelResize();
+    }
+    _cleanupResizePointerState();
+  }
+
+  /// Called by the parent [Listener.onPointerCancel].
+  void _handleResizePointerCancelFromParent(PointerCancelEvent pointerEvent) {
+    if (pointerEvent.pointer != _resizeActivePointer) return;
+
+    debugPrint('[RESIZE-PARENT] pointerCancel pointer=${pointerEvent.pointer}');
+    _dragHandler?.cancelResize();
+    _cleanupResizePointerState();
+  }
+
+  /// Resets all pointer-level resize tracking state and releases the scroll hold.
+  void _cleanupResizePointerState() {
+    _resizeActivePointer = null;
+    _resizeGestureStarted = false;
+    _pendingResizeEvent = null;
+    _pendingResizeEdge = null;
+    _lastResizePointerPosition = null;
+    _releaseResizeScrollHold();
+
+    // Re-enable PageView scrolling
+    if (_isResizeInProgress) {
+      _isResizeInProgress = false;
+      setState(() {});
+    }
+  }
+
+  /// Converts the pointer's global position to a calendar date using
+  /// the grid area's render box and the current month's date grid.
+  void _processResizeUpdateFromParent(Offset globalPosition) {
+    final dragHandler = _dragHandler;
+    if (dragHandler == null || !dragHandler.isResizing) return;
+
+    // Get the grid area render box via GlobalKey
+    final gridRenderBox =
+        _gridAreaKey.currentContext?.findRenderObject() as RenderBox?;
+    if (gridRenderBox == null || !gridRenderBox.hasSize) return;
+
+    final gridSize = gridRenderBox.size;
+    final gridOffset = gridRenderBox.localToGlobal(Offset.zero);
+
+    // Compute layout values
+    final weekNumberWidth =
+        widget.showWeekNumbers ? _WeekNumberCell.columnWidth : 0.0;
+    final isRTL = Directionality.maybeOf(context) == TextDirection.rtl;
+    final contentOffsetX = isRTL ? 0.0 : weekNumberWidth;
+    final contentWidth = gridSize.width - weekNumberWidth;
+    final dayWidth = contentWidth / 7;
+
+    // Get current month's dates
+    final dates =
+        generateMonthDates(_currentMonth, _getDefaultFirstDayOfWeek());
+    final weeks = <List<DateTime>>[];
+    for (int i = 0; i < dates.length; i += 7) {
+      weeks.add(dates.sublist(i, i + 7));
+    }
+    if (weeks.isEmpty) return;
+    final weekRowHeight = gridSize.height / weeks.length;
+
+    if (dayWidth <= 0 || weekRowHeight <= 0) return;
+
+    // Convert global position to local within the grid
+    final localX = globalPosition.dx - gridOffset.dx - contentOffsetX;
+    final localY = globalPosition.dy - gridOffset.dy;
+
+    // Compute raw (unclamped) row and column indices for extrapolation
+    final rawWeekRowIndex = (localY / weekRowHeight).floor();
+    int rawLogicalCol;
+    if (isRTL) {
+      rawLogicalCol = 6 - (localX / dayWidth).floor();
+    } else {
+      rawLogicalCol = (localX / dayWidth).floor();
+    }
+
+    // Compute linear day index (0-based from dates.first)
+    final rawDayIndex = rawWeekRowIndex * 7 + rawLogicalCol;
+
+    // Resolve the pointer date — within grid or extrapolated
+    final DateTime pointerDate;
+    if (rawDayIndex >= 0 && rawDayIndex < dates.length) {
+      final d = dates[rawDayIndex];
+      pointerDate = DateTime(d.year, d.month, d.day);
+    } else {
+      final firstDate = dates.first;
+      pointerDate = DateTime(
+        firstDate.year,
+        firstDate.month,
+        firstDate.day + rawDayIndex,
+      );
+    }
+
+    final originalStart = dragHandler.resizeOriginalStart!;
+    final originalEnd = dragHandler.resizeOriginalEnd!;
+    final edge = dragHandler.resizeEdge!;
+
+    DateTime proposedStart;
+    DateTime proposedEnd;
+
+    if (edge == MCalResizeEdge.start) {
+      proposedStart =
+          pointerDate.isBefore(originalEnd) ||
+                  pointerDate.isAtSameMomentAs(originalEnd)
+              ? pointerDate
+              : DateTime(originalEnd.year, originalEnd.month, originalEnd.day);
+      proposedEnd = originalEnd;
+    } else {
+      proposedEnd =
+          pointerDate.isAfter(originalStart) ||
+                  pointerDate.isAtSameMomentAs(originalStart)
+              ? pointerDate
+              : DateTime(
+                  originalStart.year,
+                  originalStart.month,
+                  originalStart.day,
+                );
+      proposedStart = originalStart;
+    }
+
+    // Validate via callback
+    bool isValid = true;
+    if (widget.onResizeWillAccept != null) {
+      isValid = widget.onResizeWillAccept!(
+        context,
+        MCalResizeWillAcceptDetails(
+          event: dragHandler.resizingEvent!,
+          proposedStartDate: proposedStart,
+          proposedEndDate: proposedEnd,
+          resizeEdge: edge,
+        ),
+      );
+    }
+
+    // Build highlighted cells (only for dates visible in the current grid)
+    final cells = _buildHighlightCellsFromParent(
+      proposedStart,
+      proposedEnd,
+      weeks,
+      dayWidth,
+      weekRowHeight,
+      contentOffsetX,
+    );
+
+    dragHandler.updateResize(
+      proposedStart: proposedStart,
+      proposedEnd: proposedEnd,
+      isValid: isValid,
+      cells: cells,
+    );
+
+    // Edge proximity detection for cross-month navigation.
+    // Uses 10% inset threshold matching drag-to-move.
+    // When the timer fires, the month navigates but the resize CONTINUES
+    // because the parent-level Listener survives page changes.
+    _checkResizeEdgeProximityFromParent(
+      localX,
+      localY,
+      contentWidth,
+      gridSize.height,
+      edge,
+    );
+  }
+
+  /// Builds [MCalHighlightCellInfo] list for cells visible in the current grid.
+  List<MCalHighlightCellInfo> _buildHighlightCellsFromParent(
+    DateTime start,
+    DateTime end,
+    List<List<DateTime>> weeks,
+    double dayWidth,
+    double weekRowHeight,
+    double contentOffsetX,
+  ) {
+    final cells = <MCalHighlightCellInfo>[];
+    if (weeks.isEmpty || dayWidth <= 0 || weekRowHeight <= 0) return cells;
+
+    final normalizedStart = DateTime(start.year, start.month, start.day);
+    final normalizedEnd = DateTime(end.year, end.month, end.day);
+    final totalDays = daysBetween(normalizedStart, normalizedEnd) + 1;
+    int cellNumber = 0;
+
+    for (int weekRowIndex = 0; weekRowIndex < weeks.length; weekRowIndex++) {
+      final weekDates = weeks[weekRowIndex];
+      for (int cellIndex = 0; cellIndex < weekDates.length; cellIndex++) {
+        final cellDate = weekDates[cellIndex];
+        final normalizedCell = DateTime(
+          cellDate.year,
+          cellDate.month,
+          cellDate.day,
+        );
+        if (!normalizedCell.isBefore(normalizedStart) &&
+            !normalizedCell.isAfter(normalizedEnd)) {
+          final cellLeft = contentOffsetX + (cellIndex * dayWidth);
+          final cellTop = weekRowIndex * weekRowHeight;
+          cells.add(
+            MCalHighlightCellInfo(
+              date: normalizedCell,
+              cellIndex: cellIndex,
+              weekRowIndex: weekRowIndex,
+              bounds: Rect.fromLTWH(cellLeft, cellTop, dayWidth, weekRowHeight),
+              isFirst: cellNumber == 0,
+              isLast: cellNumber == totalDays - 1,
+            ),
+          );
+          cellNumber++;
+        }
+      }
+    }
+    return cells;
+  }
+
+  /// Edge proximity detection during resize.
+  ///
+  /// Uses the same 10% inset threshold as drag-to-move. When the timer
+  /// fires, the month navigates and the resize continues on the new page
+  /// because the parent-level Listener survives page transitions.
+  void _checkResizeEdgeProximityFromParent(
+    double localX,
+    double localY,
+    double contentWidth,
+    double gridHeight,
+    MCalResizeEdge edge,
+  ) {
+    final dragHandler = _dragHandler;
+    if (dragHandler == null || !dragHandler.isResizing) return;
+    if (!widget.dragEdgeNavigationEnabled) return;
+
+    final edgeThreshold = contentWidth * 0.1;
+
+    // Detect boundary proximity
+    final nearLeadingEdge = localX < edgeThreshold || localY < 0;
+    final nearTrailingEdge =
+        localX > contentWidth - edgeThreshold || localY > gridHeight;
+
+    if (edge == MCalResizeEdge.start &&
+        nearLeadingEdge &&
+        _canNavigateToPreviousMonth()) {
+      dragHandler.handleEdgeProximity(
+        true,
+        true,
+        () {
+          if (!mounted) return;
+          debugPrint('[RESIZE-PARENT] edge nav → previous month');
+          _navigateToPreviousMonth();
+          // Recompute resize overlay for the new month's grid on the next frame
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || _resizeActivePointer == null) return;
+            if (_lastResizePointerPosition != null) {
+              _processResizeUpdateFromParent(_lastResizePointerPosition!);
+            }
+          });
+        },
+        delay: widget.dragEdgeNavigationDelay,
+      );
+    } else if (edge == MCalResizeEdge.end &&
+        nearTrailingEdge &&
+        _canNavigateToNextMonth()) {
+      dragHandler.handleEdgeProximity(
+        true,
+        false,
+        () {
+          if (!mounted) return;
+          debugPrint('[RESIZE-PARENT] edge nav → next month');
+          _navigateToNextMonth();
+          // Recompute resize overlay for the new month's grid on the next frame
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || _resizeActivePointer == null) return;
+            if (_lastResizePointerPosition != null) {
+              _processResizeUpdateFromParent(_lastResizePointerPosition!);
+            }
+          });
+        },
+        delay: widget.dragEdgeNavigationDelay,
+      );
+    } else {
+      dragHandler.handleEdgeProximity(false, false, () {});
+    }
+  }
+
+  /// Completes the resize operation at the parent level.
+  void _handleResizeEndFromParent() {
+    debugPrint('[RESIZE-PARENT] _handleResizeEnd');
+    final dragHandler = _dragHandler;
+    if (dragHandler == null || !dragHandler.isResizing) return;
+
+    final event = dragHandler.resizingEvent!;
+    final originalStart = dragHandler.resizeOriginalStart!;
+    final originalEnd = dragHandler.resizeOriginalEnd!;
+    final edge = dragHandler.resizeEdge!;
+
+    final result = dragHandler.completeResize();
+    if (result == null) return;
+
+    final (proposedStart, proposedEnd) = result;
+
+    // Calculate new dates preserving time components (DST-safe)
+    final DateTime newStartDate;
+    final DateTime newEndDate;
+
+    if (edge == MCalResizeEdge.start) {
+      final normalizedOriginalStart = DateTime(
+        originalStart.year,
+        originalStart.month,
+        originalStart.day,
+      );
+      final dayDelta = daysBetween(normalizedOriginalStart, proposedStart);
+      newStartDate = DateTime(
+        originalStart.year,
+        originalStart.month,
+        originalStart.day + dayDelta,
+        originalStart.hour,
+        originalStart.minute,
+        originalStart.second,
+        originalStart.millisecond,
+        originalStart.microsecond,
+      );
+      newEndDate = originalEnd;
+    } else {
+      final normalizedOriginalEnd = DateTime(
+        originalEnd.year,
+        originalEnd.month,
+        originalEnd.day,
+      );
+      final dayDelta = daysBetween(normalizedOriginalEnd, proposedEnd);
+      newEndDate = DateTime(
+        originalEnd.year,
+        originalEnd.month,
+        originalEnd.day + dayDelta,
+        originalEnd.hour,
+        originalEnd.minute,
+        originalEnd.second,
+        originalEnd.millisecond,
+        originalEnd.microsecond,
+      );
+      newStartDate = originalStart;
+    }
+
+    // Detect recurring occurrence
+    final isRecurring = event.occurrenceId != null;
+    String? seriesId;
+    if (isRecurring) {
+      final occId = event.occurrenceId!;
+      seriesId = event.id.endsWith('_$occId')
+          ? event.id.substring(0, event.id.length - occId.length - 1)
+          : event.id;
+    }
+
+    final details = MCalEventResizedDetails(
+      event: event,
+      oldStartDate: originalStart,
+      oldEndDate: originalEnd,
+      newStartDate: newStartDate,
+      newEndDate: newEndDate,
+      resizeEdge: edge,
+      isRecurring: isRecurring,
+      seriesId: seriesId,
+    );
+
+    final updatedEvent = event.copyWith(start: newStartDate, end: newEndDate);
+    debugPrint('[RESIZE-PARENT] updatedEvent: id=${updatedEvent.id} '
+        'start=${updatedEvent.start} end=${updatedEvent.end}');
+    debugPrint('[RESIZE-PARENT] currentMonth=$_currentMonth isRecurring=$isRecurring');
+
+    if (isRecurring && seriesId != null) {
+      debugPrint('[RESIZE-PARENT] recurring: seriesId=$seriesId '
+          'occurrenceId=${event.occurrenceId} originalDate=${DateTime.parse(event.occurrenceId!)}');
+      final exception = MCalRecurrenceException.modified(
+        originalDate: DateTime.parse(event.occurrenceId!),
+        modifiedEvent: updatedEvent,
+      );
+      debugPrint('[RESIZE-PARENT] exception: type=${exception.type} '
+          'originalDate=${exception.originalDate} '
+          'modifiedEvent.start=${exception.modifiedEvent?.start} '
+          'modifiedEvent.end=${exception.modifiedEvent?.end}');
+      if (widget.onEventResized != null) {
+        final shouldKeep = widget.onEventResized!(context, details);
+        debugPrint('[RESIZE-PARENT] onEventResized returned shouldKeep=$shouldKeep');
+        if (shouldKeep) {
+          widget.controller.addException(seriesId, exception);
+          debugPrint('[RESIZE-PARENT] addException called');
+        }
+      } else {
+        widget.controller.addException(seriesId, exception);
+        debugPrint('[RESIZE-PARENT] addException called (no callback)');
+      }
+    } else {
+      widget.controller.addEvents([updatedEvent]);
+      if (widget.onEventResized != null) {
+        final shouldKeep = widget.onEventResized!(context, details);
+        if (!shouldKeep) {
+          final revertedEvent = event.copyWith(
+            start: originalStart,
+            end: originalEnd,
+          );
+          widget.controller.addEvents([revertedEvent]);
+          return;
+        }
+      }
+    }
+
+    // Debug: query events to see what the controller returns
+    final debugEvents = _getEventsForMonth(_currentMonth);
+    debugPrint('[RESIZE-PARENT] after update: _currentMonth=$_currentMonth '
+        'events=${debugEvents.length} ids=${debugEvents.map((e) => e.id).toList()}');
+    for (final e in debugEvents) {
+      debugPrint('[RESIZE-PARENT]   event: ${e.id} start=${e.start} end=${e.end}');
+    }
+
+    // Auto-navigate to show the resized edge date
+    final activeEdgeDate =
+        edge == MCalResizeEdge.end ? newEndDate : newStartDate;
+    final targetMonth = DateTime(activeEdgeDate.year, activeEdgeDate.month, 1);
+    debugPrint('[RESIZE-PARENT] auto-nav check: activeEdgeDate=$activeEdgeDate '
+        'targetMonth=$targetMonth currentMonth=$_currentMonth '
+        'willNav=${targetMonth.year != _currentMonth.year || targetMonth.month != _currentMonth.month}');
+    if (targetMonth.year != _currentMonth.year ||
+        targetMonth.month != _currentMonth.month) {
+      _navigateToMonth(targetMonth);
+    }
   }
 }
 
@@ -3195,6 +3765,11 @@ class _MonthPageWidget extends StatefulWidget {
   /// Called when an event resize operation completes.
   final bool Function(BuildContext, MCalEventResizedDetails)? onEventResized;
 
+  /// Called when a resize handle pointer-down occurs.
+  /// Delegates to the parent [_MCalMonthViewState] for tracking.
+  final void Function(MCalCalendarEvent, MCalResizeEdge, int)?
+      onResizePointerDownCallback;
+
   const _MonthPageWidget({
     required this.month,
     required this.currentDisplayMonth,
@@ -3252,6 +3827,7 @@ class _MonthPageWidget extends StatefulWidget {
     this.enableResize = false,
     this.onResizeWillAccept,
     this.onEventResized,
+    this.onResizePointerDownCallback,
   });
 
   @override
@@ -3310,12 +3886,8 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   /// Reset when drag ends to force re-caching on next drag.
   bool _layoutCachedForDrag = false;
 
-  // ============================================================
-  // Resize Gesture State
-  // ============================================================
-
-  /// Accumulated horizontal drag distance during a resize gesture.
-  double _resizeDxAccumulated = 0.0;
+  // Resize gesture state has been moved to the parent _MCalMonthViewState
+  // so the gesture survives across page transitions during edge navigation.
 
   @override
   void initState() {
@@ -3385,6 +3957,13 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   }
 
   /// Called when drag handler state changes.
+  ///
+  /// During an active resize, feedback layers are updated by their own
+  /// [ListenableBuilder] wrappers — a full [setState] here is skipped to
+  /// avoid rebuilding the event-tile subtree during active operations.
+  ///
+  /// With the Layer 5 architecture, pointer tracking for resize lives in a
+  /// stable sibling branch, so full rebuilds during resize are now safe.
   void _onDragHandlerChanged() {
     if (!mounted) return;
     final dragHandler = widget.dragHandler;
@@ -3392,8 +3971,13 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
       // Drag/resize ended or cancelled - clear caches so indicators never stick
       _cachedDragData = null;
       _layoutCachedForDrag = false;
+      setState(() {});
+    } else if (dragHandler != null) {
+      // Active drag or resize: rebuild is safe because:
+      //  - Drag: LongPressDraggable manages its own gesture state.
+      //  - Resize: Layer 5 Listener tracks the pointer independently.
+      setState(() {});
     }
-    setState(() {});
   }
 
   /// Compute the dates and weeks for this month.
@@ -3700,7 +4284,14 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     }
 
     if (isRecurring && seriesId != null) {
-      // Recurring occurrence: use addException instead of addEvents
+      // Recurring occurrence: use a `modified` exception so the full event
+      // state (including any prior resize or other modifications) is preserved.
+      // A `rescheduled` exception only carries a newDate and would revert the
+      // occurrence to the master event's original duration.
+      final exception = MCalRecurrenceException.modified(
+        originalDate: DateTime.parse(event.occurrenceId!),
+        modifiedEvent: updatedEvent,
+      );
       if (widget.onEventDropped != null) {
         final shouldKeep = widget.onEventDropped!(
           context,
@@ -3716,23 +4307,11 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
         );
 
         if (shouldKeep) {
-          widget.controller.addException(
-            seriesId,
-            MCalRecurrenceException.rescheduled(
-              originalDate: DateTime.parse(event.occurrenceId!),
-              newDate: newStartDate,
-            ),
-          );
+          widget.controller.addException(seriesId, exception);
         }
       } else {
-        // No callback provided — auto-create reschedule exception
-        widget.controller.addException(
-          seriesId,
-          MCalRecurrenceException.rescheduled(
-            originalDate: DateTime.parse(event.occurrenceId!),
-            newDate: newStartDate,
-          ),
-        );
+        // No callback provided — auto-create modified exception
+        widget.controller.addException(seriesId, exception);
       }
     } else {
       // Non-recurring event: existing behavior
@@ -3768,239 +4347,18 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   }
 
   // ============================================================
-  // Resize Interaction Methods
+  // Resize Interaction (delegates to parent for pointer tracking)
   // ============================================================
 
-  /// Begins a resize operation for the given [event] on the specified [edge].
-  ///
-  /// Resets the accumulated drag distance, ensures the layout cache is
-  /// populated, and starts the resize state on the drag handler.
-  void _handleResizeStart(MCalCalendarEvent event, MCalResizeEdge edge) {
-    _resizeDxAccumulated = 0.0;
-
-    // Ensure layout cache is populated for building highlight cells
-    final renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox != null && renderBox.hasSize) {
-      _updateLayoutCache(renderBox);
-    }
-
-    widget.dragHandler?.startResize(event, edge);
-  }
-
-  /// Handles incremental drag updates during a resize gesture.
-  ///
-  /// Accumulates horizontal drag distance [dx], converts to a day delta
-  /// using [dayWidth], computes proposed dates with DST-safe arithmetic,
-  /// enforces minimum 1-day duration, validates via [onResizeWillAccept],
-  /// builds highlight cells, and updates the drag handler for Layer 3/4 preview.
-  void _handleResizeUpdate(double dx, double dayWidth) {
-    final dragHandler = widget.dragHandler;
-    if (dragHandler == null || !dragHandler.isResizing) return;
-
-    _resizeDxAccumulated += dx;
-
-    // Use provided dayWidth, falling back to cached layout value
-    final effectiveDayWidth = dayWidth > 0 ? dayWidth : _cachedDayWidth;
-    if (effectiveDayWidth <= 0) return;
-    final dayDelta = (_resizeDxAccumulated / effectiveDayWidth).round();
-
-    final originalStart = dragHandler.resizeOriginalStart!;
-    final originalEnd = dragHandler.resizeOriginalEnd!;
-    final edge = dragHandler.resizeEdge!;
-
-    DateTime proposedStart;
-    DateTime proposedEnd;
-
-    if (edge == MCalResizeEdge.start) {
-      // Adjusting start edge: apply delta to original start
-      final newDate = DateTime(
-        originalStart.year,
-        originalStart.month,
-        originalStart.day + dayDelta,
-      );
-      // Enforce minimum: start cannot be after end (minimum 1 day event)
-      proposedStart = newDate.isBefore(originalEnd) || newDate.isAtSameMomentAs(originalEnd)
-          ? newDate
-          : DateTime(originalEnd.year, originalEnd.month, originalEnd.day);
-      proposedEnd = originalEnd;
-    } else {
-      // Adjusting end edge: apply delta to original end
-      final newDate = DateTime(
-        originalEnd.year,
-        originalEnd.month,
-        originalEnd.day + dayDelta,
-      );
-      // Enforce minimum: end cannot be before start (minimum 1 day event)
-      proposedEnd = newDate.isAfter(originalStart) || newDate.isAtSameMomentAs(originalStart)
-          ? newDate
-          : DateTime(originalStart.year, originalStart.month, originalStart.day);
-      proposedStart = originalStart;
-    }
-
-    // Validate via callback
-    bool isValid = true;
-    if (widget.onResizeWillAccept != null) {
-      isValid = widget.onResizeWillAccept!(
-        context,
-        MCalResizeWillAcceptDetails(
-          event: dragHandler.resizingEvent!,
-          proposedStartDate: proposedStart,
-          proposedEndDate: proposedEnd,
-          resizeEdge: edge,
-        ),
-      );
-    }
-
-    // Build highlighted cells for preview
-    final cells = _buildHighlightCellsForDateRange(proposedStart, proposedEnd);
-
-    // Update drag handler (triggers Layer 3/4 rebuild)
-    dragHandler.updateResize(
-      proposedStart: proposedStart,
-      proposedEnd: proposedEnd,
-      isValid: isValid,
-      cells: cells,
-    );
-  }
-
-  /// Completes the resize operation.
-  ///
-  /// Mirrors the logic of [_handleDrop]: saves event state before clearing,
-  /// builds [MCalEventResizedDetails], calls the [onEventResized] callback,
-  /// and updates the controller. For recurring events, creates a modified
-  /// exception via [addException].
-  void _handleResizeEnd() {
-    final dragHandler = widget.dragHandler;
-    if (dragHandler == null || !dragHandler.isResizing) return;
-
-    // Save state before completeResize() clears it
-    final event = dragHandler.resizingEvent!;
-    final originalStart = dragHandler.resizeOriginalStart!;
-    final originalEnd = dragHandler.resizeOriginalEnd!;
-    final edge = dragHandler.resizeEdge!;
-
-    final result = dragHandler.completeResize();
-    if (result == null) return; // Invalid resize
-
-    final (proposedStart, proposedEnd) = result;
-
-    // Calculate new dates preserving time components using DST-safe arithmetic.
-    // For the edge that changed, compute day delta and apply to the original
-    // date with time components. The unchanged edge keeps its original value.
-    final DateTime newStartDate;
-    final DateTime newEndDate;
-
-    if (edge == MCalResizeEdge.start) {
-      // Start edge changed
-      final normalizedOriginalStart = DateTime(
-        originalStart.year,
-        originalStart.month,
-        originalStart.day,
-      );
-      final dayDelta = daysBetween(normalizedOriginalStart, proposedStart);
-      newStartDate = DateTime(
-        originalStart.year,
-        originalStart.month,
-        originalStart.day + dayDelta,
-        originalStart.hour,
-        originalStart.minute,
-        originalStart.second,
-        originalStart.millisecond,
-        originalStart.microsecond,
-      );
-      newEndDate = originalEnd;
-    } else {
-      // End edge changed
-      final normalizedOriginalEnd = DateTime(
-        originalEnd.year,
-        originalEnd.month,
-        originalEnd.day,
-      );
-      final dayDelta = daysBetween(normalizedOriginalEnd, proposedEnd);
-      newEndDate = DateTime(
-        originalEnd.year,
-        originalEnd.month,
-        originalEnd.day + dayDelta,
-        originalEnd.hour,
-        originalEnd.minute,
-        originalEnd.second,
-        originalEnd.millisecond,
-        originalEnd.microsecond,
-      );
-      newStartDate = originalStart;
-    }
-
-    // Detect recurring occurrence
-    final isRecurring = event.occurrenceId != null;
-    String? seriesId;
-    if (isRecurring) {
-      final occId = event.occurrenceId!;
-      seriesId = event.id.endsWith('_$occId')
-          ? event.id.substring(0, event.id.length - occId.length - 1)
-          : event.id;
-    }
-
-    // Build details
-    final details = MCalEventResizedDetails(
-      event: event,
-      oldStartDate: originalStart,
-      oldEndDate: originalEnd,
-      newStartDate: newStartDate,
-      newEndDate: newEndDate,
-      resizeEdge: edge,
-      isRecurring: isRecurring,
-      seriesId: seriesId,
-    );
-
-    // Create the updated event
-    final updatedEvent = event.copyWith(start: newStartDate, end: newEndDate);
-
-    if (isRecurring && seriesId != null) {
-      // Recurring occurrence: create a modified exception
-      if (widget.onEventResized != null) {
-        final shouldKeep = widget.onEventResized!(context, details);
-        if (shouldKeep) {
-          widget.controller.addException(
-            seriesId,
-            MCalRecurrenceException.rescheduled(
-              originalDate: DateTime.parse(event.occurrenceId!),
-              newDate: newStartDate,
-            ),
-          );
-        }
-      } else {
-        // No callback — auto-create exception
-        widget.controller.addException(
-          seriesId,
-          MCalRecurrenceException.rescheduled(
-            originalDate: DateTime.parse(event.occurrenceId!),
-            newDate: newStartDate,
-          ),
-        );
-      }
-    } else {
-      // Non-recurring event: update via controller
-      widget.controller.addEvents([updatedEvent]);
-
-      // Call onEventResized callback if provided
-      if (widget.onEventResized != null) {
-        final shouldKeep = widget.onEventResized!(context, details);
-
-        // If callback returns false, revert the change
-        if (!shouldKeep) {
-          final revertedEvent = event.copyWith(
-            start: originalStart,
-            end: originalEnd,
-          );
-          widget.controller.addEvents([revertedEvent]);
-        }
-      }
-    }
-  }
-
-  /// Cancels the current resize operation.
-  void _handleResizeCancel() {
-    widget.dragHandler?.cancelResize();
+  /// Called by [_ResizeHandle.onPointerDown]. Delegates to the parent
+  /// [_MCalMonthViewState] via the [onResizePointerDownCallback] so
+  /// the gesture survives across page transitions during edge navigation.
+  void _handleResizePointerDown(
+    MCalCalendarEvent event,
+    MCalResizeEdge edge,
+    int pointer,
+  ) {
+    widget.onResizePointerDownCallback?.call(event, edge, pointer);
   }
 
   /// Builds a list of [MCalHighlightCellInfo] for a date range.
@@ -4135,23 +4493,31 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
               theme.eventTileBackgroundColor ??
               Colors.red.withValues(alpha: 0.5));
 
-    final borderWidth =
-        theme.dropTargetTileBorderWidth ?? theme.eventTileBorderWidth ?? 0.0;
-    final borderColor =
-        theme.dropTargetTileBorderColor ?? theme.eventTileBorderColor;
-    final hasBorder = borderWidth > 0 && borderColor != null;
     final isFirstSegment = segment?.isFirstSegment ?? true;
     final isLastSegment = segment?.isLastSegment ?? true;
 
-    Border? tileBorder;
-    if (hasBorder) {
-      final topBorder = BorderSide(color: borderColor, width: borderWidth);
-      final bottomBorder = BorderSide(color: borderColor, width: borderWidth);
+    // If the theme specifies explicit border settings, honour them.
+    // Otherwise use the tile color as a 1px border with a translucent fill
+    // so the drop-target preview is visually distinct from the original tile.
+    final themeBorderWidth =
+        theme.dropTargetTileBorderWidth ?? theme.eventTileBorderWidth;
+    final themeBorderColor =
+        theme.dropTargetTileBorderColor ?? theme.eventTileBorderColor;
+    final hasThemeBorder =
+        themeBorderWidth != null && themeBorderWidth > 0 && themeBorderColor != null;
+
+    final Color fillColor;
+    final Border tileBorder;
+    if (hasThemeBorder) {
+      // Explicit theme border — use the tile color as-is for the fill.
+      fillColor = tileColor;
+      final topBorder = BorderSide(color: themeBorderColor, width: themeBorderWidth);
+      final bottomBorder = BorderSide(color: themeBorderColor, width: themeBorderWidth);
       final leftBorder = isFirstSegment
-          ? BorderSide(color: borderColor, width: borderWidth)
+          ? BorderSide(color: themeBorderColor, width: themeBorderWidth)
           : BorderSide.none;
       final rightBorder = isLastSegment
-          ? BorderSide(color: borderColor, width: borderWidth)
+          ? BorderSide(color: themeBorderColor, width: themeBorderWidth)
           : BorderSide.none;
       tileBorder = Border(
         top: topBorder,
@@ -4159,11 +4525,25 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
         left: leftBorder,
         right: rightBorder,
       );
+    } else {
+      // Default: 1px border in the tile color, softened opaque fill
+      // that adapts to light/dark mode.
+      final brightness = Theme.of(context).brightness;
+      fillColor = tileColor.soften(brightness);
+      final borderSide = BorderSide(color: tileColor, width: 1.0);
+      final leftBorder = isFirstSegment ? borderSide : BorderSide.none;
+      final rightBorder = isLastSegment ? borderSide : BorderSide.none;
+      tileBorder = Border(
+        top: borderSide,
+        bottom: borderSide,
+        left: leftBorder,
+        right: rightBorder,
+      );
     }
 
-    return Container(
+    final baseTile = Container(
       decoration: BoxDecoration(
-        color: tileColor,
+        color: fillColor,
         borderRadius: BorderRadius.horizontal(
           left: Radius.circular(leftRadius),
           right: Radius.circular(rightRadius),
@@ -4171,6 +4551,51 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
         border: tileBorder,
       ),
     );
+
+    // During a resize operation, show a visual handle on the active edge
+    // so the user can see where to grab even though the drop target tile
+    // covers the real event tile (and its resize handle).
+    final dragHandler = widget.dragHandler;
+    if (dragHandler != null && dragHandler.isResizing) {
+      final resizeEdge = dragHandler.resizeEdge;
+      final isRtl = Directionality.of(context) == TextDirection.rtl;
+
+      // Determine whether to show handle on this segment's edge.
+      // Start handle on first segment, end handle on last segment.
+      final showStartHandle = resizeEdge == MCalResizeEdge.start &&
+          (segment?.isFirstSegment ?? true);
+      final showEndHandle = resizeEdge == MCalResizeEdge.end &&
+          (segment?.isLastSegment ?? true);
+
+      if (showStartHandle || showEndHandle) {
+        final isLeading = (resizeEdge == MCalResizeEdge.start) != isRtl;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(child: baseTile),
+            Positioned(
+              left: isLeading ? 0 : null,
+              right: isLeading ? null : 0,
+              top: 0,
+              bottom: 0,
+              width: _ResizeHandle.handleWidth,
+              child: Center(
+                child: Container(
+                  width: 2,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      }
+    }
+
+    return baseTile;
   }
 
   // ============================================================
@@ -4276,7 +4701,20 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     final dragHandler = widget.dragHandler;
     if (dragHandler == null) return const SizedBox.shrink();
 
-    final highlightedCells = dragHandler.highlightedCells;
+    var highlightedCells = dragHandler.highlightedCells;
+
+    // When keyboard operations provide empty cells but have valid proposed
+    // dates (keyboard handlers live in the outer _MCalMonthViewState and
+    // don't have access to the layout cache), compute the cells here.
+    if (highlightedCells.isEmpty &&
+        dragHandler.proposedStartDate != null &&
+        dragHandler.proposedEndDate != null &&
+        (dragHandler.isDragging || dragHandler.isResizing)) {
+      highlightedCells = _buildHighlightCellsForDateRange(
+        dragHandler.proposedStartDate!,
+        dragHandler.proposedEndDate!,
+      );
+    }
     if (highlightedCells.isEmpty) return const SizedBox.shrink();
 
     final isValid = dragHandler.isProposedDropValid;
@@ -4442,10 +4880,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             dragHandler: widget.dragHandler,
             dragLongPressDelay: widget.dragLongPressDelay,
             enableResize: widget.enableResize,
-            onResizeStartCallback: _handleResizeStart,
-            onResizeUpdateCallback: _handleResizeUpdate,
-            onResizeEndCallback: _handleResizeEnd,
-            onResizeCancelCallback: _handleResizeCancel,
+            onResizeHandlePointerDown: _handleResizePointerDown,
           ),
         );
       }).toList(),
@@ -4459,27 +4894,46 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
         onAcceptWithDetails: _handleDrop,
         builder: (context, candidateData, rejectedData) {
           // Build drop-feedback layers (order controlled by dropTargetTilesAboveOverlay)
-          // Show during both drag and resize operations
-          final showFeedback = _isDragOrResizeActive;
-          final tilesLayer = (widget.showDropTargetTiles && showFeedback)
-              ? Positioned.fill(
-                  child: RepaintBoundary(
-                    child: IgnorePointer(
-                      child: _buildDropTargetTilesLayer(context),
-                    ),
-                  ),
-                )
-              : null;
+          //
+          // The feedback layers use ListenableBuilder so they can update
+          // independently when the drag handler notifies, without requiring
+          // a full setState on the parent widget.
+          final dragHandler = widget.dragHandler;
 
-          final overlayLayer = (widget.showDropTargetOverlay && showFeedback)
-              ? Positioned.fill(
-                  child: RepaintBoundary(
+          Widget buildFeedbackLayer({
+            required bool enabled,
+            required Widget Function(BuildContext) layerBuilder,
+          }) {
+            if (dragHandler == null) return const SizedBox.shrink();
+            // ListenableBuilder rebuilds this subtree whenever the drag
+            // handler notifies, even when _MonthPageWidgetState doesn't
+            // call setState (i.e. during resize).
+            return Positioned.fill(
+              child: ListenableBuilder(
+                listenable: dragHandler,
+                builder: (ctx, _) {
+                  final active = _isDragOrResizeActive;
+                  if (!enabled || !active) {
+                    return const SizedBox.shrink();
+                  }
+                  return RepaintBoundary(
                     child: IgnorePointer(
-                      child: _buildDropTargetOverlayLayer(context),
+                      child: layerBuilder(ctx),
                     ),
-                  ),
-                )
-              : null;
+                  );
+                },
+              ),
+            );
+          }
+
+          final tilesLayer = buildFeedbackLayer(
+            enabled: widget.showDropTargetTiles,
+            layerBuilder: _buildDropTargetTilesLayer,
+          );
+          final overlayLayer = buildFeedbackLayer(
+            enabled: widget.showDropTargetOverlay,
+            layerBuilder: _buildDropTargetOverlayLayer,
+          );
 
           // By default (dropTargetTilesAboveOverlay: false), tiles are Layer 3
           // (below) and overlay is Layer 4 (above). When true, the order reverses.
@@ -4490,12 +4944,17 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
               ? tilesLayer
               : overlayLayer;
 
+          // Layer 5 (resize gesture tracking) has been moved to the parent
+          // _MCalMonthViewState Listener so it survives page transitions.
+
+          // 3 children: main content + 2 drop feedback layers.
           final stack = Stack(
             children: [
               // Layer 1+2: Main content (week rows with grid and events)
               weekRowsColumn,
-              if (firstLayer != null) firstLayer,
-              if (secondLayer != null) secondLayer,
+              // Layer 3+4: Drop feedback (always present via ListenableBuilder)
+              firstLayer,
+              secondLayer,
             ],
           );
 
@@ -4748,18 +5207,11 @@ class _WeekRowWidget extends StatefulWidget {
   /// Whether event resize handles should be shown on multi-day event tiles.
   final bool enableResize;
 
-  /// Called when the user begins dragging a resize handle.
-  final void Function(MCalCalendarEvent event, MCalResizeEdge edge)?
-  onResizeStartCallback;
-
-  /// Called as the user drags a resize handle, with pixel dx and day width.
-  final void Function(double dx, double dayWidth)? onResizeUpdateCallback;
-
-  /// Called when the user releases a resize handle.
-  final VoidCallback? onResizeEndCallback;
-
-  /// Called when a resize drag is cancelled by the system.
-  final VoidCallback? onResizeCancelCallback;
+  /// Called when a pointer goes down on a resize handle.
+  /// The parent [_MonthPageWidgetState] uses this to register the resize
+  /// target and acquire a scroll hold before the gesture arena resolves.
+  final void Function(MCalCalendarEvent event, MCalResizeEdge edge, int pointer)?
+  onResizeHandlePointerDown;
 
   const _WeekRowWidget({
     required this.dates,
@@ -4810,10 +5262,7 @@ class _WeekRowWidget extends StatefulWidget {
     this.dragLongPressDelay = const Duration(milliseconds: 200),
     // Resize
     this.enableResize = false,
-    this.onResizeStartCallback,
-    this.onResizeUpdateCallback,
-    this.onResizeEndCallback,
-    this.onResizeCancelCallback,
+    this.onResizeHandlePointerDown,
   });
 
   @override
@@ -4961,10 +5410,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           onDragCanceledCallback: widget.onDragCanceledCallback,
           dragLongPressDelay: widget.dragLongPressDelay,
           enableResize: widget.enableResize,
-          onResizeStartCallback: widget.onResizeStartCallback,
-          onResizeUpdateCallback: widget.onResizeUpdateCallback,
-          onResizeEndCallback: widget.onResizeEndCallback,
-          onResizeCancelCallback: widget.onResizeCancelCallback,
+          onResizeHandlePointerDown: widget.onResizeHandlePointerDown,
         ),
       );
     }).toList();
@@ -5041,15 +5487,15 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           onOverflowLongPress: widget.onOverflowLongPress,
         );
 
-    // Optionally wrap event tile builder with resize handles for multi-day events
+    // Optionally wrap event tile builder with resize handles for all events
     final MCalEventTileBuilder finalEventTileBuilder;
     if (widget.enableResize) {
       finalEventTileBuilder = (BuildContext ctx, MCalEventTileContext tileCtx) {
         final tile = wrappedEventTileBuilder(ctx, tileCtx);
         final segment = tileCtx.segment;
 
-        // Only add resize handles for multi-day events (not single-day)
-        if (segment == null || segment.isSingleDay) return tile;
+        // Skip if no segment info (shouldn't happen in normal flow)
+        if (segment == null) return tile;
 
         final children = <Widget>[Positioned.fill(child: tile)];
         if (segment.isFirstSegment) {
@@ -5057,16 +5503,8 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
             _ResizeHandle(
               edge: MCalResizeEdge.start,
               event: tileCtx.event,
-              onResizeStart: () => widget.onResizeStartCallback?.call(
-                tileCtx.event,
-                MCalResizeEdge.start,
-              ),
-              onResizeUpdate: (dx) => widget.onResizeUpdateCallback?.call(
-                dx,
-                dayWidth,
-              ),
-              onResizeEnd: () => widget.onResizeEndCallback?.call(),
-              onResizeCancel: () => widget.onResizeCancelCallback?.call(),
+              onPointerDown: (event, edge, pointer) =>
+                  widget.onResizeHandlePointerDown?.call(event, edge, pointer),
             ),
           );
         }
@@ -5075,16 +5513,8 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
             _ResizeHandle(
               edge: MCalResizeEdge.end,
               event: tileCtx.event,
-              onResizeStart: () => widget.onResizeStartCallback?.call(
-                tileCtx.event,
-                MCalResizeEdge.end,
-              ),
-              onResizeUpdate: (dx) => widget.onResizeUpdateCallback?.call(
-                dx,
-                dayWidth,
-              ),
-              onResizeEnd: () => widget.onResizeEndCallback?.call(),
-              onResizeCancel: () => widget.onResizeCancelCallback?.call(),
+              onPointerDown: (event, edge, pointer) =>
+                  widget.onResizeHandlePointerDown?.call(event, edge, pointer),
             ),
           );
         }
@@ -5374,18 +5804,9 @@ class _DayCellWidget extends StatelessWidget {
   /// Whether event resize handles should be shown on multi-day event tiles.
   final bool enableResize;
 
-  /// Called when the user begins dragging a resize handle.
-  final void Function(MCalCalendarEvent event, MCalResizeEdge edge)?
-  onResizeStartCallback;
-
-  /// Called as the user drags a resize handle, with pixel dx and day width.
-  final void Function(double dx, double dayWidth)? onResizeUpdateCallback;
-
-  /// Called when the user releases a resize handle.
-  final VoidCallback? onResizeEndCallback;
-
-  /// Called when a resize drag is cancelled by the system.
-  final VoidCallback? onResizeCancelCallback;
+  /// Called when a pointer goes down on a resize handle.
+  final void Function(MCalCalendarEvent event, MCalResizeEdge edge, int pointer)?
+  onResizeHandlePointerDown;
 
   const _DayCellWidget({
     required this.date,
@@ -5433,10 +5854,7 @@ class _DayCellWidget extends StatelessWidget {
     this.dragLongPressDelay = const Duration(milliseconds: 200),
     // Resize
     this.enableResize = false,
-    this.onResizeStartCallback,
-    this.onResizeUpdateCallback,
-    this.onResizeEndCallback,
-    this.onResizeCancelCallback,
+    this.onResizeHandlePointerDown,
   });
 
   /// Gets the events to use for rendering tiles.
@@ -5890,11 +6308,11 @@ class _DayCellWidget extends StatelessWidget {
         );
       }
 
-      // Wrap with resize handles for multi-day events when resize is enabled
+      // Wrap with resize handles for all events when resize is enabled
       // (Legacy Layer 1 rendering path)
       // Note: In legacy Layer 1, the cell width serves as an approximate
       // dayWidth since each cell represents one day.
-      if (enableResize && eventSpanInfo.length > 1) {
+      if (enableResize) {
         final capturedEvent = event;
         final resizeChildren = <Widget>[Positioned.fill(child: tile)];
         if (eventSpanInfo.isStart) {
@@ -5902,16 +6320,8 @@ class _DayCellWidget extends StatelessWidget {
             _ResizeHandle(
               edge: MCalResizeEdge.start,
               event: capturedEvent,
-              onResizeStart: () => onResizeStartCallback?.call(
-                capturedEvent,
-                MCalResizeEdge.start,
-              ),
-              // dayWidth will be obtained from the _MonthPageWidgetState
-              // layout cache via _handleResizeStart, so we pass 0 here
-              // as a fallback — the actual width comes from context.
-              onResizeUpdate: (dx) => onResizeUpdateCallback?.call(dx, 0),
-              onResizeEnd: () => onResizeEndCallback?.call(),
-              onResizeCancel: () => onResizeCancelCallback?.call(),
+              onPointerDown: (event, edge, pointer) =>
+                  onResizeHandlePointerDown?.call(event, edge, pointer),
             ),
           );
         }
@@ -5920,13 +6330,8 @@ class _DayCellWidget extends StatelessWidget {
             _ResizeHandle(
               edge: MCalResizeEdge.end,
               event: capturedEvent,
-              onResizeStart: () => onResizeStartCallback?.call(
-                capturedEvent,
-                MCalResizeEdge.end,
-              ),
-              onResizeUpdate: (dx) => onResizeUpdateCallback?.call(dx, 0),
-              onResizeEnd: () => onResizeEndCallback?.call(),
-              onResizeCancel: () => onResizeCancelCallback?.call(),
+              onPointerDown: (event, edge, pointer) =>
+                  onResizeHandlePointerDown?.call(event, edge, pointer),
             ),
           );
         }
@@ -6368,15 +6773,26 @@ class _EventTileWidget extends StatelessWidget {
 /// - RTL-aware positioning using `Directionality.of(context)`
 /// - Semantic labels for accessibility ("Resize start edge" / "Resize end edge")
 ///
+/// Visual-only resize handle positioned on the edge of an event tile.
+///
 /// This widget must be placed inside a [Stack] alongside the event tile.
+/// It shows a thin visual indicator and a resize cursor on hover.
+///
+/// **All gesture handling has been moved to a separate Layer 5 overlay**
+/// (see [_buildResizeGestureLayer]) that uses raw [Listener] pointer events.
+/// This architecture is immune to widget rebuilds — even if the event tile
+/// tree is recreated during resize, the Layer 5 [Listener] continues
+/// tracking the active pointer because it lives in a stable sibling branch
+/// of the widget tree.
+///
+/// The [onPointerDown] callback is fired when the user presses on this
+/// handle, allowing the parent to register which event/edge is targeted
+/// and acquire a scroll hold on the [PageView].
 class _ResizeHandle extends StatelessWidget {
   const _ResizeHandle({
     required this.edge,
     required this.event,
-    required this.onResizeStart,
-    required this.onResizeUpdate,
-    required this.onResizeEnd,
-    required this.onResizeCancel,
+    required this.onPointerDown,
   });
 
   /// Which edge this handle is positioned on.
@@ -6385,17 +6801,10 @@ class _ResizeHandle extends StatelessWidget {
   /// The event this handle belongs to.
   final MCalCalendarEvent event;
 
-  /// Called when the user begins a horizontal drag on the handle.
-  final VoidCallback onResizeStart;
-
-  /// Called as the user drags horizontally, with the delta X in pixels.
-  final ValueChanged<double> onResizeUpdate;
-
-  /// Called when the user finishes dragging.
-  final VoidCallback onResizeEnd;
-
-  /// Called when the drag is cancelled (e.g. interrupted by the system).
-  final VoidCallback onResizeCancel;
+  /// Called when a pointer goes down on this handle.
+  /// The parent uses this to register the resize target and acquire a
+  /// scroll hold before the gesture arena resolves.
+  final void Function(MCalCalendarEvent event, MCalResizeEdge edge, int pointer) onPointerDown;
 
   /// The width of the interactive handle zone in logical pixels.
   static const double handleWidth = 8.0;
@@ -6413,19 +6822,20 @@ class _ResizeHandle extends StatelessWidget {
       right: isLeading ? null : 0,
       top: 0,
       bottom: 0,
-      width: handleWidth,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.resizeColumn,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onHorizontalDragStart: (_) => onResizeStart(),
-          onHorizontalDragUpdate: (details) => onResizeUpdate(details.delta.dx),
-          onHorizontalDragEnd: (_) => onResizeEnd(),
-          onHorizontalDragCancel: () => onResizeCancel(),
-          child: Semantics(
-            label: edge == MCalResizeEdge.start
-                ? 'Resize start edge'
-                : 'Resize end edge',
+      width: _ResizeHandle.handleWidth,
+      child: Semantics(
+        container: true,
+        label: edge == MCalResizeEdge.start
+            ? 'Resize start edge'
+            : 'Resize end edge',
+        child: MouseRegion(
+          cursor: SystemMouseCursors.resizeColumn,
+          child: Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: (pointerEvent) {
+              debugPrint('[RESIZE-HANDLE $edge] onPointerDown pointer=${pointerEvent.pointer}');
+              onPointerDown(event, edge, pointerEvent.pointer);
+            },
             child: Center(
               child: Container(
                 width: 2,

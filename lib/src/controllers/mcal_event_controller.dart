@@ -668,6 +668,24 @@ class MCalEventController extends ChangeNotifier {
     }
 
     // Expand using MCalRecurrenceRule.getOccurrences()
+    //
+    // Use DST-safe calendar-day span instead of Duration for end time
+    // calculation. Duration-based arithmetic shifts local times by ±1 hour
+    // at DST boundaries (e.g., a 9 PM event becomes 8 PM or 10 PM).
+    // Calendar-day arithmetic preserves the local time.
+    final masterDaySpan = DateTime(
+      master.end.year,
+      master.end.month,
+      master.end.day,
+    )
+        .difference(DateTime(
+          master.start.year,
+          master.start.month,
+          master.start.day,
+        ))
+        .inDays;
+    // Keep a Duration for the padding calculation only (a few hours off
+    // at DST boundaries is fine for the padding heuristic).
     final duration = master.end.difference(master.start);
 
     // Pad the query start backwards by the event duration so that multi-day
@@ -705,7 +723,22 @@ class MCalEventController extends ChangeNotifier {
             continue; // Skip this occurrence
           case MCalExceptionType.rescheduled:
             final newStart = exception.newDate!;
-            final newEnd = newStart.add(duration);
+            // DST-safe end: preserve the master event's local-time duration.
+            // The user may have set a different start time than the master,
+            // so we apply the master's start→end delta to the new start.
+            // DateTime's constructor handles overflow (e.g. hour 25 → next day).
+            final newEnd = DateTime(
+              newStart.year,
+              newStart.month,
+              newStart.day + masterDaySpan,
+              newStart.hour + (master.end.hour - master.start.hour),
+              newStart.minute + (master.end.minute - master.start.minute),
+              newStart.second + (master.end.second - master.start.second),
+              newStart.millisecond +
+                  (master.end.millisecond - master.start.millisecond),
+              newStart.microsecond +
+                  (master.end.microsecond - master.start.microsecond),
+            );
             // Only include if the rescheduled date falls within query range
             if (!newStart.isAfter(range.end) &&
                 !newEnd.isBefore(range.start)) {
@@ -729,7 +762,17 @@ class MCalEventController extends ChangeNotifier {
             break;
         }
       } else {
-        final occEnd = date.add(duration);
+        // DST-safe end: preserve master.end's time with calendar-day offset.
+        final occEnd = DateTime(
+          date.year,
+          date.month,
+          date.day + masterDaySpan,
+          master.end.hour,
+          master.end.minute,
+          master.end.second,
+          master.end.millisecond,
+          master.end.microsecond,
+        );
         // Only include if the occurrence overlaps the original query range.
         // Occurrences in the padded zone whose end is still before the
         // range start are filtered out here.
@@ -748,17 +791,43 @@ class MCalEventController extends ChangeNotifier {
     // query range but whose new date lands inside it.
     for (final entry in exceptions.entries) {
       final exception = entry.value;
-      if (exception.type == MCalExceptionType.rescheduled &&
-          !processedDateKeys.contains(entry.key)) {
-        final newStart = exception.newDate!;
-        final newEnd = newStart.add(duration);
-        if (!newStart.isAfter(range.end) && !newEnd.isBefore(range.start)) {
-          expanded.add(master.copyWith(
-            id: '${master.id}_${entry.key.toIso8601String()}',
-            start: newStart,
-            end: newEnd,
+      if (!processedDateKeys.contains(entry.key)) {
+        if (exception.type == MCalExceptionType.rescheduled) {
+          final newStart = exception.newDate!;
+          // DST-safe end: preserve the master's local-time duration.
+          final newEnd = DateTime(
+            newStart.year,
+            newStart.month,
+            newStart.day + masterDaySpan,
+            newStart.hour + (master.end.hour - master.start.hour),
+            newStart.minute + (master.end.minute - master.start.minute),
+            newStart.second + (master.end.second - master.start.second),
+            newStart.millisecond +
+                (master.end.millisecond - master.start.millisecond),
+            newStart.microsecond +
+                (master.end.microsecond - master.start.microsecond),
+          );
+          if (!newStart.isAfter(range.end) && !newEnd.isBefore(range.start)) {
+            expanded.add(master.copyWith(
+              id: '${master.id}_${entry.key.toIso8601String()}',
+              start: newStart,
+              end: newEnd,
+              occurrenceId: entry.key.toIso8601String(),
+            ));
+          }
+        } else if (exception.type == MCalExceptionType.modified) {
+          // Include modified occurrences whose original date falls outside
+          // the query range but whose modified event overlaps it.
+          // This handles cross-month resizes where an occurrence on e.g.
+          // Feb 1 is modified to start on Jan 22 — the January query must
+          // include it even though Feb 1 is outside January's grid range.
+          final modEvent = exception.modifiedEvent!.copyWith(
             occurrenceId: entry.key.toIso8601String(),
-          ));
+          );
+          if (!modEvent.start.isAfter(range.end) &&
+              !modEvent.end.isBefore(range.start)) {
+            expanded.add(modEvent);
+          }
         }
       }
     }
@@ -795,11 +864,38 @@ class MCalEventController extends ChangeNotifier {
         final idx = cached.indexWhere((e) => e.occurrenceId == dateKeyIso);
         if (idx >= 0) {
           final master = _eventsById[seriesId]!;
-          final duration = master.end.difference(master.start);
+          // Use DST-safe calendar-day arithmetic to preserve the master's
+          // local-time duration. The rescheduled start may have a different
+          // time-of-day than the master, so apply the master's start→end
+          // delta to the new start rather than using the master's end time.
+          final daySpan = DateTime(
+            master.end.year,
+            master.end.month,
+            master.end.day,
+          )
+              .difference(DateTime(
+                master.start.year,
+                master.start.month,
+                master.start.day,
+              ))
+              .inDays;
+          final newDate = exception.newDate!;
+          final newEnd = DateTime(
+            newDate.year,
+            newDate.month,
+            newDate.day + daySpan,
+            newDate.hour + (master.end.hour - master.start.hour),
+            newDate.minute + (master.end.minute - master.start.minute),
+            newDate.second + (master.end.second - master.start.second),
+            newDate.millisecond +
+                (master.end.millisecond - master.start.millisecond),
+            newDate.microsecond +
+                (master.end.microsecond - master.start.microsecond),
+          );
           cached[idx] = master.copyWith(
             id: '${seriesId}_$dateKeyIso',
-            start: exception.newDate,
-            end: exception.newDate!.add(duration),
+            start: newDate,
+            end: newEnd,
             occurrenceId: dateKeyIso,
           );
         }
@@ -1119,7 +1215,17 @@ class MCalEventController extends ChangeNotifier {
 
     // 2. Create new master starting at fromDate
     final newId = '${seriesId}_split_${fromDate.toIso8601String()}';
-    final duration = master.end.difference(master.start);
+    final daySpan = DateTime(
+      master.end.year,
+      master.end.month,
+      master.end.day,
+    )
+        .difference(DateTime(
+          master.start.year,
+          master.start.month,
+          master.start.day,
+        ))
+        .inDays;
     final newStart = DateTime(
       fromDate.year,
       fromDate.month,
@@ -1129,10 +1235,21 @@ class MCalEventController extends ChangeNotifier {
       master.start.second,
       master.start.millisecond,
     );
+    // DST-safe end: preserve master.end's time with calendar-day offset.
+    final newEnd = DateTime(
+      newStart.year,
+      newStart.month,
+      newStart.day + daySpan,
+      master.end.hour,
+      master.end.minute,
+      master.end.second,
+      master.end.millisecond,
+      master.end.microsecond,
+    );
     final newMaster = master.copyWith(
       id: newId,
       start: newStart,
-      end: newStart.add(duration),
+      end: newEnd,
       recurrenceRule: master.recurrenceRule, // original pattern (no truncation)
     );
     _eventsById[newId] = newMaster;

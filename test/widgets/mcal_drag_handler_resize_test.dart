@@ -90,13 +90,16 @@ void main() {
         expect(handler.resizeOriginalEnd, equals(DateTime(2025, 1, 17)));
       });
 
-      test('notifies listeners', () {
+      test('does NOT notify listeners (deferred to updateResize)', () {
+        // startResize intentionally skips notifyListeners to avoid
+        // triggering a rebuild that would cancel the active pointer
+        // gesture on the resize handle's GestureDetector.
         var notifyCount = 0;
         handler.addListener(() => notifyCount++);
 
         handler.startResize(singleDayEvent, MCalResizeEdge.end);
 
-        expect(notifyCount, equals(1));
+        expect(notifyCount, equals(0));
       });
     });
 
@@ -357,15 +360,16 @@ void main() {
         );
       });
 
-      test('startDrag while isResizing throws assertion error', () {
+      test('startDrag while isResizing cancels resize and starts drag', () {
         handler.startResize(multiDayEvent, MCalResizeEdge.end);
 
         expect(handler.isResizing, isTrue);
 
-        expect(
-          () => handler.startDrag(multiDayEvent, DateTime(2025, 1, 15)),
-          throwsA(isA<AssertionError>()),
-        );
+        // startDrag should gracefully cancel the active resize and proceed
+        handler.startDrag(multiDayEvent, DateTime(2025, 1, 15));
+
+        expect(handler.isDragging, isTrue);
+        expect(handler.isResizing, isFalse);
       });
 
       test('can start resize after drag is cancelled', () {

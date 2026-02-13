@@ -67,6 +67,7 @@ export 'src/models/mcal_event_change_info.dart';
 // Export styles
 export 'src/styles/mcal_theme.dart';
 // Export utilities
+export 'src/utils/color_utils.dart';
 export 'src/utils/mcal_localization.dart';
 export 'src/widgets/mcal_callback_details.dart';
 export 'src/widgets/mcal_default_week_layout.dart'

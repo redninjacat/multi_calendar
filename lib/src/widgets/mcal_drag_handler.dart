@@ -221,7 +221,14 @@ class MCalDragHandler extends ChangeNotifier {
   /// );
   /// ```
   void startDrag(MCalCalendarEvent event, DateTime sourceDate) {
-    assert(!_isResizing, 'Cannot start drag while resizing');
+    debugPrint('[DRAG-HANDLER] startDrag event=${event.title} isResizing=$_isResizing');
+    // If a resize is in progress (e.g. a LongPressDraggable fired its
+    // delayed recognizer while a resize was active), cancel it first
+    // so the drag can proceed cleanly.
+    if (_isResizing) {
+      debugPrint('[DRAG-HANDLER] startDrag => cancelling active resize first');
+      cancelResize();
+    }
 
     // Cancel any existing edge navigation timer
     _cancelEdgeNavigationTimer();
@@ -447,7 +454,8 @@ class MCalDragHandler extends ChangeNotifier {
     VoidCallback navigateCallback, {
     Duration? delay,
   }) {
-    if (!isDragging) {
+    // Works for both drag-to-move and resize operations
+    if (!isDragging && !isResizing) {
       _cancelEdgeNavigationTimer();
       return;
     }
@@ -458,7 +466,7 @@ class MCalDragHandler extends ChangeNotifier {
         final effectiveDelay =
             delay ?? const Duration(milliseconds: defaultEdgeNavigationDelayMs);
         _edgeNavigationTimer = Timer(effectiveDelay, () {
-          if (isDragging) {
+          if (isDragging || isResizing) {
             navigateCallback();
           }
         });
@@ -509,14 +517,23 @@ class MCalDragHandler extends ChangeNotifier {
   ///
   /// This sets the resize state and stores the original dates so they can
   /// be restored on cancel. Resize and drag are mutually exclusive.
+  ///
+  /// **Does not call [notifyListeners]**. The first visual update happens
+  /// when [updateResize] is called (which does notify). This is critical
+  /// for pointer-based resize: `startResize` is called inside the
+  /// `onHorizontalDragStart` callback of the resize handle's
+  /// [GestureDetector]. A synchronous rebuild at that point would alter
+  /// the widget tree (feedback layers appear), causing Flutter's gesture
+  /// system to lose the active pointer and cancel the drag.
   void startResize(MCalCalendarEvent event, MCalResizeEdge edge) {
+    debugPrint('[DRAG-HANDLER] startResize event=${event.title} edge=$edge isDragging=$isDragging');
     assert(!isDragging, 'Cannot start resize while dragging');
     _isResizing = true;
     _resizingEvent = event;
     _resizeEdge = edge;
     _resizeOriginalStart = event.start;
     _resizeOriginalEnd = event.end;
-    notifyListeners();
+    // Intentionally no notifyListeners() — see doc comment above.
   }
 
   /// Updates the proposed range during a resize operation.
@@ -529,6 +546,7 @@ class MCalDragHandler extends ChangeNotifier {
     required bool isValid,
     required List<MCalHighlightCellInfo> cells,
   }) {
+    debugPrint('[DRAG-HANDLER] updateResize proposedStart=$proposedStart proposedEnd=$proposedEnd isValid=$isValid cells=${cells.length}');
     assert(_isResizing, 'Cannot update resize when not resizing');
     _proposedStartDate = proposedStart;
     _proposedEndDate = proposedEnd;
@@ -543,17 +561,22 @@ class MCalDragHandler extends ChangeNotifier {
   /// or null if the resize state is invalid.
   /// Clears all resize state after completion.
   (DateTime, DateTime)? completeResize() {
+    debugPrint('[DRAG-HANDLER] completeResize isResizing=$_isResizing isProposedDropValid=$_isProposedDropValid');
     if (!_isResizing || !_isProposedDropValid) {
+      debugPrint('[DRAG-HANDLER] completeResize => cancelling (invalid state)');
       cancelResize();
       return null;
     }
     final result = (_proposedStartDate!, _proposedEndDate!);
+    debugPrint('[DRAG-HANDLER] completeResize => result=$result');
     _clearResizeState();
+    notifyListeners();
     return result;
   }
 
   /// Cancels the current resize operation and clears all resize state.
   void cancelResize() {
+    debugPrint('[DRAG-HANDLER] cancelResize (was isResizing=$_isResizing)');
     _clearResizeState();
     notifyListeners();
   }
@@ -569,6 +592,8 @@ class MCalDragHandler extends ChangeNotifier {
     _proposedEndDate = null;
     _isProposedDropValid = false;
     _highlightedCells = [];
+    // Cancel any pending edge navigation from resize
+    _cancelEdgeNavigationTimer();
   }
 
   // ============================================================

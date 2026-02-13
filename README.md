@@ -140,6 +140,14 @@ MCalMonthView(
 - **`onEventLongPress`**: Callback when an event tile is long-pressed.
 - **`onSwipeNavigation`**: Callback when a swipe navigation gesture is detected.
 
+**Event Resizing:**
+- **`enableEventResize`** (`bool?`): Whether to enable edge-drag resizing. `null` (default) auto-detects by platform.
+- **`onResizeWillAccept`**: Validation callback during resize. Return `false` to reject.
+- **`onEventResized`**: Completion callback when resize finishes. Return `false` to revert.
+
+**Animation:**
+- **`enableAnimations`** (`bool?`): Controls month transition animations. `null` (default) follows OS reduced motion preference. `true`/`false` are explicit overrides.
+
 **Localization:**
 - **`dateFormat`** (`String?`): Custom date format string.
 - **`locale`** (`Locale?`): Locale for date formatting and localization.
@@ -433,8 +441,12 @@ MCalMonthView(
 
 - All day cells have semantic labels describing the date
 - Event tiles have semantic labels with event details
+- Multi-day event tiles include span information (e.g., "3-day event, day 2 of 3") for screen readers
 - Navigator buttons have descriptive labels
 - Screen reader announcements for month/year changes
+- Keyboard-based event moving and resizing with announcements at every step (see [Keyboard Navigation](#keyboard-navigation))
+- Resize handles have semantic labels ("Resize start edge" / "Resize end edge")
+- `enableAnimations: null` (default) automatically respects the OS "Reduce Motion" accessibility setting
 
 The widget automatically integrates with Flutter's accessibility system and works with screen readers like VoiceOver (iOS) and TalkBack (Android).
 
@@ -455,14 +467,42 @@ The calendar grid, navigator buttons, and weekday headers automatically flip for
 
 `MCalMonthView` supports full keyboard navigation when focused:
 
+**Cell Navigation:**
+
 | Key | Action |
 |-----|--------|
 | `←` `→` `↑` `↓` | Navigate between cells |
-| `Enter` / `Space` | Select the focused cell |
+| `Enter` / `Space` | Select the focused cell (or enter event selection mode if drag-and-drop is enabled) |
 | `Home` | Jump to first day of month |
 | `End` | Jump to last day of month |
 | `Page Up` | Previous month |
 | `Page Down` | Next month |
+
+**Keyboard Event Moving** (when `enableDragAndDrop` is `true`):
+
+| Key | Action |
+|-----|--------|
+| `Enter` / `Space` | Enter event selection mode on the focused cell |
+| `Tab` / `Shift+Tab` | Cycle through events when multiple exist on a cell |
+| `Enter` | Confirm event selection, then confirm move |
+| `←` `→` | Move the selected event by 1 day |
+| `↑` `↓` | Move the selected event by 1 week |
+| `Escape` | Cancel the move |
+
+**Keyboard Event Resizing** (when both `enableDragAndDrop` and `enableEventResize` are enabled):
+
+| Key | Action |
+|-----|--------|
+| `R` | Enter resize mode (from event selection/move mode) |
+| `S` | Switch to resizing the start edge |
+| `E` | Switch to resizing the end edge |
+| `←` `→` | Adjust the active edge by 1 day |
+| `↑` `↓` | Adjust the active edge by 1 week |
+| `M` | Return to move mode |
+| `Enter` | Confirm the resize |
+| `Escape` | Cancel the resize |
+
+Screen reader announcements are provided at every step of both keyboard move and resize interactions.
 
 ```dart
 MCalMonthView(
@@ -539,13 +579,21 @@ Control month transition animations:
 ```dart
 MCalMonthView(
   controller: controller,
-  enableAnimations: true, // Default: true
+  enableAnimations: null, // Default: null (follow OS preference)
   animationDuration: Duration(milliseconds: 300), // Default
   animationCurve: Curves.easeInOut, // Default
 )
 ```
 
-Set `enableAnimations: false` for reduced motion or performance optimization.
+`enableAnimations` is a nullable `bool?` with three behaviors:
+
+| Value | Behavior |
+|-------|----------|
+| `null` (default) | Follows the OS reduced motion accessibility setting. Animations are disabled when the system has "Reduce Motion" enabled, and enabled otherwise. |
+| `true` | Force animations on regardless of OS setting (developer override). |
+| `false` | Force animations off regardless of OS setting (backward compatible). |
+
+The `setDisplayDate(date, animate: false)` and `navigateToDateWithoutAnimation()` methods always skip animation regardless of this setting.
 
 ### Week Layout Builder
 
@@ -764,6 +812,62 @@ When dragging near the left/right edges, the calendar auto-navigates to the adja
 - `onDragWillAccept` validates drop targets during drag. It is called when the proposed drop range changes. Return `false` to reject the drop (red highlight, drop reverted on release).
 - `cellInteractivityCallback` does **not** block drag-and-drop. A cell that returns `false` from `cellInteractivityCallback` can still receive dropped events unless you also return `false` from `onDragWillAccept` for that target. Use both together when you want to disable both tap and drop (e.g., past dates, weekends).
 
+### Event Resizing
+
+Enable edge-drag resizing to let users change event start or end dates by dragging the edges of event tiles.
+
+```dart
+MCalMonthView(
+  controller: controller,
+  enableDragAndDrop: true, // Required — resize uses drag infrastructure
+  enableEventResize: null, // Default: null (auto-detect by platform)
+  onResizeWillAccept: (context, details) {
+    // Validate proposed dates (e.g., reject weekends)
+    if (details.proposedEndDate.weekday == DateTime.saturday ||
+        details.proposedEndDate.weekday == DateTime.sunday) {
+      return false;
+    }
+    return true;
+  },
+  onEventResized: (context, details) {
+    print('Resized "${details.event.title}" ${details.resizeEdge.name} edge');
+    print('Old: ${details.oldStartDate} - ${details.oldEndDate}');
+    print('New: ${details.newStartDate} - ${details.newEndDate}');
+
+    // Return true to confirm, false to revert
+    return updateEventInBackend(details);
+  },
+)
+```
+
+**`enableEventResize`** is a nullable `bool?`:
+
+| Value | Behavior |
+|-------|----------|
+| `null` (default) | Auto-detects by platform: enabled on web, desktop, and tablets (shortest side >= 600dp); disabled on phones. |
+| `true` | Force resize on regardless of platform. |
+| `false` | Force resize off regardless of platform. |
+
+**Note:** `enableEventResize` requires `enableDragAndDrop` to be `true` — the resize interaction uses the same drag infrastructure.
+
+**Resize behaviors:**
+- Drag the leading edge (left in LTR, right in RTL) to change the start date
+- Drag the trailing edge (right in LTR, left in RTL) to change the end date
+- Minimum duration is 1 day — the start edge cannot be dragged past the end edge, and vice versa
+- Visual preview updates in real-time during the drag (reuses the same Layer 3/4 system as drag-and-drop)
+- Resize handles appear on multi-day event tiles only (single-day events are already at minimum)
+- Resizing a recurring event occurrence creates a `modified` exception, similar to how drag-and-drop creates a `rescheduled` exception for moves
+
+**Resize Details classes:**
+
+| Class | Properties | Used By |
+|-------|-----------|---------|
+| `MCalResizeWillAcceptDetails` | `event`, `proposedStartDate`, `proposedEndDate`, `resizeEdge` | `onResizeWillAccept` |
+| `MCalEventResizedDetails` | `event`, `oldStartDate`, `oldEndDate`, `newStartDate`, `newEndDate`, `resizeEdge`, `isRecurring`, `seriesId` | `onEventResized` |
+| `MCalResizeEdge` | Enum: `start`, `end` | Used within details |
+
+Keyboard-based resizing is also supported as an accessibility alternative — see [Keyboard Navigation](#keyboard-navigation).
+
 ### Event Display Control
 
 Limit the number of visible events per cell:
@@ -849,9 +953,10 @@ When you navigate in one view, all views sharing the controller update together.
 ## Example
 
 See the [example](example/) directory for a complete example application demonstrating package usage, including:
-- **Features Demo**: Interactive showcase of keyboard navigation, hover feedback, week numbers, animations, multi-view sync, and loading/error states
+- **Features Demo**: Interactive showcase of keyboard navigation, hover feedback, week numbers, animations, event resizing, keyboard move/resize shortcuts, multi-view sync, and loading/error states
 - **Multi-Day Events**: Contiguous tile rendering across cells and weeks
 - **Drag-and-Drop**: Move events between dates with visual feedback
+- **Event Resizing**: Drag event edges to change duration, with validation and keyboard alternatives
 - Basic MCalMonthView usage
 - Theme customization with multiple styles (Default, Modern, Classic, Minimal, Colorful)
 - Builder callbacks with the new `(BuildContext, Details)` pattern
@@ -870,8 +975,9 @@ See the [example](example/) directory for a complete example application demonst
 
 ## Known Limitations
 
-- **Recurring events:** Drag-and-drop moves the displayed instance only. The recurrence rule is not updated. Use `onEventDropped` to persist changes in your backend (e.g., create an exception or update the rule).
-- **Overflow indicator:** The "+N more" overflow indicator does not support drag-and-drop. Only visible event tiles can be dragged. Users must tap the overflow indicator to reveal hidden events in a separate view if they need to drag them.
+- **Recurring events:** Drag-and-drop moves the displayed instance only — creating a `rescheduled` exception. Resizing a recurring occurrence creates a `modified` exception. In both cases, the recurrence rule itself is not updated. Use `onEventDropped` or `onEventResized` to persist changes in your backend (e.g., create an exception or update the rule).
+- **Overflow indicator:** The "+N more" overflow indicator does not support drag-and-drop or resizing. Only visible event tiles can be dragged or resized. Users must tap the overflow indicator to reveal hidden events in a separate view if they need to manipulate them.
+- **Resize on phones:** Event resizing is disabled by default on phones (small screen, small touch targets). Set `enableEventResize: true` to force-enable it if your app has sufficiently large event tiles.
 
 ## Contributing
 

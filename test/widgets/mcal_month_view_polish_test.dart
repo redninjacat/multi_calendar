@@ -346,7 +346,7 @@ void main() {
     );
 
     testWidgets(
-      'no resize handles on single-day events even when resize enabled',
+      'single-day events get resize handles when resize is enabled',
       (tester) async {
         final singleEvent = MCalCalendarEvent(
           id: 'single-resize',
@@ -363,9 +363,10 @@ void main() {
           enableEventResize: true,
         );
 
-        // Single-day events should NOT have resize handles
-        expect(find.bySemanticsLabel('Resize start edge'), findsNothing);
-        expect(find.bySemanticsLabel('Resize end edge'), findsNothing);
+        // Single-day events SHOULD have resize handles so users can
+        // extend them into multi-day events by dragging an edge.
+        expect(find.bySemanticsLabel('Resize start edge'), findsWidgets);
+        expect(find.bySemanticsLabel('Resize end edge'), findsWidgets);
       },
     );
 
