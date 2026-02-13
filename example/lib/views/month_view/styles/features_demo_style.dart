@@ -1247,7 +1247,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
 
   Widget _buildMobileLayout(ColorScheme colorScheme) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final calendarHeight = screenHeight * 0.55;
+    final calendarHeight = screenHeight * 0.65;
 
     return SingleChildScrollView(
       child: Column(
