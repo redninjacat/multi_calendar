@@ -55,6 +55,25 @@ class MCalDragHandler extends ChangeNotifier {
   Offset? _dragPosition;
 
   // ============================================================
+  // Resize State Fields (mutually exclusive with drag state)
+  // ============================================================
+
+  /// Whether a resize operation is currently in progress.
+  bool _isResizing = false;
+
+  /// The event currently being resized.
+  MCalCalendarEvent? _resizingEvent;
+
+  /// Which edge of the event is being resized.
+  MCalResizeEdge? _resizeEdge;
+
+  /// The original start date of the event before resizing began.
+  DateTime? _resizeOriginalStart;
+
+  /// The original end date of the event before resizing began.
+  DateTime? _resizeOriginalEnd;
+
+  // ============================================================
   // Proposed Drop Range (for multi-week highlighting)
   // ============================================================
 
@@ -163,6 +182,25 @@ class MCalDragHandler extends ChangeNotifier {
   bool get isProposedDropValid => _isProposedDropValid;
 
   // ============================================================
+  // Resize Getters
+  // ============================================================
+
+  /// Whether a resize operation is currently in progress.
+  bool get isResizing => _isResizing;
+
+  /// The event currently being resized, or null if not resizing.
+  MCalCalendarEvent? get resizingEvent => _resizingEvent;
+
+  /// The edge being resized (start or end), or null if not resizing.
+  MCalResizeEdge? get resizeEdge => _resizeEdge;
+
+  /// The original start date of the event before resizing began, or null.
+  DateTime? get resizeOriginalStart => _resizeOriginalStart;
+
+  /// The original end date of the event before resizing began, or null.
+  DateTime? get resizeOriginalEnd => _resizeOriginalEnd;
+
+  // ============================================================
   // Drag Lifecycle Methods
   // ============================================================
 
@@ -183,6 +221,8 @@ class MCalDragHandler extends ChangeNotifier {
   /// );
   /// ```
   void startDrag(MCalCalendarEvent event, DateTime sourceDate) {
+    assert(!_isResizing, 'Cannot start drag while resizing');
+
     // Cancel any existing edge navigation timer
     _cancelEdgeNavigationTimer();
 
@@ -459,6 +499,76 @@ class MCalDragHandler extends ChangeNotifier {
   /// This is safe to call even if no timer is active.
   void cancelEdgeNavigation() {
     _cancelEdgeNavigationTimer();
+  }
+
+  // ============================================================
+  // Resize Lifecycle Methods
+  // ============================================================
+
+  /// Begins a resize operation for the given [event] on the specified [edge].
+  ///
+  /// This sets the resize state and stores the original dates so they can
+  /// be restored on cancel. Resize and drag are mutually exclusive.
+  void startResize(MCalCalendarEvent event, MCalResizeEdge edge) {
+    assert(!isDragging, 'Cannot start resize while dragging');
+    _isResizing = true;
+    _resizingEvent = event;
+    _resizeEdge = edge;
+    _resizeOriginalStart = event.start;
+    _resizeOriginalEnd = event.end;
+    notifyListeners();
+  }
+
+  /// Updates the proposed range during a resize operation.
+  ///
+  /// Reuses the shared [proposedStartDate], [proposedEndDate],
+  /// [isProposedDropValid], and [highlightedCells] fields.
+  void updateResize({
+    required DateTime proposedStart,
+    required DateTime proposedEnd,
+    required bool isValid,
+    required List<MCalHighlightCellInfo> cells,
+  }) {
+    assert(_isResizing, 'Cannot update resize when not resizing');
+    _proposedStartDate = proposedStart;
+    _proposedEndDate = proposedEnd;
+    _isProposedDropValid = isValid;
+    _highlightedCells = cells;
+    notifyListeners();
+  }
+
+  /// Completes the resize operation.
+  ///
+  /// Returns the proposed (start, end) dates if the resize is valid,
+  /// or null if the resize state is invalid.
+  /// Clears all resize state after completion.
+  (DateTime, DateTime)? completeResize() {
+    if (!_isResizing || !_isProposedDropValid) {
+      cancelResize();
+      return null;
+    }
+    final result = (_proposedStartDate!, _proposedEndDate!);
+    _clearResizeState();
+    return result;
+  }
+
+  /// Cancels the current resize operation and clears all resize state.
+  void cancelResize() {
+    _clearResizeState();
+    notifyListeners();
+  }
+
+  /// Clears all resize-specific state and the shared proposed drop range fields.
+  void _clearResizeState() {
+    _isResizing = false;
+    _resizingEvent = null;
+    _resizeEdge = null;
+    _resizeOriginalStart = null;
+    _resizeOriginalEnd = null;
+    _proposedStartDate = null;
+    _proposedEndDate = null;
+    _isProposedDropValid = false;
+    _highlightedCells = [];
   }
 
   // ============================================================

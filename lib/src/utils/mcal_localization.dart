@@ -132,6 +132,29 @@ class MCalLocalizations {
     return List.unmodifiable(supportedLocales);
   }
 
+  /// Formats a multi-day event span label for screen readers.
+  ///
+  /// Returns a localized string like "3-day event, day 2 of 3" that
+  /// describes the total span length and the current day position
+  /// within that span.
+  ///
+  /// [spanLength] is the total number of days the event spans.
+  /// [dayPosition] is the 1-based position of the current day within the span.
+  /// [locale] is the locale to use for localization.
+  ///
+  /// Example:
+  /// ```dart
+  /// final label = MCalLocalizations().formatMultiDaySpanLabel(3, 2, const Locale('en'));
+  /// // Returns: "3-day event, day 2 of 3"
+  /// ```
+  String formatMultiDaySpanLabel(
+      int spanLength, int dayPosition, Locale locale) {
+    final template = getLocalizedString('multiDaySpanLabel', locale);
+    return template
+        .replaceAll('{days}', spanLength.toString())
+        .replaceAll('{position}', dayPosition.toString());
+  }
+
   /// Gets the effective locale, falling back to default if not supported.
   Locale _getEffectiveLocale(Locale locale) {
     for (final supported in supportedLocales) {
@@ -210,6 +233,8 @@ class MCalLocalizations {
     'dropTargetDateRangeTo': 'to',
     'dropTargetValid': 'valid',
     'dropTargetInvalid': 'invalid',
+    // Multi-day span labels
+    'multiDaySpanLabel': '{days}-day event, day {position} of {days}',
   };
 
   static const Map<String, String> _spanishStrings = {
@@ -258,5 +283,7 @@ class MCalLocalizations {
     'dropTargetDateRangeTo': 'a',
     'dropTargetValid': 'válido',
     'dropTargetInvalid': 'no válido',
+    // Multi-day span labels
+    'multiDaySpanLabel': 'evento de {days} días, día {position} de {days}',
   };
 }

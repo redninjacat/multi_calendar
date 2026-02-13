@@ -845,3 +845,198 @@ class MCalDropOverlayDetails {
     required this.dragData,
   });
 }
+
+/// Which edge of an event tile is being resized.
+///
+/// Used in resize callbacks to indicate whether the user is adjusting
+/// the start date (leading edge) or end date (trailing edge) of an event.
+///
+/// In LTR layouts, [start] is the left edge and [end] is the right edge.
+/// In RTL layouts, these are reversed.
+enum MCalResizeEdge {
+  /// The start (leading) edge — changing the event's start date.
+  start,
+
+  /// The end (trailing) edge — changing the event's end date.
+  end,
+}
+
+/// Details object for the resize validation callback.
+///
+/// Provides context for determining whether a resize operation should be
+/// accepted at a particular proposed date range. This is used by the
+/// [onResizeWillAccept] callback to implement custom validation logic.
+///
+/// The proposed dates represent where the event's edges would be placed
+/// if the resize is accepted, with only the dragged edge changing.
+///
+/// Example:
+/// ```dart
+/// onResizeWillAccept: (context, details) {
+///   // Don't allow resizing into the past
+///   if (details.proposedStartDate.isBefore(DateTime.now())) {
+///     return false;
+///   }
+///   // Don't allow resizing onto weekends
+///   if (details.proposedEndDate.weekday == DateTime.saturday ||
+///       details.proposedEndDate.weekday == DateTime.sunday) {
+///     return false;
+///   }
+///   // Limit event duration to 14 days
+///   final duration = details.proposedEndDate
+///       .difference(details.proposedStartDate)
+///       .inDays;
+///   if (duration > 14) return false;
+///   return true;
+/// }
+/// ```
+class MCalResizeWillAcceptDetails {
+  /// The calendar event being resized.
+  final MCalCalendarEvent event;
+
+  /// The proposed new start date for the event.
+  ///
+  /// When the [resizeEdge] is [MCalResizeEdge.start], this will differ from
+  /// the event's current start date. When the [resizeEdge] is
+  /// [MCalResizeEdge.end], this will match the event's current start date.
+  final DateTime proposedStartDate;
+
+  /// The proposed new end date for the event.
+  ///
+  /// When the [resizeEdge] is [MCalResizeEdge.end], this will differ from
+  /// the event's current end date. When the [resizeEdge] is
+  /// [MCalResizeEdge.start], this will match the event's current end date.
+  final DateTime proposedEndDate;
+
+  /// Which edge of the event is being resized.
+  ///
+  /// Indicates whether the user is adjusting the [MCalResizeEdge.start]
+  /// (leading) edge or the [MCalResizeEdge.end] (trailing) edge.
+  final MCalResizeEdge resizeEdge;
+
+  /// Creates a new [MCalResizeWillAcceptDetails] instance.
+  const MCalResizeWillAcceptDetails({
+    required this.event,
+    required this.proposedStartDate,
+    required this.proposedEndDate,
+    required this.resizeEdge,
+  });
+
+  @override
+  String toString() =>
+      'MCalResizeWillAcceptDetails(event: ${event.title}, '
+      'proposedStartDate: $proposedStartDate, '
+      'proposedEndDate: $proposedEndDate, '
+      'resizeEdge: $resizeEdge)';
+}
+
+/// Details object for the resize completed callback.
+///
+/// Provides comprehensive context about a completed resize operation,
+/// including the original and new dates for the event, which edge was
+/// resized, and whether the event is a recurring occurrence.
+///
+/// The callback can return `false` to indicate that the resize should be
+/// reverted (e.g., if a backend update fails), in which case the event
+/// will be restored to its original size.
+///
+/// Example:
+/// ```dart
+/// onEventResized: (context, details) async {
+///   // Log the resize operation
+///   print('Resized "${details.event.title}" ${details.resizeEdge.name} edge');
+///   print('Old range: ${details.oldStartDate} - ${details.oldEndDate}');
+///   print('New range: ${details.newStartDate} - ${details.newEndDate}');
+///
+///   // Handle recurring event modifications
+///   if (details.isRecurring) {
+///     final confirmed = await showDialog<bool>(
+///       context: context,
+///       builder: (_) => AlertDialog(
+///         title: Text('Modify recurring event?'),
+///         content: Text('This will only change this occurrence.'),
+///         actions: [
+///           TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Cancel')),
+///           TextButton(onPressed: () => Navigator.pop(context, true), child: Text('OK')),
+///         ],
+///       ),
+///     );
+///     if (confirmed != true) return false;
+///   }
+///
+///   // Update backend
+///   try {
+///     await eventService.updateEvent(
+///       details.event.id,
+///       start: details.newStartDate,
+///       end: details.newEndDate,
+///     );
+///     return true; // Confirm the resize
+///   } catch (e) {
+///     showErrorSnackbar('Failed to resize event');
+///     return false; // Revert the resize
+///   }
+/// }
+/// ```
+class MCalEventResizedDetails {
+  /// The calendar event that was resized.
+  final MCalCalendarEvent event;
+
+  /// The original start date of the event before the resize.
+  final DateTime oldStartDate;
+
+  /// The original end date of the event before the resize.
+  final DateTime oldEndDate;
+
+  /// The new start date of the event after the resize.
+  ///
+  /// When the [resizeEdge] is [MCalResizeEdge.end], this will be the same
+  /// as [oldStartDate]. When the [resizeEdge] is [MCalResizeEdge.start],
+  /// this will differ from [oldStartDate].
+  final DateTime newStartDate;
+
+  /// The new end date of the event after the resize.
+  ///
+  /// When the [resizeEdge] is [MCalResizeEdge.start], this will be the same
+  /// as [oldEndDate]. When the [resizeEdge] is [MCalResizeEdge.end],
+  /// this will differ from [oldEndDate].
+  final DateTime newEndDate;
+
+  /// Which edge of the event was resized.
+  ///
+  /// Indicates whether the user adjusted the [MCalResizeEdge.start]
+  /// (leading) edge or the [MCalResizeEdge.end] (trailing) edge.
+  final MCalResizeEdge resizeEdge;
+
+  /// Whether the resized event is a recurring occurrence.
+  ///
+  /// When `true`, the event was expanded from a recurring series and
+  /// [seriesId] will contain the master event's ID. The resize should
+  /// create a modified exception for this specific occurrence.
+  final bool isRecurring;
+
+  /// The master event's ID, if the resized event is a recurring occurrence.
+  ///
+  /// Only non-null when [isRecurring] is `true`.
+  final String? seriesId;
+
+  /// Creates a new [MCalEventResizedDetails] instance.
+  const MCalEventResizedDetails({
+    required this.event,
+    required this.oldStartDate,
+    required this.oldEndDate,
+    required this.newStartDate,
+    required this.newEndDate,
+    required this.resizeEdge,
+    this.isRecurring = false,
+    this.seriesId,
+  });
+
+  @override
+  String toString() =>
+      'MCalEventResizedDetails(event: ${event.title}, '
+      'oldStartDate: $oldStartDate, oldEndDate: $oldEndDate, '
+      'newStartDate: $newStartDate, newEndDate: $newEndDate, '
+      'resizeEdge: $resizeEdge, '
+      'isRecurring: $isRecurring, seriesId: $seriesId)';
+}

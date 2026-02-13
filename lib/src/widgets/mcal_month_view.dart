@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
@@ -372,22 +373,37 @@ class MCalMonthView extends StatefulWidget {
 
   /// Whether animations are enabled.
   ///
-  /// When true, transitions between months and other state changes are
-  /// animated. Set to false for reduced motion or performance reasons.
-  /// Defaults to true.
-  final bool enableAnimations;
+  /// Controls how month transitions and other state changes behave:
+  ///
+  /// - **`null`** (the default): follows the OS reduced motion preference.
+  ///   When the system has "reduce motion" enabled (e.g. iOS "Reduce Motion",
+  ///   Android "Remove animations"), animations are disabled automatically.
+  ///   When the system has normal motion settings, animations are enabled.
+  ///   Uses [MediaQuery.disableAnimationsOf] to detect the preference.
+  ///
+  /// - **`true`**: force animations enabled regardless of the OS accessibility
+  ///   setting. Use this as a developer override when you always want animated
+  ///   transitions, even if the user has enabled reduced motion at the OS level.
+  ///
+  /// - **`false`**: force animations disabled regardless of the OS accessibility
+  ///   setting. Transitions use [PageController.jumpToPage] instead of
+  ///   [PageController.animateToPage]. This is backward-compatible with the
+  ///   previous behavior when `enableAnimations` was set to `false`.
+  final bool? enableAnimations;
 
   /// The duration for animations.
   ///
   /// Controls the duration of month transitions and other animated changes.
-  /// Only used when [enableAnimations] is true.
+  /// Only used when animations are resolved as enabled (see
+  /// [enableAnimations]).
   /// Defaults to 300 milliseconds.
   final Duration animationDuration;
 
   /// The curve for animations.
   ///
   /// Controls the easing curve for month transitions and other animated changes.
-  /// Only used when [enableAnimations] is true.
+  /// Only used when animations are resolved as enabled (see
+  /// [enableAnimations]).
   /// Defaults to [Curves.easeInOut].
   final Curve animationCurve;
 
@@ -587,6 +603,41 @@ class MCalMonthView extends StatefulWidget {
   /// Only used when [enableDragAndDrop] is true.
   final bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped;
 
+  // ============ Event Resize ============
+
+  /// Whether to enable event edge-drag resizing.
+  ///
+  /// When `null` (the default), resize is auto-detected based on platform:
+  /// enabled on web, desktop (macOS, Windows, Linux), and tablets
+  /// (shortest side >= 600dp), but disabled on phones.
+  ///
+  /// When `true`, resize is enabled regardless of platform.
+  /// When `false`, resize is disabled regardless of platform.
+  ///
+  /// Event resize requires [enableDragAndDrop] to be `true` as well,
+  /// since it uses the same drag infrastructure.
+  final bool? enableEventResize;
+
+  /// Called during a resize operation to validate whether the proposed
+  /// new dates should be accepted.
+  ///
+  /// If provided, this callback is called with the event and proposed
+  /// date range. Return `true` to accept or `false` to reject.
+  /// If not provided, all resize positions are accepted.
+  final bool Function(
+    BuildContext context,
+    MCalResizeWillAcceptDetails details,
+  )?
+  onResizeWillAccept;
+
+  /// Called when an event resize operation completes.
+  ///
+  /// The callback receives the event with its old and new date ranges.
+  /// Return `true` to confirm the resize, or `false` to revert.
+  /// If not provided, the resize is always confirmed.
+  final bool Function(BuildContext context, MCalEventResizedDetails details)?
+  onEventResized;
+
   /// Whether edge navigation is enabled during drag operations.
   ///
   /// When true, dragging an event tile near the left or right edge of the
@@ -669,7 +720,7 @@ class MCalMonthView extends StatefulWidget {
     this.onOverflowTap,
     this.onOverflowLongPress,
     // Animation
-    this.enableAnimations = true,
+    this.enableAnimations,
     this.animationDuration = const Duration(milliseconds: 300),
     this.animationCurve = Curves.easeInOut,
     // Event display
@@ -697,6 +748,10 @@ class MCalMonthView extends StatefulWidget {
     this.dropTargetOverlayBuilder,
     this.onDragWillAccept,
     this.onEventDropped,
+    // Event resize
+    this.enableEventResize,
+    this.onResizeWillAccept,
+    this.onEventResized,
     this.dragEdgeNavigationEnabled = true,
     this.dragEdgeNavigationDelay = const Duration(milliseconds: 1200),
     this.dragLongPressDelay = const Duration(milliseconds: 200),
@@ -781,6 +836,47 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   static const double _edgeProximityThreshold = 50.0;
 
   // ============================================================
+  // Keyboard Event Move Mode State (Task 9 — month-view-polish)
+  // ============================================================
+
+  /// Whether keyboard event move mode is active (event selected, arrows move).
+  bool _isKeyboardMoveMode = false;
+
+  /// Whether keyboard event selection mode is active (cycling through events).
+  bool _isKeyboardEventSelectionMode = false;
+
+  /// The event currently being moved via keyboard.
+  MCalCalendarEvent? _keyboardMoveEvent;
+
+  /// The original start date of the event before keyboard move began.
+  DateTime? _keyboardMoveOriginalStart;
+
+  /// The original end date of the event before keyboard move began.
+  DateTime? _keyboardMoveOriginalEnd;
+
+  /// Index for cycling through events when multiple events are on a cell.
+  int _keyboardMoveEventIndex = 0;
+
+  /// The currently proposed target date (event start) during keyboard move.
+  DateTime? _keyboardMoveProposedDate;
+
+  // ============================================================
+  // Keyboard Event Resize Mode State (Task 10 — month-view-polish)
+  // ============================================================
+
+  /// Whether keyboard resize mode is active (sub-mode of keyboard move mode).
+  bool _isKeyboardResizeMode = false;
+
+  /// Which edge is currently being resized via keyboard.
+  MCalResizeEdge _keyboardResizeEdge = MCalResizeEdge.end;
+
+  /// The proposed start date during keyboard resize.
+  DateTime? _keyboardResizeProposedStart;
+
+  /// The proposed end date during keyboard resize.
+  DateTime? _keyboardResizeProposedEnd;
+
+  // ============================================================
   // Boundary Calculation Methods (Task 9)
   // ============================================================
 
@@ -855,6 +951,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     _focusNode.dispose();
     // Dispose page controller (Task 8)
     _pageController.dispose();
+    // Clean up keyboard move mode state (Task 9 — month-view-polish)
+    _exitKeyboardMoveMode();
     // Dispose drag handler if created (Task 21)
     _dragHandler?.dispose();
     super.dispose();
@@ -1035,6 +1133,55 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     });
   }
 
+  /// Resolves whether animations should be enabled based on the
+  /// [MCalMonthView.enableAnimations] setting and OS accessibility preferences.
+  ///
+  /// - If [MCalMonthView.enableAnimations] is explicitly `true` or `false`,
+  ///   that value is returned directly (developer override).
+  /// - If `null` (the default), the OS reduced-motion preference is checked
+  ///   via [MediaQuery.disableAnimationsOf]. Animations are enabled when
+  ///   the system does **not** have reduced motion turned on.
+  bool _resolveAnimationsEnabled(BuildContext context) {
+    // Explicit true/false overrides everything
+    if (widget.enableAnimations != null) return widget.enableAnimations!;
+
+    // null = follow OS reduced motion preference
+    return !MediaQuery.disableAnimationsOf(context);
+  }
+
+  /// Resolves whether event resizing should be enabled based on the
+  /// [MCalMonthView.enableEventResize] setting and platform detection.
+  ///
+  /// - Resize requires [MCalMonthView.enableDragAndDrop] to be `true`,
+  ///   since resize uses the same drag infrastructure.
+  /// - If [MCalMonthView.enableEventResize] is explicitly `true` or `false`,
+  ///   that value is returned directly (developer override), subject to the
+  ///   drag-and-drop requirement.
+  /// - If `null` (the default), auto-detection enables resize on web,
+  ///   desktop (macOS, Windows, Linux), and tablets (shortest side >= 600dp),
+  ///   but disables it on phones.
+  bool _resolveEnableResize(BuildContext context) {
+    // Resize requires drag-and-drop infrastructure
+    if (!widget.enableDragAndDrop) return false;
+
+    // Explicit override takes precedence
+    if (widget.enableEventResize != null) return widget.enableEventResize!;
+
+    // Auto-detect: enabled on web, desktop, and tablets; disabled on phones
+    if (kIsWeb) return true;
+
+    final platform = Theme.of(context).platform;
+    if (platform == TargetPlatform.macOS ||
+        platform == TargetPlatform.windows ||
+        platform == TargetPlatform.linux) {
+      return true;
+    }
+
+    // Mobile: enabled on tablets (shortest side >= 600dp)
+    final size = MediaQuery.sizeOf(context);
+    return size.shortestSide >= 600;
+  }
+
   /// Syncs the PageView to display the specified month.
   ///
   /// Called when the controller's displayDate changes externally.
@@ -1056,7 +1203,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // Mark as programmatic to prevent recursive updates from onPageChanged
     _isProgrammaticPageChange = true;
 
-    if (shouldAnimate && widget.enableAnimations) {
+    if (shouldAnimate && _resolveAnimationsEnabled(context)) {
       _pageController
           .animateToPage(
             targetPageIndex,
@@ -1288,6 +1435,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           onDragEndedCallback: _handleDragEnded,
           onDragCanceledCallback: _handleDragCancelled,
           dragHandler: widget.enableDragAndDrop ? _ensureDragHandler : null,
+          enableResize: _resolveEnableResize(context),
+          onResizeWillAccept: widget.onResizeWillAccept,
+          onEventResized: widget.onEventResized,
         );
       },
     );
@@ -1443,16 +1593,51 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   ///
   /// Processes arrow keys, Home/End, Page Up/Down, and Enter/Space
   /// for keyboard-based calendar navigation. Also handles Escape key
-  /// to cancel active drag operations.
+  /// to cancel active drag operations and keyboard event move mode.
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     // Only process key down events
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
 
-    // Handle Escape key for drag cancellation (Task 21)
-    // This works even if keyboard navigation is disabled
+    // Handle Escape key — works even if keyboard navigation is disabled.
+    // Priority: keyboard resize mode > keyboard move mode > keyboard selection mode > pointer drag.
     if (event.logicalKey == LogicalKeyboardKey.escape) {
+      if (_isKeyboardResizeMode) {
+        // Cancel resize sub-mode, stay in move mode
+        _ensureDragHandler.cancelResize();
+        _exitKeyboardResizeMode();
+        setState(() {});
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          'Resize cancelled',
+          Directionality.of(context),
+        );
+        return KeyEventResult.handled;
+      }
+      if (_isKeyboardMoveMode) {
+        final title = _keyboardMoveEvent?.title ?? 'event';
+        _ensureDragHandler.cancelDrag();
+        _isDragActive = false;
+        _exitKeyboardMoveMode();
+        setState(() {});
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          'Move cancelled for $title',
+          Directionality.of(context),
+        );
+        return KeyEventResult.handled;
+      }
+      if (_isKeyboardEventSelectionMode) {
+        _exitKeyboardMoveMode();
+        setState(() {});
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          'Event selection cancelled',
+          Directionality.of(context),
+        );
+        return KeyEventResult.handled;
+      }
       if (widget.enableDragAndDrop && _isDragActive) {
         // Use the centralized handler to ensure all cleanup happens
         _handleDragCancelled();
@@ -1463,6 +1648,22 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // Only process when keyboard navigation is enabled
     if (!widget.enableKeyboardNavigation) {
       return KeyEventResult.ignored;
+    }
+
+    // Handle keyboard resize mode (arrow keys resize, Enter confirms, S/E switch edge)
+    // Resize mode takes priority over move mode.
+    if (_isKeyboardResizeMode) {
+      return _handleKeyboardResizeModeKey(event);
+    }
+
+    // Handle keyboard event selection mode (Tab/Shift+Tab cycles, Enter selects)
+    if (_isKeyboardEventSelectionMode && !_isKeyboardMoveMode) {
+      return _handleKeyboardSelectionModeKey(event);
+    }
+
+    // Handle keyboard move mode (arrow keys move, Enter confirms, R enters resize)
+    if (_isKeyboardMoveMode) {
+      return _handleKeyboardMoveModeKey(event);
     }
 
     // Get or initialize the focused date
@@ -1557,10 +1758,19 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       newFocusedDate = DateTime(nextMonth.year, nextMonth.month, targetDay);
       handled = true;
     }
-    // Enter/Space - trigger cell tap
+    // Enter/Space - enter keyboard move mode if drag-and-drop is enabled
+    // and the focused cell has events; otherwise trigger normal cell tap.
     else if (key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.space ||
         key == LogicalKeyboardKey.numpadEnter) {
+      if (widget.enableDragAndDrop) {
+        final dayEvents = _getEventsForDate(focusedDate);
+        if (dayEvents.isNotEmpty) {
+          _enterKeyboardEventSelectionMode(focusedDate, dayEvents);
+          return KeyEventResult.handled;
+        }
+      }
+      // No events or drag-and-drop disabled: fall through to cell tap
       _triggerCellTapForFocusedDate(focusedDate);
       return KeyEventResult.handled;
     }
@@ -1647,6 +1857,849 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         ),
       );
     }
+  }
+
+  // ============================================================
+  // Keyboard Event Move Mode Methods (Task 9 — month-view-polish)
+  // ============================================================
+
+  /// Returns all events that overlap the given [date].
+  ///
+  /// Uses the same logic as [_triggerCellTapForFocusedDate] for consistency.
+  List<MCalCalendarEvent> _getEventsForDate(DateTime date) {
+    final checkDate = DateTime(date.year, date.month, date.day);
+    return _events.where((event) {
+      final eventStart = DateTime(
+        event.start.year,
+        event.start.month,
+        event.start.day,
+      );
+      final eventEnd = DateTime(event.end.year, event.end.month, event.end.day);
+      return (checkDate.isAtSameMomentAs(eventStart) ||
+          checkDate.isAtSameMomentAs(eventEnd) ||
+          (checkDate.isAfter(eventStart) && checkDate.isBefore(eventEnd)));
+    }).toList();
+  }
+
+  /// Clears all keyboard-move state fields (and keyboard-resize sub-mode).
+  void _exitKeyboardMoveMode() {
+    _exitKeyboardResizeMode();
+    _isKeyboardMoveMode = false;
+    _isKeyboardEventSelectionMode = false;
+    _keyboardMoveEvent = null;
+    _keyboardMoveOriginalStart = null;
+    _keyboardMoveOriginalEnd = null;
+    _keyboardMoveEventIndex = 0;
+    _keyboardMoveProposedDate = null;
+  }
+
+  /// Clears keyboard-resize sub-mode state fields.
+  void _exitKeyboardResizeMode() {
+    _isKeyboardResizeMode = false;
+    _keyboardResizeEdge = MCalResizeEdge.end;
+    _keyboardResizeProposedStart = null;
+    _keyboardResizeProposedEnd = null;
+  }
+
+  /// Enters keyboard event selection mode for the given [date] and [events].
+  ///
+  /// If only one event exists, selects it immediately and enters move mode.
+  /// If multiple events exist, enters cycling mode (Tab/Shift+Tab).
+  void _enterKeyboardEventSelectionMode(
+    DateTime date,
+    List<MCalCalendarEvent> events,
+  ) {
+    if (events.length == 1) {
+      // Single event: select immediately and enter move mode
+      _selectKeyboardMoveEvent(events.first);
+    } else {
+      // Multiple events: enter cycling mode
+      _isKeyboardEventSelectionMode = true;
+      _keyboardMoveEventIndex = 0;
+      setState(() {});
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        '${events.length} events. ${events.first.title} highlighted. '
+        'Tab to cycle, Enter to confirm.',
+        Directionality.of(context),
+      );
+    }
+  }
+
+  /// Selects the given [event] for keyboard move mode.
+  ///
+  /// Sets up the move state with the event's original dates and the proposed
+  /// date initialized to the event's normalized start date.
+  void _selectKeyboardMoveEvent(MCalCalendarEvent event) {
+    _isKeyboardEventSelectionMode = false;
+    _isKeyboardMoveMode = true;
+    _keyboardMoveEvent = event;
+    _keyboardMoveOriginalStart = event.start;
+    _keyboardMoveOriginalEnd = event.end;
+    _keyboardMoveProposedDate = DateTime(
+      event.start.year,
+      event.start.month,
+      event.start.day,
+    );
+    setState(() {});
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      'Selected ${event.title}. '
+      'Arrow keys to move, Enter to confirm, Escape to cancel.',
+      Directionality.of(context),
+    );
+  }
+
+  /// Handles key events during event selection mode (cycling through events).
+  ///
+  /// Tab/Shift+Tab cycles through events on the focused cell.
+  /// Enter confirms the selection and enters move mode.
+  /// Escape exits selection mode.
+  KeyEventResult _handleKeyboardSelectionModeKey(KeyEvent event) {
+    final key = event.logicalKey;
+    final focusedDate =
+        widget.controller.focusedDate ?? widget.controller.displayDate;
+    final dayEvents = _getEventsForDate(focusedDate);
+
+    if (dayEvents.isEmpty) {
+      _exitKeyboardMoveMode();
+      setState(() {});
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.tab) {
+      final isShift = HardwareKeyboard.instance.isShiftPressed;
+      if (isShift) {
+        _keyboardMoveEventIndex =
+            (_keyboardMoveEventIndex - 1 + dayEvents.length) % dayEvents.length;
+      } else {
+        _keyboardMoveEventIndex =
+            (_keyboardMoveEventIndex + 1) % dayEvents.length;
+      }
+      final highlighted = dayEvents[_keyboardMoveEventIndex];
+      setState(() {});
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        '${highlighted.title}. '
+        '${_keyboardMoveEventIndex + 1} of ${dayEvents.length}.',
+        Directionality.of(context),
+      );
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      final selectedIndex = _keyboardMoveEventIndex.clamp(
+        0,
+        dayEvents.length - 1,
+      );
+      _selectKeyboardMoveEvent(dayEvents[selectedIndex]);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  /// Handles key events during move mode (arrow keys, Enter, Escape).
+  ///
+  /// Arrow keys shift the proposed date:
+  /// - Left/Right: +/-1 day
+  /// - Up/Down: +/-7 days
+  ///
+  /// On the first arrow press, [MCalDragHandler.startDrag] is called to
+  /// enter drag state. Each arrow press calls
+  /// [MCalDragHandler.updateProposedDropRange] so Layer 3/4 previews render.
+  ///
+  /// Enter confirms via [_handleKeyboardDrop], reusing the same drop logic
+  /// as pointer-based drag-and-drop.
+  KeyEventResult _handleKeyboardMoveModeKey(KeyEvent event) {
+    final key = event.logicalKey;
+    final moveEvent = _keyboardMoveEvent;
+    if (moveEvent == null) return KeyEventResult.ignored;
+
+    // Determine arrow-key day delta
+    int dayDelta = 0;
+    if (key == LogicalKeyboardKey.arrowRight) {
+      dayDelta = 1;
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      dayDelta = -1;
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      dayDelta = 7;
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      dayDelta = -7;
+    }
+
+    if (dayDelta != 0) {
+      final dragHandler = _ensureDragHandler;
+
+      // Start drag on first arrow press if not already dragging
+      if (!dragHandler.isDragging) {
+        final sourceDate = DateTime(
+          _keyboardMoveOriginalStart!.year,
+          _keyboardMoveOriginalStart!.month,
+          _keyboardMoveOriginalStart!.day,
+        );
+        dragHandler.startDrag(moveEvent, sourceDate);
+        _isDragActive = true;
+      }
+
+      // Calculate new proposed date using DST-safe arithmetic
+      final currentProposed = _keyboardMoveProposedDate!;
+      final newProposed = DateTime(
+        currentProposed.year,
+        currentProposed.month,
+        currentProposed.day + dayDelta,
+      );
+      _keyboardMoveProposedDate = newProposed;
+
+      // Calculate event span duration in days (inclusive)
+      final eventDurationDays =
+          daysBetween(
+            DateTime(
+              moveEvent.start.year,
+              moveEvent.start.month,
+              moveEvent.start.day,
+            ),
+            DateTime(
+              moveEvent.end.year,
+              moveEvent.end.month,
+              moveEvent.end.day,
+            ),
+          ) +
+          1;
+
+      final proposedEnd = DateTime(
+        newProposed.year,
+        newProposed.month,
+        newProposed.day + eventDurationDays - 1,
+      );
+
+      // Validate via onDragWillAccept
+      bool isValid = true;
+      if (widget.onDragWillAccept != null) {
+        isValid = widget.onDragWillAccept!(
+          context,
+          MCalDragWillAcceptDetails(
+            event: moveEvent,
+            proposedStartDate: newProposed,
+            proposedEndDate: proposedEnd,
+          ),
+        );
+      }
+
+      // Update drag handler proposed range (triggers Layer 3/4 rebuild)
+      dragHandler.updateProposedDropRange(
+        proposedStart: newProposed,
+        proposedEnd: proposedEnd,
+        isValid: isValid,
+      );
+
+      // Update drag target date and validity
+      dragHandler.updateDrag(newProposed, isValid, Offset.zero);
+
+      // Navigate to new month if proposed date leaves visible month
+      final newMonth = DateTime(newProposed.year, newProposed.month, 1);
+      if (newMonth.year != _currentMonth.year ||
+          newMonth.month != _currentMonth.month) {
+        _navigateToMonth(newMonth);
+      }
+
+      // Track focus on the proposed date
+      widget.controller.setFocusedDate(newProposed);
+
+      // Screen reader announcement
+      final dateStr = DateFormat.yMMMd().format(newProposed);
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        'Moving ${moveEvent.title} to $dateStr',
+        Directionality.of(context),
+      );
+
+      setState(() {});
+      return KeyEventResult.handled;
+    }
+
+    // R key: enter resize mode (if resize is enabled)
+    if (key == LogicalKeyboardKey.keyR && _resolveEnableResize(context)) {
+      final dragHandler = _ensureDragHandler;
+
+      // If currently in drag state (from arrow move), cancel it first
+      if (dragHandler.isDragging) {
+        dragHandler.cancelDrag();
+        _isDragActive = false;
+      }
+
+      // Enter resize mode
+      _isKeyboardResizeMode = true;
+      _keyboardResizeEdge = MCalResizeEdge.end;
+
+      // Initialize proposed dates from the event's current dates
+      _keyboardResizeProposedStart = DateTime(
+        moveEvent.start.year,
+        moveEvent.start.month,
+        moveEvent.start.day,
+      );
+      _keyboardResizeProposedEnd = DateTime(
+        moveEvent.end.year,
+        moveEvent.end.month,
+        moveEvent.end.day,
+      );
+
+      // Start resize on the drag handler
+      dragHandler.startResize(moveEvent, MCalResizeEdge.end);
+
+      // Set up initial highlight state in handler
+      final isValid = _validateKeyboardResize(moveEvent);
+      dragHandler.updateResize(
+        proposedStart: _keyboardResizeProposedStart!,
+        proposedEnd: _keyboardResizeProposedEnd!,
+        isValid: isValid,
+        cells: [],
+      );
+
+      setState(() {});
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        'Resize mode. Adjusting end edge. '
+        'Arrow keys to resize, S for start, E for end, '
+        'Enter to confirm, Escape to cancel.',
+        Directionality.of(context),
+      );
+      return KeyEventResult.handled;
+    }
+
+    // Enter: confirm the move
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      _handleKeyboardDrop();
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  /// Confirms the keyboard-initiated event move.
+  ///
+  /// Mirrors the logic of [_MonthPageWidgetState._handleDrop], reusing the
+  /// same [MCalEventDroppedDetails] callback and controller mutation flow.
+  void _handleKeyboardDrop() {
+    final dragHandler = _dragHandler;
+    final event = _keyboardMoveEvent;
+
+    if (dragHandler == null || event == null) {
+      _exitKeyboardMoveMode();
+      setState(() {});
+      return;
+    }
+
+    final proposedStart = dragHandler.proposedStartDate;
+    final proposedEnd = dragHandler.proposedEndDate;
+
+    if (proposedStart == null ||
+        proposedEnd == null ||
+        !dragHandler.isProposedDropValid) {
+      dragHandler.cancelDrag();
+      _isDragActive = false;
+      _exitKeyboardMoveMode();
+      setState(() {});
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        'Move cancelled. Invalid target.',
+        Directionality.of(context),
+      );
+      return;
+    }
+
+    // Use the stored original dates (set when the event was selected).
+    final oldStartDate = _keyboardMoveOriginalStart ?? event.start;
+    final oldEndDate = _keyboardMoveOriginalEnd ?? event.end;
+
+    // Calculate day delta using DST-safe daysBetween
+    final normalizedEventStart = DateTime(
+      oldStartDate.year,
+      oldStartDate.month,
+      oldStartDate.day,
+    );
+    final dayDelta = daysBetween(normalizedEventStart, proposedStart);
+
+    // Calculate new dates preserving time components
+    final newStartDate = DateTime(
+      oldStartDate.year,
+      oldStartDate.month,
+      oldStartDate.day + dayDelta,
+      oldStartDate.hour,
+      oldStartDate.minute,
+      oldStartDate.second,
+      oldStartDate.millisecond,
+      oldStartDate.microsecond,
+    );
+    final newEndDate = DateTime(
+      oldEndDate.year,
+      oldEndDate.month,
+      oldEndDate.day + dayDelta,
+      oldEndDate.hour,
+      oldEndDate.minute,
+      oldEndDate.second,
+      oldEndDate.millisecond,
+      oldEndDate.microsecond,
+    );
+
+    // Create updated event
+    final updatedEvent = event.copyWith(start: newStartDate, end: newEndDate);
+
+    // Detect recurring occurrence
+    final isRecurring = event.occurrenceId != null;
+    String? seriesId;
+    if (isRecurring) {
+      final occId = event.occurrenceId!;
+      seriesId = event.id.endsWith('_$occId')
+          ? event.id.substring(0, event.id.length - occId.length - 1)
+          : event.id;
+    }
+
+    if (isRecurring && seriesId != null) {
+      // Recurring occurrence: use addException instead of addEvents
+      if (widget.onEventDropped != null) {
+        final shouldKeep = widget.onEventDropped!(
+          context,
+          MCalEventDroppedDetails(
+            event: event,
+            oldStartDate: oldStartDate,
+            oldEndDate: oldEndDate,
+            newStartDate: newStartDate,
+            newEndDate: newEndDate,
+            isRecurring: true,
+            seriesId: seriesId,
+          ),
+        );
+
+        if (shouldKeep) {
+          widget.controller.addException(
+            seriesId,
+            MCalRecurrenceException.rescheduled(
+              originalDate: DateTime.parse(event.occurrenceId!),
+              newDate: newStartDate,
+            ),
+          );
+        }
+      } else {
+        // No callback provided — auto-create reschedule exception
+        widget.controller.addException(
+          seriesId,
+          MCalRecurrenceException.rescheduled(
+            originalDate: DateTime.parse(event.occurrenceId!),
+            newDate: newStartDate,
+          ),
+        );
+      }
+    } else {
+      // Non-recurring event: update via controller
+      widget.controller.addEvents([updatedEvent]);
+
+      // Call onEventDropped callback if provided
+      if (widget.onEventDropped != null) {
+        final shouldKeep = widget.onEventDropped!(
+          context,
+          MCalEventDroppedDetails(
+            event: event,
+            oldStartDate: oldStartDate,
+            oldEndDate: oldEndDate,
+            newStartDate: newStartDate,
+            newEndDate: newEndDate,
+          ),
+        );
+
+        // If callback returns false, revert the change
+        if (!shouldKeep) {
+          final revertedEvent = event.copyWith(
+            start: oldStartDate,
+            end: oldEndDate,
+          );
+          widget.controller.addEvents([revertedEvent]);
+        }
+      }
+    }
+
+    // Announce success
+    final dateStr = DateFormat.yMMMd().format(newStartDate);
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      'Moved ${event.title} to $dateStr',
+      Directionality.of(context),
+    );
+
+    // Clean up drag and keyboard move state
+    dragHandler.cancelDrag();
+    _isDragActive = false;
+    _exitKeyboardMoveMode();
+    setState(() {});
+  }
+
+  // ============================================================
+  // Keyboard Resize Mode (Task 10 — month-view-polish)
+  // ============================================================
+
+  /// Handles key events during keyboard resize mode.
+  ///
+  /// - Arrow keys: adjust the active edge (+/-1 day for Left/Right, +/-7 for Up/Down)
+  /// - S: switch to start edge
+  /// - E: switch to end edge
+  /// - M: cancel resize, return to move mode
+  /// - Enter: confirm resize via [_handleKeyboardResizeEnd]
+  /// - Escape: cancel resize, stay in move mode
+  KeyEventResult _handleKeyboardResizeModeKey(KeyEvent event) {
+    final key = event.logicalKey;
+    final resizeEvent = _keyboardMoveEvent;
+    if (resizeEvent == null) return KeyEventResult.ignored;
+
+    final dragHandler = _ensureDragHandler;
+
+    // S key: switch to start edge
+    if (key == LogicalKeyboardKey.keyS) {
+      _keyboardResizeEdge = MCalResizeEdge.start;
+      // Restart resize with new edge
+      dragHandler.cancelResize();
+      dragHandler.startResize(resizeEvent, MCalResizeEdge.start);
+      // Restore proposed range in handler
+      if (_keyboardResizeProposedStart != null &&
+          _keyboardResizeProposedEnd != null) {
+        final isValid = _validateKeyboardResize(resizeEvent);
+        dragHandler.updateResize(
+          proposedStart: _keyboardResizeProposedStart!,
+          proposedEnd: _keyboardResizeProposedEnd!,
+          isValid: isValid,
+          cells: [],
+        );
+      }
+      setState(() {});
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        'Resizing start edge',
+        Directionality.of(context),
+      );
+      return KeyEventResult.handled;
+    }
+
+    // E key: switch to end edge
+    if (key == LogicalKeyboardKey.keyE) {
+      _keyboardResizeEdge = MCalResizeEdge.end;
+      // Restart resize with new edge
+      dragHandler.cancelResize();
+      dragHandler.startResize(resizeEvent, MCalResizeEdge.end);
+      // Restore proposed range in handler
+      if (_keyboardResizeProposedStart != null &&
+          _keyboardResizeProposedEnd != null) {
+        final isValid = _validateKeyboardResize(resizeEvent);
+        dragHandler.updateResize(
+          proposedStart: _keyboardResizeProposedStart!,
+          proposedEnd: _keyboardResizeProposedEnd!,
+          isValid: isValid,
+          cells: [],
+        );
+      }
+      setState(() {});
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        'Resizing end edge',
+        Directionality.of(context),
+      );
+      return KeyEventResult.handled;
+    }
+
+    // M key: cancel resize, return to move mode
+    if (key == LogicalKeyboardKey.keyM) {
+      dragHandler.cancelResize();
+      _exitKeyboardResizeMode();
+      setState(() {});
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        'Move mode',
+        Directionality.of(context),
+      );
+      return KeyEventResult.handled;
+    }
+
+    // Arrow keys: adjust active edge
+    final int delta;
+    if (key == LogicalKeyboardKey.arrowRight) {
+      delta = 1;
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      delta = -1;
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      delta = 7;
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      delta = -7;
+    } else {
+      delta = 0;
+    }
+
+    if (delta != 0) {
+      if (_keyboardResizeEdge == MCalResizeEdge.end) {
+        final currentEnd = _keyboardResizeProposedEnd!;
+        final newEnd = DateTime(
+          currentEnd.year,
+          currentEnd.month,
+          currentEnd.day + delta,
+        );
+        // Clamp: end cannot be before start (minimum 1 day)
+        _keyboardResizeProposedEnd = newEnd.isBefore(
+              _keyboardResizeProposedStart!,
+            )
+            ? DateTime(
+                _keyboardResizeProposedStart!.year,
+                _keyboardResizeProposedStart!.month,
+                _keyboardResizeProposedStart!.day,
+              )
+            : newEnd;
+      } else {
+        final currentStart = _keyboardResizeProposedStart!;
+        final newStart = DateTime(
+          currentStart.year,
+          currentStart.month,
+          currentStart.day + delta,
+        );
+        // Clamp: start cannot be after end (minimum 1 day)
+        _keyboardResizeProposedStart = newStart.isAfter(
+              _keyboardResizeProposedEnd!,
+            )
+            ? DateTime(
+                _keyboardResizeProposedEnd!.year,
+                _keyboardResizeProposedEnd!.month,
+                _keyboardResizeProposedEnd!.day,
+              )
+            : newStart;
+      }
+
+      // Validate via callback
+      final isValid = _validateKeyboardResize(resizeEvent);
+
+      // Update drag handler (triggers Layer 3/4 rebuild)
+      dragHandler.updateResize(
+        proposedStart: _keyboardResizeProposedStart!,
+        proposedEnd: _keyboardResizeProposedEnd!,
+        isValid: isValid,
+        cells: [],
+      );
+
+      // Calculate span length for announcement
+      final spanDays =
+          daysBetween(
+            _keyboardResizeProposedStart!,
+            _keyboardResizeProposedEnd!,
+          ) +
+          1;
+      final activeDate = _keyboardResizeEdge == MCalResizeEdge.end
+          ? _keyboardResizeProposedEnd!
+          : _keyboardResizeProposedStart!;
+      final dateStr = DateFormat.yMMMd().format(activeDate);
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        'Resizing ${resizeEvent.title} ${_keyboardResizeEdge.name} to $dateStr, $spanDays days',
+        Directionality.of(context),
+      );
+
+      setState(() {});
+      return KeyEventResult.handled;
+    }
+
+    // Enter: confirm resize
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      _handleKeyboardResizeEnd();
+      return KeyEventResult.handled;
+    }
+
+    // Escape: cancel resize, stay in move mode
+    if (key == LogicalKeyboardKey.escape) {
+      dragHandler.cancelResize();
+      _exitKeyboardResizeMode();
+      setState(() {});
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        'Resize cancelled',
+        Directionality.of(context),
+      );
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  /// Validates the current keyboard resize proposal via [onResizeWillAccept].
+  bool _validateKeyboardResize(MCalCalendarEvent event) {
+    if (widget.onResizeWillAccept == null) return true;
+    return widget.onResizeWillAccept!(
+      context,
+      MCalResizeWillAcceptDetails(
+        event: event,
+        proposedStartDate: _keyboardResizeProposedStart!,
+        proposedEndDate: _keyboardResizeProposedEnd!,
+        resizeEdge: _keyboardResizeEdge,
+      ),
+    );
+  }
+
+  /// Confirms the keyboard-initiated event resize.
+  ///
+  /// Mirrors the logic of [_MonthPageWidgetState._handleResizeEnd], reusing
+  /// the same [MCalDragHandler.completeResize] state machine and
+  /// [MCalEventResizedDetails] callback flow.
+  void _handleKeyboardResizeEnd() {
+    final dragHandler = _dragHandler;
+    final event = _keyboardMoveEvent;
+
+    if (dragHandler == null || event == null || !dragHandler.isResizing) {
+      _exitKeyboardResizeMode();
+      _exitKeyboardMoveMode();
+      setState(() {});
+      return;
+    }
+
+    // Save state before completeResize() clears it
+    final originalStart = dragHandler.resizeOriginalStart!;
+    final originalEnd = dragHandler.resizeOriginalEnd!;
+    final edge = dragHandler.resizeEdge!;
+
+    final result = dragHandler.completeResize();
+    if (result == null) {
+      // Invalid resize
+      _exitKeyboardResizeMode();
+      setState(() {});
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        'Resize cancelled. Invalid resize.',
+        Directionality.of(context),
+      );
+      return;
+    }
+
+    final (proposedStart, proposedEnd) = result;
+
+    // Calculate new dates preserving time components using DST-safe arithmetic.
+    final DateTime newStartDate;
+    final DateTime newEndDate;
+
+    if (edge == MCalResizeEdge.start) {
+      // Start edge changed
+      final normalizedOriginalStart = DateTime(
+        originalStart.year,
+        originalStart.month,
+        originalStart.day,
+      );
+      final dayDelta = daysBetween(normalizedOriginalStart, proposedStart);
+      newStartDate = DateTime(
+        originalStart.year,
+        originalStart.month,
+        originalStart.day + dayDelta,
+        originalStart.hour,
+        originalStart.minute,
+        originalStart.second,
+        originalStart.millisecond,
+        originalStart.microsecond,
+      );
+      newEndDate = originalEnd;
+    } else {
+      // End edge changed
+      final normalizedOriginalEnd = DateTime(
+        originalEnd.year,
+        originalEnd.month,
+        originalEnd.day,
+      );
+      final dayDelta = daysBetween(normalizedOriginalEnd, proposedEnd);
+      newEndDate = DateTime(
+        originalEnd.year,
+        originalEnd.month,
+        originalEnd.day + dayDelta,
+        originalEnd.hour,
+        originalEnd.minute,
+        originalEnd.second,
+        originalEnd.millisecond,
+        originalEnd.microsecond,
+      );
+      newStartDate = originalStart;
+    }
+
+    // Detect recurring occurrence
+    final isRecurring = event.occurrenceId != null;
+    String? seriesId;
+    if (isRecurring) {
+      final occId = event.occurrenceId!;
+      seriesId = event.id.endsWith('_$occId')
+          ? event.id.substring(0, event.id.length - occId.length - 1)
+          : event.id;
+    }
+
+    // Build details
+    final details = MCalEventResizedDetails(
+      event: event,
+      oldStartDate: originalStart,
+      oldEndDate: originalEnd,
+      newStartDate: newStartDate,
+      newEndDate: newEndDate,
+      resizeEdge: edge,
+      isRecurring: isRecurring,
+      seriesId: seriesId,
+    );
+
+    // Create the updated event
+    final updatedEvent = event.copyWith(start: newStartDate, end: newEndDate);
+
+    if (isRecurring && seriesId != null) {
+      // Recurring occurrence: create a modified exception
+      if (widget.onEventResized != null) {
+        final shouldKeep = widget.onEventResized!(context, details);
+        if (shouldKeep) {
+          widget.controller.addException(
+            seriesId,
+            MCalRecurrenceException.rescheduled(
+              originalDate: DateTime.parse(event.occurrenceId!),
+              newDate: newStartDate,
+            ),
+          );
+        }
+      } else {
+        // No callback — auto-create exception
+        widget.controller.addException(
+          seriesId,
+          MCalRecurrenceException.rescheduled(
+            originalDate: DateTime.parse(event.occurrenceId!),
+            newDate: newStartDate,
+          ),
+        );
+      }
+    } else {
+      // Non-recurring event: update via controller
+      widget.controller.addEvents([updatedEvent]);
+
+      // Call onEventResized callback if provided
+      if (widget.onEventResized != null) {
+        final shouldKeep = widget.onEventResized!(context, details);
+
+        // If callback returns false, revert the change
+        if (!shouldKeep) {
+          final revertedEvent = event.copyWith(
+            start: originalStart,
+            end: originalEnd,
+          );
+          widget.controller.addEvents([revertedEvent]);
+        }
+      }
+    }
+
+    // Announce success
+    final startStr = DateFormat.yMMMd().format(newStartDate);
+    final endStr = DateFormat.yMMMd().format(newEndDate);
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      'Resized ${event.title} to $startStr through $endStr',
+      Directionality.of(context),
+    );
+
+    // Clean up resize and move state
+    _exitKeyboardResizeMode();
+    _exitKeyboardMoveMode();
+    _isDragActive = false;
+    setState(() {});
   }
 
   /// Navigates to a specific month.
@@ -2132,6 +3185,16 @@ class _MonthPageWidget extends StatefulWidget {
   /// The drag handler for coordinating drag state across week rows.
   final MCalDragHandler? dragHandler;
 
+  /// Whether event resize handles should be shown on multi-day event tiles.
+  final bool enableResize;
+
+  /// Called during a resize operation to validate the proposed dates.
+  final bool Function(BuildContext, MCalResizeWillAcceptDetails)?
+  onResizeWillAccept;
+
+  /// Called when an event resize operation completes.
+  final bool Function(BuildContext, MCalEventResizedDetails)? onEventResized;
+
   const _MonthPageWidget({
     required this.month,
     required this.currentDisplayMonth,
@@ -2185,6 +3248,10 @@ class _MonthPageWidget extends StatefulWidget {
     this.onDragEndedCallback,
     this.onDragCanceledCallback,
     this.dragHandler,
+    // Resize
+    this.enableResize = false,
+    this.onResizeWillAccept,
+    this.onEventResized,
   });
 
   @override
@@ -2242,6 +3309,13 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   /// Whether layout has been cached for the current drag operation.
   /// Reset when drag ends to force re-caching on next drag.
   bool _layoutCachedForDrag = false;
+
+  // ============================================================
+  // Resize Gesture State
+  // ============================================================
+
+  /// Accumulated horizontal drag distance during a resize gesture.
+  double _resizeDxAccumulated = 0.0;
 
   @override
   void initState() {
@@ -2314,8 +3388,8 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   void _onDragHandlerChanged() {
     if (!mounted) return;
     final dragHandler = widget.dragHandler;
-    if (dragHandler != null && !dragHandler.isDragging) {
-      // Drag ended or cancelled - clear caches so drop indicators never stick
+    if (dragHandler != null && !dragHandler.isDragging && !dragHandler.isResizing) {
+      // Drag/resize ended or cancelled - clear caches so indicators never stick
       _cachedDragData = null;
       _layoutCachedForDrag = false;
     }
@@ -2353,6 +3427,12 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
   /// Whether a drag is currently active.
   bool get _isDragActive => widget.dragHandler?.isDragging ?? false;
+
+  /// Whether a resize is currently active.
+  bool get _isResizeActive => widget.dragHandler?.isResizing ?? false;
+
+  /// Whether a drag or resize is currently active (for overlay rendering).
+  bool get _isDragOrResizeActive => _isDragActive || _isResizeActive;
 
   /// Get week dates for a specific week row index.
   List<DateTime> _getWeekDates(int weekRowIndex) {
@@ -2688,6 +3768,311 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   }
 
   // ============================================================
+  // Resize Interaction Methods
+  // ============================================================
+
+  /// Begins a resize operation for the given [event] on the specified [edge].
+  ///
+  /// Resets the accumulated drag distance, ensures the layout cache is
+  /// populated, and starts the resize state on the drag handler.
+  void _handleResizeStart(MCalCalendarEvent event, MCalResizeEdge edge) {
+    _resizeDxAccumulated = 0.0;
+
+    // Ensure layout cache is populated for building highlight cells
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox != null && renderBox.hasSize) {
+      _updateLayoutCache(renderBox);
+    }
+
+    widget.dragHandler?.startResize(event, edge);
+  }
+
+  /// Handles incremental drag updates during a resize gesture.
+  ///
+  /// Accumulates horizontal drag distance [dx], converts to a day delta
+  /// using [dayWidth], computes proposed dates with DST-safe arithmetic,
+  /// enforces minimum 1-day duration, validates via [onResizeWillAccept],
+  /// builds highlight cells, and updates the drag handler for Layer 3/4 preview.
+  void _handleResizeUpdate(double dx, double dayWidth) {
+    final dragHandler = widget.dragHandler;
+    if (dragHandler == null || !dragHandler.isResizing) return;
+
+    _resizeDxAccumulated += dx;
+
+    // Use provided dayWidth, falling back to cached layout value
+    final effectiveDayWidth = dayWidth > 0 ? dayWidth : _cachedDayWidth;
+    if (effectiveDayWidth <= 0) return;
+    final dayDelta = (_resizeDxAccumulated / effectiveDayWidth).round();
+
+    final originalStart = dragHandler.resizeOriginalStart!;
+    final originalEnd = dragHandler.resizeOriginalEnd!;
+    final edge = dragHandler.resizeEdge!;
+
+    DateTime proposedStart;
+    DateTime proposedEnd;
+
+    if (edge == MCalResizeEdge.start) {
+      // Adjusting start edge: apply delta to original start
+      final newDate = DateTime(
+        originalStart.year,
+        originalStart.month,
+        originalStart.day + dayDelta,
+      );
+      // Enforce minimum: start cannot be after end (minimum 1 day event)
+      proposedStart = newDate.isBefore(originalEnd) || newDate.isAtSameMomentAs(originalEnd)
+          ? newDate
+          : DateTime(originalEnd.year, originalEnd.month, originalEnd.day);
+      proposedEnd = originalEnd;
+    } else {
+      // Adjusting end edge: apply delta to original end
+      final newDate = DateTime(
+        originalEnd.year,
+        originalEnd.month,
+        originalEnd.day + dayDelta,
+      );
+      // Enforce minimum: end cannot be before start (minimum 1 day event)
+      proposedEnd = newDate.isAfter(originalStart) || newDate.isAtSameMomentAs(originalStart)
+          ? newDate
+          : DateTime(originalStart.year, originalStart.month, originalStart.day);
+      proposedStart = originalStart;
+    }
+
+    // Validate via callback
+    bool isValid = true;
+    if (widget.onResizeWillAccept != null) {
+      isValid = widget.onResizeWillAccept!(
+        context,
+        MCalResizeWillAcceptDetails(
+          event: dragHandler.resizingEvent!,
+          proposedStartDate: proposedStart,
+          proposedEndDate: proposedEnd,
+          resizeEdge: edge,
+        ),
+      );
+    }
+
+    // Build highlighted cells for preview
+    final cells = _buildHighlightCellsForDateRange(proposedStart, proposedEnd);
+
+    // Update drag handler (triggers Layer 3/4 rebuild)
+    dragHandler.updateResize(
+      proposedStart: proposedStart,
+      proposedEnd: proposedEnd,
+      isValid: isValid,
+      cells: cells,
+    );
+  }
+
+  /// Completes the resize operation.
+  ///
+  /// Mirrors the logic of [_handleDrop]: saves event state before clearing,
+  /// builds [MCalEventResizedDetails], calls the [onEventResized] callback,
+  /// and updates the controller. For recurring events, creates a modified
+  /// exception via [addException].
+  void _handleResizeEnd() {
+    final dragHandler = widget.dragHandler;
+    if (dragHandler == null || !dragHandler.isResizing) return;
+
+    // Save state before completeResize() clears it
+    final event = dragHandler.resizingEvent!;
+    final originalStart = dragHandler.resizeOriginalStart!;
+    final originalEnd = dragHandler.resizeOriginalEnd!;
+    final edge = dragHandler.resizeEdge!;
+
+    final result = dragHandler.completeResize();
+    if (result == null) return; // Invalid resize
+
+    final (proposedStart, proposedEnd) = result;
+
+    // Calculate new dates preserving time components using DST-safe arithmetic.
+    // For the edge that changed, compute day delta and apply to the original
+    // date with time components. The unchanged edge keeps its original value.
+    final DateTime newStartDate;
+    final DateTime newEndDate;
+
+    if (edge == MCalResizeEdge.start) {
+      // Start edge changed
+      final normalizedOriginalStart = DateTime(
+        originalStart.year,
+        originalStart.month,
+        originalStart.day,
+      );
+      final dayDelta = daysBetween(normalizedOriginalStart, proposedStart);
+      newStartDate = DateTime(
+        originalStart.year,
+        originalStart.month,
+        originalStart.day + dayDelta,
+        originalStart.hour,
+        originalStart.minute,
+        originalStart.second,
+        originalStart.millisecond,
+        originalStart.microsecond,
+      );
+      newEndDate = originalEnd;
+    } else {
+      // End edge changed
+      final normalizedOriginalEnd = DateTime(
+        originalEnd.year,
+        originalEnd.month,
+        originalEnd.day,
+      );
+      final dayDelta = daysBetween(normalizedOriginalEnd, proposedEnd);
+      newEndDate = DateTime(
+        originalEnd.year,
+        originalEnd.month,
+        originalEnd.day + dayDelta,
+        originalEnd.hour,
+        originalEnd.minute,
+        originalEnd.second,
+        originalEnd.millisecond,
+        originalEnd.microsecond,
+      );
+      newStartDate = originalStart;
+    }
+
+    // Detect recurring occurrence
+    final isRecurring = event.occurrenceId != null;
+    String? seriesId;
+    if (isRecurring) {
+      final occId = event.occurrenceId!;
+      seriesId = event.id.endsWith('_$occId')
+          ? event.id.substring(0, event.id.length - occId.length - 1)
+          : event.id;
+    }
+
+    // Build details
+    final details = MCalEventResizedDetails(
+      event: event,
+      oldStartDate: originalStart,
+      oldEndDate: originalEnd,
+      newStartDate: newStartDate,
+      newEndDate: newEndDate,
+      resizeEdge: edge,
+      isRecurring: isRecurring,
+      seriesId: seriesId,
+    );
+
+    // Create the updated event
+    final updatedEvent = event.copyWith(start: newStartDate, end: newEndDate);
+
+    if (isRecurring && seriesId != null) {
+      // Recurring occurrence: create a modified exception
+      if (widget.onEventResized != null) {
+        final shouldKeep = widget.onEventResized!(context, details);
+        if (shouldKeep) {
+          widget.controller.addException(
+            seriesId,
+            MCalRecurrenceException.rescheduled(
+              originalDate: DateTime.parse(event.occurrenceId!),
+              newDate: newStartDate,
+            ),
+          );
+        }
+      } else {
+        // No callback — auto-create exception
+        widget.controller.addException(
+          seriesId,
+          MCalRecurrenceException.rescheduled(
+            originalDate: DateTime.parse(event.occurrenceId!),
+            newDate: newStartDate,
+          ),
+        );
+      }
+    } else {
+      // Non-recurring event: update via controller
+      widget.controller.addEvents([updatedEvent]);
+
+      // Call onEventResized callback if provided
+      if (widget.onEventResized != null) {
+        final shouldKeep = widget.onEventResized!(context, details);
+
+        // If callback returns false, revert the change
+        if (!shouldKeep) {
+          final revertedEvent = event.copyWith(
+            start: originalStart,
+            end: originalEnd,
+          );
+          widget.controller.addEvents([revertedEvent]);
+        }
+      }
+    }
+  }
+
+  /// Cancels the current resize operation.
+  void _handleResizeCancel() {
+    widget.dragHandler?.cancelResize();
+  }
+
+  /// Builds a list of [MCalHighlightCellInfo] for a date range.
+  ///
+  /// Uses the cached layout values to compute bounds for each cell
+  /// in the proposed range, spanning across week rows as needed.
+  List<MCalHighlightCellInfo> _buildHighlightCellsForDateRange(
+    DateTime start,
+    DateTime end,
+  ) {
+    final cells = <MCalHighlightCellInfo>[];
+    if (_weeks.isEmpty) return cells;
+
+    // Ensure we have valid layout cache
+    final dayWidth = _cachedDayWidth > 0
+        ? _cachedDayWidth
+        : (_cachedCalendarSize.width - _cachedWeekNumberWidth) / 7;
+    final weekRowHeight = _cachedWeekRowHeight > 0
+        ? _cachedWeekRowHeight
+        : (_weeks.isNotEmpty ? _cachedCalendarSize.height / _weeks.length : 0.0);
+
+    if (dayWidth <= 0 || weekRowHeight <= 0) return cells;
+
+    // Normalize dates to date-only
+    final normalizedStart = DateTime(start.year, start.month, start.day);
+    final normalizedEnd = DateTime(end.year, end.month, end.day);
+    final totalDays = daysBetween(normalizedStart, normalizedEnd) + 1;
+
+    int cellNumber = 0;
+
+    // Iterate through each week row to find matching dates
+    for (int weekRowIndex = 0; weekRowIndex < _weeks.length; weekRowIndex++) {
+      final weekDates = _weeks[weekRowIndex];
+      for (int cellIndex = 0; cellIndex < weekDates.length; cellIndex++) {
+        final cellDate = weekDates[cellIndex];
+        final normalizedCell = DateTime(
+          cellDate.year,
+          cellDate.month,
+          cellDate.day,
+        );
+
+        // Check if this cell is within the proposed range
+        if (!normalizedCell.isBefore(normalizedStart) &&
+            !normalizedCell.isAfter(normalizedEnd)) {
+          final cellLeft = _cachedContentOffsetX + (cellIndex * dayWidth);
+          final cellTop = weekRowIndex * weekRowHeight;
+          final cellBounds = Rect.fromLTWH(
+            cellLeft,
+            cellTop,
+            dayWidth,
+            weekRowHeight,
+          );
+
+          cells.add(
+            MCalHighlightCellInfo(
+              date: normalizedCell,
+              cellIndex: cellIndex,
+              weekRowIndex: weekRowIndex,
+              bounds: cellBounds,
+              isFirst: cellNumber == 0,
+              isLast: cellNumber == totalDays - 1,
+            ),
+          );
+          cellNumber++;
+        }
+      }
+    }
+
+    return cells;
+  }
+
+  // ============================================================
   // Layer 3 Drop Target Tile Builder
   // ============================================================
 
@@ -2699,7 +4084,8 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   ) {
     final customBuilder = widget.dropTargetTileBuilder;
     return (BuildContext context, MCalEventTileContext tileContext) {
-      final event = dragHandler.draggedEvent;
+      // Use dragged event during drag, or resizing event during resize
+      final event = dragHandler.draggedEvent ?? dragHandler.resizingEvent;
       if (event == null) return const SizedBox.shrink();
       final meta = _getRecurrenceMetadata(event, widget.controller);
       final newContext = MCalEventTileContext(
@@ -2897,7 +4283,10 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
     Widget overlay;
     // Precedence: dropTargetOverlayBuilder > dropTargetCellBuilder > default
-    if (widget.dropTargetOverlayBuilder != null) {
+    // Note: dropTargetOverlayBuilder requires drag data; during resize,
+    // fall through to dropTargetCellBuilder or default painter.
+    if (widget.dropTargetOverlayBuilder != null &&
+        dragHandler.draggedEvent != null) {
       // Use cached values instead of findRenderObject
       final draggedEvent = dragHandler.draggedEvent;
       final sourceDate = dragHandler.sourceDate;
@@ -3052,6 +4441,11 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             onDragCanceledCallback: widget.onDragCanceledCallback,
             dragHandler: widget.dragHandler,
             dragLongPressDelay: widget.dragLongPressDelay,
+            enableResize: widget.enableResize,
+            onResizeStartCallback: _handleResizeStart,
+            onResizeUpdateCallback: _handleResizeUpdate,
+            onResizeEndCallback: _handleResizeEnd,
+            onResizeCancelCallback: _handleResizeCancel,
           ),
         );
       }).toList(),
@@ -3065,7 +4459,9 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
         onAcceptWithDetails: _handleDrop,
         builder: (context, candidateData, rejectedData) {
           // Build drop-feedback layers (order controlled by dropTargetTilesAboveOverlay)
-          final tilesLayer = (widget.showDropTargetTiles && _isDragActive)
+          // Show during both drag and resize operations
+          final showFeedback = _isDragOrResizeActive;
+          final tilesLayer = (widget.showDropTargetTiles && showFeedback)
               ? Positioned.fill(
                   child: RepaintBoundary(
                     child: IgnorePointer(
@@ -3075,7 +4471,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
                 )
               : null;
 
-          final overlayLayer = (widget.showDropTargetOverlay && _isDragActive)
+          final overlayLayer = (widget.showDropTargetOverlay && showFeedback)
               ? Positioned.fill(
                   child: RepaintBoundary(
                     child: IgnorePointer(
@@ -3105,7 +4501,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
           // Semantics at DragTarget level so drop target state is announced
           // even when overlay is disabled. Includes full date range for multi-day.
-          final dropTargetLabel = _isDragActive
+          final dropTargetLabel = _isDragOrResizeActive
               ? _buildDropTargetSemanticLabel()
               : null;
           if (dropTargetLabel != null) {
@@ -3349,6 +4745,22 @@ class _WeekRowWidget extends StatefulWidget {
   /// Long-press delay before drag starts.
   final Duration dragLongPressDelay;
 
+  /// Whether event resize handles should be shown on multi-day event tiles.
+  final bool enableResize;
+
+  /// Called when the user begins dragging a resize handle.
+  final void Function(MCalCalendarEvent event, MCalResizeEdge edge)?
+  onResizeStartCallback;
+
+  /// Called as the user drags a resize handle, with pixel dx and day width.
+  final void Function(double dx, double dayWidth)? onResizeUpdateCallback;
+
+  /// Called when the user releases a resize handle.
+  final VoidCallback? onResizeEndCallback;
+
+  /// Called when a resize drag is cancelled by the system.
+  final VoidCallback? onResizeCancelCallback;
+
   const _WeekRowWidget({
     required this.dates,
     required this.currentMonth,
@@ -3396,6 +4808,12 @@ class _WeekRowWidget extends StatefulWidget {
     this.onDragCanceledCallback,
     this.dragHandler,
     this.dragLongPressDelay = const Duration(milliseconds: 200),
+    // Resize
+    this.enableResize = false,
+    this.onResizeStartCallback,
+    this.onResizeUpdateCallback,
+    this.onResizeEndCallback,
+    this.onResizeCancelCallback,
   });
 
   @override
@@ -3542,6 +4960,11 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           onDragEndedCallback: widget.onDragEndedCallback,
           onDragCanceledCallback: widget.onDragCanceledCallback,
           dragLongPressDelay: widget.dragLongPressDelay,
+          enableResize: widget.enableResize,
+          onResizeStartCallback: widget.onResizeStartCallback,
+          onResizeUpdateCallback: widget.onResizeUpdateCallback,
+          onResizeEndCallback: widget.onResizeEndCallback,
+          onResizeCancelCallback: widget.onResizeCancelCallback,
         ),
       );
     }).toList();
@@ -3618,6 +5041,64 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           onOverflowLongPress: widget.onOverflowLongPress,
         );
 
+    // Optionally wrap event tile builder with resize handles for multi-day events
+    final MCalEventTileBuilder finalEventTileBuilder;
+    if (widget.enableResize) {
+      finalEventTileBuilder = (BuildContext ctx, MCalEventTileContext tileCtx) {
+        final tile = wrappedEventTileBuilder(ctx, tileCtx);
+        final segment = tileCtx.segment;
+
+        // Only add resize handles for multi-day events (not single-day)
+        if (segment == null || segment.isSingleDay) return tile;
+
+        final children = <Widget>[Positioned.fill(child: tile)];
+        if (segment.isFirstSegment) {
+          children.add(
+            _ResizeHandle(
+              edge: MCalResizeEdge.start,
+              event: tileCtx.event,
+              onResizeStart: () => widget.onResizeStartCallback?.call(
+                tileCtx.event,
+                MCalResizeEdge.start,
+              ),
+              onResizeUpdate: (dx) => widget.onResizeUpdateCallback?.call(
+                dx,
+                dayWidth,
+              ),
+              onResizeEnd: () => widget.onResizeEndCallback?.call(),
+              onResizeCancel: () => widget.onResizeCancelCallback?.call(),
+            ),
+          );
+        }
+        if (segment.isLastSegment) {
+          children.add(
+            _ResizeHandle(
+              edge: MCalResizeEdge.end,
+              event: tileCtx.event,
+              onResizeStart: () => widget.onResizeStartCallback?.call(
+                tileCtx.event,
+                MCalResizeEdge.end,
+              ),
+              onResizeUpdate: (dx) => widget.onResizeUpdateCallback?.call(
+                dx,
+                dayWidth,
+              ),
+              onResizeEnd: () => widget.onResizeEndCallback?.call(),
+              onResizeCancel: () => widget.onResizeCancelCallback?.call(),
+            ),
+          );
+        }
+
+        // Only wrap in Stack if we actually added handles
+        if (children.length > 1) {
+          return Stack(clipBehavior: Clip.none, children: children);
+        }
+        return tile;
+      };
+    } else {
+      finalEventTileBuilder = wrappedEventTileBuilder;
+    }
+
     // Create the week layout context
     final layoutContext = MCalWeekLayoutContext(
       segments: weekSegments,
@@ -3627,7 +5108,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       weekRowIndex: widget.weekRowIndex,
       currentMonth: widget.currentMonth,
       config: config,
-      eventTileBuilder: wrappedEventTileBuilder,
+      eventTileBuilder: finalEventTileBuilder,
       dateLabelBuilder: wrappedDateLabelBuilder,
       overflowIndicatorBuilder: wrappedOverflowIndicatorBuilder,
     );
@@ -3890,6 +5371,22 @@ class _DayCellWidget extends StatelessWidget {
   /// Set to false for Layer 1 grid cells when date labels are rendered in Layer 2.
   final bool showDateLabel;
 
+  /// Whether event resize handles should be shown on multi-day event tiles.
+  final bool enableResize;
+
+  /// Called when the user begins dragging a resize handle.
+  final void Function(MCalCalendarEvent event, MCalResizeEdge edge)?
+  onResizeStartCallback;
+
+  /// Called as the user drags a resize handle, with pixel dx and day width.
+  final void Function(double dx, double dayWidth)? onResizeUpdateCallback;
+
+  /// Called when the user releases a resize handle.
+  final VoidCallback? onResizeEndCallback;
+
+  /// Called when a resize drag is cancelled by the system.
+  final VoidCallback? onResizeCancelCallback;
+
   const _DayCellWidget({
     required this.date,
     required this.displayMonth,
@@ -3934,6 +5431,12 @@ class _DayCellWidget extends StatelessWidget {
     this.onDragEndedCallback,
     this.onDragCanceledCallback,
     this.dragLongPressDelay = const Duration(milliseconds: 200),
+    // Resize
+    this.enableResize = false,
+    this.onResizeStartCallback,
+    this.onResizeUpdateCallback,
+    this.onResizeEndCallback,
+    this.onResizeCancelCallback,
   });
 
   /// Gets the events to use for rendering tiles.
@@ -4387,6 +5890,51 @@ class _DayCellWidget extends StatelessWidget {
         );
       }
 
+      // Wrap with resize handles for multi-day events when resize is enabled
+      // (Legacy Layer 1 rendering path)
+      // Note: In legacy Layer 1, the cell width serves as an approximate
+      // dayWidth since each cell represents one day.
+      if (enableResize && eventSpanInfo.length > 1) {
+        final capturedEvent = event;
+        final resizeChildren = <Widget>[Positioned.fill(child: tile)];
+        if (eventSpanInfo.isStart) {
+          resizeChildren.add(
+            _ResizeHandle(
+              edge: MCalResizeEdge.start,
+              event: capturedEvent,
+              onResizeStart: () => onResizeStartCallback?.call(
+                capturedEvent,
+                MCalResizeEdge.start,
+              ),
+              // dayWidth will be obtained from the _MonthPageWidgetState
+              // layout cache via _handleResizeStart, so we pass 0 here
+              // as a fallback — the actual width comes from context.
+              onResizeUpdate: (dx) => onResizeUpdateCallback?.call(dx, 0),
+              onResizeEnd: () => onResizeEndCallback?.call(),
+              onResizeCancel: () => onResizeCancelCallback?.call(),
+            ),
+          );
+        }
+        if (eventSpanInfo.isEnd) {
+          resizeChildren.add(
+            _ResizeHandle(
+              edge: MCalResizeEdge.end,
+              event: capturedEvent,
+              onResizeStart: () => onResizeStartCallback?.call(
+                capturedEvent,
+                MCalResizeEdge.end,
+              ),
+              onResizeUpdate: (dx) => onResizeUpdateCallback?.call(dx, 0),
+              onResizeEnd: () => onResizeEndCallback?.call(),
+              onResizeCancel: () => onResizeCancelCallback?.call(),
+            ),
+          );
+        }
+        if (resizeChildren.length > 1) {
+          tile = Stack(clipBehavior: Clip.none, children: resizeChildren);
+        }
+      }
+
       // Wrap in SizedBox with Padding to enforce margin at layout level.
       // The margin space is NOT part of the tile (clicks there go to the cell).
       // Single-day tiles have margin on all sides.
@@ -4773,7 +6321,29 @@ class _EventTileWidget extends StatelessWidget {
   String _getSemanticLabel() {
     final localizations = MCalLocalizations();
     final timeStr = _formatEventTime(localizations);
-    return '${event.title}, $timeStr';
+    var label = '${event.title}, $timeStr';
+
+    if (spanLength > 1) {
+      final eventStartDate = DateTime(
+        event.start.year,
+        event.start.month,
+        event.start.day,
+      );
+      final cellDate = DateTime(
+        displayDate.year,
+        displayDate.month,
+        displayDate.day,
+      );
+      final dayPosition = daysBetween(eventStartDate, cellDate) + 1;
+      final spanLabel = localizations.formatMultiDaySpanLabel(
+        spanLength,
+        dayPosition,
+        locale,
+      );
+      label = '$label, $spanLabel';
+    }
+
+    return label;
   }
 
   /// Formats the event time for display.
@@ -4785,6 +6355,91 @@ class _EventTileWidget extends StatelessWidget {
     final startTime = localizations.formatTime(event.start, locale);
     final endTime = localizations.formatTime(event.end, locale);
     return '$startTime to $endTime';
+  }
+}
+
+/// A thin draggable zone on the leading or trailing edge of an event tile
+/// that allows the user to resize the event by dragging.
+///
+/// The handle is positioned as a narrow vertical strip (default 8dp wide)
+/// at the start or end edge of the event tile. It provides:
+/// - A `SystemMouseCursors.resizeColumn` cursor on hover
+/// - Horizontal drag gesture callbacks for resize interaction
+/// - RTL-aware positioning using `Directionality.of(context)`
+/// - Semantic labels for accessibility ("Resize start edge" / "Resize end edge")
+///
+/// This widget must be placed inside a [Stack] alongside the event tile.
+class _ResizeHandle extends StatelessWidget {
+  const _ResizeHandle({
+    required this.edge,
+    required this.event,
+    required this.onResizeStart,
+    required this.onResizeUpdate,
+    required this.onResizeEnd,
+    required this.onResizeCancel,
+  });
+
+  /// Which edge this handle is positioned on.
+  final MCalResizeEdge edge;
+
+  /// The event this handle belongs to.
+  final MCalCalendarEvent event;
+
+  /// Called when the user begins a horizontal drag on the handle.
+  final VoidCallback onResizeStart;
+
+  /// Called as the user drags horizontally, with the delta X in pixels.
+  final ValueChanged<double> onResizeUpdate;
+
+  /// Called when the user finishes dragging.
+  final VoidCallback onResizeEnd;
+
+  /// Called when the drag is cancelled (e.g. interrupted by the system).
+  final VoidCallback onResizeCancel;
+
+  /// The width of the interactive handle zone in logical pixels.
+  static const double handleWidth = 8.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+
+    // In LTR: start edge is on the left, end edge is on the right
+    // In RTL: start edge is on the right, end edge is on the left
+    final isLeading = (edge == MCalResizeEdge.start) != isRtl;
+
+    return Positioned(
+      left: isLeading ? 0 : null,
+      right: isLeading ? null : 0,
+      top: 0,
+      bottom: 0,
+      width: handleWidth,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.resizeColumn,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragStart: (_) => onResizeStart(),
+          onHorizontalDragUpdate: (details) => onResizeUpdate(details.delta.dx),
+          onHorizontalDragEnd: (_) => onResizeEnd(),
+          onHorizontalDragCancel: () => onResizeCancel(),
+          child: Semantics(
+            label: edge == MCalResizeEdge.start
+                ? 'Resize start edge'
+                : 'Resize end edge',
+            child: Center(
+              child: Container(
+                width: 2,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

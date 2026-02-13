@@ -44,6 +44,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   bool _showWeekNumbers = false;
   bool _enableAnimations = true;
   bool _enableDragAndDrop = true;
+  bool _enableResize = true;
   bool _useCustomDragTargetTile = false;
   bool _showDropTargetTiles = true;
   bool _showDropTargetOverlay = true;
@@ -1297,6 +1298,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
                 enableKeyboardNavigation: false,
                 enableDragAndDrop: _enableDragAndDrop,
+                enableEventResize: _enableResize,
                 showDropTargetTiles: _showDropTargetTiles,
                 showDropTargetOverlay: _showDropTargetOverlay,
                 dropTargetTilesAboveOverlay: _dropTargetTilesAboveOverlay,
@@ -1337,13 +1339,30 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 // Drag-and-drop callback
                 onEventDropped: _enableDragAndDrop
                     ? (context, details) {
-                        //_showAlert(
-                        //  context,
-                        //  'Event Dropped',
-                        //  'Moved "${details.event.title}" from '
-                        //      '${_formatDate(details.oldStartDate)} to '
-                        //      '${_formatDate(details.newStartDate)}',
-                        //);
+                        return true;
+                      }
+                    : null,
+                // Resize callbacks
+                onResizeWillAccept: _enableResize
+                    ? (context, details) {
+                        // Accept all resizes in the demo
+                        return true;
+                      }
+                    : null,
+                onEventResized: _enableResize
+                    ? (context, details) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Resized "${details.event.title}" '
+                              '${details.resizeEdge.name} edge: '
+                              '${_formatDate(details.newStartDate)} to '
+                              '${_formatDate(details.newEndDate)}'
+                              '${details.isRecurring ? ' (recurring)' : ''}',
+                            ),
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
                         return true;
                       }
                     : null,
@@ -1396,6 +1415,12 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 'Drag',
                 _enableDragAndDrop,
                 (v) => setState(() => _enableDragAndDrop = v),
+                colorScheme,
+              ),
+              _buildCompactToggle(
+                'Resize',
+                _enableResize,
+                (v) => setState(() => _enableResize = v),
                 colorScheme,
               ),
               _buildCompactToggle(
@@ -1559,6 +1584,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
               }, colorScheme),
               _buildToggle('Drag & Drop', _enableDragAndDrop, (v) {
                 setState(() => _enableDragAndDrop = v);
+              }, colorScheme),
+              _buildToggle('Resize', _enableResize, (v) {
+                setState(() => _enableResize = v);
               }, colorScheme),
               _buildToggle(
                 'Custom drag target tile',
@@ -1772,16 +1800,45 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: colorScheme.primaryContainer.withAlpha(100),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 4,
-        alignment: WrapAlignment.center,
+      child: Column(
         children: [
-          _shortcutChip('←→↑↓', 'Navigate cells', colorScheme),
-          _shortcutChip('Enter/Space', 'Select cell', colorScheme),
-          _shortcutChip('Home', 'First day', colorScheme),
-          _shortcutChip('End', 'Last day', colorScheme),
-          _shortcutChip('PgUp/PgDn', 'Prev/Next month', colorScheme),
+          // Row 1: Navigation shortcuts
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
+            alignment: WrapAlignment.center,
+            children: [
+              _shortcutChip('←→↑↓', 'Navigate cells', colorScheme),
+              _shortcutChip('Enter/Space', 'Select cell', colorScheme),
+              _shortcutChip('Home', 'First day', colorScheme),
+              _shortcutChip('End', 'Last day', colorScheme),
+              _shortcutChip('PgUp/PgDn', 'Prev/Next month', colorScheme),
+            ],
+          ),
+          // Row 2: Event move & resize shortcuts
+          if (_enableDragAndDrop) ...[
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 16,
+              runSpacing: 4,
+              alignment: WrapAlignment.center,
+              children: [
+                _shortcutChip(
+                  'Enter/Space',
+                  'Select event for moving',
+                  colorScheme,
+                ),
+                _shortcutChip('Arrows', 'Move event between dates', colorScheme),
+                if (_enableResize) ...[
+                  _shortcutChip('R', 'Enter resize mode', colorScheme),
+                  _shortcutChip('S / E', 'Switch start/end edge', colorScheme),
+                  _shortcutChip('M', 'Return to move mode', colorScheme),
+                ],
+                _shortcutChip('Enter', 'Confirm', colorScheme),
+                _shortcutChip('Esc', 'Cancel', colorScheme),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -1899,6 +1956,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
                 enableKeyboardNavigation: isDesktop,
                 enableDragAndDrop: _enableDragAndDrop,
+                enableEventResize: _enableResize,
                 showDropTargetTiles: _showDropTargetTiles,
                 showDropTargetOverlay: _showDropTargetOverlay,
                 dropTargetTilesAboveOverlay: _dropTargetTilesAboveOverlay,
@@ -1942,13 +2000,30 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 // Drag-and-drop callback
                 onEventDropped: _enableDragAndDrop
                     ? (context, details) {
-                        //_showAlert(
-                        //  context,
-                        //  'Event Dropped',
-                        //  'Moved "${details.event.title}" from '
-                        //  '${_formatDate(details.oldStartDate)} to '
-                        //  '${_formatDate(details.newStartDate)}',
-                        //);
+                        return true;
+                      }
+                    : null,
+                // Resize callbacks
+                onResizeWillAccept: _enableResize
+                    ? (context, details) {
+                        // Accept all resizes in the demo
+                        return true;
+                      }
+                    : null,
+                onEventResized: _enableResize
+                    ? (context, details) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Resized "${details.event.title}" '
+                              '${details.resizeEdge.name} edge: '
+                              '${_formatDate(details.newStartDate)} to '
+                              '${_formatDate(details.newEndDate)}'
+                              '${details.isRecurring ? ' (recurring)' : ''}',
+                            ),
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
                         return true;
                       }
                     : null,
