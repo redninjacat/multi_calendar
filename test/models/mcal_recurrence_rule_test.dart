@@ -494,7 +494,7 @@ void main() {
             occ.weekday == DateTime.tuesday ||
                 occ.weekday == DateTime.thursday,
             isTrue,
-            reason: '${occ} should be Tuesday or Thursday',
+            reason: '$occ should be Tuesday or Thursday',
           );
         }
       });

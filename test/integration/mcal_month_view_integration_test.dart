@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart' show AxisDirection;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -1080,8 +1079,6 @@ void main() {
 
       controller.setMockEvents([event]);
 
-      MCalDraggedTileDetails? draggedDetails;
-
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -1091,7 +1088,6 @@ void main() {
                 controller: controller,
                 enableDragAndDrop: true,
                 draggedTileBuilder: (context, details) {
-                  draggedDetails = details;
                   return Container(
                     color: Colors.blue.withValues(alpha: 0.8),
                     child: Text(details.event.title),
@@ -1160,7 +1156,6 @@ void main() {
 
       controller.setMockEvents([event]);
 
-      MCalEventDroppedDetails? droppedDetails;
       bool shouldAcceptDrop = true;
 
       await tester.pumpWidget(
@@ -1172,7 +1167,6 @@ void main() {
                 controller: controller,
                 enableDragAndDrop: true,
                 onEventDropped: (context, details) {
-                  droppedDetails = details;
                   return shouldAcceptDrop;
                 },
               ),
@@ -1246,10 +1240,6 @@ void main() {
 
       BuildContext? cellTapContext;
       MCalCellTapDetails? cellTapDetails;
-      BuildContext? eventTapContext;
-      MCalEventTapDetails? eventTapDetails;
-      BuildContext? overflowContext;
-      MCalOverflowTapDetails? overflowDetails;
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1261,14 +1251,6 @@ void main() {
                 onCellTap: (context, details) {
                   cellTapContext = context;
                   cellTapDetails = details;
-                },
-                onEventTap: (context, details) {
-                  eventTapContext = context;
-                  eventTapDetails = details;
-                },
-                onOverflowTap: (context, details) {
-                  overflowContext = context;
-                  overflowDetails = details;
                 },
               ),
             ),
@@ -1633,8 +1615,6 @@ void main() {
       controller.setMockEvents([multiDayEvent]);
 
       MCalEventTileContext? eventTileContext;
-      MCalDragWillAcceptDetails? dragWillAcceptDetails;
-      MCalEventDroppedDetails? eventDroppedDetails;
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1650,14 +1630,6 @@ void main() {
                     color: Colors.blue,
                     child: Text(ctx.event.title),
                   );
-                },
-                onDragWillAccept: (context, details) {
-                  dragWillAcceptDetails = details;
-                  return true;
-                },
-                onEventDropped: (context, details) {
-                  eventDroppedDetails = details;
-                  return true;
                 },
               ),
             ),
@@ -1738,8 +1710,6 @@ void main() {
 
       controller.setMockEvents([multiDayEvent]);
 
-      bool validationCalled = false;
-
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -1749,7 +1719,6 @@ void main() {
                 controller: controller,
                 enableDragAndDrop: true,
                 onDragWillAccept: (context, details) {
-                  validationCalled = true;
                   // Reject if the proposed dates would span across a month boundary
                   final startMonth = details.proposedStartDate.month;
                   final endMonth = details.proposedEndDate.month;

@@ -869,7 +869,7 @@ class _RecurrenceEditorDialogState extends State<RecurrenceEditorDialog> {
     ];
 
     return DropdownButtonFormField<int>(
-      value: _weekStart,
+      initialValue: _weekStart,
       items: days.map((day) {
         return DropdownMenuItem<int>(
           value: day,

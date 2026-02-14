@@ -1170,13 +1170,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // "setState during build" errors when multiple widgets share a controller.
     _scheduleSetState(() {
       _events = _getEventsForMonth(_currentMonth);
-      debugPrint(
-        '[MONTH-VIEW] _scheduleSetState: refreshed events for '
-        '$_currentMonth => ${_events.length} events',
-      );
-      for (final e in _events) {
-        debugPrint('[MONTH-VIEW]   ${e.id}: ${e.start} - ${e.end}');
-      }
     });
   }
 
@@ -2967,10 +2960,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     MCalResizeEdge edge,
     int pointer,
   ) {
-    debugPrint(
-      '[RESIZE-PARENT] pointerDown pointer=$pointer event=${event.title} edge=$edge',
-    );
-
     _resizeActivePointer = pointer;
     _resizeGestureStarted = false;
     _resizeDxAccumulated = 0.0;
@@ -2989,13 +2978,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // Acquire scroll hold as belt-and-suspenders for the current frame.
     _releaseResizeScrollHold();
     try {
-      debugPrint('[RESIZE-PARENT] holding scroll position');
       _resizeScrollHold = _pageController.position.hold(() {
-        debugPrint('[RESIZE-PARENT] scroll hold broken externally');
         _resizeScrollHold = null;
       });
     } catch (e) {
-      debugPrint('[RESIZE-PARENT] failed to hold scroll: $e');
+      // Scroll hold failed, but resize can still proceed
     }
   }
 
@@ -3020,7 +3007,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       final edge = _pendingResizeEdge;
       if (event == null || edge == null) return;
 
-      debugPrint('[RESIZE-PARENT] threshold crossed, starting resize');
       _ensureDragHandler.startResize(event, edge);
       return;
     }
@@ -3034,10 +3020,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   void _handleResizePointerUpFromParent(PointerUpEvent pointerEvent) {
     if (pointerEvent.pointer != _resizeActivePointer) return;
 
-    debugPrint(
-      '[RESIZE-PARENT] pointerUp pointer=${pointerEvent.pointer} gestureStarted=$_resizeGestureStarted',
-    );
-
     if (_resizeGestureStarted) {
       _handleResizeEndFromParent();
     } else {
@@ -3050,7 +3032,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   void _handleResizePointerCancelFromParent(PointerCancelEvent pointerEvent) {
     if (pointerEvent.pointer != _resizeActivePointer) return;
 
-    debugPrint('[RESIZE-PARENT] pointerCancel pointer=${pointerEvent.pointer}');
     _dragHandler?.cancelResize();
     _cleanupResizePointerState();
   }
@@ -3284,7 +3265,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         _canNavigateToPreviousMonth()) {
       dragHandler.handleEdgeProximity(true, true, () {
         if (!mounted) return;
-        debugPrint('[RESIZE-PARENT] edge nav → previous month');
         _navigateToPreviousMonth();
         // Recompute resize overlay for the new month's grid on the next frame
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3299,7 +3279,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         _canNavigateToNextMonth()) {
       dragHandler.handleEdgeProximity(true, false, () {
         if (!mounted) return;
-        debugPrint('[RESIZE-PARENT] edge nav → next month');
         _navigateToNextMonth();
         // Recompute resize overlay for the new month's grid on the next frame
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3316,7 +3295,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
 
   /// Completes the resize operation at the parent level.
   void _handleResizeEndFromParent() {
-    debugPrint('[RESIZE-PARENT] _handleResizeEnd');
     final dragHandler = _dragHandler;
     if (dragHandler == null || !dragHandler.isResizing) return;
 
@@ -3394,41 +3372,19 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     );
 
     final updatedEvent = event.copyWith(start: newStartDate, end: newEndDate);
-    debugPrint(
-      '[RESIZE-PARENT] updatedEvent: id=${updatedEvent.id} '
-      'start=${updatedEvent.start} end=${updatedEvent.end}',
-    );
-    debugPrint(
-      '[RESIZE-PARENT] currentMonth=$_currentMonth isRecurring=$isRecurring',
-    );
 
     if (isRecurring && seriesId != null) {
-      debugPrint(
-        '[RESIZE-PARENT] recurring: seriesId=$seriesId '
-        'occurrenceId=${event.occurrenceId} originalDate=${DateTime.parse(event.occurrenceId!)}',
-      );
       final exception = MCalRecurrenceException.modified(
         originalDate: DateTime.parse(event.occurrenceId!),
         modifiedEvent: updatedEvent,
       );
-      debugPrint(
-        '[RESIZE-PARENT] exception: type=${exception.type} '
-        'originalDate=${exception.originalDate} '
-        'modifiedEvent.start=${exception.modifiedEvent?.start} '
-        'modifiedEvent.end=${exception.modifiedEvent?.end}',
-      );
       if (widget.onEventResized != null) {
         final shouldKeep = widget.onEventResized!(context, details);
-        debugPrint(
-          '[RESIZE-PARENT] onEventResized returned shouldKeep=$shouldKeep',
-        );
         if (shouldKeep) {
           widget.controller.addException(seriesId, exception);
-          debugPrint('[RESIZE-PARENT] addException called');
         }
       } else {
         widget.controller.addException(seriesId, exception);
-        debugPrint('[RESIZE-PARENT] addException called (no callback)');
       }
     } else {
       widget.controller.addEvents([updatedEvent]);
@@ -3445,28 +3401,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       }
     }
 
-    // Debug: query events to see what the controller returns
-    final debugEvents = _getEventsForMonth(_currentMonth);
-    debugPrint(
-      '[RESIZE-PARENT] after update: _currentMonth=$_currentMonth '
-      'events=${debugEvents.length} ids=${debugEvents.map((e) => e.id).toList()}',
-    );
-    for (final e in debugEvents) {
-      debugPrint(
-        '[RESIZE-PARENT]   event: ${e.id} start=${e.start} end=${e.end}',
-      );
-    }
-
     // Auto-navigate to show the resized edge date
     final activeEdgeDate = edge == MCalResizeEdge.end
         ? newEndDate
         : newStartDate;
     final targetMonth = DateTime(activeEdgeDate.year, activeEdgeDate.month, 1);
-    debugPrint(
-      '[RESIZE-PARENT] auto-nav check: activeEdgeDate=$activeEdgeDate '
-      'targetMonth=$targetMonth currentMonth=$_currentMonth '
-      'willNav=${targetMonth.year != _currentMonth.year || targetMonth.month != _currentMonth.month}',
-    );
     if (targetMonth.year != _currentMonth.year ||
         targetMonth.month != _currentMonth.month) {
       _navigateToMonth(targetMonth);
@@ -3657,7 +3596,8 @@ class _MCalSnappyPageScrollPhysics extends PageScrollPhysics {
     final double targetPixels = targetPage * pageSize;
 
     // If we're already at the target, no simulation needed
-    if ((position.pixels - targetPixels).abs() < tolerance.distance) {
+    final toleranceValue = toleranceFor(position);
+    if ((position.pixels - targetPixels).abs() < toleranceValue.distance) {
       return null;
     }
 
@@ -3667,7 +3607,7 @@ class _MCalSnappyPageScrollPhysics extends PageScrollPhysics {
       position.pixels,
       targetPixels,
       velocity,
-      tolerance: tolerance,
+      tolerance: toleranceValue,
     );
   }
 }
@@ -6908,9 +6848,6 @@ class _ResizeHandle extends StatelessWidget {
           child: Listener(
             behavior: HitTestBehavior.opaque,
             onPointerDown: (pointerEvent) {
-              debugPrint(
-                '[RESIZE-HANDLE $edge] onPointerDown pointer=${pointerEvent.pointer}',
-              );
               onPointerDown(event, edge, pointerEvent.pointer);
             },
             child: Center(

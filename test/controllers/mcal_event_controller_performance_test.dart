@@ -118,7 +118,7 @@ class _StoredException {
 ///
 /// Contains all CRUD operations and can synchronize with an
 /// [MCalEventController] via [syncToController].
-class InMemoryEventStore {
+class _InMemoryEventStore {
   final Map<String, _StoredEvent> _events = {};
   final Map<String, List<_StoredException>> _exceptions = {};
 
@@ -250,7 +250,7 @@ class InMemoryEventStore {
 // =============================================================================
 
 /// Generates a large, realistic set of recurring events starting from various
-/// points in the past.  Returns a populated [InMemoryEventStore].
+/// points in the past.  Returns a populated [_InMemoryEventStore].
 ///
 /// The mix mirrors a real-world calendar:
 /// - ~40% daily events (stand-ups, medication reminders, etc.)
@@ -262,11 +262,11 @@ class InMemoryEventStore {
 /// - ~40% no end (infinite)
 /// - ~30% with until date
 /// - ~30% with count
-InMemoryEventStore _buildLargeStore({
+_InMemoryEventStore _buildLargeStore({
   required int eventCount,
   required DateTime viewMonth,
 }) {
-  final store = InMemoryEventStore();
+  final store = _InMemoryEventStore();
   final rng = Random(42); // fixed seed for reproducibility
 
   final frequencies = [
@@ -372,7 +372,7 @@ InMemoryEventStore _buildLargeStore({
 /// For each event that is currently recurring, adds 0–5 exceptions on
 /// random dates that fall within the query range.
 void _addExceptionsToStore(
-  InMemoryEventStore store,
+  _InMemoryEventStore store,
   DateTimeRange queryRange,
   Random rng,
 ) {
@@ -466,7 +466,7 @@ void main() {
   // ===========================================================================
   group('Data store ↔ controller sync', () {
     test('full sync populates controller accurately', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       // Add a mix of events to the store.
@@ -501,7 +501,7 @@ void main() {
     });
 
     test('sync preserves externalId linkage', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -521,7 +521,7 @@ void main() {
     });
 
     test('sync pushes exceptions correctly', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -546,7 +546,7 @@ void main() {
     });
 
     test('incremental sync updates single event', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -570,7 +570,7 @@ void main() {
     });
 
     test('incremental sync removes deleted event', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -676,11 +676,11 @@ void main() {
   // 3. Performance + Accuracy: Mixed Termination Strategies
   // ===========================================================================
   group('Mixed termination strategies', () {
-    late InMemoryEventStore store;
+    late _InMemoryEventStore store;
     late MCalEventController controller;
 
     setUp(() {
-      store = InMemoryEventStore();
+      store = _InMemoryEventStore();
       controller = MCalEventController();
 
       // Infinite daily — started 2 years ago
@@ -853,11 +853,11 @@ void main() {
   // 5. Edit Operations: Store → Controller Flow
   // ===========================================================================
   group('Edit operations via store', () {
-    late InMemoryEventStore store;
+    late _InMemoryEventStore store;
     late MCalEventController controller;
 
     setUp(() {
-      store = InMemoryEventStore();
+      store = _InMemoryEventStore();
       controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -1027,11 +1027,11 @@ void main() {
   // 6. Multi-Series Batch Editing
   // ===========================================================================
   group('Multi-series batch editing', () {
-    late InMemoryEventStore store;
+    late _InMemoryEventStore store;
     late MCalEventController controller;
 
     setUp(() {
-      store = InMemoryEventStore();
+      store = _InMemoryEventStore();
       controller = MCalEventController();
 
       // Series A: daily from Jan 1 (old, infinite)
@@ -1132,7 +1132,7 @@ void main() {
   // 7. Accuracy: View Navigation Simulation
   // ===========================================================================
   group('View navigation simulation', () {
-    late InMemoryEventStore store;
+    late _InMemoryEventStore store;
     late MCalEventController controller;
 
     setUp(() {
@@ -1195,7 +1195,7 @@ void main() {
   // ===========================================================================
   group('Multi-day overlap edge cases', () {
     test('3-day event starting day before range overlaps into range', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       // 3-day event on Mondays, started a year ago.
@@ -1217,7 +1217,7 @@ void main() {
     });
 
     test('week-long event started years ago overlaps correctly', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -1243,7 +1243,7 @@ void main() {
   // ===========================================================================
   group('Exception interactions at scale', () {
     test('many deletions across a large daily series', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -1276,7 +1276,7 @@ void main() {
     });
 
     test('reschedule chain: A→B, then edit B→C', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -1317,7 +1317,7 @@ void main() {
     });
 
     test('mixed exception types across many dates', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -1382,7 +1382,7 @@ void main() {
   // ===========================================================================
   group('DTSTART optimization accuracy', () {
     test('bi-daily event from 5 years ago produces correct alignment', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       // Every 2 days from Jan 1, 2021.
@@ -1415,7 +1415,7 @@ void main() {
     });
 
     test('bi-weekly from 3 years ago preserves day-of-week', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -1444,7 +1444,7 @@ void main() {
     });
 
     test('optimization does not break monthly events from far past', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -1462,7 +1462,7 @@ void main() {
     });
 
     test('optimization does not break yearly events from far past', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -1487,7 +1487,7 @@ void main() {
   // ===========================================================================
   group('Realistic workflow simulation', () {
     test('initial load → edits → navigation → verify', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       // Step 1: App launches, loads events from "server".
@@ -1568,7 +1568,7 @@ void main() {
     });
 
     test('server sync replaces entire data set', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       // Initial sync.
@@ -1583,7 +1583,7 @@ void main() {
       expect(controller.getEventsForRange(_februaryRange).length, 24);
 
       // Simulate server returning a completely different data set.
-      final newStore = InMemoryEventStore();
+      final newStore = _InMemoryEventStore();
       newStore.addEvent(_StoredEvent(
         id: 'new-event',
         title: 'New Event',
@@ -1604,7 +1604,7 @@ void main() {
   // ===========================================================================
   group('Stress: concurrent modifications', () {
     test('rapid add/delete cycle maintains consistency', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(
@@ -1641,7 +1641,7 @@ void main() {
     });
 
     test('rapid exception type overwrites maintain consistency', () {
-      final store = InMemoryEventStore();
+      final store = _InMemoryEventStore();
       final controller = MCalEventController();
 
       store.addEvent(_StoredEvent(

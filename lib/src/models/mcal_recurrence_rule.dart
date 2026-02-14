@@ -358,13 +358,11 @@ class MCalRecurrenceRule {
       endDate: until,
       interval: interval,
       count: count,
-      byWeekDays: byWeekDays != null
-          ? byWeekDays!
-              .map(
-                (wd) => teno_rrule.WeekDay(wd.dayOfWeek, wd.occurrence),
-              )
-              .toSet()
-          : null,
+      byWeekDays: byWeekDays
+          ?.map(
+            (wd) => teno_rrule.WeekDay(wd.dayOfWeek, wd.occurrence),
+          )
+          .toSet(),
       byMonthDays: frequency == MCalFrequency.yearly
           ? effectiveByMonthDaysYearly
           : effectiveByMonthDays,

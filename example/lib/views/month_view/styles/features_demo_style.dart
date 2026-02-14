@@ -213,8 +213,8 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     return Container(
       decoration: BoxDecoration(
         color: valid
-            ? colorScheme.primary.withOpacity(0.3)
-            : colorScheme.error.withOpacity(0.3),
+            ? colorScheme.primary.withValues(alpha: 0.3)
+            : colorScheme.error.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
           color: valid ? colorScheme.primary : colorScheme.error,

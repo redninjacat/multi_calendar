@@ -1,10 +1,8 @@
-import 'dart:async';
 import 'dart:ui' show Offset, Rect;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 import 'package:multi_calendar/src/widgets/mcal_drag_handler.dart';
-import 'package:multi_calendar/src/widgets/mcal_callback_details.dart';
 
 void main() {
   group('MCalDragHandler Tests', () {
@@ -658,9 +656,9 @@ void main() {
         dragHandler.startDrag(event, DateTime(2025, 1, 15));
 
         var callCount = 0;
-        final callback = () {
+        void callback() {
           callCount++;
-        };
+        }
 
         // Call multiple times while near edge
         dragHandler.handleEdgeProximity(true, true, callback);
@@ -715,9 +713,9 @@ void main() {
         dragHandler.startDrag(event, DateTime(2025, 1, 15));
 
         var callCount = 0;
-        final callback = () {
+        void callback() {
           callCount++;
-        };
+        }
 
         // Start near edge
         dragHandler.handleEdgeProximity(true, true, callback);

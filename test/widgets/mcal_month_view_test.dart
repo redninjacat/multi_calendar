@@ -1126,9 +1126,6 @@ void main() {
         final currentMonthDates = capturedDetails.where(
           (d) => d.isCurrentMonth,
         );
-        final nonCurrentMonthDates = capturedDetails.where(
-          (d) => !d.isCurrentMonth,
-        );
         expect(currentMonthDates, isNotEmpty);
         // There should also be leading/trailing dates if the month doesn't start on first day of week
         // This depends on the specific month and first day of week setting
@@ -1144,10 +1141,6 @@ void main() {
         );
         // Simulate setting an error state - we'll need to use the controller's error mechanism
 
-        BuildContext? capturedContext;
-        MCalErrorDetails? capturedDetails;
-        bool errorBuilderCalled = false;
-
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -1156,9 +1149,6 @@ void main() {
                 child: MCalMonthView(
                   controller: errorController,
                   errorBuilder: (context, details) {
-                    capturedContext = context;
-                    capturedDetails = details;
-                    errorBuilderCalled = true;
                     return Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -3029,7 +3019,7 @@ void main() {
                 eventTileBuilder: (context, ctx, defaultTile) {
                   capturedContexts.add(ctx);
                   return Container(
-                    color: Colors.blue.withOpacity(0.3),
+                    color: Colors.blue.withValues(alpha: 0.3),
                     child: Text(ctx.event.title),
                   );
                 },
@@ -3250,7 +3240,7 @@ void main() {
                     final segment = ctx.segment;
                     final showTitle = segment?.isFirstSegment ?? true;
                     return Container(
-                      color: Colors.green.withOpacity(0.3),
+                      color: Colors.green.withValues(alpha: 0.3),
                       child: Text(showTitle ? ctx.event.title : ''),
                     );
                   },
@@ -3322,7 +3312,7 @@ void main() {
                   return Container(
                     key: Key('custom-tile-$builderCallCount'),
                     decoration: BoxDecoration(
-                      color: Colors.purple.withOpacity(0.4),
+                      color: Colors.purple.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.horizontal(
                         left: Radius.circular(leftRadius),
                         right: Radius.circular(rightRadius),
@@ -3383,7 +3373,6 @@ void main() {
       await tester.pumpAndSettle();
 
       // The event should be visible in the grid (which includes leading December dates)
-      final eventFinder = find.text('Month Boundary');
       // Event should appear in the grid
       expect(find.byType(MCalMonthView), findsOneWidget);
     });
@@ -3417,9 +3406,7 @@ void main() {
                   eventTileBuilder: (context, ctx, defaultTile) {
                     capturedContexts.add(ctx);
                     final segment = ctx.segment;
-                    return Container(
-                      child: Text('Span: ${segment?.spanDays ?? 1}'),
-                    );
+                    return Text('Span: ${segment?.spanDays ?? 1}');
                   },
                 ),
               ),
@@ -4035,8 +4022,8 @@ void main() {
                   return Container(
                     key: Key('drop-target-${details.date.day}'),
                     color: details.isValid
-                        ? Colors.green.withOpacity(0.3)
-                        : Colors.red.withOpacity(0.3),
+                        ? Colors.green.withValues(alpha: 0.3)
+                        : Colors.red.withValues(alpha: 0.3),
                   );
                 },
               ),
@@ -4710,7 +4697,7 @@ void main() {
                 dropTargetCellBuilder: (context, details) {
                   capturedDetails.add(details);
                   return Container(
-                    color: Colors.blue.withOpacity(0.3),
+                    color: Colors.blue.withValues(alpha: 0.3),
                   );
                 },
               ),
@@ -4774,14 +4761,14 @@ void main() {
                     overlayBuilderCalled = true;
                     return Container(
                       key: const Key('overlay-builder'),
-                      color: Colors.purple.withOpacity(0.3),
+                      color: Colors.purple.withValues(alpha: 0.3),
                     );
                   },
                   dropTargetCellBuilder: (context, details) {
                     cellBuilderCalled = true;
                     return Container(
                       key: const Key('cell-builder'),
-                      color: Colors.green.withOpacity(0.3),
+                      color: Colors.green.withValues(alpha: 0.3),
                     );
                   },
                 ),
@@ -5170,7 +5157,7 @@ void main() {
                   capturedDetails.add(details);
                   return Container(
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.3),
+                      color: Colors.blue.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.horizontal(
                         left:
                             details.isFirst
@@ -5250,7 +5237,7 @@ void main() {
                 dropTargetOverlayBuilder: (context, details) {
                   capturedOverlayDetails = details;
                   return Container(
-                    color: Colors.orange.withOpacity(0.3),
+                    color: Colors.orange.withValues(alpha: 0.3),
                   );
                 },
               ),
@@ -5336,7 +5323,7 @@ void main() {
                 dropTargetCellBuilder: (context, details) {
                   lastCellBuilderCallCount++;
                   return Container(
-                    color: Colors.blue.withOpacity(0.3),
+                    color: Colors.blue.withValues(alpha: 0.3),
                   );
                 },
               ),
