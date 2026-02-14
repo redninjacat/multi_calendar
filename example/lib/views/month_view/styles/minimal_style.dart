@@ -65,6 +65,8 @@ class MinimalMonthStyle extends StatelessWidget {
                 controller: eventController,
                 showNavigator: true,
                 enableSwipeNavigation: true,
+                enableDragToMove: false,
+                enableDragToResize: false,
                 locale: locale,
                 weekLayoutBuilder: (context, layoutContext) {
                   // Minimal style: centered date labels + dot indicators

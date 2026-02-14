@@ -125,7 +125,7 @@ void main() {
           home: Scaffold(
             body: MCalMonthView(
               controller: controller,
-              enableDragAndDrop: true,
+              enableDragToMove: true,
               showDropTargetTiles: false,
               showDropTargetOverlay: false,
               dropTargetTileBuilder: (context, tileContext) {
@@ -3460,9 +3460,9 @@ void main() {
     });
 
     // ============================================================
-    // Test 1: enableDragAndDrop:false doesn't wrap tiles with draggable
+    // Test 1: enableDragToMove:false doesn't wrap tiles with draggable
     // ============================================================
-    testWidgets('enableDragAndDrop:false does not wrap tiles with draggable', (
+    testWidgets('enableDragToMove:false does not wrap tiles with draggable', (
       tester,
     ) async {
       final testController = MockMCalEventController(
@@ -3484,7 +3484,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: false, // Disabled
+                enableDragToMove: false, // Disabled
               ),
             ),
           ),
@@ -3497,9 +3497,9 @@ void main() {
     });
 
     // ============================================================
-    // Test 2: enableDragAndDrop:true wraps tiles with draggable
+    // Test 2: enableDragToMove:true wraps tiles with draggable
     // ============================================================
-    testWidgets('enableDragAndDrop:true wraps tiles with draggable', (
+    testWidgets('enableDragToMove:true wraps tiles with draggable', (
       tester,
     ) async {
       final testController = MockMCalEventController(
@@ -3521,7 +3521,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true, // Enabled
+                enableDragToMove: true, // Enabled
               ),
             ),
           ),
@@ -3556,7 +3556,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
               ),
             ),
           ),
@@ -3610,7 +3610,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onDragWillAccept: (context, details) {
                   capturedDetails = details;
                   return true;
@@ -3673,7 +3673,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onDragWillAccept: (context, details) {
                   // Reject all drops on weekends
                   final weekday = details.proposedStartDate.weekday;
@@ -3719,7 +3719,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onEventDropped: (context, details) {
                   capturedDetails = details;
                   return true; // Accept the drop
@@ -3793,7 +3793,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onEventDropped: (context, details) {
                   dropCallCount++;
                   return false; // Reject the drop - should revert
@@ -3874,7 +3874,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 draggedTileBuilder: (context, details) {
                   builderCalled = true;
                   capturedDetails = details;
@@ -3944,7 +3944,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 dragSourceTileBuilder: (context, details) {
                   builderCalled = true;
                   capturedDetails = details;
@@ -4016,7 +4016,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 dropTargetCellBuilder: (context, details) {
                   capturedDetails.add(details);
                   return Container(
@@ -4093,7 +4093,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
               ),
             ),
           ),
@@ -4158,7 +4158,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 minDate: DateTime(2025, 1, 1),
                 dragEdgeNavigationDelay: const Duration(milliseconds: 400),
               ),
@@ -4222,7 +4222,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 maxDate: DateTime(2025, 3, 31),
                 dragEdgeNavigationDelay: const Duration(milliseconds: 400),
               ),
@@ -4289,7 +4289,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
               ),
             ),
           ),
@@ -4346,7 +4346,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onEventDropped: (context, details) {
                   dropCalled = true;
                   return true;
@@ -4416,7 +4416,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onEventDropped: (context, details) {
                   dropCalled = true;
                   return true;
@@ -4453,7 +4453,7 @@ void main() {
     // ============================================================
     // Additional tests for edge cases
     // ============================================================
-    testWidgets('DragTarget is present when enableDragAndDrop is true', (
+    testWidgets('DragTarget is present when enableDragToMove is true', (
       tester,
     ) async {
       final testController = MockMCalEventController(
@@ -4467,7 +4467,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
               ),
             ),
           ),
@@ -4479,7 +4479,7 @@ void main() {
       expect(find.byType(DragTarget<MCalDragData>), findsWidgets);
     });
 
-    testWidgets('DragTarget is not present when enableDragAndDrop is false', (
+    testWidgets('DragTarget is not present when enableDragToMove is false', (
       tester,
     ) async {
       final testController = MockMCalEventController(
@@ -4493,7 +4493,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: false,
+                enableDragToMove: false,
               ),
             ),
           ),
@@ -4526,7 +4526,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
               ),
             ),
           ),
@@ -4577,7 +4577,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 // No callbacks provided - should still work
               ),
             ),
@@ -4613,7 +4613,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: testController,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onEventDropped: (context, details) {
                   dropCount++;
                   return true;
@@ -4693,7 +4693,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 dropTargetCellBuilder: (context, details) {
                   capturedDetails.add(details);
                   return Container(
@@ -4755,7 +4755,7 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: controller,
-                  enableDragAndDrop: true,
+                  enableDragToMove: true,
                   // Both builders provided - overlay should take precedence
                   dropTargetOverlayBuilder: (context, details) {
                     overlayBuilderCalled = true;
@@ -4824,7 +4824,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onEventDropped: (context, details) {
                   droppedDetails = details;
                   return true;
@@ -4887,7 +4887,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
               ),
             ),
           ),
@@ -4943,7 +4943,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onEventDropped: (context, details) {
                   droppedDetails = details;
                   return true;
@@ -5017,7 +5017,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 dropTargetOverlayBuilder: (context, details) {
                   capturedOverlay = details;
                   return const SizedBox.shrink();
@@ -5082,7 +5082,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 // Reject all drops
                 onDragWillAccept: (context, details) {
                   dropWasAccepted = false;
@@ -5152,7 +5152,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 dropTargetCellBuilder: (context, details) {
                   capturedDetails.add(details);
                   return Container(
@@ -5233,7 +5233,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 dropTargetOverlayBuilder: (context, details) {
                   capturedOverlayDetails = details;
                   return Container(
@@ -5288,7 +5288,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
               ),
             ),
           ),
@@ -5319,7 +5319,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 dropTargetCellBuilder: (context, details) {
                   lastCellBuilderCallCount++;
                   return Container(

@@ -232,7 +232,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onHoverEvent: (ctx) {
                   hoverContext = ctx;
                 },
@@ -614,7 +614,7 @@ void main() {
         onHoverEvent: (ctx) {
           hoverContext = ctx;
         },
-        enableDragAndDrop: true,
+        enableDragToMove: true,
         dayWidth: 100,
         tileHeight: 20,
       );

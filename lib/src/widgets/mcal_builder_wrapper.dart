@@ -30,7 +30,7 @@ class MCalBuilderWrapper {
     void Function(BuildContext, MCalEventTapDetails)? onEventLongPress,
     ValueChanged<MCalEventTileContext?>? onHoverEvent,
     MCalEventController? controller,
-    bool enableDragAndDrop = false,
+    bool enableDragToMove = false,
     MCalDragHandler? dragHandler,
     // Drag-related parameters
     Widget Function(BuildContext, MCalDraggedTileDetails)? draggedTileBuilder,
@@ -70,7 +70,7 @@ class MCalBuilderWrapper {
       }
 
       // If drag-and-drop is enabled, wrap with MCalDraggableEventTile
-      if (enableDragAndDrop) {
+      if (enableDragToMove) {
         // When drag is enabled, wrap with draggable widget
         // The MCalDraggableEventTile handles both dragging and passes through taps
         Widget tileWithTapHandlers = GestureDetector(

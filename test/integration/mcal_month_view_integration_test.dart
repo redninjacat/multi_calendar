@@ -1069,7 +1069,7 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('enableDragAndDrop enables long-press drag on events', (tester) async {
+    testWidgets('enableDragToMove enables long-press drag on events', (tester) async {
       final event = MCalCalendarEvent(
         id: 'drag-event',
         title: 'Draggable Event',
@@ -1086,7 +1086,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 draggedTileBuilder: (context, details) {
                   return Container(
                     color: Colors.blue.withValues(alpha: 0.8),
@@ -1104,7 +1104,7 @@ void main() {
       // The month view should be rendered
       expect(find.byType(MCalMonthView), findsOneWidget);
 
-      // Verify enableDragAndDrop is set (the actual drag test would require
+      // Verify enableDragToMove is set (the actual drag test would require
       // finding and long-pressing the event tile which is complex)
     });
 
@@ -1127,7 +1127,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onDragWillAccept: (context, details) {
                   validationRequests.add(details);
                   // Reject weekends
@@ -1165,7 +1165,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onEventDropped: (context, details) {
                   return shouldAcceptDrop;
                 },
@@ -1202,7 +1202,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 dragEdgeNavigationDelay: const Duration(milliseconds: 300),
               ),
             ),
@@ -1623,7 +1623,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 eventTileBuilder: (context, ctx, defaultTile) {
                   eventTileContext = ctx;
                   return Container(
@@ -1671,7 +1671,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onDragWillAccept: (context, details) {
                   validationDetails.add(details);
                   // Verify proposed dates maintain duration
@@ -1717,7 +1717,7 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
                 onDragWillAccept: (context, details) {
                   // Reject if the proposed dates would span across a month boundary
                   final startMonth = details.proposedStartDate.month;
@@ -1773,7 +1773,7 @@ void main() {
                 child: MCalMonthView(
                   controller: controller,
                   enableSwipeNavigation: true,
-                  enableDragAndDrop: true,
+                  enableDragToMove: true,
                   eventTileBuilder: (context, ctx, defaultTile) {
                     eventTileBuilderCalls++;
                     return Container(

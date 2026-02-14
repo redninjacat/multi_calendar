@@ -41,8 +41,8 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   // ============================================================
   bool _showWeekNumbers = false;
   bool _enableAnimations = true;
-  bool _enableDragAndDrop = true;
-  bool _enableResize = true;
+  bool _enableDragToMove = true;
+  bool _enableDragToResize = true;
   bool _useCustomDropTargetTile = false;
   bool _showDropTargetTiles = true;
   bool _showDropTargetOverlay = true;
@@ -1277,10 +1277,10 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 enableAnimations: _enableAnimations,
                 maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
                 enableKeyboardNavigation: false,
-                enableDragAndDrop: _enableDragAndDrop,
+                enableDragToMove: _enableDragToMove,
                 // On mobile, let the library auto-detect (disabled by default
                 // on phones). On desktop/tablet the toggle controls it.
-                enableEventResize: null,
+                enableDragToResize: null,
                 showDropTargetTiles: _showDropTargetTiles,
                 showDropTargetOverlay: _showDropTargetOverlay,
                 dropTargetTilesAboveOverlay: _dropTargetTilesAboveOverlay,
@@ -1312,26 +1312,26 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                         colorScheme,
                       )
                     : null,
-                onDragWillAccept: _enableDragAndDrop && _enableBlackoutDays
+                onDragWillAccept: _enableDragToMove && _enableBlackoutDays
                     ? (context, details) => !_proposedRangeOverlapsBlackout(
                         details.proposedStartDate,
                         details.proposedEndDate,
                       )
                     : null,
                 // Drag-and-drop callback
-                onEventDropped: _enableDragAndDrop
+                onEventDropped: _enableDragToMove
                     ? (context, details) {
                         return true;
                       }
                     : null,
                 // Resize callbacks
-                onResizeWillAccept: _enableResize
+                onResizeWillAccept: _enableDragToResize
                     ? (context, details) {
                         // Accept all resizes in the demo
                         return true;
                       }
                     : null,
-                onEventResized: _enableResize
+                onEventResized: _enableDragToResize
                     ? (context, details) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -1349,7 +1349,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                       }
                     : null,
                 dropTargetTileBuilder:
-                    _enableDragAndDrop && _useCustomDropTargetTile
+                    _enableDragToMove && _useCustomDropTargetTile
                     ? (context, tileContext) =>
                           _buildCustomDropTargetTile(context, tileContext)
                     : null,
@@ -1395,8 +1395,8 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
               ),
               _buildCompactToggle(
                 'Drag',
-                _enableDragAndDrop,
-                (v) => setState(() => _enableDragAndDrop = v),
+                _enableDragToMove,
+                (v) => setState(() => _enableDragToMove = v),
                 colorScheme,
               ),
               _buildCompactToggle(
@@ -1571,12 +1571,12 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
               }, colorScheme),
               _buildToggle(
                 isDesktop ? 'Drag' : 'Drag & Drop',
-                _enableDragAndDrop,
-                (v) => setState(() => _enableDragAndDrop = v),
+                _enableDragToMove,
+                (v) => setState(() => _enableDragToMove = v),
                 colorScheme,
               ),
-              _buildToggle('Resize', _enableResize, (v) {
-                setState(() => _enableResize = v);
+              _buildToggle('Resize', _enableDragToResize, (v) {
+                setState(() => _enableDragToResize = v);
               }, colorScheme),
               _buildToggle(
                 isDesktop ? 'Custom drop tile' : 'Custom drop target tile',
@@ -1768,7 +1768,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
             ],
           ),
           // Row 3: Drag edge delay (only when drag enabled)
-          if (_enableDragAndDrop)
+          if (_enableDragToMove)
             Padding(
               padding: EdgeInsets.only(top: rowGap),
               child: _buildCompactSlider(
@@ -1807,10 +1807,10 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
           _shortcutChip('Home', 'First day', colorScheme),
           _shortcutChip('End', 'Last day', colorScheme),
           _shortcutChip('PgUp/PgDn', 'Prev/Next month', colorScheme),
-          if (_enableDragAndDrop) ...[
+          if (_enableDragToMove) ...[
             _shortcutChip('Enter/Space', 'Select event', colorScheme),
             _shortcutChip('Arrows', 'Move event', colorScheme),
-            if (_enableResize) ...[
+            if (_enableDragToResize) ...[
               _shortcutChip('R', 'Resize mode', colorScheme),
               _shortcutChip('S/E', 'Start/end edge', colorScheme),
               _shortcutChip('M', 'Move mode', colorScheme),
@@ -1934,8 +1934,8 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 enableAnimations: _enableAnimations,
                 maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
                 enableKeyboardNavigation: isDesktop,
-                enableDragAndDrop: _enableDragAndDrop,
-                enableEventResize: _enableResize,
+                enableDragToMove: _enableDragToMove,
+                enableDragToResize: _enableDragToResize,
                 showDropTargetTiles: _showDropTargetTiles,
                 showDropTargetOverlay: _showDropTargetOverlay,
                 dropTargetTilesAboveOverlay: _dropTargetTilesAboveOverlay,
@@ -1970,26 +1970,26 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                         colorScheme,
                       )
                     : null,
-                onDragWillAccept: _enableDragAndDrop && _enableBlackoutDays
+                onDragWillAccept: _enableDragToMove && _enableBlackoutDays
                     ? (context, details) => !_proposedRangeOverlapsBlackout(
                         details.proposedStartDate,
                         details.proposedEndDate,
                       )
                     : null,
                 // Drag-and-drop callback
-                onEventDropped: _enableDragAndDrop
+                onEventDropped: _enableDragToMove
                     ? (context, details) {
                         return true;
                       }
                     : null,
                 // Resize callbacks
-                onResizeWillAccept: _enableResize
+                onResizeWillAccept: _enableDragToResize
                     ? (context, details) {
                         // Accept all resizes in the demo
                         return true;
                       }
                     : null,
-                onEventResized: _enableResize
+                onEventResized: _enableDragToResize
                     ? (context, details) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -2007,7 +2007,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                       }
                     : null,
                 // Custom drop target cell builder - highlights cells during drag
-                dropTargetCellBuilder: _enableDragAndDrop
+                dropTargetCellBuilder: _enableDragToMove
                     ? (context, details) {
                         return Container(
                           decoration: BoxDecoration(
@@ -2027,7 +2027,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                       }
                     : null,
                 dropTargetTileBuilder:
-                    _enableDragAndDrop && _useCustomDropTargetTile
+                    _enableDragToMove && _useCustomDropTargetTile
                     ? (context, tileContext) =>
                           _buildCustomDropTargetTile(context, tileContext)
                     : null,
@@ -2115,7 +2115,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 enableAnimations: _enableAnimations,
                 maxVisibleEventsPerDay: 2,
                 enableKeyboardNavigation: false,
-                enableDragAndDrop: false,
+                enableDragToMove: false,
                 onHoverCell: isDesktop ? _onHoverCell : null,
                 onHoverEvent: isDesktop ? _onHoverEvent : null,
               ),

@@ -489,7 +489,7 @@ class MCalMonthView extends StatefulWidget {
   /// long-press gesture. Day cells become drop targets that accept events.
   ///
   /// Defaults to false.
-  final bool enableDragAndDrop;
+  final bool enableDragToMove;
 
   /// Builder callback for customizing the dragged tile feedback widget.
   ///
@@ -499,7 +499,7 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// If not provided, the default feedback is the tile with elevation.
   ///
-  /// Only used when [enableDragAndDrop] is true.
+  /// Only used when [enableDragToMove] is true.
   final Widget Function(BuildContext, MCalDraggedTileDetails)?
   draggedTileBuilder;
 
@@ -511,17 +511,17 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// If not provided, the default placeholder is the tile with 50% opacity.
   ///
-  /// Only used when [enableDragAndDrop] is true.
+  /// Only used when [enableDragToMove] is true.
   final Widget Function(BuildContext, MCalDragSourceDetails)?
   dragSourceTileBuilder;
 
   /// Builder callback for customizing the drag target preview widget.
   ///
-  /// When true (and [enableDragAndDrop] is true), drop target preview tiles
+  /// When true (and [enableDragToMove] is true), drop target preview tiles
   /// (Layer 3) are shown during drag. Defaults to true.
   final bool showDropTargetTiles;
 
-  /// When true (and [enableDragAndDrop] is true), the drop target cell overlay
+  /// When true (and [enableDragToMove] is true), the drop target cell overlay
   /// (Layer 4) is shown during drag. Defaults to true.
   final bool showDropTargetOverlay;
 
@@ -533,7 +533,7 @@ class MCalMonthView extends StatefulWidget {
   /// Setting this to true reverses their order.
   ///
   /// Only relevant when both [showDropTargetTiles] and [showDropTargetOverlay]
-  /// are true and [enableDragAndDrop] is true.
+  /// are true and [enableDragToMove] is true.
   final bool dropTargetTilesAboveOverlay;
 
   /// Optional builder for drop target preview tiles (Layer 3).
@@ -543,7 +543,7 @@ class MCalMonthView extends StatefulWidget {
   /// with [isDropTargetPreview] true and [dropValid], [proposedStartDate],
   /// [proposedEndDate] set. If null, a default tile (same shape, no text) is used.
   ///
-  /// Only used when [enableDragAndDrop] and [showDropTargetTiles] are true.
+  /// Only used when [enableDragToMove] and [showDropTargetTiles] are true.
   final MCalEventTileBuilder? dropTargetTileBuilder;
 
   /// Builder callback for customizing drop target cell appearance.
@@ -558,7 +558,7 @@ class MCalMonthView extends StatefulWidget {
   /// If neither builder is provided, the default [CustomPainter] implementation
   /// draws colored rounded rectangles for each highlighted cell.
   ///
-  /// Only used when [enableDragAndDrop] is true.
+  /// Only used when [enableDragToMove] is true.
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
   dropTargetCellBuilder;
 
@@ -573,7 +573,7 @@ class MCalMonthView extends StatefulWidget {
   /// over the highlight rendering, such as drawing connected highlights or
   /// custom animations.
   ///
-  /// Only used when [enableDragAndDrop] is true.
+  /// Only used when [enableDragToMove] is true.
   final Widget Function(BuildContext, MCalDropOverlayDetails)?
   dropTargetOverlayBuilder;
 
@@ -589,7 +589,7 @@ class MCalMonthView extends StatefulWidget {
   /// disables tap/long-press but does not block drops. Use [onDragWillAccept] to
   /// reject drops on cells you consider disabled (e.g., past dates, weekends).
   ///
-  /// Only used when [enableDragAndDrop] is true.
+  /// Only used when [enableDragToMove] is true.
   final bool Function(BuildContext, MCalDragWillAcceptDetails)?
   onDragWillAccept;
 
@@ -601,7 +601,7 @@ class MCalMonthView extends StatefulWidget {
   /// Return true to confirm the drop, or false to revert the event to
   /// its original position (useful if a backend update fails).
   ///
-  /// Only used when [enableDragAndDrop] is true.
+  /// Only used when [enableDragToMove] is true.
   final bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped;
 
   // ============ Event Resize ============
@@ -615,9 +615,9 @@ class MCalMonthView extends StatefulWidget {
   /// When `true`, resize is enabled regardless of platform.
   /// When `false`, resize is disabled regardless of platform.
   ///
-  /// Event resize requires [enableDragAndDrop] to be `true` as well,
+  /// Event resize requires [enableDragToMove] to be `true` as well,
   /// since it uses the same drag infrastructure.
-  final bool? enableEventResize;
+  final bool? enableDragToResize;
 
   /// Called during a resize operation to validate whether the proposed
   /// new dates should be accepted.
@@ -639,6 +639,40 @@ class MCalMonthView extends StatefulWidget {
   final bool Function(BuildContext context, MCalEventResizedDetails details)?
   onEventResized;
 
+  /// Optional builder for the visual part of resize handles.
+  ///
+  /// When provided, replaces the default 2x16px semi-transparent white bar
+  /// on both event tile handles and drop-target preview tile handles.
+  /// The framework still handles hit testing, cursor feedback, and
+  /// positioning — this builder only controls the visual indicator.
+  ///
+  /// The [MCalResizeHandleContext] tells the builder which edge
+  /// ([MCalResizeEdge.start] or [MCalResizeEdge.end]) the handle
+  /// represents and whether it is on a drop-target preview tile.
+  ///
+  /// Only used when [enableDragToResize] resolves to `true`.
+  final Widget Function(BuildContext context, MCalResizeHandleContext)?
+  resizeHandleBuilder;
+
+  /// Optional callback that returns a horizontal inset (in logical pixels)
+  /// for a resize handle.
+  ///
+  /// Positive values shift the handle (both visual and interactive hit area)
+  /// inward from the tile edge. This is useful for custom tile builders
+  /// where the visual content is narrower than the tile slot — for example,
+  /// a centered half-width pill where the handles should align with the pill
+  /// edges rather than the outer tile boundaries.
+  ///
+  /// The callback receives the full [MCalEventTileContext] so it can
+  /// differentiate (e.g.) all-day events from timed events, and the
+  /// [MCalResizeEdge] indicating which edge is being positioned.
+  ///
+  /// Returns `0.0` equivalent when `null` (no inset).
+  ///
+  /// Only used when [enableDragToResize] resolves to `true`.
+  final double Function(MCalEventTileContext, MCalResizeEdge)?
+  resizeHandleInset;
+
   /// Whether edge navigation is enabled during drag operations.
   ///
   /// When true, dragging an event tile near the left or right edge of the
@@ -650,7 +684,7 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Defaults to true.
   ///
-  /// Only used when [enableDragAndDrop] is true.
+  /// Only used when [enableDragToMove] is true.
   final bool dragEdgeNavigationEnabled;
 
   /// The delay before edge navigation triggers during drag operations.
@@ -664,7 +698,7 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Defaults to 1200 milliseconds.
   ///
-  /// Only used when [enableDragAndDrop] and [dragEdgeNavigationEnabled] are true.
+  /// Only used when [enableDragToMove] and [dragEdgeNavigationEnabled] are true.
   final Duration dragEdgeNavigationDelay;
 
   /// The long-press delay before a drag operation starts.
@@ -675,7 +709,7 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Defaults to 200 milliseconds.
   ///
-  /// Only used when [enableDragAndDrop] is true.
+  /// Only used when [enableDragToMove] is true.
   final Duration dragLongPressDelay;
 
   /// Creates a new [MCalMonthView] widget.
@@ -738,7 +772,7 @@ class MCalMonthView extends StatefulWidget {
     this.weekLayoutBuilder,
     this.overflowIndicatorBuilder,
     // Drag-and-drop
-    this.enableDragAndDrop = false,
+    this.enableDragToMove = false,
     this.showDropTargetTiles = true,
     this.showDropTargetOverlay = true,
     this.dropTargetTilesAboveOverlay = false,
@@ -750,9 +784,11 @@ class MCalMonthView extends StatefulWidget {
     this.onDragWillAccept,
     this.onEventDropped,
     // Event resize
-    this.enableEventResize,
+    this.enableDragToResize,
     this.onResizeWillAccept,
     this.onEventResized,
+    this.resizeHandleBuilder,
+    this.resizeHandleInset,
     this.dragEdgeNavigationEnabled = true,
     this.dragEdgeNavigationDelay = const Duration(milliseconds: 1200),
     this.dragLongPressDelay = const Duration(milliseconds: 200),
@@ -1190,22 +1226,22 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   }
 
   /// Resolves whether event resizing should be enabled based on the
-  /// [MCalMonthView.enableEventResize] setting and platform detection.
+  /// [MCalMonthView.enableDragToResize] setting and platform detection.
   ///
-  /// - Resize requires [MCalMonthView.enableDragAndDrop] to be `true`,
+  /// - Resize requires [MCalMonthView.enableDragToMove] to be `true`,
   ///   since resize uses the same drag infrastructure.
-  /// - If [MCalMonthView.enableEventResize] is explicitly `true` or `false`,
+  /// - If [MCalMonthView.enableDragToResize] is explicitly `true` or `false`,
   ///   that value is returned directly (developer override), subject to the
   ///   drag-and-drop requirement.
   /// - If `null` (the default), auto-detection enables resize on web,
   ///   desktop (macOS, Windows, Linux), and tablets (shortest side >= 600dp),
   ///   but disables it on phones.
-  bool _resolveEnableResize(BuildContext context) {
+  bool _resolveDragToResize(BuildContext context) {
     // Resize requires drag-and-drop infrastructure
-    if (!widget.enableDragAndDrop) return false;
+    if (!widget.enableDragToMove) return false;
 
     // Explicit override takes precedence
-    if (widget.enableEventResize != null) return widget.enableEventResize!;
+    if (widget.enableDragToResize != null) return widget.enableDragToResize!;
 
     // Auto-detect: enabled on web, desktop, and tablets; disabled on phones
     if (kIsWeb) return true;
@@ -1475,7 +1511,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           weekLayoutBuilder: widget.weekLayoutBuilder,
           overflowIndicatorBuilder: widget.overflowIndicatorBuilder,
           // Drag-and-drop
-          enableDragAndDrop: widget.enableDragAndDrop,
+          enableDragToMove: widget.enableDragToMove,
           showDropTargetTiles: widget.showDropTargetTiles,
           showDropTargetOverlay: widget.showDropTargetOverlay,
           dropTargetTilesAboveOverlay: widget.dropTargetTilesAboveOverlay,
@@ -1500,10 +1536,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           onDragStartedCallback: _handleDragStarted,
           onDragEndedCallback: _handleDragEnded,
           onDragCanceledCallback: _handleDragCancelled,
-          dragHandler: widget.enableDragAndDrop ? _ensureDragHandler : null,
-          enableResize: _resolveEnableResize(context),
+          dragHandler: widget.enableDragToMove ? _ensureDragHandler : null,
+          enableDragToResize: _resolveDragToResize(context),
           onResizeWillAccept: widget.onResizeWillAccept,
           onEventResized: widget.onEventResized,
+          resizeHandleBuilder: widget.resizeHandleBuilder,
+          resizeHandleInset: widget.resizeHandleInset,
           onResizePointerDownCallback: _handleResizePointerDownFromChild,
           // Keyboard selection state
           keyboardHighlightedEventId: _keyboardHighlightedEventId,
@@ -1610,7 +1648,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // Enable key events if keyboard navigation OR drag-and-drop is enabled
     // (drag-and-drop needs Escape key for cancellation)
     final enableKeyEvents =
-        widget.enableKeyboardNavigation || widget.enableDragAndDrop;
+        widget.enableKeyboardNavigation || widget.enableDragToMove;
 
     return MCalTheme(
       data: theme,
@@ -1639,7 +1677,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
                 },
                 onPointerMove: (event) {
                   // Track pointer position during drag for edge detection
-                  if (widget.enableDragAndDrop && _isDragActive) {
+                  if (widget.enableDragToMove && _isDragActive) {
                     _handleDragPositionUpdate(event.position, calendarSize);
                   }
                   // Track resize pointer events at parent level so the
@@ -1718,7 +1756,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         );
         return KeyEventResult.handled;
       }
-      if (widget.enableDragAndDrop && _isDragActive) {
+      if (widget.enableDragToMove && _isDragActive) {
         // Use the centralized handler to ensure all cleanup happens
         _handleDragCancelled();
         return KeyEventResult.handled;
@@ -1843,7 +1881,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     else if (key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.space ||
         key == LogicalKeyboardKey.numpadEnter) {
-      if (widget.enableDragAndDrop) {
+      if (widget.enableDragToMove) {
         final dayEvents = _getEventsForDate(focusedDate);
         if (dayEvents.isNotEmpty) {
           _enterKeyboardEventSelectionMode(focusedDate, dayEvents);
@@ -2200,7 +2238,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // R key: enter resize mode (if resize is enabled)
-    if (key == LogicalKeyboardKey.keyR && _resolveEnableResize(context)) {
+    if (key == LogicalKeyboardKey.keyR && _resolveDragToResize(context)) {
       final dragHandler = _ensureDragHandler;
 
       // If currently in drag state (from arrow move), cancel it first
@@ -2848,7 +2886,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   ///
   /// Updates drag state tracking and prepares the drag handler.
   void _handleDragStarted(MCalCalendarEvent event, DateTime sourceDate) {
-    if (!widget.enableDragAndDrop) return;
+    if (!widget.enableDragToMove) return;
 
     _isDragActive = true;
     _ensureDragHandler.startDrag(event, sourceDate);
@@ -2879,7 +2917,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   ///
   /// Checks for edge proximity based on the current drag position.
   void _handleDragPositionUpdate(Offset globalPosition, Size calendarSize) {
-    if (!widget.enableDragAndDrop || !_isDragActive) return;
+    if (!widget.enableDragToMove || !_isDragActive) return;
 
     _checkEdgeProximity(globalPosition, calendarSize);
   }
@@ -3702,7 +3740,7 @@ class _MonthPageWidget extends StatefulWidget {
   overflowIndicatorBuilder;
 
   // Drag-and-drop parameters
-  final bool enableDragAndDrop;
+  final bool enableDragToMove;
   final bool showDropTargetTiles;
   final bool showDropTargetOverlay;
   final bool dropTargetTilesAboveOverlay;
@@ -3734,7 +3772,7 @@ class _MonthPageWidget extends StatefulWidget {
   final MCalDragHandler? dragHandler;
 
   /// Whether event resize handles should be shown on multi-day event tiles.
-  final bool enableResize;
+  final bool enableDragToResize;
 
   /// Called during a resize operation to validate the proposed dates.
   final bool Function(BuildContext, MCalResizeWillAcceptDetails)?
@@ -3742,6 +3780,14 @@ class _MonthPageWidget extends StatefulWidget {
 
   /// Called when an event resize operation completes.
   final bool Function(BuildContext, MCalEventResizedDetails)? onEventResized;
+
+  /// Optional custom builder for the visual part of resize handles.
+  final Widget Function(BuildContext, MCalResizeHandleContext)?
+  resizeHandleBuilder;
+
+  /// Optional callback returning horizontal inset for a resize handle.
+  final double Function(MCalEventTileContext, MCalResizeEdge)?
+  resizeHandleInset;
 
   /// Called when a resize handle pointer-down occurs.
   /// Delegates to the parent [_MCalMonthViewState] for tracking.
@@ -3786,7 +3832,7 @@ class _MonthPageWidget extends StatefulWidget {
     this.weekLayoutBuilder,
     this.overflowIndicatorBuilder,
     // Drag-and-drop
-    this.enableDragAndDrop = false,
+    this.enableDragToMove = false,
     this.showDropTargetTiles = true,
     this.showDropTargetOverlay = true,
     this.dropTargetTilesAboveOverlay = false,
@@ -3808,9 +3854,11 @@ class _MonthPageWidget extends StatefulWidget {
     this.onDragCanceledCallback,
     this.dragHandler,
     // Resize
-    this.enableResize = false,
+    this.enableDragToResize = false,
     this.onResizeWillAccept,
     this.onEventResized,
+    this.resizeHandleBuilder,
+    this.resizeHandleInset,
     this.onResizePointerDownCallback,
     // Keyboard selection state
     this.keyboardHighlightedEventId,
@@ -4569,26 +4617,40 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
       if (showStartHandle || showEndHandle) {
         final isLeading = (resizeEdge == MCalResizeEdge.start) != isRtl;
+
+        // Compute inset for the drop-target handle.
+        final handleInset = widget.resizeHandleInset != null
+            ? widget.resizeHandleInset!(tileContext, resizeEdge!)
+            : 0.0;
+
+        // Build the visual child — custom builder or default white bar.
+        final handleContext = MCalResizeHandleContext(
+          edge: resizeEdge!,
+          event: tileContext.event,
+          isDropTargetPreview: true,
+        );
+        final visual = widget.resizeHandleBuilder != null
+            ? widget.resizeHandleBuilder!(context, handleContext)
+            : Container(
+                width: 2,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              );
+
         return Stack(
           clipBehavior: Clip.none,
           children: [
             Positioned.fill(child: baseTile),
             Positioned(
-              left: isLeading ? 0 : null,
-              right: isLeading ? null : 0,
+              left: isLeading ? handleInset : null,
+              right: isLeading ? null : handleInset,
               top: 0,
               bottom: 0,
               width: _ResizeHandle.handleWidth,
-              child: Center(
-                child: Container(
-                  width: 2,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                ),
-              ),
+              child: Center(child: visual),
             ),
           ],
         );
@@ -4866,7 +4928,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             weekRowIndex: weekRowIndex,
             multiDayLayouts: weekLayouts,
             // Drag-and-drop - pass builders but NOT drop target handling
-            enableDragAndDrop: widget.enableDragAndDrop,
+            enableDragToMove: widget.enableDragToMove,
             draggedTileBuilder: widget.draggedTileBuilder,
             dragSourceTileBuilder: widget.dragSourceTileBuilder,
             dropTargetTileBuilder: widget.dropTargetTileBuilder,
@@ -4879,7 +4941,9 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             onDragCanceledCallback: widget.onDragCanceledCallback,
             dragHandler: widget.dragHandler,
             dragLongPressDelay: widget.dragLongPressDelay,
-            enableResize: widget.enableResize,
+            enableDragToResize: widget.enableDragToResize,
+            resizeHandleBuilder: widget.resizeHandleBuilder,
+            resizeHandleInset: widget.resizeHandleInset,
             onResizeHandlePointerDown: _handleResizePointerDown,
             // Keyboard selection state
             keyboardHighlightedEventId: widget.keyboardHighlightedEventId,
@@ -4890,7 +4954,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     );
 
     // Wrap with unified DragTarget if drag-and-drop is enabled
-    if (widget.enableDragAndDrop) {
+    if (widget.enableDragToMove) {
       return DragTarget<MCalDragData>(
         onMove: _handleDragMove,
         onLeave: (_) => _handleDragLeave(),
@@ -5180,7 +5244,7 @@ class _WeekRowWidget extends StatefulWidget {
   final List<MCalMultiDayEventLayout>? multiDayLayouts;
 
   // Drag-and-drop parameters
-  final bool enableDragAndDrop;
+  final bool enableDragToMove;
   final Widget Function(BuildContext, MCalDraggedTileDetails)?
   draggedTileBuilder;
   final Widget Function(BuildContext, MCalDragSourceDetails)?
@@ -5206,7 +5270,15 @@ class _WeekRowWidget extends StatefulWidget {
   final Duration dragLongPressDelay;
 
   /// Whether event resize handles should be shown on multi-day event tiles.
-  final bool enableResize;
+  final bool enableDragToResize;
+
+  /// Optional custom builder for the visual part of resize handles.
+  final Widget Function(BuildContext, MCalResizeHandleContext)?
+  resizeHandleBuilder;
+
+  /// Optional callback returning horizontal inset for a resize handle.
+  final double Function(MCalEventTileContext, MCalResizeEdge)?
+  resizeHandleInset;
 
   /// Called when a pointer goes down on a resize handle.
   /// The parent [_MonthPageWidgetState] uses this to register the resize
@@ -5257,7 +5329,7 @@ class _WeekRowWidget extends StatefulWidget {
     this.weekRowIndex = 0,
     this.multiDayLayouts,
     // Drag-and-drop
-    this.enableDragAndDrop = false,
+    this.enableDragToMove = false,
     this.draggedTileBuilder,
     this.dragSourceTileBuilder,
     this.dropTargetTileBuilder,
@@ -5272,7 +5344,9 @@ class _WeekRowWidget extends StatefulWidget {
     this.dragHandler,
     this.dragLongPressDelay = const Duration(milliseconds: 200),
     // Resize
-    this.enableResize = false,
+    this.enableDragToResize = false,
+    this.resizeHandleBuilder,
+    this.resizeHandleInset,
     this.onResizeHandlePointerDown,
     // Keyboard selection state
     this.keyboardHighlightedEventId,
@@ -5412,7 +5486,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           onOverflowLongPress: widget.onOverflowLongPress,
           multiDayReservedHeight:
               0.0, // No reserved height - all events in Layer 2
-          enableDragAndDrop: widget.enableDragAndDrop,
+          enableDragToMove: widget.enableDragToMove,
           draggedTileBuilder: widget.draggedTileBuilder,
           dragSourceTileBuilder: widget.dragSourceTileBuilder,
           dropTargetCellBuilder: widget.dropTargetCellBuilder,
@@ -5423,7 +5497,9 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           onDragEndedCallback: widget.onDragEndedCallback,
           onDragCanceledCallback: widget.onDragCanceledCallback,
           dragLongPressDelay: widget.dragLongPressDelay,
-          enableResize: widget.enableResize,
+          enableDragToResize: widget.enableDragToResize,
+          resizeHandleBuilder: widget.resizeHandleBuilder,
+          resizeHandleInset: widget.resizeHandleInset,
           onResizeHandlePointerDown: widget.onResizeHandlePointerDown,
         ),
       );
@@ -5473,7 +5549,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       onEventLongPress: widget.onEventLongPress,
       onHoverEvent: widget.onHoverEvent,
       controller: widget.controller,
-      enableDragAndDrop: widget.enableDragAndDrop,
+      enableDragToMove: widget.enableDragToMove,
       dragHandler: null,
       // Drag-related parameters
       draggedTileBuilder: widget.draggedTileBuilder,
@@ -5505,7 +5581,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
 
     // Optionally wrap event tile builder with resize handles for all events
     final MCalEventTileBuilder finalEventTileBuilder;
-    if (widget.enableResize) {
+    if (widget.enableDragToResize) {
       finalEventTileBuilder = (BuildContext ctx, MCalEventTileContext tileCtx) {
         final segment = tileCtx.segment;
 
@@ -5541,20 +5617,28 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
 
         final children = <Widget>[Positioned.fill(child: tileWithPadding)];
         if (segment.isFirstSegment) {
+          final startInset = widget.resizeHandleInset
+              ?.call(contextWithHandles, MCalResizeEdge.start) ?? 0.0;
           children.add(
             _ResizeHandle(
               edge: MCalResizeEdge.start,
               event: tileCtx.event,
+              visualBuilder: widget.resizeHandleBuilder,
+              inset: startInset,
               onPointerDown: (event, edge, pointer) =>
                   widget.onResizeHandlePointerDown?.call(event, edge, pointer),
             ),
           );
         }
         if (segment.isLastSegment) {
+          final endInset = widget.resizeHandleInset
+              ?.call(contextWithHandles, MCalResizeEdge.end) ?? 0.0;
           children.add(
             _ResizeHandle(
               edge: MCalResizeEdge.end,
               event: tileCtx.event,
+              visualBuilder: widget.resizeHandleBuilder,
+              inset: endInset,
               onPointerDown: (event, edge, pointer) =>
                   widget.onResizeHandlePointerDown?.call(event, edge, pointer),
             ),
@@ -5927,7 +6011,7 @@ class _DayCellWidget extends StatelessWidget {
   onOverflowLongPress;
 
   // Drag-and-drop parameters
-  final bool enableDragAndDrop;
+  final bool enableDragToMove;
   final Widget Function(BuildContext, MCalDraggedTileDetails)?
   draggedTileBuilder;
   final Widget Function(BuildContext, MCalDragSourceDetails)?
@@ -5957,7 +6041,15 @@ class _DayCellWidget extends StatelessWidget {
   final bool showDateLabel;
 
   /// Whether event resize handles should be shown on multi-day event tiles.
-  final bool enableResize;
+  final bool enableDragToResize;
+
+  /// Optional custom builder for the visual part of resize handles.
+  final Widget Function(BuildContext, MCalResizeHandleContext)?
+  resizeHandleBuilder;
+
+  /// Optional callback returning horizontal inset for a resize handle.
+  final double Function(MCalEventTileContext, MCalResizeEdge)?
+  resizeHandleInset;
 
   /// Called when a pointer goes down on a resize handle.
   final void Function(
@@ -5999,7 +6091,7 @@ class _DayCellWidget extends StatelessWidget {
     this.multiDayReservedHeight = 0.0,
     this.showDateLabel = true,
     // Drag-and-drop
-    this.enableDragAndDrop = false,
+    this.enableDragToMove = false,
     this.draggedTileBuilder,
     this.dragSourceTileBuilder,
     this.dropTargetCellBuilder,
@@ -6012,7 +6104,9 @@ class _DayCellWidget extends StatelessWidget {
     this.onDragCanceledCallback,
     this.dragLongPressDelay = const Duration(milliseconds: 200),
     // Resize
-    this.enableResize = false,
+    this.enableDragToResize = false,
+    this.resizeHandleBuilder,
+    this.resizeHandleInset,
     this.onResizeHandlePointerDown,
   });
 
@@ -6432,7 +6526,7 @@ class _DayCellWidget extends StatelessWidget {
       // Wrap with MCalDraggableEventTile when drag-and-drop is enabled
       // Note: This is legacy Layer 1 rendering. Layer 2 (via weekLayoutBuilder)
       // is the primary path for event rendering in the new architecture.
-      if (enableDragAndDrop) {
+      if (enableDragToMove) {
         // Capture event and date for the callback closures
         final capturedEvent = event;
         final capturedDate = date;
@@ -6471,7 +6565,10 @@ class _DayCellWidget extends StatelessWidget {
       // (Legacy Layer 1 rendering path)
       // Note: In legacy Layer 1, the cell width serves as an approximate
       // dayWidth since each cell represents one day.
-      if (enableResize) {
+      // Note: resizeHandleInset is not supported in Layer 1 because
+      // MCalEventTileContext is not available; only the visual builder
+      // is forwarded.
+      if (enableDragToResize) {
         final capturedEvent = event;
         final resizeChildren = <Widget>[Positioned.fill(child: tile)];
         if (eventSpanInfo.isStart) {
@@ -6479,6 +6576,7 @@ class _DayCellWidget extends StatelessWidget {
             _ResizeHandle(
               edge: MCalResizeEdge.start,
               event: capturedEvent,
+              visualBuilder: resizeHandleBuilder,
               onPointerDown: (event, edge, pointer) =>
                   onResizeHandlePointerDown?.call(event, edge, pointer),
             ),
@@ -6489,6 +6587,7 @@ class _DayCellWidget extends StatelessWidget {
             _ResizeHandle(
               edge: MCalResizeEdge.end,
               event: capturedEvent,
+              visualBuilder: resizeHandleBuilder,
               onPointerDown: (event, edge, pointer) =>
                   onResizeHandlePointerDown?.call(event, edge, pointer),
             ),
@@ -6952,6 +7051,8 @@ class _ResizeHandle extends StatelessWidget {
     required this.edge,
     required this.event,
     required this.onPointerDown,
+    this.visualBuilder,
+    this.inset = 0.0,
   });
 
   /// Which edge this handle is positioned on.
@@ -6966,6 +7067,18 @@ class _ResizeHandle extends StatelessWidget {
   final void Function(MCalCalendarEvent event, MCalResizeEdge edge, int pointer)
   onPointerDown;
 
+  /// Optional custom builder for the visual indicator.
+  ///
+  /// When provided, replaces the default 2x16px semi-transparent white bar.
+  /// The framework still handles hit testing, cursor feedback, and positioning.
+  final Widget Function(BuildContext, MCalResizeHandleContext)? visualBuilder;
+
+  /// Horizontal inset from the tile edge in logical pixels.
+  ///
+  /// Shifts the handle (both visual and interactive hit area) inward.
+  /// Defaults to 0.0 (no inset).
+  final double inset;
+
   /// The width of the interactive handle zone in logical pixels.
   static const double handleWidth = 8.0;
 
@@ -6977,9 +7090,26 @@ class _ResizeHandle extends StatelessWidget {
     // In RTL: start edge is on the right, end edge is on the left
     final isLeading = (edge == MCalResizeEdge.start) != isRtl;
 
+    // Build the visual child — custom builder or default white bar.
+    final handleContext = MCalResizeHandleContext(
+      edge: edge,
+      event: event,
+      isDropTargetPreview: false,
+    );
+    final visual = visualBuilder != null
+        ? visualBuilder!(context, handleContext)
+        : Container(
+            width: 2,
+            height: 16,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(1),
+            ),
+          );
+
     return Positioned(
-      left: isLeading ? 0 : null,
-      right: isLeading ? null : 0,
+      left: isLeading ? inset : null,
+      right: isLeading ? null : inset,
       top: 0,
       bottom: 0,
       width: _ResizeHandle.handleWidth,
@@ -6995,16 +7125,7 @@ class _ResizeHandle extends StatelessWidget {
             onPointerDown: (pointerEvent) {
               onPointerDown(event, edge, pointerEvent.pointer);
             },
-            child: Center(
-              child: Container(
-                width: 2,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(1),
-                ),
-              ),
-            ),
+            child: Center(child: visual),
           ),
         ),
       ),

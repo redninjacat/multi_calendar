@@ -67,47 +67,18 @@ class ColorfulMonthStyle extends StatelessWidget {
                 showNavigator: true,
                 enableSwipeNavigation: true,
                 locale: locale,
-                enableDragAndDrop: true,
+                enableDragToMove: true,
+                enableDragToResize: null,
+                // Shift resize handles inward for timed (non-all-day) events
+                // so they align with the narrower centered pill shape.
+                resizeHandleInset: (tileContext, edge) {
+                  if (tileContext.event.isAllDay) return 0.0;
+                  final spanDays = tileContext.segment?.spanDays ?? 1;
+                  final perDayWidth = (tileContext.width ?? 0.0) / spanDays;
+                  return perDayWidth / 4;
+                },
                 eventTileBuilder: (context, tileContext, defaultTile) {
-                  final segment = tileContext.segment;
-                  final isAllDay = tileContext.isAllDay;
-                  final MCalThemeData theme = MCalTheme.of(context);
-                  final eventTileCornerRadius =
-                      theme.eventTileCornerRadius ?? 4.0;
-
-                  // Determine corner radius based on segment position
-                  final leftRadius = segment?.isFirstSegment == true
-                      ? Radius.circular(eventTileCornerRadius)
-                      : Radius.zero;
-                  final rightRadius = segment?.isLastSegment == true
-                      ? Radius.circular(eventTileCornerRadius)
-                      : Radius.zero;
-
-                  final pill = Container(
-                    // Timed events use half width, all-day events use full width
-                    width: isAllDay ? null : (tileContext.width ?? 0) / 2,
-                    decoration: BoxDecoration(
-                      color:
-                          tileContext.event.color ??
-                          Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.only(
-                        topLeft: leftRadius,
-                        bottomLeft: leftRadius,
-                        topRight: rightRadius,
-                        bottomRight: rightRadius,
-                      ),
-                    ),
-                  );
-
-                  // For timed events, align to the left (start)
-                  if (!isAllDay) {
-                    return Align(
-                      alignment: AlignmentDirectional.center,
-                      child: pill,
-                    );
-                  }
-
-                  return pill;
+                  return _buildColorfulEventTile(context, tileContext);
                 },
                 dateLabelBuilder: (context, labelContext, defaultLabel) {
                   return _buildDateLabel(context, labelContext);
@@ -123,39 +94,40 @@ class ColorfulMonthStyle extends StatelessWidget {
                   final cornerRadius = theme.eventTileCornerRadius ?? 4.0;
                   final tileHeight = theme.eventTileHeight ?? 6.0;
                   final isAllDay = details.event.isAllDay;
+                  final color =
+                      details.event.color ??
+                      Theme.of(context).colorScheme.primary;
 
-                  // Build the pill with Material wrapper for drop shadow
-                  final pill = Material(
-                    elevation: 6.0,
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(cornerRadius),
-                    child: Container(
-                      // Timed events use half width, all-day events use full width
-                      width: isAllDay
-                          ? details.tileWidth
-                          : details.tileWidth / 2,
-                      height: tileHeight,
-                      decoration: BoxDecoration(
-                        color:
-                            details.event.color ??
-                            Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.all(
-                          Radius.circular(cornerRadius),
+                  // Timed events: inset each end by perDayWidth/4
+                  // to match the pill geometry of the placed tiles.
+                  final inset = isAllDay ? 0.0 : details.dayWidth / 4;
+                  final pillWidth = details.tileWidth - (inset * 2);
+
+                  return SizedBox(
+                    width: details.tileWidth,
+                    height: tileHeight,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: inset),
+                      child: Material(
+                        elevation: 6.0,
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(cornerRadius),
+                        child: Container(
+                          width: pillWidth,
+                          height: tileHeight,
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(cornerRadius),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   );
-
-                  // For timed events, center within a sized container
-                  if (!isAllDay) {
-                    return SizedBox(
-                      width: details.tileWidth,
-                      height: tileHeight,
-                      child: Center(child: pill),
-                    );
-                  }
-
-                  return pill;
+                },
+                dropTargetTileBuilder: (context, tileContext) {
+                  return _buildColorfulDropTargetTile(context, tileContext);
                 },
                 dropTargetOverlayBuilder: (context, details) {
                   return Stack(
@@ -225,6 +197,7 @@ class ColorfulMonthStyle extends StatelessWidget {
         ctx.date.year == selectedDate!.year &&
         ctx.date.month == selectedDate!.month &&
         ctx.date.day == selectedDate!.day;
+    final isFocused = ctx.isFocused;
 
     return Container(
       margin: const EdgeInsets.all(3),
@@ -244,8 +217,17 @@ class ColorfulMonthStyle extends StatelessWidget {
                   gradientEnd.withAlpha(100),
                 ],
               )
+            : isFocused
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  gradientStart.withAlpha(50),
+                  gradientEnd.withAlpha(50),
+                ],
+              )
             : null,
-        color: !ctx.isToday && !isSelected
+        color: !ctx.isToday && !isSelected && !isFocused
             ? (isDarkMode
                   ? Colors.white.withAlpha(10)
                   : Colors.white.withAlpha(180))
@@ -257,6 +239,14 @@ class ColorfulMonthStyle extends StatelessWidget {
                   color: gradientEnd.withAlpha(100),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
+                ),
+              ]
+            : isFocused
+            ? [
+                BoxShadow(
+                  color: gradientEnd.withAlpha(60),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ]
             : null,
@@ -333,6 +323,150 @@ class ColorfulMonthStyle extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  // ============================================================
+  // Colorful Event Tile Helpers
+  // ============================================================
+
+  /// Computes the pill inset for one end of a timed (non-all-day) event.
+  ///
+  /// Single-day timed events are centered half-width pills so each side
+  /// has an inset of `perDayWidth / 4`. Multi-day timed events use the
+  /// same per-day inset on their first/last segments so the pill ends
+  /// align with single-day pills.
+  static double _timedPillInset(MCalEventTileContext ctx) {
+    final spanDays = ctx.segment?.spanDays ?? 1;
+    final perDayWidth = (ctx.width ?? 0) / spanDays;
+    return perDayWidth / 4;
+  }
+
+  /// Builds a Colorful-style event tile.
+  ///
+  /// - **All-day events**: full-width pill with segment corner radii.
+  /// - **Timed single-day events**: centered half-width pill.
+  /// - **Timed multi-day events**: full-span pill inset on the first/last
+  ///   segment ends so the edges align with single-day timed pills.
+  Widget _buildColorfulEventTile(
+    BuildContext context,
+    MCalEventTileContext tileContext,
+  ) {
+    final segment = tileContext.segment;
+    final isAllDay = tileContext.event.isAllDay;
+    final MCalThemeData theme = MCalTheme.of(context);
+    final cornerRadius = theme.eventTileCornerRadius ?? 4.0;
+    final color =
+        tileContext.event.color ?? Theme.of(context).colorScheme.primary;
+
+    final leftRadius = segment?.isFirstSegment == true
+        ? Radius.circular(cornerRadius)
+        : Radius.zero;
+    final rightRadius = segment?.isLastSegment == true
+        ? Radius.circular(cornerRadius)
+        : Radius.zero;
+
+    // All-day events: full width.
+    if (isAllDay) {
+      return Container(
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.only(
+            topLeft: leftRadius,
+            bottomLeft: leftRadius,
+            topRight: rightRadius,
+            bottomRight: rightRadius,
+          ),
+        ),
+      );
+    }
+
+    // Timed events: inset the first/last segment ends to align with
+    // single-day centered pills.
+    final inset = _timedPillInset(tileContext);
+    final isFirst = segment?.isFirstSegment ?? true;
+    final isLast = segment?.isLastSegment ?? true;
+
+    return Padding(
+      padding: EdgeInsetsDirectional.only(
+        start: isFirst ? inset : 0,
+        end: isLast ? inset : 0,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.only(
+            topLeft: leftRadius,
+            bottomLeft: leftRadius,
+            topRight: rightRadius,
+            bottomRight: rightRadius,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds a Colorful-style drop target tile (border + softened fill).
+  ///
+  /// Uses the same geometry as [_buildColorfulEventTile] so the drop
+  /// preview aligns perfectly with the source tile.
+  Widget _buildColorfulDropTargetTile(
+    BuildContext context,
+    MCalEventTileContext tileContext,
+  ) {
+    final segment = tileContext.segment;
+    final isAllDay = tileContext.event.isAllDay;
+    final valid = tileContext.dropValid ?? true;
+    final MCalThemeData theme = MCalTheme.of(context);
+    final cornerRadius = theme.eventTileCornerRadius ?? 4.0;
+
+    final leftRadius = segment?.isFirstSegment == true
+        ? Radius.circular(cornerRadius)
+        : Radius.zero;
+    final rightRadius = segment?.isLastSegment == true
+        ? Radius.circular(cornerRadius)
+        : Radius.zero;
+
+    final tileColor = valid
+        ? (tileContext.event.color ?? Theme.of(context).colorScheme.primary)
+        : Colors.red.withValues(alpha: 0.5);
+    final brightness = Theme.of(context).brightness;
+    final fillColor = tileColor.soften(brightness);
+    final borderSide = BorderSide(color: tileColor, width: 1.0);
+    final isFirst = segment?.isFirstSegment ?? true;
+    final isLast = segment?.isLastSegment ?? true;
+    final tileBorder = Border(
+      top: borderSide,
+      bottom: borderSide,
+      left: isFirst ? borderSide : BorderSide.none,
+      right: isLast ? borderSide : BorderSide.none,
+    );
+
+    final decoration = BoxDecoration(
+      color: fillColor,
+      borderRadius: BorderRadius.only(
+        topLeft: leftRadius,
+        bottomLeft: leftRadius,
+        topRight: rightRadius,
+        bottomRight: rightRadius,
+      ),
+      border: tileBorder,
+    );
+
+    // All-day events: full width.
+    if (isAllDay) {
+      return Container(decoration: decoration);
+    }
+
+    // Timed events: same inset logic as the event tile.
+    final inset = _timedPillInset(tileContext);
+
+    return Padding(
+      padding: EdgeInsetsDirectional.only(
+        start: isFirst ? inset : 0,
+        end: isLast ? inset : 0,
+      ),
+      child: Container(decoration: decoration),
     );
   }
 }

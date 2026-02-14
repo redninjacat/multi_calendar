@@ -36,7 +36,7 @@ void main() {
       WidgetTester tester, {
       required List<MCalCalendarEvent> events,
       required void Function(MCalEventTileContext) onTileBuild,
-      bool enableEventResize = false,
+      bool enableDragToResize = false,
     }) async {
       controller.setEvents(events);
       controller.setFocusedDate(DateTime(2025, 1, 15));
@@ -50,8 +50,8 @@ void main() {
               child: MCalMonthView(
                 controller: controller,
                 enableKeyboardNavigation: true,
-                enableDragAndDrop: true,
-                enableEventResize: enableEventResize,
+                enableDragToMove: true,
+                enableDragToResize: enableDragToResize,
                 eventTileBuilder: (context, ctx, defaultTile) {
                   onTileBuild(ctx);
                   return defaultTile;
@@ -329,7 +329,7 @@ void main() {
         await pumpCalendar(
           tester,
           events: [event],
-          enableEventResize: true,
+          enableDragToResize: true,
           onTileBuild: (ctx) {
             if (ctx.event.id == 'resize-kb') {
               capturedStates.add(ctx.keyboardState);
@@ -356,7 +356,7 @@ void main() {
           selectedStates,
           isNotEmpty,
           reason:
-              'With enableEventResize, keyboard state should still propagate '
+              'With enableDragToResize, keyboard state should still propagate '
               'through the resize handle wrapper to the tile builder',
         );
       },

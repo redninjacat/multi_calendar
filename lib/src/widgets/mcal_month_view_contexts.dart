@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/mcal_calendar_event.dart';
 import '../models/mcal_recurrence_rule.dart';
+import 'mcal_callback_details.dart';
 import 'mcal_week_layout_contexts.dart';
 
 /// The keyboard interaction state of an event tile.
@@ -448,5 +449,57 @@ class MCalWeekNumberContext {
     required this.weekNumber,
     required this.firstDayOfWeek,
     required this.defaultFormattedString,
+  });
+}
+
+// ============================================================
+// Resize Handle Context
+// ============================================================
+
+/// Context provided to [MCalMonthView.resizeHandleBuilder].
+///
+/// Contains information about the resize handle being built, including
+/// which edge it represents and the event it belongs to. The builder
+/// can use [isDropTargetPreview] to render a different visual for
+/// handles on drop-target preview tiles (e.g. slightly more opaque).
+///
+/// Example:
+/// ```dart
+/// resizeHandleBuilder: (context, handleContext) {
+///   return Container(
+///     width: 3,
+///     height: 14,
+///     decoration: BoxDecoration(
+///       color: handleContext.edge == MCalResizeEdge.start
+///           ? Colors.blue
+///           : Colors.red,
+///       borderRadius: BorderRadius.circular(1.5),
+///     ),
+///   );
+/// }
+/// ```
+class MCalResizeHandleContext {
+  /// The resize edge this handle represents.
+  ///
+  /// [MCalResizeEdge.start] for the leading edge (changes start date),
+  /// [MCalResizeEdge.end] for the trailing edge (changes end date).
+  final MCalResizeEdge edge;
+
+  /// The event this handle belongs to.
+  final MCalCalendarEvent event;
+
+  /// Whether this handle is on a drop-target preview tile.
+  ///
+  /// During a resize operation the library shows a semi-transparent
+  /// "preview" tile that tracks the proposed new range. Handles on
+  /// these preview tiles have `isDropTargetPreview` set to `true`
+  /// so the builder can render them differently (e.g. higher opacity).
+  final bool isDropTargetPreview;
+
+  /// Creates a new [MCalResizeHandleContext] instance.
+  const MCalResizeHandleContext({
+    required this.edge,
+    required this.event,
+    this.isDropTargetPreview = false,
   });
 }

@@ -141,7 +141,7 @@ MCalMonthView(
 - **`onSwipeNavigation`**: Callback when a swipe navigation gesture is detected.
 
 **Event Resizing:**
-- **`enableEventResize`** (`bool?`): Whether to enable edge-drag resizing. `null` (default) auto-detects by platform.
+- **`enableDragToResize`** (`bool?`): Whether to enable edge-drag resizing. `null` (default) auto-detects by platform.
 - **`onResizeWillAccept`**: Validation callback during resize. Return `false` to reject.
 - **`onEventResized`**: Completion callback when resize finishes. Return `false` to revert.
 
@@ -478,7 +478,7 @@ The calendar grid, navigator buttons, and weekday headers automatically flip for
 | `Page Up` | Previous month |
 | `Page Down` | Next month |
 
-**Keyboard Event Moving** (when `enableDragAndDrop` is `true`):
+**Keyboard Event Moving** (when `enableDragToMove` is `true`):
 
 | Key | Action |
 |-----|--------|
@@ -489,7 +489,7 @@ The calendar grid, navigator buttons, and weekday headers automatically flip for
 | `↑` `↓` | Move the selected event by 1 week |
 | `Escape` | Cancel the move |
 
-**Keyboard Event Resizing** (when both `enableDragAndDrop` and `enableEventResize` are enabled):
+**Keyboard Event Resizing** (when both `enableDragToMove` and `enableDragToResize` are enabled):
 
 | Key | Action |
 |-----|--------|
@@ -652,7 +652,7 @@ Enable drag-and-drop to move events between dates.
 ```dart
 MCalMonthView(
   controller: controller,
-  enableDragAndDrop: true,
+  enableDragToMove: true,
   dragEdgeNavigationDelay: Duration(milliseconds: 500),
   onEventDropped: (context, details) {
     print('Moved ${details.event.title}');
@@ -725,7 +725,7 @@ Toggle layers with `showDropTargetTiles` (Layer 3) and `showDropTargetOverlay` (
 ```dart
 MCalMonthView(
   controller: controller,
-  enableDragAndDrop: true,
+  enableDragToMove: true,
   // Dragged tile (follows pointer)
   draggedTileBuilder: (context, details) {
     return Material(
@@ -819,8 +819,8 @@ Enable edge-drag resizing to let users change event start or end dates by draggi
 ```dart
 MCalMonthView(
   controller: controller,
-  enableDragAndDrop: true, // Required — resize uses drag infrastructure
-  enableEventResize: null, // Default: null (auto-detect by platform)
+  enableDragToMove: true, // Required — resize uses drag infrastructure
+  enableDragToResize: null, // Default: null (auto-detect by platform)
   onResizeWillAccept: (context, details) {
     // Validate proposed dates (e.g., reject weekends)
     if (details.proposedEndDate.weekday == DateTime.saturday ||
@@ -840,7 +840,7 @@ MCalMonthView(
 )
 ```
 
-**`enableEventResize`** is a nullable `bool?`:
+**`enableDragToResize`** is a nullable `bool?`:
 
 | Value | Behavior |
 |-------|----------|
@@ -848,7 +848,12 @@ MCalMonthView(
 | `true` | Force resize on regardless of platform. |
 | `false` | Force resize off regardless of platform. |
 
-**Note:** `enableEventResize` requires `enableDragAndDrop` to be `true` — the resize interaction uses the same drag infrastructure.
+**Note:** `enableDragToResize` requires `enableDragToMove` to be `true` — the resize interaction uses the same drag infrastructure.
+
+**Custom resize handles:**
+
+- **`resizeHandleBuilder`**: Optional builder that replaces the default white bar visual indicator. Receives a `MCalResizeHandleContext` with the edge (`start`/`end`), event, and whether this is a drop-target preview handle.
+- **`resizeHandleInset`**: Optional callback returning a horizontal inset (in logical pixels) to shift the handle inward from the tile edge. Useful for custom tile builders where the visual content is narrower than the slot (e.g. a centered pill). Receives `MCalEventTileContext` and `MCalResizeEdge`.
 
 **Resize behaviors:**
 - Drag the leading edge (left in LTR, right in RTL) to change the start date
@@ -977,7 +982,7 @@ See the [example](example/) directory for a complete example application demonst
 
 - **Recurring events:** Drag-and-drop moves the displayed instance only — creating a `rescheduled` exception. Resizing a recurring occurrence creates a `modified` exception. In both cases, the recurrence rule itself is not updated. Use `onEventDropped` or `onEventResized` to persist changes in your backend (e.g., create an exception or update the rule).
 - **Overflow indicator:** The "+N more" overflow indicator does not support drag-and-drop or resizing. Only visible event tiles can be dragged or resized. Users must tap the overflow indicator to reveal hidden events in a separate view if they need to manipulate them.
-- **Resize on phones:** Event resizing is disabled by default on phones (small screen, small touch targets). Set `enableEventResize: true` to force-enable it if your app has sufficiently large event tiles.
+- **Resize on phones:** Event resizing is disabled by default on phones (small screen, small touch targets). Set `enableDragToResize: true` to force-enable it if your app has sufficiently large event tiles.
 
 ## Contributing
 

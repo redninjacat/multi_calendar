@@ -53,6 +53,8 @@ class ModernMonthStyle extends StatelessWidget {
               controller: eventController,
               showNavigator: true,
               enableSwipeNavigation: true,
+              enableDragToMove: false,
+              enableDragToResize: false,
               locale: locale,
               // Custom week layout builder that renders dots for events
               weekLayoutBuilder: (context, ctx) {

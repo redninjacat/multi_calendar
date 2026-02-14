@@ -33,8 +33,8 @@ void main() {
     WidgetTester tester, {
     required _MockController controller,
     bool? enableAnimations,
-    bool? enableEventResize,
-    bool enableDragAndDrop = false,
+    bool? enableDragToResize,
+    bool enableDragToMove = false,
     bool enableKeyboardNavigation = true,
     bool showNavigator = false,
     MediaQueryData? mediaQueryData,
@@ -62,8 +62,8 @@ void main() {
                 child: MCalMonthView(
                   controller: controller,
                   enableAnimations: enableAnimations,
-                  enableEventResize: enableEventResize,
-                  enableDragAndDrop: enableDragAndDrop,
+                  enableDragToResize: enableDragToResize,
+                  enableDragToMove: enableDragToMove,
                   enableKeyboardNavigation: enableKeyboardNavigation,
                   showNavigator: showNavigator,
                   onResizeWillAccept: onResizeWillAccept,
@@ -335,8 +335,8 @@ void main() {
         await pumpMonthView(
           tester,
           controller: controller,
-          enableDragAndDrop: true,
-          enableEventResize: true,
+          enableDragToMove: true,
+          enableDragToResize: true,
         );
 
         // Resize handles have semantic labels
@@ -359,8 +359,8 @@ void main() {
         await pumpMonthView(
           tester,
           controller: controller,
-          enableDragAndDrop: true,
-          enableEventResize: true,
+          enableDragToMove: true,
+          enableDragToResize: true,
         );
 
         // Single-day events SHOULD have resize handles so users can
@@ -387,8 +387,8 @@ void main() {
         await pumpMonthView(
           tester,
           controller: controller,
-          enableDragAndDrop: true,
-          enableEventResize: true,
+          enableDragToMove: true,
+          enableDragToResize: true,
           onEventResized: (context, details) {
             resizedDetails = details;
             return true;
@@ -442,8 +442,8 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
-        enableEventResize: true,
+        enableDragToMove: true,
+        enableDragToResize: true,
         onResizeWillAccept: (context, details) {
           willAcceptCalled = true;
           return true;
@@ -496,8 +496,8 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
-        enableEventResize: null, // auto-detect
+        enableDragToMove: true,
+        enableDragToResize: null, // auto-detect
         platform: TargetPlatform.macOS,
         mediaQueryData: const MediaQueryData(size: Size(1200, 800)),
       );
@@ -521,8 +521,8 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
-        enableEventResize: null, // auto-detect
+        enableDragToMove: true,
+        enableDragToResize: null, // auto-detect
         platform: TargetPlatform.android,
         mediaQueryData: const MediaQueryData(size: Size(360, 640)),
       );
@@ -531,7 +531,7 @@ void main() {
       expect(find.bySemanticsLabel('Resize end edge'), findsNothing);
     });
 
-    testWidgets('enableEventResize: false → no resize handles regardless', (
+    testWidgets('enableDragToResize: false → no resize handles regardless', (
       tester,
     ) async {
       final event = MCalCalendarEvent(
@@ -546,8 +546,8 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
-        enableEventResize: false,
+        enableDragToMove: true,
+        enableDragToResize: false,
         platform: TargetPlatform.macOS,
       );
 
@@ -556,7 +556,7 @@ void main() {
     });
 
     testWidgets(
-      'enableEventResize: true → resize handles appear regardless of platform',
+      'enableDragToResize: true → resize handles appear regardless of platform',
       (tester) async {
         final event = MCalCalendarEvent(
           id: 'resize-true',
@@ -570,8 +570,8 @@ void main() {
         await pumpMonthView(
           tester,
           controller: controller,
-          enableDragAndDrop: true,
-          enableEventResize: true,
+          enableDragToMove: true,
+          enableDragToResize: true,
           platform: TargetPlatform.android,
           mediaQueryData: const MediaQueryData(size: Size(360, 640)),
         );
@@ -596,8 +596,8 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
-        enableEventResize: null, // auto-detect
+        enableDragToMove: true,
+        enableDragToResize: null, // auto-detect
         platform: TargetPlatform.android,
         // Tablet: shortest side >= 600
         mediaQueryData: const MediaQueryData(size: Size(800, 1200)),
@@ -636,7 +636,7 @@ void main() {
         await pumpMonthView(
           tester,
           controller: controller,
-          enableDragAndDrop: true,
+          enableDragToMove: true,
           enableKeyboardNavigation: true,
         );
 
@@ -684,7 +684,7 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
+        enableDragToMove: true,
         enableKeyboardNavigation: true,
       );
 
@@ -731,7 +731,7 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
+        enableDragToMove: true,
         enableKeyboardNavigation: true,
         onEventDropped: (ctx, details) {
           droppedDetails = details;
@@ -780,7 +780,7 @@ void main() {
         await pumpMonthView(
           tester,
           controller: controller,
-          enableDragAndDrop: true,
+          enableDragToMove: true,
           enableKeyboardNavigation: true,
         );
 
@@ -840,8 +840,8 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
-        enableEventResize: true,
+        enableDragToMove: true,
+        enableDragToResize: true,
         enableKeyboardNavigation: true,
       );
 
@@ -891,8 +891,8 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
-        enableEventResize: true,
+        enableDragToMove: true,
+        enableDragToResize: true,
         enableKeyboardNavigation: true,
       );
 
@@ -943,8 +943,8 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
-        enableEventResize: true,
+        enableDragToMove: true,
+        enableDragToResize: true,
         enableKeyboardNavigation: true,
       );
 
@@ -998,8 +998,8 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
-        enableEventResize: true,
+        enableDragToMove: true,
+        enableDragToResize: true,
         enableKeyboardNavigation: true,
       );
 
@@ -1056,8 +1056,8 @@ void main() {
         await pumpMonthView(
           tester,
           controller: controller,
-          enableDragAndDrop: true,
-          enableEventResize: true,
+          enableDragToMove: true,
+          enableDragToResize: true,
           enableKeyboardNavigation: true,
           onEventResized: (ctx, details) {
             resizedDetails = details;
@@ -1117,8 +1117,8 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
-        enableEventResize: true,
+        enableDragToMove: true,
+        enableDragToResize: true,
       );
 
       // Verify resize handles are present with correct semantic labels
@@ -1170,8 +1170,8 @@ void main() {
       await pumpMonthView(
         tester,
         controller: controller,
-        enableDragAndDrop: true,
-        enableEventResize: true,
+        enableDragToMove: true,
+        enableDragToResize: true,
       );
 
       // Verify handles exist

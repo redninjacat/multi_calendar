@@ -68,6 +68,8 @@ class ClassicMonthStyle extends StatelessWidget {
               controller: eventController,
               showNavigator: true,
               enableSwipeNavigation: true,
+              enableDragToMove: false,
+              enableDragToResize: false,
               locale: locale,
               dayCellBuilder: (context, ctx, defaultCell) {
                 return _buildDayCell(context, ctx, colorScheme);
