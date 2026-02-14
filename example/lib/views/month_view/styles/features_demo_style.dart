@@ -1,6 +1,4 @@
 import 'package:example/widgets/day_events_bottom_sheet.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 
@@ -86,12 +84,6 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     final sampleEvents = createSampleEvents();
     _sharedController.addEvents(sampleEvents);
     _blackoutDates = _computeBlackoutDates();
-
-    // Set initial focused date on platforms that support keyboard navigation
-    if (_supportsKeyboardNavigation) {
-      final now = DateTime.now();
-      _sharedController.setFocusedDate(DateTime(now.year, now.month, 1));
-    }
   }
 
   /// Computes 2 blackout days in the current month and 2 in the following month,
@@ -158,21 +150,6 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     return false;
   }
 
-  /// Returns true if the current platform supports keyboard navigation.
-  bool get _supportsKeyboardNavigation {
-    if (kIsWeb) return true;
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.macOS:
-      case TargetPlatform.windows:
-      case TargetPlatform.linux:
-        return true;
-      case TargetPlatform.android:
-      case TargetPlatform.iOS:
-      case TargetPlatform.fuchsia:
-        return false;
-    }
-  }
-
   @override
   void dispose() {
     _sharedController.dispose();
@@ -183,19 +160,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   // Alert Helpers
   // ============================================================
 
-  void _showAlert(BuildContext context, String title, String message) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+  void _showSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
     );
   }
 
@@ -264,34 +231,29 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   void _onCellTap(BuildContext context, MCalCellTapDetails details) {
     final dateStr = _formatDate(details.date);
     final isToday = _isSameDay(details.date, DateTime.now());
-    _showAlert(
+    _showSnackBar(
       context,
-      'Cell Tapped',
-      'You tapped the cell for $dateStr\n'
-          'Events: ${details.events.length}\n'
-          'Is today: $isToday\n'
-          'Is current month: ${details.isCurrentMonth}',
+      'Cell Tapped: You tapped the cell for $dateStr. '
+      'Events: ${details.events.length}. '
+      'Is today: $isToday. Is current month: ${details.isCurrentMonth}',
     );
   }
 
   void _onCellLongPress(BuildContext context, MCalCellTapDetails details) {
     final dateStr = _formatDate(details.date);
-    _showAlert(
+    _showSnackBar(
       context,
-      'Cell Long-Pressed',
-      'You long-pressed the cell for $dateStr\n'
-          'Events: ${details.events.length}',
+      'Cell Long-Pressed: You long-pressed the cell for $dateStr. '
+      'Events: ${details.events.length}',
     );
   }
 
   void _onDateLabelTap(BuildContext context, MCalDateLabelTapDetails details) {
     final dateStr = _formatDate(details.date);
-    _showAlert(
+    _showSnackBar(
       context,
-      'Date Label Tapped',
-      'You tapped the date label for $dateStr\n'
-          'Is today: ${details.isToday}\n'
-          'Is current month: ${details.isCurrentMonth}',
+      'Date Label Tapped: You tapped the date label for $dateStr. '
+      'Is today: ${details.isToday}. Is current month: ${details.isCurrentMonth}',
     );
   }
 
@@ -300,10 +262,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     MCalDateLabelTapDetails details,
   ) {
     final dateStr = _formatDate(details.date);
-    _showAlert(
+    _showSnackBar(
       context,
-      'Date Label Long-Pressed',
-      'You long-pressed the date label for $dateStr',
+      'Date Label Long-Pressed: You long-pressed the date label for $dateStr',
     );
   }
 
@@ -779,9 +740,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              '${_formatDate(occurrence.start)}'
-                              '  ${_formatTime(occurrence.start)}'
-                              ' \u2013 ${_formatTime(occurrence.end)}',
+                              _formatEventRange(occurrence),
                               style: textTheme.bodyMedium?.copyWith(
                                 color: colorScheme.onSurface,
                               ),
@@ -990,6 +949,25 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 18,
+                        color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _formatEventRange(event),
+                          style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(ctx).colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   TextField(
                     controller: titleController,
                     decoration: InputDecoration(
@@ -1128,12 +1106,11 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     BuildContext context,
     MCalOverflowTapDetails details,
   ) {
-    _showAlert(
+    _showSnackBar(
       context,
-      'Overflow Indicator Long-Pressed',
-      'Date: ${_formatDate(details.date)}\n'
-          'Hidden: ${details.hiddenEventCount} events\n'
-          'Total: ${details.allEvents.length} events',
+      'Overflow Indicator Long-Pressed: Date: ${_formatDate(details.date)}. '
+      'Hidden: ${details.hiddenEventCount} events. '
+      'Total: ${details.allEvents.length} events',
     );
   }
 
@@ -1234,7 +1211,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                   ),
                   Expanded(
                     flex: 1,
-                    child: _buildSecondaryCalendar(colorScheme),
+                    child: _buildSecondaryCalendar(colorScheme, isDesktop),
                   ),
                 ],
               ),
@@ -1301,7 +1278,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
                 enableKeyboardNavigation: false,
                 enableDragAndDrop: _enableDragAndDrop,
-                enableEventResize: _enableResize,
+                // On mobile, let the library auto-detect (disabled by default
+                // on phones). On desktop/tablet the toggle controls it.
+                enableEventResize: null,
                 showDropTargetTiles: _showDropTargetTiles,
                 showDropTargetOverlay: _showDropTargetOverlay,
                 dropTargetTilesAboveOverlay: _dropTargetTilesAboveOverlay,
@@ -1418,12 +1397,6 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 'Drag',
                 _enableDragAndDrop,
                 (v) => setState(() => _enableDragAndDrop = v),
-                colorScheme,
-              ),
-              _buildCompactToggle(
-                'Resize',
-                _enableResize,
-                (v) => setState(() => _enableResize = v),
                 colorScheme,
               ),
               _buildCompactToggle(
@@ -1652,7 +1625,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
               FilledButton.icon(
                 onPressed: () => _onAddRecurringEvent(context),
                 icon: Icon(Icons.repeat, size: isDesktop ? 16 : 18),
-                label: Text(isDesktop ? 'Add Recurring' : 'Add Recurring Event'),
+                label: Text(
+                  isDesktop ? 'Add Recurring' : 'Add Recurring Event',
+                ),
               ),
             ],
           ),
@@ -1872,10 +1847,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
         const SizedBox(width: 3),
         Text(
           action,
-          style: TextStyle(
-            fontSize: 10,
-            color: colorScheme.onSurfaceVariant,
-          ),
+          style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
         ),
       ],
     );
@@ -2092,7 +2064,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   // Secondary Calendar (Synced)
   // ============================================================
 
-  Widget _buildSecondaryCalendar(ColorScheme colorScheme) {
+  Widget _buildSecondaryCalendar(ColorScheme colorScheme, bool isDesktop) {
     return Container(
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -2144,6 +2116,8 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 maxVisibleEventsPerDay: 2,
                 enableKeyboardNavigation: false,
                 enableDragAndDrop: false,
+                onHoverCell: isDesktop ? _onHoverCell : null,
+                onHoverEvent: isDesktop ? _onHoverEvent : null,
               ),
             ),
           ),
@@ -2214,10 +2188,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
       children: [
         Text(
           '$label: $showValue',
-          style: TextStyle(
-            fontSize: 13,
-            color: colorScheme.onSurface,
-          ),
+          style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
         ),
         SizedBox(
           width: sliderWidth,
@@ -2319,6 +2290,16 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     final m = dt.minute.toString().padLeft(2, '0');
     final ampm = dt.hour < 12 ? 'AM' : 'PM';
     return '$h:$m $ampm';
+  }
+
+  /// Read-only full range string for an event (single-day or multi-day).
+  String _formatEventRange(MCalCalendarEvent event) {
+    final start = event.start;
+    final end = event.end;
+    if (_isSameDay(start, end)) {
+      return '${_formatDate(start)} ${_formatTime(start)} \u2013 ${_formatTime(end)}';
+    }
+    return '${_formatDate(start)} ${_formatTime(start)} \u2013 ${_formatDate(end)} ${_formatTime(end)}';
   }
 
   bool _isSameDay(DateTime a, DateTime b) {

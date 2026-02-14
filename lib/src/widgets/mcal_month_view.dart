@@ -1170,8 +1170,10 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // "setState during build" errors when multiple widgets share a controller.
     _scheduleSetState(() {
       _events = _getEventsForMonth(_currentMonth);
-      debugPrint('[MONTH-VIEW] _scheduleSetState: refreshed events for '
-          '$_currentMonth => ${_events.length} events');
+      debugPrint(
+        '[MONTH-VIEW] _scheduleSetState: refreshed events for '
+        '$_currentMonth => ${_events.length} events',
+      );
       for (final e in _events) {
         debugPrint('[MONTH-VIEW]   ${e.id}: ${e.start} - ${e.end}');
       }
@@ -2498,9 +2500,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           currentEnd.day + delta,
         );
         // Clamp: end cannot be before start (minimum 1 day)
-        _keyboardResizeProposedEnd = newEnd.isBefore(
-              _keyboardResizeProposedStart!,
-            )
+        _keyboardResizeProposedEnd =
+            newEnd.isBefore(_keyboardResizeProposedStart!)
             ? DateTime(
                 _keyboardResizeProposedStart!.year,
                 _keyboardResizeProposedStart!.month,
@@ -2515,9 +2516,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           currentStart.day + delta,
         );
         // Clamp: start cannot be after end (minimum 1 day)
-        _keyboardResizeProposedStart = newStart.isAfter(
-              _keyboardResizeProposedEnd!,
-            )
+        _keyboardResizeProposedStart =
+            newStart.isAfter(_keyboardResizeProposedEnd!)
             ? DateTime(
                 _keyboardResizeProposedEnd!.year,
                 _keyboardResizeProposedEnd!.month,
@@ -2967,7 +2967,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     MCalResizeEdge edge,
     int pointer,
   ) {
-    debugPrint('[RESIZE-PARENT] pointerDown pointer=$pointer event=${event.title} edge=$edge');
+    debugPrint(
+      '[RESIZE-PARENT] pointerDown pointer=$pointer event=${event.title} edge=$edge',
+    );
 
     _resizeActivePointer = pointer;
     _resizeGestureStarted = false;
@@ -3032,7 +3034,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   void _handleResizePointerUpFromParent(PointerUpEvent pointerEvent) {
     if (pointerEvent.pointer != _resizeActivePointer) return;
 
-    debugPrint('[RESIZE-PARENT] pointerUp pointer=${pointerEvent.pointer} gestureStarted=$_resizeGestureStarted');
+    debugPrint(
+      '[RESIZE-PARENT] pointerUp pointer=${pointerEvent.pointer} gestureStarted=$_resizeGestureStarted',
+    );
 
     if (_resizeGestureStarted) {
       _handleResizeEndFromParent();
@@ -3082,16 +3086,19 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final gridOffset = gridRenderBox.localToGlobal(Offset.zero);
 
     // Compute layout values
-    final weekNumberWidth =
-        widget.showWeekNumbers ? _WeekNumberCell.columnWidth : 0.0;
+    final weekNumberWidth = widget.showWeekNumbers
+        ? _WeekNumberCell.columnWidth
+        : 0.0;
     final isRTL = Directionality.maybeOf(context) == TextDirection.rtl;
     final contentOffsetX = isRTL ? 0.0 : weekNumberWidth;
     final contentWidth = gridSize.width - weekNumberWidth;
     final dayWidth = contentWidth / 7;
 
     // Get current month's dates
-    final dates =
-        generateMonthDates(_currentMonth, _getDefaultFirstDayOfWeek());
+    final dates = generateMonthDates(
+      _currentMonth,
+      _getDefaultFirstDayOfWeek(),
+    );
     final weeks = <List<DateTime>>[];
     for (int i = 0; i < dates.length; i += 7) {
       weeks.add(dates.sublist(i, i + 7));
@@ -3141,20 +3148,20 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     if (edge == MCalResizeEdge.start) {
       proposedStart =
           pointerDate.isBefore(originalEnd) ||
-                  pointerDate.isAtSameMomentAs(originalEnd)
-              ? pointerDate
-              : DateTime(originalEnd.year, originalEnd.month, originalEnd.day);
+              pointerDate.isAtSameMomentAs(originalEnd)
+          ? pointerDate
+          : DateTime(originalEnd.year, originalEnd.month, originalEnd.day);
       proposedEnd = originalEnd;
     } else {
       proposedEnd =
           pointerDate.isAfter(originalStart) ||
-                  pointerDate.isAtSameMomentAs(originalStart)
-              ? pointerDate
-              : DateTime(
-                  originalStart.year,
-                  originalStart.month,
-                  originalStart.day,
-                );
+              pointerDate.isAtSameMomentAs(originalStart)
+          ? pointerDate
+          : DateTime(
+              originalStart.year,
+              originalStart.month,
+              originalStart.day,
+            );
       proposedStart = originalStart;
     }
 
@@ -3275,43 +3282,33 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     if (edge == MCalResizeEdge.start &&
         nearLeadingEdge &&
         _canNavigateToPreviousMonth()) {
-      dragHandler.handleEdgeProximity(
-        true,
-        true,
-        () {
-          if (!mounted) return;
-          debugPrint('[RESIZE-PARENT] edge nav → previous month');
-          _navigateToPreviousMonth();
-          // Recompute resize overlay for the new month's grid on the next frame
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted || _resizeActivePointer == null) return;
-            if (_lastResizePointerPosition != null) {
-              _processResizeUpdateFromParent(_lastResizePointerPosition!);
-            }
-          });
-        },
-        delay: widget.dragEdgeNavigationDelay,
-      );
+      dragHandler.handleEdgeProximity(true, true, () {
+        if (!mounted) return;
+        debugPrint('[RESIZE-PARENT] edge nav → previous month');
+        _navigateToPreviousMonth();
+        // Recompute resize overlay for the new month's grid on the next frame
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _resizeActivePointer == null) return;
+          if (_lastResizePointerPosition != null) {
+            _processResizeUpdateFromParent(_lastResizePointerPosition!);
+          }
+        });
+      }, delay: widget.dragEdgeNavigationDelay);
     } else if (edge == MCalResizeEdge.end &&
         nearTrailingEdge &&
         _canNavigateToNextMonth()) {
-      dragHandler.handleEdgeProximity(
-        true,
-        false,
-        () {
-          if (!mounted) return;
-          debugPrint('[RESIZE-PARENT] edge nav → next month');
-          _navigateToNextMonth();
-          // Recompute resize overlay for the new month's grid on the next frame
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted || _resizeActivePointer == null) return;
-            if (_lastResizePointerPosition != null) {
-              _processResizeUpdateFromParent(_lastResizePointerPosition!);
-            }
-          });
-        },
-        delay: widget.dragEdgeNavigationDelay,
-      );
+      dragHandler.handleEdgeProximity(true, false, () {
+        if (!mounted) return;
+        debugPrint('[RESIZE-PARENT] edge nav → next month');
+        _navigateToNextMonth();
+        // Recompute resize overlay for the new month's grid on the next frame
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _resizeActivePointer == null) return;
+          if (_lastResizePointerPosition != null) {
+            _processResizeUpdateFromParent(_lastResizePointerPosition!);
+          }
+        });
+      }, delay: widget.dragEdgeNavigationDelay);
     } else {
       dragHandler.handleEdgeProximity(false, false, () {});
     }
@@ -3397,24 +3394,34 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     );
 
     final updatedEvent = event.copyWith(start: newStartDate, end: newEndDate);
-    debugPrint('[RESIZE-PARENT] updatedEvent: id=${updatedEvent.id} '
-        'start=${updatedEvent.start} end=${updatedEvent.end}');
-    debugPrint('[RESIZE-PARENT] currentMonth=$_currentMonth isRecurring=$isRecurring');
+    debugPrint(
+      '[RESIZE-PARENT] updatedEvent: id=${updatedEvent.id} '
+      'start=${updatedEvent.start} end=${updatedEvent.end}',
+    );
+    debugPrint(
+      '[RESIZE-PARENT] currentMonth=$_currentMonth isRecurring=$isRecurring',
+    );
 
     if (isRecurring && seriesId != null) {
-      debugPrint('[RESIZE-PARENT] recurring: seriesId=$seriesId '
-          'occurrenceId=${event.occurrenceId} originalDate=${DateTime.parse(event.occurrenceId!)}');
+      debugPrint(
+        '[RESIZE-PARENT] recurring: seriesId=$seriesId '
+        'occurrenceId=${event.occurrenceId} originalDate=${DateTime.parse(event.occurrenceId!)}',
+      );
       final exception = MCalRecurrenceException.modified(
         originalDate: DateTime.parse(event.occurrenceId!),
         modifiedEvent: updatedEvent,
       );
-      debugPrint('[RESIZE-PARENT] exception: type=${exception.type} '
-          'originalDate=${exception.originalDate} '
-          'modifiedEvent.start=${exception.modifiedEvent?.start} '
-          'modifiedEvent.end=${exception.modifiedEvent?.end}');
+      debugPrint(
+        '[RESIZE-PARENT] exception: type=${exception.type} '
+        'originalDate=${exception.originalDate} '
+        'modifiedEvent.start=${exception.modifiedEvent?.start} '
+        'modifiedEvent.end=${exception.modifiedEvent?.end}',
+      );
       if (widget.onEventResized != null) {
         final shouldKeep = widget.onEventResized!(context, details);
-        debugPrint('[RESIZE-PARENT] onEventResized returned shouldKeep=$shouldKeep');
+        debugPrint(
+          '[RESIZE-PARENT] onEventResized returned shouldKeep=$shouldKeep',
+        );
         if (shouldKeep) {
           widget.controller.addException(seriesId, exception);
           debugPrint('[RESIZE-PARENT] addException called');
@@ -3440,19 +3447,26 @@ class _MCalMonthViewState extends State<MCalMonthView> {
 
     // Debug: query events to see what the controller returns
     final debugEvents = _getEventsForMonth(_currentMonth);
-    debugPrint('[RESIZE-PARENT] after update: _currentMonth=$_currentMonth '
-        'events=${debugEvents.length} ids=${debugEvents.map((e) => e.id).toList()}');
+    debugPrint(
+      '[RESIZE-PARENT] after update: _currentMonth=$_currentMonth '
+      'events=${debugEvents.length} ids=${debugEvents.map((e) => e.id).toList()}',
+    );
     for (final e in debugEvents) {
-      debugPrint('[RESIZE-PARENT]   event: ${e.id} start=${e.start} end=${e.end}');
+      debugPrint(
+        '[RESIZE-PARENT]   event: ${e.id} start=${e.start} end=${e.end}',
+      );
     }
 
     // Auto-navigate to show the resized edge date
-    final activeEdgeDate =
-        edge == MCalResizeEdge.end ? newEndDate : newStartDate;
+    final activeEdgeDate = edge == MCalResizeEdge.end
+        ? newEndDate
+        : newStartDate;
     final targetMonth = DateTime(activeEdgeDate.year, activeEdgeDate.month, 1);
-    debugPrint('[RESIZE-PARENT] auto-nav check: activeEdgeDate=$activeEdgeDate '
-        'targetMonth=$targetMonth currentMonth=$_currentMonth '
-        'willNav=${targetMonth.year != _currentMonth.year || targetMonth.month != _currentMonth.month}');
+    debugPrint(
+      '[RESIZE-PARENT] auto-nav check: activeEdgeDate=$activeEdgeDate '
+      'targetMonth=$targetMonth currentMonth=$_currentMonth '
+      'willNav=${targetMonth.year != _currentMonth.year || targetMonth.month != _currentMonth.month}',
+    );
     if (targetMonth.year != _currentMonth.year ||
         targetMonth.month != _currentMonth.month) {
       _navigateToMonth(targetMonth);
@@ -3768,7 +3782,7 @@ class _MonthPageWidget extends StatefulWidget {
   /// Called when a resize handle pointer-down occurs.
   /// Delegates to the parent [_MCalMonthViewState] for tracking.
   final void Function(MCalCalendarEvent, MCalResizeEdge, int)?
-      onResizePointerDownCallback;
+  onResizePointerDownCallback;
 
   const _MonthPageWidget({
     required this.month,
@@ -3967,7 +3981,9 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   void _onDragHandlerChanged() {
     if (!mounted) return;
     final dragHandler = widget.dragHandler;
-    if (dragHandler != null && !dragHandler.isDragging && !dragHandler.isResizing) {
+    if (dragHandler != null &&
+        !dragHandler.isDragging &&
+        !dragHandler.isResizing) {
       // Drag/resize ended or cancelled - clear caches so indicators never stick
       _cachedDragData = null;
       _layoutCachedForDrag = false;
@@ -4378,7 +4394,9 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
         : (_cachedCalendarSize.width - _cachedWeekNumberWidth) / 7;
     final weekRowHeight = _cachedWeekRowHeight > 0
         ? _cachedWeekRowHeight
-        : (_weeks.isNotEmpty ? _cachedCalendarSize.height / _weeks.length : 0.0);
+        : (_weeks.isNotEmpty
+              ? _cachedCalendarSize.height / _weeks.length
+              : 0.0);
 
     if (dayWidth <= 0 || weekRowHeight <= 0) return cells;
 
@@ -4504,15 +4522,23 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     final themeBorderColor =
         theme.dropTargetTileBorderColor ?? theme.eventTileBorderColor;
     final hasThemeBorder =
-        themeBorderWidth != null && themeBorderWidth > 0 && themeBorderColor != null;
+        themeBorderWidth != null &&
+        themeBorderWidth > 0 &&
+        themeBorderColor != null;
 
     final Color fillColor;
     final Border tileBorder;
     if (hasThemeBorder) {
       // Explicit theme border — use the tile color as-is for the fill.
       fillColor = tileColor;
-      final topBorder = BorderSide(color: themeBorderColor, width: themeBorderWidth);
-      final bottomBorder = BorderSide(color: themeBorderColor, width: themeBorderWidth);
+      final topBorder = BorderSide(
+        color: themeBorderColor,
+        width: themeBorderWidth,
+      );
+      final bottomBorder = BorderSide(
+        color: themeBorderColor,
+        width: themeBorderWidth,
+      );
       final leftBorder = isFirstSegment
           ? BorderSide(color: themeBorderColor, width: themeBorderWidth)
           : BorderSide.none;
@@ -4562,10 +4588,11 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
       // Determine whether to show handle on this segment's edge.
       // Start handle on first segment, end handle on last segment.
-      final showStartHandle = resizeEdge == MCalResizeEdge.start &&
+      final showStartHandle =
+          resizeEdge == MCalResizeEdge.start &&
           (segment?.isFirstSegment ?? true);
-      final showEndHandle = resizeEdge == MCalResizeEdge.end &&
-          (segment?.isLastSegment ?? true);
+      final showEndHandle =
+          resizeEdge == MCalResizeEdge.end && (segment?.isLastSegment ?? true);
 
       if (showStartHandle || showEndHandle) {
         final isLeading = (resizeEdge == MCalResizeEdge.start) != isRtl;
@@ -4917,9 +4944,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
                     return const SizedBox.shrink();
                   }
                   return RepaintBoundary(
-                    child: IgnorePointer(
-                      child: layerBuilder(ctx),
-                    ),
+                    child: IgnorePointer(child: layerBuilder(ctx)),
                   );
                 },
               ),
@@ -5210,7 +5235,11 @@ class _WeekRowWidget extends StatefulWidget {
   /// Called when a pointer goes down on a resize handle.
   /// The parent [_MonthPageWidgetState] uses this to register the resize
   /// target and acquire a scroll hold before the gesture arena resolves.
-  final void Function(MCalCalendarEvent event, MCalResizeEdge edge, int pointer)?
+  final void Function(
+    MCalCalendarEvent event,
+    MCalResizeEdge edge,
+    int pointer,
+  )?
   onResizeHandlePointerDown;
 
   const _WeekRowWidget({
@@ -5457,6 +5486,8 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       defaultBuilder: _buildDefaultEventTile,
       onEventTap: widget.onEventTap,
       onEventLongPress: widget.onEventLongPress,
+      onHoverEvent: widget.onHoverEvent,
+      controller: widget.controller,
       enableDragAndDrop: widget.enableDragAndDrop,
       dragHandler: null,
       // Drag-related parameters
@@ -5497,7 +5528,33 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
         // Skip if no segment info (shouldn't happen in normal flow)
         if (segment == null) return tile;
 
-        final children = <Widget>[Positioned.fill(child: tile)];
+        // Pass handle flags so the tile can add inner content padding (rectangle
+        // stays full size; text shifts inward).
+        final contextWithHandles = MCalEventTileContext(
+          event: tileCtx.event,
+          displayDate: tileCtx.displayDate,
+          isAllDay: tileCtx.isAllDay,
+          segment: tileCtx.segment,
+          width: tileCtx.width,
+          height: tileCtx.height,
+          isDropTargetPreview: tileCtx.isDropTargetPreview,
+          dropValid: tileCtx.dropValid,
+          proposedStartDate: tileCtx.proposedStartDate,
+          proposedEndDate: tileCtx.proposedEndDate,
+          isRecurring: tileCtx.isRecurring,
+          seriesId: tileCtx.seriesId,
+          recurrenceRule: tileCtx.recurrenceRule,
+          masterEvent: tileCtx.masterEvent,
+          isException: tileCtx.isException,
+          hasLeadingResizeHandle: segment.isFirstSegment,
+          hasTrailingResizeHandle: segment.isLastSegment,
+        );
+        final tileWithPadding = wrappedEventTileBuilder(
+          ctx,
+          contextWithHandles,
+        );
+
+        final children = <Widget>[Positioned.fill(child: tileWithPadding)];
         if (segment.isFirstSegment) {
           children.add(
             _ResizeHandle(
@@ -5523,7 +5580,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
         if (children.length > 1) {
           return Stack(clipBehavior: Clip.none, children: children);
         }
-        return tile;
+        return tileWithPadding;
       };
     } else {
       finalEventTileBuilder = wrappedEventTileBuilder;
@@ -5604,6 +5661,19 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       );
     }
 
+    // Extra horizontal padding when resize handles are shown so text does not
+    // sit under the handles (rectangle stays full size; content shifts inward).
+    const double basePadding = 4.0;
+    const double handleInset = 4.0;
+    final startPadding =
+        basePadding + (tileContext.hasLeadingResizeHandle ? handleInset : 0);
+    final endPadding =
+        basePadding + (tileContext.hasTrailingResizeHandle ? handleInset : 0);
+    final contentPadding = EdgeInsetsDirectional.only(
+      start: startPadding,
+      end: endPadding,
+    );
+
     return Container(
       decoration: BoxDecoration(
         color: tileColor,
@@ -5613,7 +5683,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
         ),
         border: tileBorder,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      padding: contentPadding,
       alignment: Alignment.centerLeft,
       child: Text(
         event.title,
@@ -5805,7 +5875,11 @@ class _DayCellWidget extends StatelessWidget {
   final bool enableResize;
 
   /// Called when a pointer goes down on a resize handle.
-  final void Function(MCalCalendarEvent event, MCalResizeEdge edge, int pointer)?
+  final void Function(
+    MCalCalendarEvent event,
+    MCalResizeEdge edge,
+    int pointer,
+  )?
   onResizeHandlePointerDown;
 
   const _DayCellWidget({
@@ -6804,7 +6878,8 @@ class _ResizeHandle extends StatelessWidget {
   /// Called when a pointer goes down on this handle.
   /// The parent uses this to register the resize target and acquire a
   /// scroll hold before the gesture arena resolves.
-  final void Function(MCalCalendarEvent event, MCalResizeEdge edge, int pointer) onPointerDown;
+  final void Function(MCalCalendarEvent event, MCalResizeEdge edge, int pointer)
+  onPointerDown;
 
   /// The width of the interactive handle zone in logical pixels.
   static const double handleWidth = 8.0;
@@ -6833,7 +6908,9 @@ class _ResizeHandle extends StatelessWidget {
           child: Listener(
             behavior: HitTestBehavior.opaque,
             onPointerDown: (pointerEvent) {
-              debugPrint('[RESIZE-HANDLE $edge] onPointerDown pointer=${pointerEvent.pointer}');
+              debugPrint(
+                '[RESIZE-HANDLE $edge] onPointerDown pointer=${pointerEvent.pointer}',
+              );
               onPointerDown(event, edge, pointerEvent.pointer);
             },
             child: Center(

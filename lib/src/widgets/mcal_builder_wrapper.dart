@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
 import 'mcal_callback_details.dart';
 import 'mcal_draggable_event_tile.dart';
@@ -14,18 +15,21 @@ import 'mcal_drag_handler.dart';
 class MCalBuilderWrapper {
   MCalBuilderWrapper._(); // Prevent instantiation
 
-  /// Wraps an event tile builder with tap, long-press, and drag handlers.
+  /// Wraps an event tile builder with tap, long-press, hover, and drag handlers.
   ///
   /// The returned builder will:
   /// 1. Call the developer's builder (or default) to get the visual widget
   /// 2. Wrap it with GestureDetector for tap/long-press (if drag is disabled)
   /// 3. Wrap with MCalDraggableEventTile if drag is enabled
+  /// 4. Wrap with MouseRegion for hover support (if [onHoverEvent] is provided)
   static MCalEventTileBuilder wrapEventTileBuilder({
     required Widget Function(BuildContext, MCalEventTileContext, Widget)?
     developerBuilder,
     required Widget Function(BuildContext, MCalEventTileContext) defaultBuilder,
     void Function(BuildContext, MCalEventTapDetails)? onEventTap,
     void Function(BuildContext, MCalEventTapDetails)? onEventLongPress,
+    ValueChanged<MCalEventTileContext?>? onHoverEvent,
+    MCalEventController? controller,
     bool enableDragAndDrop = false,
     MCalDragHandler? dragHandler,
     // Drag-related parameters
@@ -48,6 +52,22 @@ class MCalBuilderWrapper {
       final visualWidget = developerBuilder != null
           ? developerBuilder(context, tileContext, defaultWidget)
           : defaultWidget;
+
+      // Helper: wraps a widget with MouseRegion for hover support.
+      Widget wrapWithHover(Widget child) {
+        if (onHoverEvent == null) return child;
+        return MouseRegion(
+          onEnter: (_) {
+            final hoverContext = _buildHoverContext(
+              tileContext,
+              controller,
+            );
+            onHoverEvent(hoverContext);
+          },
+          onExit: (_) => onHoverEvent(null),
+          child: child,
+        );
+      }
 
       // If drag-and-drop is enabled, wrap with MCalDraggableEventTile
       if (enableDragAndDrop) {
@@ -105,48 +125,113 @@ class MCalBuilderWrapper {
           );
         }
 
-        return MCalDraggableEventTile(
-          event: event,
-          sourceDate: displayDate,
-          dayWidth: dayWidth,
-          horizontalSpacing: horizontalSpacing,
-          enabled: true,
-          dragLongPressDelay: dragLongPressDelay,
-          draggedTileBuilder: draggedTileBuilder,
-          dragSourceTileBuilder: dragSourceTileBuilder,
-          onDragStarted: onDragStartedCallback != null
-              ? () => onDragStartedCallback(event, displayDate)
-              : null,
-          onDragEnded: onDragEndedCallback,
-          onDragCanceled: onDragCanceledCallback,
-          defaultFeedbackBuilder: defaultFeedbackBuilder,
-          child: tileWithTapHandlers,
+        return wrapWithHover(
+          MCalDraggableEventTile(
+            event: event,
+            sourceDate: displayDate,
+            dayWidth: dayWidth,
+            horizontalSpacing: horizontalSpacing,
+            enabled: true,
+            dragLongPressDelay: dragLongPressDelay,
+            draggedTileBuilder: draggedTileBuilder,
+            dragSourceTileBuilder: dragSourceTileBuilder,
+            onDragStarted: onDragStartedCallback != null
+                ? () => onDragStartedCallback(event, displayDate)
+                : null,
+            onDragEnded: onDragEndedCallback,
+            onDragCanceled: onDragCanceledCallback,
+            defaultFeedbackBuilder: defaultFeedbackBuilder,
+            child: tileWithTapHandlers,
+          ),
         );
       }
 
       // Drag is disabled - wrap with gesture detector for tap/long-press
-      return GestureDetector(
-        onTap: onEventTap != null
-            ? () => onEventTap(
-                context,
-                MCalEventTapDetails(
-                  event: tileContext.event,
-                  displayDate: tileContext.displayDate,
-                ),
-              )
-            : null,
-        onLongPress: onEventLongPress != null
-            ? () => onEventLongPress(
-                context,
-                MCalEventTapDetails(
-                  event: tileContext.event,
-                  displayDate: tileContext.displayDate,
-                ),
-              )
-            : null,
-        child: visualWidget,
+      return wrapWithHover(
+        GestureDetector(
+          onTap: onEventTap != null
+              ? () => onEventTap(
+                  context,
+                  MCalEventTapDetails(
+                    event: tileContext.event,
+                    displayDate: tileContext.displayDate,
+                  ),
+                )
+              : null,
+          onLongPress: onEventLongPress != null
+              ? () => onEventLongPress(
+                  context,
+                  MCalEventTapDetails(
+                    event: tileContext.event,
+                    displayDate: tileContext.displayDate,
+                  ),
+                )
+              : null,
+          child: visualWidget,
+        ),
       );
     };
+  }
+
+  /// Builds an [MCalEventTileContext] enriched with recurrence metadata,
+  /// suitable for the [onHoverEvent] callback.
+  ///
+  /// If [controller] is available, recurrence metadata (seriesId,
+  /// recurrenceRule, masterEvent, isException) is resolved from the
+  /// controller. Otherwise, the fields from the original [tileContext]
+  /// are forwarded as-is.
+  static MCalEventTileContext _buildHoverContext(
+    MCalEventTileContext tileContext,
+    MCalEventController? controller,
+  ) {
+    final event = tileContext.event;
+
+    // If no controller or no occurrenceId, forward existing context fields.
+    if (controller == null || event.occurrenceId == null) {
+      return MCalEventTileContext(
+        event: event,
+        displayDate: tileContext.displayDate,
+        isAllDay: tileContext.isAllDay,
+        segment: tileContext.segment,
+        width: tileContext.width,
+        height: tileContext.height,
+        isRecurring: tileContext.isRecurring,
+        seriesId: tileContext.seriesId,
+        recurrenceRule: tileContext.recurrenceRule,
+        masterEvent: tileContext.masterEvent,
+        isException: tileContext.isException,
+      );
+    }
+
+    // Resolve recurrence metadata from controller.
+    final occId = event.occurrenceId!;
+    final seriesId = event.id.endsWith('_$occId')
+        ? event.id.substring(0, event.id.length - occId.length - 1)
+        : event.id;
+    final masterEvent = controller.getEventById(seriesId);
+    final exceptions = controller.getExceptions(seriesId);
+    final normalizedOccDate = DateTime.tryParse(occId);
+    final isException = normalizedOccDate != null &&
+        exceptions.any((e) {
+          final d = e.originalDate;
+          return d.year == normalizedOccDate.year &&
+              d.month == normalizedOccDate.month &&
+              d.day == normalizedOccDate.day;
+        });
+
+    return MCalEventTileContext(
+      event: event,
+      displayDate: tileContext.displayDate,
+      isAllDay: tileContext.isAllDay,
+      segment: tileContext.segment,
+      width: tileContext.width,
+      height: tileContext.height,
+      isRecurring: true,
+      seriesId: seriesId,
+      recurrenceRule: masterEvent?.recurrenceRule,
+      masterEvent: masterEvent,
+      isException: isException,
+    );
   }
 
   /// Wraps a date label builder with optional tap/long-press handlers.

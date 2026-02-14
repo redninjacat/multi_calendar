@@ -180,6 +180,16 @@ class MCalEventTileContext {
   /// differs from the default recurrence pattern. Defaults to `false`.
   final bool isException;
 
+  /// True when a leading (start) resize handle is shown for this tile.
+  /// The default tile builder uses this to add extra start padding so text
+  /// does not sit under the handle. Defaults to `false`.
+  final bool hasLeadingResizeHandle;
+
+  /// True when a trailing (end) resize handle is shown for this tile.
+  /// The default tile builder uses this to add extra end padding so text
+  /// does not sit under the handle. Defaults to `false`.
+  final bool hasTrailingResizeHandle;
+
   /// Creates a new [MCalEventTileContext] instance.
   const MCalEventTileContext({
     required this.event,
@@ -197,6 +207,8 @@ class MCalEventTileContext {
     this.recurrenceRule,
     this.masterEvent,
     this.isException = false,
+    this.hasLeadingResizeHandle = false,
+    this.hasTrailingResizeHandle = false,
   });
 }
 
