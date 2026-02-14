@@ -1222,6 +1222,27 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     return size.shortestSide >= 600;
   }
 
+  /// The event ID currently highlighted during keyboard Tab/Shift+Tab cycling.
+  ///
+  /// Returns `null` when not in event selection mode.
+  String? get _keyboardHighlightedEventId {
+    if (!_isKeyboardEventSelectionMode || _isKeyboardMoveMode) return null;
+    final focusedDate =
+        widget.controller.focusedDate ?? widget.controller.displayDate;
+    final dayEvents = _getEventsForDate(focusedDate);
+    if (dayEvents.isEmpty) return null;
+    final index = _keyboardMoveEventIndex.clamp(0, dayEvents.length - 1);
+    return dayEvents[index].id;
+  }
+
+  /// The event ID currently selected for keyboard move or resize.
+  ///
+  /// Returns `null` when not in move/resize mode.
+  String? get _keyboardSelectedEventId {
+    if (!_isKeyboardMoveMode) return null;
+    return _keyboardMoveEvent?.id;
+  }
+
   /// Syncs the PageView to display the specified month.
   ///
   /// Called when the controller's displayDate changes externally.
@@ -1484,6 +1505,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           onResizeWillAccept: widget.onResizeWillAccept,
           onEventResized: widget.onEventResized,
           onResizePointerDownCallback: _handleResizePointerDownFromChild,
+          // Keyboard selection state
+          keyboardHighlightedEventId: _keyboardHighlightedEventId,
+          keyboardSelectedEventId: _keyboardSelectedEventId,
         );
       },
     );
@@ -3724,6 +3748,12 @@ class _MonthPageWidget extends StatefulWidget {
   final void Function(MCalCalendarEvent, MCalResizeEdge, int)?
   onResizePointerDownCallback;
 
+  /// The event ID currently highlighted during keyboard event cycling.
+  final String? keyboardHighlightedEventId;
+
+  /// The event ID currently selected for keyboard move/resize.
+  final String? keyboardSelectedEventId;
+
   const _MonthPageWidget({
     required this.month,
     required this.currentDisplayMonth,
@@ -3782,6 +3812,9 @@ class _MonthPageWidget extends StatefulWidget {
     this.onResizeWillAccept,
     this.onEventResized,
     this.onResizePointerDownCallback,
+    // Keyboard selection state
+    this.keyboardHighlightedEventId,
+    this.keyboardSelectedEventId,
   });
 
   @override
@@ -4848,6 +4881,9 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             dragLongPressDelay: widget.dragLongPressDelay,
             enableResize: widget.enableResize,
             onResizeHandlePointerDown: _handleResizePointerDown,
+            // Keyboard selection state
+            keyboardHighlightedEventId: widget.keyboardHighlightedEventId,
+            keyboardSelectedEventId: widget.keyboardSelectedEventId,
           ),
         );
       }).toList(),
@@ -5182,6 +5218,12 @@ class _WeekRowWidget extends StatefulWidget {
   )?
   onResizeHandlePointerDown;
 
+  /// The event ID currently highlighted during keyboard event cycling.
+  final String? keyboardHighlightedEventId;
+
+  /// The event ID currently selected for keyboard move/resize.
+  final String? keyboardSelectedEventId;
+
   const _WeekRowWidget({
     required this.dates,
     required this.currentMonth,
@@ -5232,6 +5274,9 @@ class _WeekRowWidget extends StatefulWidget {
     // Resize
     this.enableResize = false,
     this.onResizeHandlePointerDown,
+    // Keyboard selection state
+    this.keyboardHighlightedEventId,
+    this.keyboardSelectedEventId,
   });
 
   @override
@@ -5462,11 +5507,10 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
     final MCalEventTileBuilder finalEventTileBuilder;
     if (widget.enableResize) {
       finalEventTileBuilder = (BuildContext ctx, MCalEventTileContext tileCtx) {
-        final tile = wrappedEventTileBuilder(ctx, tileCtx);
         final segment = tileCtx.segment;
 
         // Skip if no segment info (shouldn't happen in normal flow)
-        if (segment == null) return tile;
+        if (segment == null) return wrappedEventTileBuilder(ctx, tileCtx);
 
         // Pass handle flags so the tile can add inner content padding (rectangle
         // stays full size; text shifts inward).
@@ -5488,6 +5532,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           isException: tileCtx.isException,
           hasLeadingResizeHandle: segment.isFirstSegment,
           hasTrailingResizeHandle: segment.isLastSegment,
+          keyboardState: tileCtx.keyboardState,
         );
         final tileWithPadding = wrappedEventTileBuilder(
           ctx,
@@ -5526,6 +5571,50 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       finalEventTileBuilder = wrappedEventTileBuilder;
     }
 
+    // Wrap the final tile builder to inject keyboard selection state.
+    // This runs after resize-handle wrapping so the context enrichment
+    // reaches both the default and custom builders.
+    final highlightedId = widget.keyboardHighlightedEventId;
+    final selectedId = widget.keyboardSelectedEventId;
+    final MCalEventTileBuilder keyboardAwareBuilder;
+    if (highlightedId != null || selectedId != null) {
+      keyboardAwareBuilder = (BuildContext ctx, MCalEventTileContext tileCtx) {
+        final eventId = tileCtx.event.id;
+        MCalEventKeyboardState state = MCalEventKeyboardState.none;
+        if (eventId == selectedId) {
+          state = MCalEventKeyboardState.selected;
+        } else if (eventId == highlightedId) {
+          state = MCalEventKeyboardState.highlighted;
+        }
+        if (state != MCalEventKeyboardState.none) {
+          final enriched = MCalEventTileContext(
+            event: tileCtx.event,
+            displayDate: tileCtx.displayDate,
+            isAllDay: tileCtx.isAllDay,
+            segment: tileCtx.segment,
+            width: tileCtx.width,
+            height: tileCtx.height,
+            isDropTargetPreview: tileCtx.isDropTargetPreview,
+            dropValid: tileCtx.dropValid,
+            proposedStartDate: tileCtx.proposedStartDate,
+            proposedEndDate: tileCtx.proposedEndDate,
+            isRecurring: tileCtx.isRecurring,
+            seriesId: tileCtx.seriesId,
+            recurrenceRule: tileCtx.recurrenceRule,
+            masterEvent: tileCtx.masterEvent,
+            isException: tileCtx.isException,
+            hasLeadingResizeHandle: tileCtx.hasLeadingResizeHandle,
+            hasTrailingResizeHandle: tileCtx.hasTrailingResizeHandle,
+            keyboardState: state,
+          );
+          return finalEventTileBuilder(ctx, enriched);
+        }
+        return finalEventTileBuilder(ctx, tileCtx);
+      };
+    } else {
+      keyboardAwareBuilder = finalEventTileBuilder;
+    }
+
     // Create the week layout context
     final layoutContext = MCalWeekLayoutContext(
       segments: weekSegments,
@@ -5535,7 +5624,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       weekRowIndex: widget.weekRowIndex,
       currentMonth: widget.currentMonth,
       config: config,
-      eventTileBuilder: finalEventTileBuilder,
+      eventTileBuilder: keyboardAwareBuilder,
       dateLabelBuilder: wrappedDateLabelBuilder,
       overflowIndicatorBuilder: wrappedOverflowIndicatorBuilder,
     );
@@ -5554,6 +5643,19 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
   // unified DragTarget wrapping all week rows.
 
   /// Builds the default event tile widget.
+  ///
+  /// Renders a coloured rectangle with the event title, respecting theme
+  /// settings for colour, border, corner radius, and text style.
+  ///
+  /// Visual adjustments:
+  /// - Extra horizontal padding when resize handles are present
+  ///   ([MCalEventTileContext.hasLeadingResizeHandle] /
+  ///   [MCalEventTileContext.hasTrailingResizeHandle]).
+  /// - High-contrast border indicator when the tile is involved in
+  ///   keyboard navigation ([MCalEventTileContext.keyboardState]):
+  ///   * [MCalEventKeyboardState.highlighted]: 1.5px contrasting border.
+  ///   * [MCalEventKeyboardState.selected]: 2px contrasting border with a
+  ///     subtle background tint shift.
   Widget _buildDefaultEventTile(
     BuildContext context,
     MCalEventTileContext tileContext,
@@ -5614,15 +5716,58 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       end: endPadding,
     );
 
-    return Container(
-      decoration: BoxDecoration(
+    // Keyboard selection indicator: override the border to show selection state.
+    // - highlighted (cycling): 1.5px border in a contrasting colour
+    // - selected (move/resize): 2px border in a contrasting colour with a
+    //   subtle background tint shift
+    final keyboardState = tileContext.keyboardState;
+    BoxDecoration decoration;
+    if (keyboardState != MCalEventKeyboardState.none) {
+      // Use a high-contrast border: white or black depending on tile luminance
+      final isLight = tileColor.computeLuminance() > 0.5;
+      final indicatorColor = isLight ? Colors.black : Colors.white;
+      final indicatorWidth =
+          keyboardState == MCalEventKeyboardState.selected ? 2.0 : 1.5;
+
+      final kbBorderSide = BorderSide(
+        color: indicatorColor,
+        width: indicatorWidth,
+      );
+      final kbLeftBorder = isFirstSegment ? kbBorderSide : BorderSide.none;
+      final kbRightBorder = isLastSegment ? kbBorderSide : BorderSide.none;
+      final kbBorder = Border(
+        top: kbBorderSide,
+        bottom: kbBorderSide,
+        left: kbLeftBorder,
+        right: kbRightBorder,
+      );
+
+      // For selected state, slightly shift the background to reinforce
+      final effectiveColor = keyboardState == MCalEventKeyboardState.selected
+          ? Color.lerp(tileColor, indicatorColor, 0.10)!
+          : tileColor;
+
+      decoration = BoxDecoration(
+        color: effectiveColor,
+        borderRadius: BorderRadius.horizontal(
+          left: Radius.circular(leftRadius),
+          right: Radius.circular(rightRadius),
+        ),
+        border: kbBorder,
+      );
+    } else {
+      decoration = BoxDecoration(
         color: tileColor,
         borderRadius: BorderRadius.horizontal(
           left: Radius.circular(leftRadius),
           right: Radius.circular(rightRadius),
         ),
         border: tileBorder,
-      ),
+      );
+    }
+
+    return Container(
+      decoration: decoration,
       padding: contentPadding,
       alignment: Alignment.centerLeft,
       child: Text(

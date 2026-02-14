@@ -43,7 +43,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   bool _enableAnimations = true;
   bool _enableDragAndDrop = true;
   bool _enableResize = true;
-  bool _useCustomDragTargetTile = false;
+  bool _useCustomDropTargetTile = false;
   bool _showDropTargetTiles = true;
   bool _showDropTargetOverlay = true;
   bool _dropTargetTilesAboveOverlay = false;
@@ -274,13 +274,13 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
 
   void _onEventLongPress(BuildContext context, MCalEventTapDetails details) {
     final event = details.event;
+    final dateStr = _formatDate(details.displayDate);
     final isRecurring = event.occurrenceId != null;
-
-    if (isRecurring) {
-      _handleRecurringEventDelete(context, event);
-    } else {
-      _handleNonRecurringEventDelete(context, event);
-    }
+    _showSnackBar(
+      context,
+      'Event Long-Pressed: "${event.title}" on $dateStr. '
+      'All-day: ${event.isAllDay}. Recurring: $isRecurring',
+    );
   }
 
   /// Shows a bottom sheet with Edit and Delete options for the tapped event.
@@ -1349,7 +1349,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                       }
                     : null,
                 dropTargetTileBuilder:
-                    _enableDragAndDrop && _useCustomDragTargetTile
+                    _enableDragAndDrop && _useCustomDropTargetTile
                     ? (context, tileContext) =>
                           _buildCustomDropTargetTile(context, tileContext)
                     : null,
@@ -1400,9 +1400,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 colorScheme,
               ),
               _buildCompactToggle(
-                'Custom tile',
-                _useCustomDragTargetTile,
-                (v) => setState(() => _useCustomDragTargetTile = v),
+                'Custom drop tile',
+                _useCustomDropTargetTile,
+                (v) => setState(() => _useCustomDropTargetTile = v),
                 colorScheme,
               ),
               _buildCompactToggle(
@@ -1579,9 +1579,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 setState(() => _enableResize = v);
               }, colorScheme),
               _buildToggle(
-                isDesktop ? 'Custom tile' : 'Custom drag target tile',
-                _useCustomDragTargetTile,
-                (v) => setState(() => _useCustomDragTargetTile = v),
+                isDesktop ? 'Custom drop tile' : 'Custom drop target tile',
+                _useCustomDropTargetTile,
+                (v) => setState(() => _useCustomDropTargetTile = v),
                 colorScheme,
               ),
               _buildToggle(
@@ -2027,7 +2027,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                       }
                     : null,
                 dropTargetTileBuilder:
-                    _enableDragAndDrop && _useCustomDragTargetTile
+                    _enableDragAndDrop && _useCustomDropTargetTile
                     ? (context, tileContext) =>
                           _buildCustomDropTargetTile(context, tileContext)
                     : null,

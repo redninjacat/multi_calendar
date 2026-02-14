@@ -161,6 +161,79 @@ void main() {
       expect(context.displayDate, isA<DateTime>());
       expect(context.isAllDay, isA<bool>());
     });
+
+    test('keyboardState defaults to none', () {
+      final context = MCalEventTileContext(
+        event: MCalCalendarEvent(
+          id: 'kb-default',
+          title: 'Test',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 15, 1),
+        ),
+        displayDate: DateTime(2024, 1, 15),
+        isAllDay: false,
+      );
+
+      expect(context.keyboardState, MCalEventKeyboardState.none);
+    });
+
+    test('keyboardState can be set to highlighted', () {
+      final context = MCalEventTileContext(
+        event: MCalCalendarEvent(
+          id: 'kb-highlighted',
+          title: 'Test',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 15, 1),
+        ),
+        displayDate: DateTime(2024, 1, 15),
+        isAllDay: false,
+        keyboardState: MCalEventKeyboardState.highlighted,
+      );
+
+      expect(context.keyboardState, MCalEventKeyboardState.highlighted);
+    });
+
+    test('keyboardState can be set to selected', () {
+      final context = MCalEventTileContext(
+        event: MCalCalendarEvent(
+          id: 'kb-selected',
+          title: 'Test',
+          start: DateTime(2024, 1, 15),
+          end: DateTime(2024, 1, 15, 1),
+        ),
+        displayDate: DateTime(2024, 1, 15),
+        isAllDay: false,
+        keyboardState: MCalEventKeyboardState.selected,
+      );
+
+      expect(context.keyboardState, MCalEventKeyboardState.selected);
+    });
+  });
+
+  group('MCalEventKeyboardState', () {
+    test('has exactly three values', () {
+      expect(MCalEventKeyboardState.values.length, 3);
+    });
+
+    test('values are none, highlighted, selected', () {
+      expect(MCalEventKeyboardState.values, [
+        MCalEventKeyboardState.none,
+        MCalEventKeyboardState.highlighted,
+        MCalEventKeyboardState.selected,
+      ]);
+    });
+
+    test('none has index 0', () {
+      expect(MCalEventKeyboardState.none.index, 0);
+    });
+
+    test('highlighted has index 1', () {
+      expect(MCalEventKeyboardState.highlighted.index, 1);
+    });
+
+    test('selected has index 2', () {
+      expect(MCalEventKeyboardState.selected.index, 2);
+    });
   });
 
   group('MCalDayHeaderContext', () {

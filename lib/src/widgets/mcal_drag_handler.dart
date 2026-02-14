@@ -104,6 +104,29 @@ class MCalDragHandler extends ChangeNotifier {
   /// the configured delay.
   Timer? _edgeNavigationTimer;
 
+  /// Whether the pointer is currently in the edge zone.
+  ///
+  /// Set to `true` by [handleEdgeProximity] when [nearEdge] is true, and
+  /// `false` when the pointer leaves the edge. Used by the self-repeating
+  /// timer to decide whether to schedule another navigation.
+  bool _isNearEdge = false;
+
+  /// The navigation callback captured from the most recent
+  /// [handleEdgeProximity] call. Retained so the self-repeating timer can
+  /// re-invoke it without a new pointer-move event.
+  VoidCallback? _edgeNavigateCallback;
+
+  /// The delay captured from the most recent [handleEdgeProximity] call.
+  Duration? _edgeNavigateDelay;
+
+  /// Extra pause inserted between consecutive automatic navigations.
+  ///
+  /// After the first navigation fires (using the caller-provided delay),
+  /// each subsequent repeat waits this duration *plus* the original delay.
+  /// This gives the page transition animation time to settle and provides
+  /// a comfortable rhythm for the user (hold-to-scroll).
+  static const Duration _edgeRepeatDelay = Duration(milliseconds: 400);
+
   /// Default delay before edge navigation triggers (in milliseconds).
   static const int defaultEdgeNavigationDelayMs = 500;
 
@@ -428,14 +451,24 @@ class MCalDragHandler extends ChangeNotifier {
   ///
   /// When the user drags near the left or right edge of the calendar,
   /// this method starts a timer that will call [navigateCallback] after
-  /// the specified [delay] (default 500ms). If the user moves away from
-  /// the edge before the timer fires, navigation is cancelled.
+  /// the specified [delay]. If the user moves away from the edge before
+  /// the timer fires, navigation is cancelled.
+  ///
+  /// **Self-repeating navigation:** The first time the pointer enters the
+  /// edge zone a timer is started with the configured [delay]. When it
+  /// fires, it navigates and then — if the pointer is still in the edge
+  /// zone — automatically schedules the next navigation after
+  /// [_edgeRepeatDelay]. This allows the user to hold the pointer at the
+  /// edge and watch months scroll by without needing to wiggle.
+  ///
+  /// Moving away from the edge cancels any pending timer and resets all
+  /// repeat state so the next edge hover starts fresh.
   ///
   /// Parameters:
   /// - [nearEdge]: Whether the drag position is near an edge
   /// - [isLeftEdge]: True for left edge (previous month), false for right
   /// - [navigateCallback]: Callback to invoke for navigation
-  /// - [delay]: Optional custom delay before navigation triggers
+  /// - [delay]: Optional custom delay before the *first* navigation triggers
   ///
   /// Example:
   /// ```dart
@@ -459,26 +492,59 @@ class MCalDragHandler extends ChangeNotifier {
     }
 
     if (nearEdge) {
-      // Start timer if not already running
-      if (_edgeNavigationTimer == null || !_edgeNavigationTimer!.isActive) {
-        final effectiveDelay =
-            delay ?? const Duration(milliseconds: defaultEdgeNavigationDelayMs);
-        _edgeNavigationTimer = Timer(effectiveDelay, () {
-          if (isDragging || isResizing) {
-            navigateCallback();
-          }
-        });
+      _isNearEdge = true;
+      _edgeNavigateCallback = navigateCallback;
+      _edgeNavigateDelay = delay;
+
+      // Start the initial timer if none is pending.
+      if (_edgeNavigationTimer == null) {
+        _startEdgeTimer(
+          delay ?? const Duration(milliseconds: defaultEdgeNavigationDelayMs),
+          navigateCallback,
+        );
       }
     } else {
-      // Not near edge, cancel any pending navigation
+      // Left the edge zone — cancel everything so next entry starts fresh.
+      _isNearEdge = false;
+      _edgeNavigateCallback = null;
+      _edgeNavigateDelay = null;
       _cancelEdgeNavigationTimer();
     }
   }
 
-  /// Cancels the edge navigation timer if it's active.
+  /// Starts (or restarts) the edge navigation timer with the given [delay].
+  ///
+  /// When the timer fires it navigates, then self-schedules the next
+  /// navigation after [_edgeRepeatDelay] if the pointer is still near
+  /// the edge.
+  void _startEdgeTimer(Duration delay, VoidCallback navigateCallback) {
+    _edgeNavigationTimer?.cancel();
+    _edgeNavigationTimer = Timer(delay, () {
+      _edgeNavigationTimer = null;
+      if (!(isDragging || isResizing)) return;
+
+      // Navigate
+      navigateCallback();
+
+      // If still near the edge, queue the next navigation after the
+      // repeat delay. Use the latest callback in case the direction
+      // changed (shouldn't happen, but be safe).
+      if (_isNearEdge) {
+        final cb = _edgeNavigateCallback ?? navigateCallback;
+        final nextDelay = _edgeNavigateDelay ??
+            const Duration(milliseconds: defaultEdgeNavigationDelayMs);
+        _startEdgeTimer(_edgeRepeatDelay + nextDelay, cb);
+      }
+    });
+  }
+
+  /// Cancels the edge navigation timer and resets all edge-repeat state.
   void _cancelEdgeNavigationTimer() {
     _edgeNavigationTimer?.cancel();
     _edgeNavigationTimer = null;
+    _isNearEdge = false;
+    _edgeNavigateCallback = null;
+    _edgeNavigateDelay = null;
   }
 
   /// Cancels the debounce timer if active.

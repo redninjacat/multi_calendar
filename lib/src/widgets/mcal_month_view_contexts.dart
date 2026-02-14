@@ -3,6 +3,27 @@ import '../models/mcal_calendar_event.dart';
 import '../models/mcal_recurrence_rule.dart';
 import 'mcal_week_layout_contexts.dart';
 
+/// The keyboard interaction state of an event tile.
+///
+/// Used by the default event tile builder (and available to custom builders via
+/// [MCalEventTileContext.keyboardState]) to visually distinguish events that
+/// are currently involved in keyboard navigation.
+enum MCalEventKeyboardState {
+  /// Not involved in any keyboard interaction.
+  none,
+
+  /// The tile is highlighted during Tab/Shift+Tab cycling but not yet
+  /// confirmed. Use this to show a lightweight indicator (e.g. a dashed
+  /// outline or subtle glow) so the user knows which event will be selected
+  /// if they press Enter.
+  highlighted,
+
+  /// The tile has been confirmed for keyboard move or resize. Use this to
+  /// show a prominent indicator (e.g. a solid border or colour shift) so the
+  /// user knows which event is being acted upon.
+  selected,
+}
+
 /// Context object for day cell builder callbacks.
 ///
 /// Provides all necessary data for customizing the rendering of individual
@@ -190,6 +211,20 @@ class MCalEventTileContext {
   /// does not sit under the handle. Defaults to `false`.
   final bool hasTrailingResizeHandle;
 
+  /// The keyboard interaction state of this tile.
+  ///
+  /// [MCalEventKeyboardState.highlighted] when the tile is being cycled
+  /// through via Tab/Shift+Tab but not yet confirmed.
+  /// [MCalEventKeyboardState.selected] when the tile has been confirmed
+  /// for keyboard move or resize.
+  /// [MCalEventKeyboardState.none] (default) when the tile is not involved
+  /// in keyboard interaction.
+  ///
+  /// The default tile builder uses this to render a visual indicator.
+  /// Custom builders receive this value and can render any treatment they
+  /// wish.
+  final MCalEventKeyboardState keyboardState;
+
   /// Creates a new [MCalEventTileContext] instance.
   const MCalEventTileContext({
     required this.event,
@@ -209,6 +244,7 @@ class MCalEventTileContext {
     this.isException = false,
     this.hasLeadingResizeHandle = false,
     this.hasTrailingResizeHandle = false,
+    this.keyboardState = MCalEventKeyboardState.none,
   });
 }
 
