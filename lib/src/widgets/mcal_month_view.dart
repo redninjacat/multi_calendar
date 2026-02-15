@@ -6152,14 +6152,15 @@ class _DayCellWidget extends StatelessWidget {
         final tileHeight = theme.eventTileHeight ?? 20.0;
 
         // Calculate available height for events after:
-        // - date label with top padding (20.0 + 4.0 = 24.0) if showing
+        // - date label with top padding (theme.dateLabelHeight + 4.0) if showing
         // - multi-day reserved area (variable)
         // - cell border (1px top + 1px bottom = 2px)
         // Note: Event tiles now go edge-to-edge horizontally (no cell padding)
         // and tiles handle their own margins
+        final dateLabelHeight = theme.dateLabelHeight ?? 18.0;
         final dateLabelHeightWithPadding = showDateLabel
-            ? 24.0
-            : 0.0; // 20.0 label + 4.0 top padding
+            ? (dateLabelHeight + 4.0)
+            : 0.0;
         const cellBorderHeight = 2.0; // 1px border on top and bottom
         final availableEventHeight =
             constraints.maxHeight -
@@ -6446,10 +6447,13 @@ class _DayCellWidget extends StatelessWidget {
     // Get alignment from the DateLabelPosition
     final alignment = labelContext.horizontalAlignment;
 
+    // Use theme dateLabelHeight to prevent overflow when cells are constrained
+    final labelHeight = theme.dateLabelHeight ?? 18.0;
+
     // Use a fixed-size container for uniform spacing
     final circleContainer = Container(
-      width: 24,
-      height: 24,
+      width: labelHeight,
+      height: labelHeight,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: labelContext.isToday
@@ -6457,11 +6461,14 @@ class _DayCellWidget extends StatelessWidget {
             : Colors.transparent,
         shape: BoxShape.circle,
       ),
-      child: dateText,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: dateText,
+      ),
     );
 
     return SizedBox(
-      height: 24,
+      height: labelHeight,
       child: Align(alignment: alignment, child: circleContainer),
     );
   }

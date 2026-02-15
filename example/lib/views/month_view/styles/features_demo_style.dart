@@ -77,6 +77,9 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   // Control panel expansion state for mobile
   bool _showControls = false;
 
+  // Desktop control panel expansion (starts collapsed to save space)
+  bool _showDesktopControls = false;
+
   @override
   void initState() {
     super.initState();
@@ -1534,16 +1537,16 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   }
 
   // ============================================================
-  // Desktop Control Panel
+  // Desktop Control Panel (collapsible, compact)
   // ============================================================
 
   Widget _buildControlPanel(ColorScheme colorScheme, bool isDesktop) {
-    final padding = isDesktop
-        ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
-        : const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
-    final toggleSpacing = isDesktop ? 14.0 : 24.0;
-    final rowGap = isDesktop ? 4.0 : 8.0;
-    final sliderWidth = isDesktop ? 72.0 : 100.0;
+    if (!isDesktop) {
+      return _buildTabletControlPanel(colorScheme);
+    }
+    // Desktop: collapsible panel - collapsed by default to save space
+    const padding = EdgeInsets.symmetric(horizontal: 8, vertical: 4);
+    const sliderWidth = 56.0;
 
     return Container(
       padding: padding,
@@ -1554,49 +1557,40 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Row 1: Feature toggles
-          Wrap(
-            spacing: toggleSpacing,
-            runSpacing: rowGap,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          // Compact header row: expand button + essential toggles + actions
+          Row(
             children: [
-              _buildToggle(
-                isDesktop ? 'Week #' : 'Week Numbers',
-                _showWeekNumbers,
-                (v) => setState(() => _showWeekNumbers = v),
-                colorScheme,
+              IconButton(
+                icon: Icon(
+                  _showDesktopControls ? Icons.expand_less : Icons.tune,
+                  size: 20,
+                  color: colorScheme.primary,
+                ),
+                onPressed: () =>
+                    setState(() => _showDesktopControls = !_showDesktopControls),
+                tooltip: _showDesktopControls ? 'Hide controls' : 'Show controls',
+                style: IconButton.styleFrom(
+                  padding: const EdgeInsets.all(4),
+                  minimumSize: const Size(32, 32),
+                ),
               ),
-              _buildToggle('Animations', _enableAnimations, (v) {
-                setState(() => _enableAnimations = v);
-              }, colorScheme),
-              _buildToggle(
-                isDesktop ? 'Drag' : 'Drag & Drop',
-                _enableDragToMove,
-                (v) => setState(() => _enableDragToMove = v),
-                colorScheme,
-              ),
-              _buildToggle('Resize', _enableDragToResize, (v) {
-                setState(() => _enableDragToResize = v);
-              }, colorScheme),
-              _buildToggle(
-                isDesktop ? 'Custom drop tile' : 'Custom drop target tile',
-                _useCustomDropTargetTile,
-                (v) => setState(() => _useCustomDropTargetTile = v),
-                colorScheme,
-              ),
-              _buildToggle(
-                isDesktop ? 'Tiles above' : 'Tiles above overlay',
-                _dropTargetTilesAboveOverlay,
-                (v) => setState(() => _dropTargetTilesAboveOverlay = v),
-                colorScheme,
-              ),
-              _buildToggle(
-                isDesktop ? 'Blackout' : 'Blackout days',
-                _enableBlackoutDays,
-                (v) => setState(() => _enableBlackoutDays = v),
-                colorScheme,
-              ),
-              // Loading/Error demo buttons
+              const SizedBox(width: 4),
+              _buildCompactToggle('Week #', _showWeekNumbers,
+                  (v) => setState(() => _showWeekNumbers = v), colorScheme,
+                  fontSize: 11),
+              const SizedBox(width: 2),
+              _buildCompactToggle('Anim', _enableAnimations,
+                  (v) => setState(() => _enableAnimations = v), colorScheme,
+                  fontSize: 11),
+              const SizedBox(width: 2),
+              _buildCompactToggle('Drag', _enableDragToMove,
+                  (v) => setState(() => _enableDragToMove = v), colorScheme,
+                  fontSize: 11),
+              const SizedBox(width: 2),
+              _buildCompactToggle('Resize', _enableDragToResize,
+                  (v) => setState(() => _enableDragToResize = v), colorScheme,
+                  fontSize: 11),
+              const SizedBox(width: 8),
               FilledButton.tonal(
                 onPressed: () {
                   _sharedController.setLoading(true);
@@ -1604,15 +1598,215 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                     if (mounted) _sharedController.setLoading(false);
                   });
                 },
-                child: Text(isDesktop ? 'Loading' : 'Show Loading'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: const Size(0, 28),
+                ),
+                child: const Text('Load', style: TextStyle(fontSize: 11)),
               ),
+              const SizedBox(width: 4),
+              FilledButton.tonal(
+                onPressed: () => _sharedController.setError(
+                    'Demo error: Something went wrong!'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: const Size(0, 28),
+                ),
+                child: const Text('Error', style: TextStyle(fontSize: 11)),
+              ),
+              const SizedBox(width: 4),
+              OutlinedButton(
+                onPressed: () {
+                  _sharedController.clearError();
+                  _sharedController.setLoading(false);
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: const Size(0, 28),
+                ),
+                child: const Text('Clear', style: TextStyle(fontSize: 11)),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: () => _onAddRecurringEvent(context),
+                icon: const Icon(Icons.repeat, size: 14),
+                label: const Text('Recurring', style: TextStyle(fontSize: 11)),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: const Size(0, 28),
+                ),
+              ),
+            ],
+          ),
+          if (_showDesktopControls) ...[
+            const SizedBox(height: 4),
+            // Expanded: more toggles + sliders that wrap
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _buildCompactToggle(
+                    'Custom tile', _useCustomDropTargetTile,
+                    (v) => setState(() => _useCustomDropTargetTile = v),
+                    colorScheme, fontSize: 11),
+                _buildCompactToggle(
+                    'Tiles above', _dropTargetTilesAboveOverlay,
+                    (v) =>
+                        setState(() => _dropTargetTilesAboveOverlay = v),
+                    colorScheme, fontSize: 11),
+                _buildCompactToggle('Blackout', _enableBlackoutDays,
+                    (v) => setState(() => _enableBlackoutDays = v),
+                    colorScheme, fontSize: 11),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Label:',
+                        style: TextStyle(
+                            fontSize: 11, color: colorScheme.onSurface)),
+                    const SizedBox(width: 4),
+                    DropdownButton<DateLabelPosition>(
+                      value: _dateLabelPosition,
+                      isDense: true,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colorScheme.onSurface,
+                      ),
+                      items: DateLabelPosition.values
+                          .map((pos) => DropdownMenuItem(
+                                value: pos,
+                                child: Text(pos.name, style: const TextStyle(fontSize: 11)),
+                              ))
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) setState(() => _dateLabelPosition = v);
+                      },
+                    ),
+                  ],
+                ),
+                _buildCompactSlider(
+                    'Max Events', _maxVisibleEventsPerDay.toDouble(), 1, 10, 9,
+                    (v) => setState(() => _maxVisibleEventsPerDay = v.round()),
+                    colorScheme,
+                    showValue: _maxVisibleEventsPerDay.toString(),
+                    sliderWidth: 140,
+                    fontSize: 11),
+                _buildCompactSlider(
+                    'Tile Height', _tileHeight, 10, 30, 20,
+                    (v) => setState(() => _tileHeight = v),
+                    colorScheme,
+                    showValue: '${_tileHeight.toInt()}px',
+                    sliderWidth: 140,
+                    fontSize: 11),
+                _buildCompactSlider(
+                    'Corner', _eventTileCornerRadius, 0, 10, 10,
+                    (v) => setState(() => _eventTileCornerRadius = v),
+                    colorScheme,
+                    showValue: '${_eventTileCornerRadius.toInt()}px',
+                    sliderWidth: 140,
+                    fontSize: 11),
+                _buildCompactSlider(
+                    'Border', _tileBorderWidth, 0, 3, 6,
+                    (v) => setState(() => _tileBorderWidth = v),
+                    colorScheme,
+                    showValue: _tileBorderWidth.toStringAsFixed(1),
+                    sliderWidth: 140,
+                    fontSize: 11),
+                _buildCompactSlider(
+                    'V-Space', _tileVerticalSpacing, 0, 6, 6,
+                    (v) => setState(() => _tileVerticalSpacing = v),
+                    colorScheme,
+                    showValue: '${_tileVerticalSpacing.toInt()}px',
+                    sliderWidth: 140,
+                    fontSize: 11),
+                _buildCompactSlider(
+                    'H-Space', _tileHorizontalSpacing, 0, 6, 6,
+                    (v) => setState(() => _tileHorizontalSpacing = v),
+                    colorScheme,
+                    showValue: '${_tileHorizontalSpacing.toInt()}px',
+                    sliderWidth: 140,
+                    fontSize: 11),
+                _buildCompactSlider(
+                    'Label H', _dateLabelHeight, 12, 28, 16,
+                    (v) => setState(() => _dateLabelHeight = v),
+                    colorScheme,
+                    showValue: '${_dateLabelHeight.toInt()}px',
+                    sliderWidth: 140,
+                    fontSize: 11),
+                _buildCompactSlider(
+                    'Overflow H', _overflowIndicatorHeight, 10, 20, 10,
+                    (v) => setState(() => _overflowIndicatorHeight = v),
+                    colorScheme,
+                    showValue: '${_overflowIndicatorHeight.toInt()}px',
+                    sliderWidth: 140,
+                    fontSize: 11),
+                if (_enableDragToMove)
+                  _buildCompactSlider(
+                      'Edge Delay', _dragEdgeNavigationDelayMs.toDouble(),
+                      200, 1400, 12,
+                      (v) => setState(
+                          () => _dragEdgeNavigationDelayMs = v.round()),
+                      colorScheme,
+                      showValue: '${_dragEdgeNavigationDelayMs}ms',
+                      sliderWidth: 140,
+                      fontSize: 11),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabletControlPanel(ColorScheme colorScheme) {
+    const padding = EdgeInsets.symmetric(horizontal: 12, vertical: 6);
+    const toggleSpacing = 14.0;
+    const rowGap = 4.0;
+    const sliderWidth = 72.0;
+
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withAlpha(100),
+        border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Wrap(
+            spacing: toggleSpacing,
+            runSpacing: rowGap,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _buildToggle('Week #', _showWeekNumbers,
+                  (v) => setState(() => _showWeekNumbers = v), colorScheme),
+              _buildToggle('Animations', _enableAnimations,
+                  (v) => setState(() => _enableAnimations = v), colorScheme),
+              _buildToggle('Drag', _enableDragToMove,
+                  (v) => setState(() => _enableDragToMove = v), colorScheme),
+              _buildToggle('Resize', _enableDragToResize,
+                  (v) => setState(() => _enableDragToResize = v), colorScheme),
+              _buildToggle('Custom drop tile', _useCustomDropTargetTile,
+                  (v) => setState(() => _useCustomDropTargetTile = v),
+                  colorScheme),
+              _buildToggle('Tiles above', _dropTargetTilesAboveOverlay,
+                  (v) => setState(() => _dropTargetTilesAboveOverlay = v),
+                  colorScheme),
+              _buildToggle('Blackout', _enableBlackoutDays,
+                  (v) => setState(() => _enableBlackoutDays = v), colorScheme),
               FilledButton.tonal(
                 onPressed: () {
-                  _sharedController.setError(
-                    'Demo error: Something went wrong!',
-                  );
+                  _sharedController.setLoading(true);
+                  Future.delayed(const Duration(seconds: 2), () {
+                    if (mounted) _sharedController.setLoading(false);
+                  });
                 },
-                child: Text(isDesktop ? 'Error' : 'Show Error'),
+                child: const Text('Loading'),
+              ),
+              FilledButton.tonal(
+                onPressed: () => _sharedController.setError(
+                    'Demo error: Something went wrong!'),
+                child: const Text('Error'),
               ),
               OutlinedButton(
                 onPressed: () {
@@ -1621,167 +1815,104 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 },
                 child: const Text('Clear'),
               ),
-              // Recurring event creation
               FilledButton.icon(
                 onPressed: () => _onAddRecurringEvent(context),
-                icon: Icon(Icons.repeat, size: isDesktop ? 16 : 18),
-                label: Text(
-                  isDesktop ? 'Add Recurring' : 'Add Recurring Event',
-                ),
+                icon: const Icon(Icons.repeat, size: 16),
+                label: const Text('Add Recurring'),
               ),
             ],
           ),
           SizedBox(height: rowGap),
-          // Row 2: Theme settings
           Wrap(
-            spacing: isDesktop ? 10.0 : 16.0,
+            spacing: 10.0,
             runSpacing: rowGap,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              // Date label position
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'Label:',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
+                  Text('Label:',
+                      style: TextStyle(
+                          fontSize: 13, color: colorScheme.onSurface)),
                   const SizedBox(width: 8),
                   DropdownButton<DateLabelPosition>(
                     value: _dateLabelPosition,
                     isDense: true,
                     style: TextStyle(
-                      fontSize: 13,
-                      color: colorScheme.onSurface,
-                    ),
-                    items: DateLabelPosition.values.map((pos) {
-                      return DropdownMenuItem(
-                        value: pos,
-                        child: Text(pos.name),
-                      );
-                    }).toList(),
+                        fontSize: 13, color: colorScheme.onSurface),
+                    items: DateLabelPosition.values
+                        .map((pos) => DropdownMenuItem(
+                              value: pos,
+                              child: Text(pos.name),
+                            ))
+                        .toList(),
                     onChanged: (v) {
                       if (v != null) setState(() => _dateLabelPosition = v);
                     },
                   ),
                 ],
               ),
-              // Max events slider
               _buildCompactSlider(
-                'Max Events',
-                _maxVisibleEventsPerDay.toDouble(),
-                1,
-                10,
-                9,
-                (v) => setState(() => _maxVisibleEventsPerDay = v.round()),
-                colorScheme,
-                showValue: _maxVisibleEventsPerDay.toString(),
-                sliderWidth: sliderWidth,
-              ),
-              // Tile height slider
+                  'Max Events', _maxVisibleEventsPerDay.toDouble(), 1, 10, 9,
+                  (v) => setState(() => _maxVisibleEventsPerDay = v.round()),
+                  colorScheme,
+                  showValue: _maxVisibleEventsPerDay.toString(),
+                  sliderWidth: sliderWidth),
               _buildCompactSlider(
-                'Tile Height',
-                _tileHeight,
-                10,
-                30,
-                20,
-                (v) => setState(() => _tileHeight = v),
-                colorScheme,
-                showValue: '${_tileHeight.toInt()}px',
-                sliderWidth: sliderWidth,
-              ),
-              // Corner radius slider
+                  'Tile Height', _tileHeight, 10, 30, 20,
+                  (v) => setState(() => _tileHeight = v),
+                  colorScheme,
+                  showValue: '${_tileHeight.toInt()}px',
+                  sliderWidth: sliderWidth),
               _buildCompactSlider(
-                'Corner',
-                _eventTileCornerRadius,
-                0,
-                10,
-                10,
-                (v) => setState(() => _eventTileCornerRadius = v),
-                colorScheme,
-                showValue: '${_eventTileCornerRadius.toInt()}px',
-                sliderWidth: sliderWidth,
-              ),
-              // Border width slider
+                  'Corner', _eventTileCornerRadius, 0, 10, 10,
+                  (v) => setState(() => _eventTileCornerRadius = v),
+                  colorScheme,
+                  showValue: '${_eventTileCornerRadius.toInt()}px',
+                  sliderWidth: sliderWidth),
               _buildCompactSlider(
-                'Border',
-                _tileBorderWidth,
-                0,
-                3,
-                6,
-                (v) => setState(() => _tileBorderWidth = v),
-                colorScheme,
-                showValue: '${_tileBorderWidth.toStringAsFixed(1)}px',
-                sliderWidth: sliderWidth,
-              ),
-              // Vertical spacing slider
+                  'Border', _tileBorderWidth, 0, 3, 6,
+                  (v) => setState(() => _tileBorderWidth = v),
+                  colorScheme,
+                  showValue: '${_tileBorderWidth.toStringAsFixed(1)}px',
+                  sliderWidth: sliderWidth),
               _buildCompactSlider(
-                'V-Space',
-                _tileVerticalSpacing,
-                0,
-                6,
-                6,
-                (v) => setState(() => _tileVerticalSpacing = v),
-                colorScheme,
-                showValue: '${_tileVerticalSpacing.toInt()}px',
-                sliderWidth: sliderWidth,
-              ),
-              // Horizontal spacing slider
+                  'V-Space', _tileVerticalSpacing, 0, 6, 6,
+                  (v) => setState(() => _tileVerticalSpacing = v),
+                  colorScheme,
+                  showValue: '${_tileVerticalSpacing.toInt()}px',
+                  sliderWidth: sliderWidth),
               _buildCompactSlider(
-                'H-Space',
-                _tileHorizontalSpacing,
-                0,
-                6,
-                6,
-                (v) => setState(() => _tileHorizontalSpacing = v),
-                colorScheme,
-                showValue: '${_tileHorizontalSpacing.toInt()}px',
-                sliderWidth: sliderWidth,
-              ),
-              // Label height slider
+                  'H-Space', _tileHorizontalSpacing, 0, 6, 6,
+                  (v) => setState(() => _tileHorizontalSpacing = v),
+                  colorScheme,
+                  showValue: '${_tileHorizontalSpacing.toInt()}px',
+                  sliderWidth: sliderWidth),
               _buildCompactSlider(
-                'Label H',
-                _dateLabelHeight,
-                12,
-                28,
-                16,
-                (v) => setState(() => _dateLabelHeight = v),
-                colorScheme,
-                showValue: '${_dateLabelHeight.toInt()}px',
-                sliderWidth: sliderWidth,
-              ),
-              // Overflow indicator height slider
+                  'Label H', _dateLabelHeight, 12, 28, 16,
+                  (v) => setState(() => _dateLabelHeight = v),
+                  colorScheme,
+                  showValue: '${_dateLabelHeight.toInt()}px',
+                  sliderWidth: sliderWidth),
               _buildCompactSlider(
-                'Overflow H',
-                _overflowIndicatorHeight,
-                10,
-                20,
-                10,
-                (v) => setState(() => _overflowIndicatorHeight = v),
-                colorScheme,
-                showValue: '${_overflowIndicatorHeight.toInt()}px',
-                sliderWidth: sliderWidth,
-              ),
+                  'Overflow H', _overflowIndicatorHeight, 10, 20, 10,
+                  (v) => setState(() => _overflowIndicatorHeight = v),
+                  colorScheme,
+                  showValue: '${_overflowIndicatorHeight.toInt()}px',
+                  sliderWidth: sliderWidth),
             ],
           ),
-          // Row 3: Drag edge delay (only when drag enabled)
           if (_enableDragToMove)
             Padding(
-              padding: EdgeInsets.only(top: rowGap),
+              padding: const EdgeInsets.only(top: 4),
               child: _buildCompactSlider(
-                'Edge Delay',
-                _dragEdgeNavigationDelayMs.toDouble(),
-                200,
-                1400,
-                12,
-                (v) => setState(() => _dragEdgeNavigationDelayMs = v.round()),
-                colorScheme,
-                showValue: '${_dragEdgeNavigationDelayMs}ms',
-                sliderWidth: sliderWidth,
-              ),
+                  'Edge Delay', _dragEdgeNavigationDelayMs.toDouble(),
+                  200, 1400, 12,
+                  (v) =>
+                      setState(() => _dragEdgeNavigationDelayMs = v.round()),
+                  colorScheme,
+                  showValue: '${_dragEdgeNavigationDelayMs}ms',
+                  sliderWidth: sliderWidth),
             ),
         ],
       ),
@@ -1893,9 +2024,10 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
         border: Border.all(color: colorScheme.outlineVariant),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        children: [
-          Container(
+      child: ClipRect(
+        child: Column(
+          children: [
+            Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: colorScheme.primaryContainer.withAlpha(100),
@@ -2058,6 +2190,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -2073,18 +2206,19 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
         border: Border.all(color: colorScheme.outlineVariant),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: colorScheme.secondaryContainer.withAlpha(100),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(8),
+      child: ClipRect(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: colorScheme.secondaryContainer.withAlpha(100),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(8),
+                ),
               ),
-            ),
-            child: ClipRect(
-              child: Row(
+              child: ClipRect(
+                child: Row(
                 children: [
                   Icon(Icons.sync, color: colorScheme.secondary),
                   const SizedBox(width: 8),
@@ -2127,6 +2261,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -2158,14 +2293,15 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     String label,
     bool value,
     ValueChanged<bool> onChanged,
-    ColorScheme colorScheme,
-  ) {
+    ColorScheme colorScheme, {
+    double fontSize = 13,
+  }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
+          style: TextStyle(fontSize: fontSize, color: colorScheme.onSurface),
         ),
         const SizedBox(width: 4),
         Switch(
@@ -2187,13 +2323,14 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     ColorScheme colorScheme, {
     required String showValue,
     double sliderWidth = 100,
+    double fontSize = 13,
   }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           '$label: $showValue',
-          style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
+          style: TextStyle(fontSize: fontSize, color: colorScheme.onSurface),
         ),
         SizedBox(
           width: sliderWidth,
