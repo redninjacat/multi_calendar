@@ -4,7 +4,7 @@ import '../models/mcal_calendar_event.dart';
 import '../styles/mcal_theme.dart';
 import 'mcal_callback_details.dart';
 
-/// A widget that renders a segment of a multi-day event tile.
+/// A widget that renders a segment of a multi-day event tile in Month View.
 ///
 /// This widget is responsible for rendering contiguous multi-day event tiles
 /// that span across cells and potentially multiple week rows. It handles:
@@ -14,7 +14,7 @@ import 'mcal_callback_details.dart';
 ///
 /// Example:
 /// ```dart
-/// MCalMultiDayTile(
+/// MCalMonthMultiDayTile(
 ///   event: myEvent,
 ///   details: MCalMultiDayTileDetails(
 ///     event: myEvent,
@@ -33,7 +33,7 @@ import 'mcal_callback_details.dart';
 ///   onTap: (context, details) => print('Tapped: ${details.event.title}'),
 /// )
 /// ```
-class MCalMultiDayTile extends StatelessWidget {
+class MCalMonthMultiDayTile extends StatelessWidget {
   /// The calendar event being rendered.
   final MCalCalendarEvent event;
 
@@ -58,8 +58,8 @@ class MCalMultiDayTile extends StatelessWidget {
   /// event and display date.
   final void Function(BuildContext, MCalEventTapDetails)? onLongPress;
 
-  /// Creates a new [MCalMultiDayTile] widget.
-  const MCalMultiDayTile({
+  /// Creates a new [MCalMonthMultiDayTile] widget.
+  const MCalMonthMultiDayTile({
     super.key,
     required this.event,
     required this.details,

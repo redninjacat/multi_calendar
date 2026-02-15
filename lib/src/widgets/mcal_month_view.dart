@@ -17,19 +17,19 @@ import '../utils/date_utils.dart';
 import '../utils/mcal_localization.dart';
 import 'mcal_builder_wrapper.dart';
 import 'mcal_callback_details.dart';
-import 'mcal_default_week_layout.dart';
+import 'mcal_month_default_week_layout.dart';
 import 'mcal_drag_handler.dart';
 import 'mcal_draggable_event_tile.dart';
 import 'mcal_month_view_contexts.dart';
-import 'mcal_multi_day_renderer.dart';
-import 'mcal_week_layout_contexts.dart';
+import 'mcal_month_multi_day_renderer.dart';
+import 'mcal_month_week_layout_contexts.dart';
 
 /// Builder callback for customizing week row event layout.
 ///
-/// Receives [MCalWeekLayoutContext] containing all events, dates, column widths,
+/// Receives [MCalMonthWeekLayoutContext] containing all events, dates, column widths,
 /// and pre-wrapped builders for event tiles, date labels, and overflow indicators.
 typedef MCalWeekLayoutBuilder =
-    Widget Function(BuildContext context, MCalWeekLayoutContext layoutContext);
+    Widget Function(BuildContext context, MCalMonthWeekLayoutContext layoutContext);
 
 /// Direction for swipe navigation gestures.
 enum MCalSwipeNavigationDirection {
@@ -193,9 +193,9 @@ class MCalMonthView extends StatefulWidget {
 
   /// Builder callback for customizing day header rendering.
   ///
-  /// Receives the build context, [MCalDayHeaderContext] with header data, and
+  /// Receives the build context, [MCalMonthDayHeaderContext] with header data, and
   /// the default header widget. Return a custom widget to override the default.
-  final Widget Function(BuildContext, MCalDayHeaderContext, Widget)?
+  final Widget Function(BuildContext, MCalMonthDayHeaderContext, Widget)?
   dayHeaderBuilder;
 
   /// Builder callback for customizing navigator rendering.
@@ -473,12 +473,12 @@ class MCalMonthView extends StatefulWidget {
 
   /// Builder callback for customizing overflow indicator rendering.
   ///
-  /// Receives the build context, [MCalOverflowIndicatorContext] with overflow data,
+  /// Receives the build context, [MCalMonthOverflowIndicatorContext] with overflow data,
   /// and the default indicator widget. Return a custom widget to override the default.
   ///
   /// **Note:** The overflow indicator does not support drag-and-drop. Only
   /// visible event tiles can be dragged.
-  final Widget Function(BuildContext, MCalOverflowIndicatorContext, Widget)?
+  final Widget Function(BuildContext, MCalMonthOverflowIndicatorContext, Widget)?
   overflowIndicatorBuilder;
 
   // ============ Drag-and-Drop ============
@@ -1243,8 +1243,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // Explicit override takes precedence
     if (widget.enableDragToResize != null) return widget.enableDragToResize!;
 
-    // Auto-detect: enabled on web, desktop, and tablets; disabled on phones
-    if (kIsWeb) return true;
+    // Auto-detect: enabled on web (when not phone-sized), desktop, and tablets; disabled on phones
+    final size = MediaQuery.sizeOf(context);
+    if (kIsWeb) return size.shortestSide >= 600;
 
     final platform = Theme.of(context).platform;
     if (platform == TargetPlatform.macOS ||
@@ -1254,7 +1255,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // Mobile: enabled on tablets (shortest side >= 600dp)
-    final size = MediaQuery.sizeOf(context);
     return size.shortestSide >= 600;
   }
 
@@ -1573,11 +1573,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final locale = widget.locale ?? Localizations.localeOf(context);
     final firstDayOfWeek = _getDefaultFirstDayOfWeek();
 
-    // Build the main calendar content
-    final calendarContent = Column(
-      children: [
-        if (widget.showNavigator)
-          _NavigatorWidget(
+    // Build the main calendar content (ClipRect prevents overflow errors)
+    final calendarContent = ClipRect(
+      child: Column(
+        children: [
+          if (widget.showNavigator)
+            _NavigatorWidget(
             currentMonth: _currentMonth,
             minDate: widget.minDate,
             maxDate: widget.maxDate,
@@ -1599,7 +1600,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           key: _gridAreaKey,
           child: _buildMonthGridWithRTL(context, theme, locale),
         ),
-      ],
+        ],
+      ),
     );
 
     // Build overlay widgets based on controller state
@@ -3736,7 +3738,7 @@ class _MonthPageWidget extends StatefulWidget {
   final MCalWeekLayoutBuilder? weekLayoutBuilder;
 
   /// Builder callback for customizing overflow indicator rendering.
-  final Widget Function(BuildContext, MCalOverflowIndicatorContext, Widget)?
+  final Widget Function(BuildContext, MCalMonthOverflowIndicatorContext, Widget)?
   overflowIndicatorBuilder;
 
   // Drag-and-drop parameters
@@ -4707,13 +4709,13 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
           dateLabelHeight: dateLabelHeight,
           dayWidth: dayWidth,
         );
-        final config = MCalWeekLayoutConfig.fromTheme(
+        final config = MCalMonthWeekLayoutConfig.fromTheme(
           widget.theme,
           maxVisibleEventsPerDay: widget.maxVisibleEventsPerDay,
         );
         Widget noOpOverflow(
           BuildContext ctx,
-          MCalOverflowIndicatorContext overflowContext,
+          MCalMonthOverflowIndicatorContext overflowContext,
         ) => const SizedBox.shrink();
 
         return Column(
@@ -4722,8 +4724,8 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             final columnWidths = List.filled(7, dayWidth);
             final segments = weekRowIndex < phantomSegments.length
                 ? phantomSegments[weekRowIndex]
-                : <MCalEventSegment>[];
-            final layoutContext = MCalWeekLayoutContext(
+                : <MCalMonthEventSegment>[];
+            final layoutContext = MCalMonthWeekLayoutContext(
               segments: segments,
               dates: weekDates,
               columnWidths: columnWidths,
@@ -4737,7 +4739,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             );
             final weekLayout = widget.weekLayoutBuilder != null
                 ? widget.weekLayoutBuilder!(context, layoutContext)
-                : MCalDefaultWeekLayoutBuilder.build(context, layoutContext);
+                : MCalMonthDefaultWeekLayoutBuilder.build(context, layoutContext);
             return Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -5234,7 +5236,7 @@ class _WeekRowWidget extends StatefulWidget {
   final MCalWeekLayoutBuilder? weekLayoutBuilder;
 
   /// Builder callback for customizing overflow indicator rendering.
-  final Widget Function(BuildContext, MCalOverflowIndicatorContext, Widget)?
+  final Widget Function(BuildContext, MCalMonthOverflowIndicatorContext, Widget)?
   overflowIndicatorBuilder;
 
   /// The index of this week row within the month grid.
@@ -5518,7 +5520,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
     double rowHeight,
   ) {
     // Create layout config from theme, passing maxVisibleEventsPerDay
-    final config = MCalWeekLayoutConfig.fromTheme(
+    final config = MCalMonthWeekLayoutConfig.fromTheme(
       widget.theme,
       maxVisibleEventsPerDay: widget.maxVisibleEventsPerDay,
     );
@@ -5536,7 +5538,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
     // Get segments for this specific week row
     final weekSegments = widget.weekRowIndex < allSegments.length
         ? allSegments[widget.weekRowIndex]
-        : <MCalEventSegment>[];
+        : <MCalMonthEventSegment>[];
 
     // Get day width for dragged tile sizing
     final dayWidth = columnWidths.isNotEmpty ? columnWidths[0] : 0.0;
@@ -5700,7 +5702,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
     }
 
     // Create the week layout context
-    final layoutContext = MCalWeekLayoutContext(
+    final layoutContext = MCalMonthWeekLayoutContext(
       segments: weekSegments,
       dates: widget.dates,
       columnWidths: columnWidths,
@@ -5719,7 +5721,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
     }
 
     // Use default week layout builder
-    return MCalDefaultWeekLayoutBuilder.build(context, layoutContext);
+    return MCalMonthDefaultWeekLayoutBuilder.build(context, layoutContext);
   }
 
   // Note: _buildDropTargetTilesLayer and _shouldHighlightCell have been removed.
@@ -5924,7 +5926,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
   /// Builds the default overflow indicator widget.
   Widget _buildDefaultOverflowIndicator(
     BuildContext context,
-    MCalOverflowIndicatorContext overflowContext,
+    MCalMonthOverflowIndicatorContext overflowContext,
   ) {
     final theme = widget.theme;
     return Center(
@@ -7420,7 +7422,7 @@ class _OverflowIndicatorWidget extends StatelessWidget {
 class _WeekdayHeaderRowWidget extends StatelessWidget {
   final int firstDayOfWeek;
   final MCalThemeData theme;
-  final Widget Function(BuildContext, MCalDayHeaderContext, Widget)?
+  final Widget Function(BuildContext, MCalMonthDayHeaderContext, Widget)?
   dayHeaderBuilder;
   final Locale locale;
   final bool showWeekNumbers;
@@ -7490,7 +7492,7 @@ class _WeekdayHeaderRowWidget extends StatelessWidget {
 
       // Apply builder callback if provided
       if (dayHeaderBuilder != null) {
-        final contextObj = MCalDayHeaderContext(
+        final contextObj = MCalMonthDayHeaderContext(
           dayOfWeek: dayOfWeek,
           dayName: dayName,
         );
@@ -7703,7 +7705,7 @@ class _NavigatorWidget extends StatelessWidget {
 /// Creates a synthetic all-day event from [proposedStartDate] to [proposedEndDate],
 /// then uses [MCalMultiDayRenderer.calculateAllEventSegments] to get one segment
 /// per week row that the range intersects.
-List<List<MCalEventSegment>> _getPhantomSegmentsForDropTarget({
+List<List<MCalMonthEventSegment>> _getPhantomSegmentsForDropTarget({
   required DateTime proposedStartDate,
   required DateTime proposedEndDate,
   required DateTime monthStart,

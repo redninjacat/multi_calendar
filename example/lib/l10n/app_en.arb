@@ -1,0 +1,145 @@
+{
+  "@@locale": "en",
+  "appTitle": "Multi Calendar",
+  "toggleTheme": "Toggle theme",
+  "changeLanguage": "Change language",
+  "languageEnglish": "English",
+  "languageSpanish": "Spanish",
+  "languageFrench": "French",
+  "languageArabic": "Arabic (RTL)",
+  "monthView": "Month View",
+  "dayView": "Day View",
+  "monthViewDescription": "Different styles for the month calendar view",
+  "dayViewDescription": "Day view with drag-and-drop, timed and all-day events",
+  "comingSoon": "Coming soon...",
+  "styleDefault": "Default",
+  "styleClassic": "Classic",
+  "styleModern": "Modern",
+  "styleColorful": "Colorful",
+  "styleMinimal": "Minimal",
+  "styleMinimalDescription": "Bare bones, text-only design. Maximum whitespace, minimal gridlines, subtle colors. Clean and spacious.",
+  "styleFeaturesDemo": "Features Demo",
+  "styleFeaturesDemoDescription": "Comprehensive showcase: special time regions (lunch, after-hours), blocked slots, drag-drop, resize, keyboard nav, snap-to-time. Try dropping events into blocked zones.",
+  "styleDefaultDescription": "Out-of-the-box Day View with default theme. Drag events to move, resize from edges. Double-tap empty space to create. Shows all-day and timed events.",
+  "styleClassicDescription": "Traditional grid with borders, square corners, uniform colors. Business hours 8–18, 15-minute gridlines.",
+  "styleModernDescription": "Clean, rounded design with colorful event indicators. Extended hours 7–21, 30-minute major gridlines.",
+  "styleColorfulDescription": "Vibrant gradients and bold colors. Full 24-hour range. Playful, creative aesthetic.",
+  "styleStressTest": "Stress Test",
+  "styleStressTestDescription": "Performance demo with 100–500 events. Toggle stress mode, select event count, view FPS and frame metrics. Demonstrates smooth rendering with many overlapping events.",
+  "styleRtlDemo": "RTL Demo",
+  "styleRtlDemoDescription": "Day View in right-to-left layout (Arabic). Time legend on right, navigator arrows flipped. Demonstrates full RTL support for Arabic and other RTL languages.",
+  "styleThemeCustomization": "Theme Customization",
+  "styleThemeCustomizationDescription": "Customize theme properties: hour height, gridlines, time slots, event tiles, resize handles. Presets for common configurations. Changes apply immediately.",
+  "notes": "Notes",
+  "allDay": "All day",
+  "allDayRange": "{startDate} - {endDate} (All day)",
+  "allDaySingle": "{date} (All day)",
+  "@allDayRange": {
+    "placeholders": {
+      "startDate": {},
+      "endDate": {}
+    }
+  },
+  "@allDaySingle": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "daysCount": "{count} days",
+  "@daysCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "hoursMinutes": "{hours} hr {minutes} min",
+  "hoursOnly": "{hours} hr",
+  "minutesOnly": "{minutes} min",
+  "@hoursMinutes": {
+    "placeholders": {
+      "hours": {},
+      "minutes": {}
+    }
+  },
+  "@hoursOnly": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "@minutesOnly": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "eventMoved": "Moved: {title} to {time}",
+  "eventResized": "Resized: {title} to {minutes} min",
+  "doubleTapCreate": "Double-tap at {time} - Create event",
+  "@eventMoved": {
+    "placeholders": {
+      "title": {},
+      "time": {}
+    }
+  },
+  "@eventResized": {
+    "placeholders": {
+      "title": {},
+      "minutes": {}
+    }
+  },
+  "@doubleTapCreate": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "eventId": "Event ID: {id}",
+  "externalId": "External ID: {id}",
+  "@eventId": {
+    "placeholders": {
+      "id": {}
+    }
+  },
+  "@externalId": {
+    "placeholders": {
+      "id": {}
+    }
+  },
+  "eventCreated": "Created: {title}",
+  "eventUpdated": "Updated: {title}",
+  "eventDeleted": "Deleted: {title}",
+  "deleteEvent": "Delete Event",
+  "deleteEventConfirm": "Delete \"{title}\"?",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "edit": "Edit",
+  "@eventCreated": { "placeholders": { "title": {} } },
+  "@eventUpdated": { "placeholders": { "title": {} } },
+  "@eventDeleted": { "placeholders": { "title": {} } },
+  "@deleteEventConfirm": { "placeholders": { "title": {} } },
+  "comparisonView": "Comparison",
+  "comparisonViewDescription": "Month and Day views side by side with shared data",
+  "comparisonUseMonthView": "Overview, planning, multi-day events",
+  "comparisonUseDayView": "Schedule details, time slots, drag-and-drop",
+  "comparisonDaySelected": "Selected {date}",
+  "@comparisonDaySelected": { "placeholders": { "date": {} } },
+  "styleAccessibility": "Accessibility",
+  "styleAccessibilityDescription": "Demonstrate accessibility features: keyboard shortcuts, screen reader support, high contrast mode. WCAG 2.1 AA compliant.",
+  "accessibilityKeyboardShortcuts": "Keyboard Shortcuts",
+  "accessibilityShortcutCreate": "Create event",
+  "accessibilityShortcutEdit": "Edit event",
+  "accessibilityShortcutDelete": "Delete event",
+  "accessibilityScreenReaderGuide": "Screen Reader Guide",
+  "accessibilityScreenReaderInstructions": "Enable VoiceOver (iOS/macOS) or TalkBack (Android) to hear semantic labels. Events announce title, time range, and duration. Navigator buttons announce Previous day, Today, Next day. Time slots announce hour. Resize handles announce Resize start edge or Resize end edge.",
+  "accessibilityChecklist": "Accessibility Checklist",
+  "accessibilityChecklistItem1": "Semantic labels on all interactive elements",
+  "accessibilityChecklistItem2": "Keyboard navigation (Tab, Arrow keys, Enter, Escape)",
+  "accessibilityChecklistItem3": "Keyboard shortcuts (Cmd/Ctrl+N, E, D)",
+  "accessibilityChecklistItem4": "High contrast mode support",
+  "accessibilityChecklistItem5": "Screen reader announcements for actions",
+  "accessibilityChecklistItem6": "Focus indicators visible",
+  "accessibilityHighContrast": "High Contrast Mode",
+  "accessibilityHighContrastDescription": "Toggle to see high-contrast styling for low vision users.",
+  "accessibilityKeyboardNavFlow": "Keyboard Navigation Flow",
+  "accessibilityKeyboardNavStep1": "Tab or click to focus Day View",
+  "accessibilityKeyboardNavStep2": "Tab to move between events chronologically",
+  "accessibilityKeyboardNavStep3": "Enter to activate (open event details)",
+  "accessibilityKeyboardNavStep4": "Cmd/Ctrl+N to create, E to edit, D to delete focused event"
+}

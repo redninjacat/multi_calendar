@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 
 void main() {
-  group('MCalMultiDayRenderer', () {
+  group('MCalMultiDayRenderer (Month View)', () {
     group('isMultiDay()', () {
       test('returns true for event spanning 2 days', () {
         final event = MCalCalendarEvent(

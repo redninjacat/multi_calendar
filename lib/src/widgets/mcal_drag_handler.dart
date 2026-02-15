@@ -316,26 +316,38 @@ class MCalDragHandler extends ChangeNotifier {
   ///   isValid: true,
   /// );
   /// ```
+  /// When [preserveTime] is true (day view), stores full DateTime with time.
+  /// When false (month view), normalizes to date-only for cell highlighting.
   void updateProposedDropRange({
     required DateTime proposedStart,
     required DateTime proposedEnd,
     required bool isValid,
+    bool preserveTime = false,
   }) {
     // NOTE: We removed the `if (!isDragging) return;` guard here because
     // onWillAcceptWithDetails can fire before onDragStarted completes,
     // causing the proposed range to not be updated and showing red indicators.
     // If this method is called, there IS a drag happening.
 
-    final normalizedStart = DateTime(
-      proposedStart.year,
-      proposedStart.month,
-      proposedStart.day,
-    );
-    final normalizedEnd = DateTime(
-      proposedEnd.year,
-      proposedEnd.month,
-      proposedEnd.day,
-    );
+    final DateTime normalizedStart;
+    final DateTime normalizedEnd;
+    if (preserveTime) {
+      // Day view: preserve full time for timed events
+      normalizedStart = proposedStart;
+      normalizedEnd = proposedEnd;
+    } else {
+      // Month view: normalize to date-only for cell highlighting
+      normalizedStart = DateTime(
+        proposedStart.year,
+        proposedStart.month,
+        proposedStart.day,
+      );
+      normalizedEnd = DateTime(
+        proposedEnd.year,
+        proposedEnd.month,
+        proposedEnd.day,
+      );
+    }
 
     final changed =
         _proposedStartDate != normalizedStart ||

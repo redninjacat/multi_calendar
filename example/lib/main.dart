@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'l10n/app_localizations.dart';
 import 'screens/main_screen.dart';
 
 void main() {
@@ -52,12 +52,8 @@ class _MyAppState extends State<MyApp> {
       ),
       themeMode: _themeMode,
       locale: _locale,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('en'), Locale('es', 'MX')],
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: MainScreen(
         onLocaleChanged: _changeLocale,
         onThemeToggle: _toggleTheme,

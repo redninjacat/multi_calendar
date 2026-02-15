@@ -88,7 +88,7 @@ class ModernMonthStyle extends StatelessWidget {
   /// Each day with events shows up to 3 colored dots plus a '+' indicator for more.
   Widget _buildDotsWeekLayout(
     BuildContext context,
-    MCalWeekLayoutContext ctx,
+    MCalMonthWeekLayoutContext ctx,
     ColorScheme colorScheme,
   ) {
     // Collect events for each day in the week

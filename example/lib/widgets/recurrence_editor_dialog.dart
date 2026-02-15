@@ -683,8 +683,13 @@ class _RecurrenceEditorDialogState extends State<RecurrenceEditorDialog> {
   // ── End condition ────────────────────────────────────────────────────────
 
   Widget _buildEndConditionSection(ColorScheme colorScheme) {
-    return Column(
-      children: [
+    return RadioGroup<_EndCondition>(
+      groupValue: _endCondition,
+      onChanged: (v) {
+        if (v != null) setState(() => _endCondition = v);
+      },
+      child: Column(
+        children: [
         // ── Never ──
         _buildEndConditionTile(
           colorScheme: colorScheme,
@@ -716,6 +721,7 @@ class _RecurrenceEditorDialogState extends State<RecurrenceEditorDialog> {
               : null,
         ),
       ],
+      ),
     );
   }
 
@@ -742,10 +748,6 @@ class _RecurrenceEditorDialogState extends State<RecurrenceEditorDialog> {
             children: [
               Radio<_EndCondition>(
                 value: value,
-                groupValue: _endCondition,
-                onChanged: (v) {
-                  if (v != null) setState(() => _endCondition = v);
-                },
                 visualDensity: VisualDensity.compact,
               ),
               Icon(

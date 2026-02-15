@@ -100,11 +100,13 @@ class ColorfulMonthStyle extends StatelessWidget {
 
                   // Timed events: inset each end by perDayWidth/4
                   // to match the pill geometry of the placed tiles.
-                  final inset = isAllDay ? 0.0 : details.dayWidth / 4;
-                  final pillWidth = details.tileWidth - (inset * 2);
+                  final dayW = details.dayWidth ?? 0.0;
+                  final tileW = details.tileWidth ?? 0.0;
+                  final inset = isAllDay ? 0.0 : dayW / 4;
+                  final pillWidth = tileW - (inset * 2);
 
                   return SizedBox(
-                    width: details.tileWidth,
+                    width: tileW,
                     height: tileHeight,
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: inset),

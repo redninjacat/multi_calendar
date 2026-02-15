@@ -20,7 +20,7 @@ void main() {
     });
   });
 
-  group('MCalEventSegment', () {
+  group('MCalMonthEventSegment (Month View)', () {
     late MCalCalendarEvent testEvent;
 
     setUp(() {
@@ -33,7 +33,7 @@ void main() {
     });
 
     test('calculates spanDays correctly', () {
-      final segment = MCalEventSegment(
+      final segment = MCalMonthEventSegment(
         event: testEvent,
         weekRowIndex: 0,
         startDayInWeek: 1,
@@ -45,7 +45,7 @@ void main() {
     });
 
     test('identifies single day segment', () {
-      final segment = MCalEventSegment(
+      final segment = MCalMonthEventSegment(
         event: testEvent,
         weekRowIndex: 0,
         startDayInWeek: 2,
@@ -57,7 +57,7 @@ void main() {
     });
 
     test('multi-day segment is not single day', () {
-      final segment = MCalEventSegment(
+      final segment = MCalMonthEventSegment(
         event: testEvent,
         weekRowIndex: 0,
         startDayInWeek: 1,
@@ -69,7 +69,7 @@ void main() {
     });
 
     test('first segment of multi-week event is not single day', () {
-      final segment = MCalEventSegment(
+      final segment = MCalMonthEventSegment(
         event: testEvent,
         weekRowIndex: 0,
         startDayInWeek: 5,
@@ -81,7 +81,7 @@ void main() {
     });
 
     test('equality works correctly', () {
-      final segment1 = MCalEventSegment(
+      final segment1 = MCalMonthEventSegment(
         event: testEvent,
         weekRowIndex: 0,
         startDayInWeek: 1,
@@ -89,7 +89,7 @@ void main() {
         isFirstSegment: true,
         isLastSegment: true,
       );
-      final segment2 = MCalEventSegment(
+      final segment2 = MCalMonthEventSegment(
         event: testEvent,
         weekRowIndex: 0,
         startDayInWeek: 1,
@@ -102,9 +102,9 @@ void main() {
     });
   });
 
-  group('MCalWeekLayoutConfig', () {
+  group('MCalMonthWeekLayoutConfig (Month View)', () {
     test('has correct default values', () {
-      final config = MCalWeekLayoutConfig.fromTheme(const MCalThemeData());
+      final config = MCalMonthWeekLayoutConfig.fromTheme(const MCalThemeData());
 
       expect(config.tileHeight, 18.0);
       expect(config.tileVerticalSpacing, 2.0);
@@ -121,7 +121,7 @@ void main() {
         eventTileHeight: 25.0,
         dateLabelPosition: DateLabelPosition.bottomRight,
       );
-      final config = MCalWeekLayoutConfig.fromTheme(theme);
+      final config = MCalMonthWeekLayoutConfig.fromTheme(theme);
 
       expect(config.tileHeight, 25.0);
       expect(config.dateLabelPosition, DateLabelPosition.bottomRight);

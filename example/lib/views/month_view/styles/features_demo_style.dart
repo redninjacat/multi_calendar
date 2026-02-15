@@ -1903,23 +1903,25 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 top: Radius.circular(8),
               ),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_month, color: colorScheme.primary),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    isDesktop
-                        ? 'Primary View (Click to focus, then use keyboard)'
-                        : 'Calendar',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: colorScheme.onSurface,
+            child: ClipRect(
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_month, color: colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      isDesktop
+                          ? 'Primary View (Click to focus, then use keyboard)'
+                          : 'Calendar',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: colorScheme.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -2081,21 +2083,24 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                 top: Radius.circular(8),
               ),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.sync, color: colorScheme.secondary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Synced View',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 13,
-                      color: colorScheme.onSurface,
+            child: ClipRect(
+              child: Row(
+                children: [
+                  Icon(Icons.sync, color: colorScheme.secondary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Synced View',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                        color: colorScheme.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           Expanded(

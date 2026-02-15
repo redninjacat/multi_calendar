@@ -2,9 +2,21 @@
 
 A flexible Flutter package for displaying calendar views with full RFC 5545 RRULE support. This package provides separate widgets for Day, Multi-day, and Month views, offering greater modularity and customization compared to single-widget calendar solutions.
 
+## Table of Contents
+
+- [Features](#features)
+- [Getting Started](#getting-started)
+- [Package Structure](#package-structure)
+- [MCalMonthView](#mcalmonthview)
+- [MCalDayView](#mcaldayview)
+- [Example](#example)
+- [Requirements](#requirements)
+- [Contributing](#contributing)
+
 ## Features
 
 - **Multiple Calendar Views**: Separate widgets for Day, Multi-day (configurable day count), and Month views
+- **Day View**: Time-based vertical layout with hour markers, all-day events, overlap detection, drag-and-drop, resize, keyboard navigation, and special time regions
 - **RFC 5545 RRULE Support**: Full support for recurring event rules with exception handling
 - **Flexible Time Ranges**: Configurable time ranges for Day and Multi-day views (e.g., 8am-8pm)
 - **Event Controller Pattern**: Single controller that dynamically loads events based on visible date range
@@ -83,7 +95,7 @@ MCalMonthView(
 - **MCalCalendarEvent**: Data model for calendar events (includes `isAllDay` field for all-day event support)
 - **MCalEventController**: Controller for managing calendar events and view state
 - **MCalMonthView**: Month calendar view widget (available now)
-- **MCalDayView**: Day calendar view widget (coming soon)
+- **MCalDayView**: Day calendar view widget — see [Day View documentation](docs/day_view.md)
 - **MCalMultiDayView**: Multi-day calendar view widget (coming soon)
 - **MCalThemeData**: Theme extension for calendar-specific styling
 - **MCalLocalizations**: Built-in support for English and Mexican Spanish
@@ -955,14 +967,77 @@ Row(
 
 When you navigate in one view, all views sharing the controller update together.
 
+## MCalDayView
+
+`MCalDayView` displays a single day in a time-based vertical layout with hour markers, gridlines, and interactive event tiles. It is ideal for scheduling apps, task management, resource booking, and daily agenda views.
+
+### Day View vs Month View
+
+| Aspect | MCalDayView | MCalMonthView |
+|--------|-------------|---------------|
+| **Layout** | Vertical timeline with hour slots | Grid of days in month |
+| **Focus** | Single day, time-of-day precision | Full month overview |
+| **Events** | Positioned by start/end time; overlap detection | Tiles in day cells; multi-day spanning |
+| **Use case** | Scheduling, meetings, time-blocking | Month-at-a-glance, planning |
+| **Time range** | Configurable (e.g., 8am–6pm) | Full day cells |
+| **Special regions** | Time regions (lunch, blocked hours) | N/A |
+
+### Quick Start
+
+```dart
+import 'package:multi_calendar/multi_calendar.dart';
+
+final controller = MCalEventController(initialDate: DateTime.now());
+controller.addEvents([
+  MCalCalendarEvent(
+    id: 'meeting',
+    title: 'Team Meeting',
+    start: DateTime(2026, 2, 14, 10, 0),
+    end: DateTime(2026, 2, 14, 11, 0),
+  ),
+  MCalCalendarEvent(
+    id: 'lunch',
+    title: 'Lunch',
+    start: DateTime(2026, 2, 14, 12, 0),
+    end: DateTime(2026, 2, 14, 13, 0),
+  ),
+]);
+
+MCalDayView(
+  controller: controller,
+  startHour: 8,
+  endHour: 18,
+  showNavigator: true,
+  enableDragToMove: true,
+  onEventTap: (context, details) {
+    print('Tapped: ${details.event.title}');
+  },
+)
+```
+
+### Key Features
+
+- **All-day events** — Section at top for events without specific times
+- **Timed events** — Positioned by start/end time with automatic overlap detection
+- **Drag and drop** — Move events within day, across days, or convert all-day ↔ timed
+- **Resize** — Drag event edges to change duration
+- **Time regions** — Blocked time, lunch breaks, non-working hours
+- **Current time indicator** — Live-updating line marking current time
+- **Keyboard navigation** — Full keyboard support for accessibility
+
+### Documentation
+
+For complete Day View documentation, including configuration options, builders, theming, and troubleshooting, see [Day View documentation](docs/day_view.md).
+
 ## Example
 
 See the [example](example/) directory for a complete example application demonstrating package usage, including:
 - **Features Demo**: Interactive showcase of keyboard navigation, hover feedback, week numbers, animations, event resizing, keyboard move/resize shortcuts, multi-view sync, and loading/error states
+- **Day View**: Time-based layout with hour markers, all-day events, overlap detection, drag-and-drop, and time regions
 - **Multi-Day Events**: Contiguous tile rendering across cells and weeks
 - **Drag-and-Drop**: Move events between dates with visual feedback
 - **Event Resizing**: Drag event edges to change duration, with validation and keyboard alternatives
-- Basic MCalMonthView usage
+- Basic MCalMonthView and MCalDayView usage
 - Theme customization with multiple styles (Default, Modern, Classic, Minimal, Colorful)
 - Builder callbacks with the new `(BuildContext, Details)` pattern
 - PageView-style swipe navigation

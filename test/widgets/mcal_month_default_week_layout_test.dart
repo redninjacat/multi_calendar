@@ -27,10 +27,10 @@ void main() {
     );
   });
 
-  group('MCalDefaultWeekLayoutBuilder.assignRows', () {
+  group('MCalMonthDefaultWeekLayoutBuilder.assignRows (Month View)', () {
     test('assigns single segment to row 0', () {
       final segments = [
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event1,
           weekRowIndex: 0,
           startDayInWeek: 1,
@@ -40,7 +40,7 @@ void main() {
         ),
       ];
 
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows(segments);
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows(segments);
 
       expect(assignments.length, 1);
       expect(assignments[0].row, 0);
@@ -48,7 +48,7 @@ void main() {
 
     test('assigns non-overlapping segments to same row', () {
       final segments = [
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event1,
           weekRowIndex: 0,
           startDayInWeek: 0,
@@ -56,7 +56,7 @@ void main() {
           isFirstSegment: true,
           isLastSegment: true,
         ),
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event2,
           weekRowIndex: 0,
           startDayInWeek: 3,
@@ -66,7 +66,7 @@ void main() {
         ),
       ];
 
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows(segments);
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows(segments);
 
       expect(assignments.length, 2);
       expect(assignments[0].row, 0);
@@ -75,7 +75,7 @@ void main() {
 
     test('assigns overlapping segments to different rows', () {
       final segments = [
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event1,
           weekRowIndex: 0,
           startDayInWeek: 1,
@@ -83,7 +83,7 @@ void main() {
           isFirstSegment: true,
           isLastSegment: true,
         ),
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event2,
           weekRowIndex: 0,
           startDayInWeek: 2,
@@ -93,7 +93,7 @@ void main() {
         ),
       ];
 
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows(segments);
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows(segments);
 
       expect(assignments.length, 2);
       expect(assignments[0].row, 0);
@@ -101,14 +101,14 @@ void main() {
     });
 
     test('handles empty segment list', () {
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows([]);
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows([]);
       expect(assignments, isEmpty);
     });
 
     test('assigns adjacent segments to same row', () {
       // Events that are adjacent (not overlapping) can share a row
       final segments = [
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event1,
           weekRowIndex: 0,
           startDayInWeek: 0,
@@ -116,7 +116,7 @@ void main() {
           isFirstSegment: true,
           isLastSegment: true,
         ),
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event2,
           weekRowIndex: 0,
           startDayInWeek: 3, // Starts right after event1 ends
@@ -126,7 +126,7 @@ void main() {
         ),
       ];
 
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows(segments);
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows(segments);
 
       expect(assignments.length, 2);
       expect(assignments[0].row, 0);
@@ -135,7 +135,7 @@ void main() {
 
     test('handles three overlapping segments correctly', () {
       final segments = [
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event1,
           weekRowIndex: 0,
           startDayInWeek: 0,
@@ -143,7 +143,7 @@ void main() {
           isFirstSegment: true,
           isLastSegment: true,
         ),
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event2,
           weekRowIndex: 0,
           startDayInWeek: 1,
@@ -151,7 +151,7 @@ void main() {
           isFirstSegment: true,
           isLastSegment: true,
         ),
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event3,
           weekRowIndex: 0,
           startDayInWeek: 2,
@@ -161,7 +161,7 @@ void main() {
         ),
       ];
 
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows(segments);
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows(segments);
 
       expect(assignments.length, 3);
       expect(assignments[0].row, 0);
@@ -173,7 +173,7 @@ void main() {
       // First segment spans days 0-1, second spans 5-6, third spans 2-4
       // All can fit in row 0
       final segments = [
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event1,
           weekRowIndex: 0,
           startDayInWeek: 0,
@@ -181,7 +181,7 @@ void main() {
           isFirstSegment: true,
           isLastSegment: true,
         ),
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event2,
           weekRowIndex: 0,
           startDayInWeek: 5,
@@ -189,7 +189,7 @@ void main() {
           isFirstSegment: true,
           isLastSegment: true,
         ),
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event3,
           weekRowIndex: 0,
           startDayInWeek: 2,
@@ -199,7 +199,7 @@ void main() {
         ),
       ];
 
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows(segments);
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows(segments);
 
       expect(assignments.length, 3);
       // All should fit in row 0
@@ -209,10 +209,10 @@ void main() {
     });
   });
 
-  group('MCalDefaultWeekLayoutBuilder.calculateOverflow', () {
+  group('MCalMonthDefaultWeekLayoutBuilder.calculateOverflow (Month View)', () {
     test('returns empty map when no overflow', () {
       final segments = [
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event1,
           weekRowIndex: 0,
           startDayInWeek: 0,
@@ -221,8 +221,8 @@ void main() {
           isLastSegment: true,
         ),
       ];
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows(segments);
-      final overflow = MCalDefaultWeekLayoutBuilder.calculateOverflow(
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows(segments);
+      final overflow = MCalMonthDefaultWeekLayoutBuilder.calculateOverflow(
         assignments: assignments,
         maxVisibleRows: 5,
       );
@@ -232,7 +232,7 @@ void main() {
 
     test('counts hidden events per day correctly', () {
       // Create segments that will overflow
-      final segments = <MCalEventSegment>[];
+      final segments = <MCalMonthEventSegment>[];
       for (int i = 0; i < 10; i++) {
         final event = MCalCalendarEvent(
           id: 'evt-$i',
@@ -240,7 +240,7 @@ void main() {
           start: DateTime(2024, 1, 15),
           end: DateTime(2024, 1, 15),
         );
-        segments.add(MCalEventSegment(
+        segments.add(MCalMonthEventSegment(
           event: event,
           weekRowIndex: 0,
           startDayInWeek: 1, // All on day 1
@@ -250,8 +250,8 @@ void main() {
         ));
       }
 
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows(segments);
-      final overflow = MCalDefaultWeekLayoutBuilder.calculateOverflow(
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows(segments);
+      final overflow = MCalMonthDefaultWeekLayoutBuilder.calculateOverflow(
         assignments: assignments,
         maxVisibleRows: 3,
       );
@@ -265,7 +265,7 @@ void main() {
     test('handles multi-day event spanning multiple days', () {
       // Event spans days 0-2
       final segments = [
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event1,
           weekRowIndex: 0,
           startDayInWeek: 0,
@@ -275,9 +275,9 @@ void main() {
         ),
       ];
 
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows(segments);
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows(segments);
       // With maxVisibleRows: 0, all events should be hidden
-      final overflow = MCalDefaultWeekLayoutBuilder.calculateOverflow(
+      final overflow = MCalMonthDefaultWeekLayoutBuilder.calculateOverflow(
         assignments: assignments,
         maxVisibleRows: 0,
       );
@@ -293,7 +293,7 @@ void main() {
 
     test('correctly separates visible and hidden events', () {
       // Create 5 events on the same day
-      final segments = <MCalEventSegment>[];
+      final segments = <MCalMonthEventSegment>[];
       for (int i = 0; i < 5; i++) {
         final event = MCalCalendarEvent(
           id: 'evt-$i',
@@ -301,7 +301,7 @@ void main() {
           start: DateTime(2024, 1, 15),
           end: DateTime(2024, 1, 15),
         );
-        segments.add(MCalEventSegment(
+        segments.add(MCalMonthEventSegment(
           event: event,
           weekRowIndex: 0,
           startDayInWeek: 3,
@@ -311,8 +311,8 @@ void main() {
         ));
       }
 
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows(segments);
-      final overflow = MCalDefaultWeekLayoutBuilder.calculateOverflow(
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows(segments);
+      final overflow = MCalMonthDefaultWeekLayoutBuilder.calculateOverflow(
         assignments: assignments,
         maxVisibleRows: 2,
       );
@@ -326,7 +326,7 @@ void main() {
       // Event 1 on day 0, Event 2 on days 1-3, Event 3 on day 2
       // With maxVisibleRows=1, we should see overflow on days 1,2,3
       final segments = [
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event1,
           weekRowIndex: 0,
           startDayInWeek: 0,
@@ -334,7 +334,7 @@ void main() {
           isFirstSegment: true,
           isLastSegment: true,
         ),
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event2,
           weekRowIndex: 0,
           startDayInWeek: 1,
@@ -342,7 +342,7 @@ void main() {
           isFirstSegment: true,
           isLastSegment: true,
         ),
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event3,
           weekRowIndex: 0,
           startDayInWeek: 2,
@@ -352,8 +352,8 @@ void main() {
         ),
       ];
 
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows(segments);
-      final overflow = MCalDefaultWeekLayoutBuilder.calculateOverflow(
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows(segments);
+      final overflow = MCalMonthDefaultWeekLayoutBuilder.calculateOverflow(
         assignments: assignments,
         maxVisibleRows: 1,
       );
@@ -368,7 +368,7 @@ void main() {
 
     test('returns empty map when maxVisibleRows covers all events', () {
       final segments = [
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event1,
           weekRowIndex: 0,
           startDayInWeek: 0,
@@ -376,7 +376,7 @@ void main() {
           isFirstSegment: true,
           isLastSegment: true,
         ),
-        MCalEventSegment(
+        MCalMonthEventSegment(
           event: event2,
           weekRowIndex: 0,
           startDayInWeek: 1,
@@ -386,9 +386,9 @@ void main() {
         ),
       ];
 
-      final assignments = MCalDefaultWeekLayoutBuilder.assignRows(segments);
+      final assignments = MCalMonthDefaultWeekLayoutBuilder.assignRows(segments);
       // With maxVisibleRows: 10, all 2 events should be visible
-      final overflow = MCalDefaultWeekLayoutBuilder.calculateOverflow(
+      final overflow = MCalMonthDefaultWeekLayoutBuilder.calculateOverflow(
         assignments: assignments,
         maxVisibleRows: 10,
       );

@@ -52,7 +52,6 @@
 /// ## Future exports
 ///
 /// The following will be exported in future releases:
-/// - Day view (MCalDayView)
 /// - Multi-day view (MCalMultiDayView)
 
 library;
@@ -61,32 +60,53 @@ library;
 export 'src/controllers/mcal_event_controller.dart';
 // Export models
 export 'src/models/mcal_calendar_event.dart';
-export 'src/models/mcal_recurrence_rule.dart';
-export 'src/models/mcal_recurrence_exception.dart';
 export 'src/models/mcal_event_change_info.dart';
+export 'src/models/mcal_recurrence_exception.dart';
+export 'src/models/mcal_recurrence_rule.dart';
+export 'src/models/mcal_time_region.dart';
 // Export styles
 export 'src/styles/mcal_theme.dart';
 // Export utilities
 export 'src/utils/color_utils.dart';
 export 'src/utils/mcal_localization.dart';
 export 'src/widgets/mcal_callback_details.dart';
-export 'src/widgets/mcal_default_week_layout.dart'
+export 'src/widgets/mcal_month_default_week_layout.dart'
     show
-        MCalDefaultWeekLayoutBuilder,
-        MCalSegmentRowAssignment,
-        MCalOverflowInfo;
+        MCalMonthDefaultWeekLayoutBuilder,
+        MCalMonthSegmentRowAssignment,
+        MCalMonthOverflowInfo;
 export 'src/widgets/mcal_draggable_event_tile.dart';
 // Export widgets
+export 'src/widgets/mcal_day_view.dart'
+    show
+        MCalDayView,
+        MCalDayViewCreateEventIntent,
+        MCalDayViewDeleteEventIntent,
+        MCalDayViewEditEventIntent,
+        MCalDayViewState;
+export 'src/widgets/mcal_day_view_contexts.dart'
+    show
+        MCalAllDayEventTileContext,
+        MCalCurrentTimeContext,
+        MCalDayHeaderContext,
+        MCalDayLayoutContext,
+        MCalGridlineContext,
+        MCalGridlineType,
+        MCalTimeLabelContext,
+        MCalTimeRegionContext,
+        MCalTimeSlotContext,
+        MCalTimedEventTileContext;
+// Note: Day View uses MCalDayHeaderContext; Month View uses MCalMonthDayHeaderContext.
 export 'src/widgets/mcal_month_view.dart';
 export 'src/widgets/mcal_month_view_contexts.dart';
-export 'src/widgets/mcal_multi_day_renderer.dart';
-export 'src/widgets/mcal_multi_day_tile.dart';
-export 'src/widgets/mcal_week_layout_contexts.dart'
+export 'src/widgets/mcal_month_multi_day_renderer.dart';
+export 'src/widgets/mcal_month_multi_day_tile.dart';
+export 'src/widgets/mcal_month_week_layout_contexts.dart'
     show
-        MCalEventSegment,
-        MCalWeekLayoutContext,
-        MCalWeekLayoutConfig,
-        MCalOverflowIndicatorContext,
+        MCalMonthEventSegment,
+        MCalMonthWeekLayoutContext,
+        MCalMonthWeekLayoutConfig,
+        MCalMonthOverflowIndicatorContext,
         DateLabelPosition;
 
 // Future exports (to be implemented):

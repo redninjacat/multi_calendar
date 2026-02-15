@@ -378,30 +378,55 @@ class MCalDraggedTileDetails {
   /// such as rotation or scaling based on movement.
   final Offset currentPosition;
 
-  /// The width of a single day cell/column in the calendar grid.
-  final double dayWidth;
+  /// The width of a single day cell/column in the calendar grid (Month View).
+  ///
+  /// Used by Month View to calculate multi-day event tile widths.
+  /// Null for Day View.
+  final double? dayWidth;
 
-  /// The horizontal spacing applied to event tiles.
+  /// The horizontal spacing applied to event tiles (Month View).
   ///
   /// The full tile width can be calculated as:
   /// `(dayWidth * eventDurationDays) - (horizontalSpacing * 2)`
-  final double horizontalSpacing;
+  /// Null for Day View.
+  final double? horizontalSpacing;
 
-  /// The number of days this event spans.
-  final int eventDurationDays;
+  /// The number of days this event spans (Month View).
+  ///
+  /// Used by Month View for multi-day event rendering.
+  /// Null for Day View.
+  final int? eventDurationDays;
+
+  /// Whether the event is an all-day event (Day View only).
+  ///
+  /// True if the event was originally from the all-day section,
+  /// false if from the timed events area. Null for Month View.
+  final bool? isAllDay;
 
   /// Calculates the tile width based on day width, duration, and spacing.
-  double get tileWidth =>
-      (dayWidth * eventDurationDays) - (horizontalSpacing * 2);
+  ///
+  /// Only applicable for Month View where dayWidth is provided.
+  double? get tileWidth => dayWidth != null &&
+          horizontalSpacing != null &&
+          eventDurationDays != null
+      ? (dayWidth! * eventDurationDays!) - (horizontalSpacing! * 2)
+      : null;
+
+  /// Alias for currentPosition to maintain Day View naming convention.
+  Offset get position => currentPosition;
 
   /// Creates a new [MCalDraggedTileDetails] instance.
+  ///
+  /// For Month View, provide dayWidth, horizontalSpacing, and eventDurationDays.
+  /// For Day View, provide isAllDay.
   const MCalDraggedTileDetails({
     required this.event,
     required this.sourceDate,
     required this.currentPosition,
-    required this.dayWidth,
-    required this.horizontalSpacing,
-    required this.eventDurationDays,
+    this.dayWidth,
+    this.horizontalSpacing,
+    this.eventDurationDays,
+    this.isAllDay,
   });
 }
 
@@ -436,8 +461,25 @@ class MCalDragSourceDetails {
   /// the drag was initiated.
   final DateTime sourceDate;
 
+  /// Source time where the drag originated (for Day View timed events).
+  ///
+  /// For timed events in Day View, this includes both date and time components.
+  /// For all-day events or Month View, this will have the time set to midnight.
+  final DateTime? sourceTime;
+
+  /// Whether the event is an all-day event (Day View only).
+  ///
+  /// True if the event was dragged from the all-day section in Day View,
+  /// false if dragged from the timed events area. Null for Month View.
+  final bool? isAllDay;
+
   /// Creates a new [MCalDragSourceDetails] instance.
-  const MCalDragSourceDetails({required this.event, required this.sourceDate});
+  const MCalDragSourceDetails({
+    required this.event,
+    required this.sourceDate,
+    this.sourceTime,
+    this.isAllDay,
+  });
 }
 
 /// Details object for the drop validation callback.
@@ -603,6 +645,17 @@ class MCalEventDroppedDetails {
   /// Only non-null when [isRecurring] is `true`.
   final String? seriesId;
 
+  /// Type conversion that occurred during the drop, if any.
+  ///
+  /// Indicates if the event was converted between all-day and timed formats:
+  /// - `'allDayToTimed'`: Event was converted from all-day to timed
+  /// - `'timedToAllDay'`: Event was converted from timed to all-day
+  /// - `null`: No type conversion occurred
+  ///
+  /// This field is only relevant for Day View drag-and-drop operations where
+  /// events can be dragged between the all-day section and timed section.
+  final String? typeConversion;
+
   /// Creates a new [MCalEventDroppedDetails] instance.
   const MCalEventDroppedDetails({
     required this.event,
@@ -612,6 +665,7 @@ class MCalEventDroppedDetails {
     required this.newEndDate,
     this.isRecurring = false,
     this.seriesId,
+    this.typeConversion,
   });
 }
 
@@ -1040,3 +1094,167 @@ class MCalEventResizedDetails {
       'resizeEdge: $resizeEdge, '
       'isRecurring: $isRecurring, seriesId: $seriesId)';
 }
+
+/// Details for building a custom drop target overlay in Day View.
+///
+/// Passed to [MCalDayView.dropTargetOverlayBuilder] during drag operations.
+/// This provides comprehensive context for rendering custom overlay feedback
+/// showing where the dragged event will be placed if dropped.
+///
+/// **Note:** This class is specific to Day View. For Month View overlay details,
+/// see [MCalDropOverlayDetails].
+///
+/// ## Precedence
+///
+/// When [dropTargetOverlayBuilder] is provided, it takes precedence over the
+/// default overlay implementation. Only one will be used:
+///
+/// 1. [dropTargetOverlayBuilder] (custom)
+/// 2. Default semi-transparent overlay (default)
+///
+/// ## When to Use
+///
+/// Use [dropTargetOverlayBuilder] when you need:
+/// - Custom overlay colors or styles for valid/invalid drops
+/// - Animated overlay effects during drag
+/// - Additional information displayed in the overlay
+/// - Full control over overlay rendering
+///
+/// ## Example
+///
+/// ```dart
+/// dropTargetOverlayBuilder: (context, details) {
+///   return Stack(
+///     children: details.highlightedTimeSlots.map((slot) {
+///       return Positioned(
+///         top: slot.topOffset,
+///         left: 0,
+///         right: 0,
+///         height: slot.height,
+///         child: Container(
+///           margin: EdgeInsets.symmetric(horizontal: 4),
+///           decoration: BoxDecoration(
+///             color: details.isValid
+///                 ? Colors.blue.withOpacity(0.2)
+///                 : Colors.red.withOpacity(0.2),
+///             borderRadius: BorderRadius.circular(8),
+///             border: Border.all(
+///               color: details.isValid ? Colors.blue : Colors.red,
+///               width: 2,
+///             ),
+///           ),
+///           child: Center(
+///             child: Text(
+///               details.isValid
+///                   ? 'Drop here to move'
+///                   : 'Invalid drop target',
+///               style: TextStyle(
+///                 color: details.isValid ? Colors.blue : Colors.red,
+///                 fontWeight: FontWeight.bold,
+///               ),
+///             ),
+///           ),
+///         ),
+///       );
+///     }).toList(),
+///   );
+/// }
+/// ```
+class MCalDayViewDropOverlayDetails {
+  /// List of time slot ranges that should be highlighted.
+  ///
+  /// Each [MCalTimeSlotRange] represents a vertical segment where the event
+  /// would be placed. For events that span multiple time ranges (e.g., with
+  /// gaps or breaks), this list may contain multiple entries.
+  final List<MCalTimeSlotRange> highlightedTimeSlots;
+
+  /// The event being dragged.
+  ///
+  /// Contains the full event data including title, times, color, etc.
+  final MCalCalendarEvent draggedEvent;
+
+  /// Proposed start date/time if the event is dropped at the current position.
+  ///
+  /// This reflects where the event would begin after the drop, accounting for
+  /// any type conversions (all-day ↔ timed).
+  final DateTime proposedStartDate;
+
+  /// Proposed end date/time if the event is dropped at the current position.
+  ///
+  /// This reflects where the event would end after the drop, accounting for
+  /// any type conversions (all-day ↔ timed).
+  final DateTime proposedEndDate;
+
+  /// Whether the current drop position is valid.
+  ///
+  /// Determined by [MCalDayView.onDragWillAccept] callback if provided,
+  /// otherwise defaults to `true`. Use this to render different overlay
+  /// styles for valid vs. invalid drop targets.
+  final bool isValid;
+
+  /// Source date where the drag originated.
+  ///
+  /// For timed events, this is the date portion of the source time.
+  /// For all-day events, this is the all-day date.
+  final DateTime sourceDate;
+
+  /// Creates a new [MCalDayViewDropOverlayDetails] instance.
+  const MCalDayViewDropOverlayDetails({
+    required this.highlightedTimeSlots,
+    required this.draggedEvent,
+    required this.proposedStartDate,
+    required this.proposedEndDate,
+    required this.isValid,
+    required this.sourceDate,
+  });
+}
+
+/// Represents a time slot range for overlay highlighting in Day View.
+///
+/// Used within [MCalDropOverlayDetails.highlightedTimeSlots] to specify
+/// the vertical position and dimensions of each highlighted time range.
+///
+/// The [topOffset] and [height] values are in pixels and can be used
+/// directly with [Positioned] widgets in a [Stack].
+///
+/// Example:
+/// ```dart
+/// MCalTimeSlotRange(
+///   startTime: DateTime(2026, 2, 14, 9, 0),  // 9:00 AM
+///   endTime: DateTime(2026, 2, 14, 10, 30),   // 10:30 AM
+///   topOffset: 180.0,  // Pixels from top
+///   height: 90.0,      // Pixels tall
+/// )
+/// ```
+class MCalTimeSlotRange {
+  /// Start time of this time slot range.
+  ///
+  /// Represents the beginning of the highlighted period.
+  final DateTime startTime;
+
+  /// End time of this time slot range.
+  ///
+  /// Represents the end of the highlighted period.
+  final DateTime endTime;
+
+  /// Top offset in pixels from the Day View's coordinate origin.
+  ///
+  /// This value can be used directly with [Positioned.top] to place
+  /// overlay widgets at the correct vertical position.
+  final double topOffset;
+
+  /// Height in pixels of this time slot range.
+  ///
+  /// This value can be used directly with [Positioned] or [Container]
+  /// to size overlay widgets to match the time range duration.
+  final double height;
+
+  /// Creates a new [MCalTimeSlotRange] instance.
+  const MCalTimeSlotRange({
+    required this.startTime,
+    required this.endTime,
+    required this.topOffset,
+    required this.height,
+  });
+}
+

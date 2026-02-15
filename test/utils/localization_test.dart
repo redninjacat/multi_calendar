@@ -126,8 +126,12 @@ void main() {
         expect(localizations.isRTL(const Locale('es', 'MX')), isFalse);
       });
 
-      test('returns false for unsupported locale', () {
-        expect(localizations.isRTL(const Locale('ar')), isFalse);
+      test('returns true for Arabic (RTL) locale', () {
+        expect(localizations.isRTL(const Locale('ar')), isTrue);
+      });
+
+      test('returns true for Hebrew (RTL) locale', () {
+        expect(localizations.isRTL(const Locale('he')), isTrue);
       });
     });
 

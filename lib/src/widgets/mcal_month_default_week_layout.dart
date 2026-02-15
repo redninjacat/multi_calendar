@@ -1,28 +1,28 @@
 import 'package:flutter/material.dart';
 import '../models/mcal_calendar_event.dart';
 import 'mcal_month_view_contexts.dart';
-import 'mcal_week_layout_contexts.dart';
+import 'mcal_month_week_layout_contexts.dart';
 
 /// Assignment of an event segment to a row index.
 ///
-/// Used by [MCalDefaultWeekLayoutBuilder.assignRows] to communicate which
-/// row each [MCalEventSegment] occupies in the week layout grid.
-class MCalSegmentRowAssignment {
-  /// The [MCalEventSegment] being assigned.
-  final MCalEventSegment segment;
+/// Used by [MCalMonthDefaultWeekLayoutBuilder.assignRows] to communicate which
+/// row each [MCalMonthEventSegment] occupies in the week layout grid.
+class MCalMonthSegmentRowAssignment {
+  /// The [MCalMonthEventSegment] being assigned.
+  final MCalMonthEventSegment segment;
 
   /// The zero-based row index where this segment is placed.
   final int row;
 
-  const MCalSegmentRowAssignment({required this.segment, required this.row});
+  const MCalMonthSegmentRowAssignment({required this.segment, required this.row});
 }
 
 /// Overflow information for a single day column.
 ///
-/// Returned by [MCalDefaultWeekLayoutBuilder.calculateOverflow] when more
+/// Returned by [MCalMonthDefaultWeekLayoutBuilder.calculateOverflow] when more
 /// events exist in a day than can be displayed. Counts hidden events per
 /// day, not hidden rows.
-class MCalOverflowInfo {
+class MCalMonthOverflowInfo {
   /// Number of events hidden due to overflow for this day.
   final int hiddenCount;
 
@@ -32,29 +32,29 @@ class MCalOverflowInfo {
   /// [MCalCalendarEvent] instances that are visible in the day cell.
   final List<MCalCalendarEvent> visibleEvents;
 
-  const MCalOverflowInfo({
+  const MCalMonthOverflowInfo({
     required this.hiddenCount,
     required this.hiddenEvents,
     required this.visibleEvents,
   });
 }
 
-/// Default week layout builder implementation.
+/// Default week layout builder implementation for Month View.
 ///
 /// Uses a greedy first-fit algorithm to assign events to rows:
 /// 1. Sort segments by span length (longer first) then by start day
 /// 2. For each segment, find the first row where it fits without overlap
 /// 3. Multi-day events maintain visual continuity across week boundaries
-class MCalDefaultWeekLayoutBuilder {
-  MCalDefaultWeekLayoutBuilder._();
+class MCalMonthDefaultWeekLayoutBuilder {
+  MCalMonthDefaultWeekLayoutBuilder._();
 
   /// Assigns row indices to segments using greedy first-fit algorithm.
   ///
   /// Segments should be pre-sorted (longer spans first, then by start day).
-  static List<MCalSegmentRowAssignment> assignRows(
-    List<MCalEventSegment> segments,
+  static List<MCalMonthSegmentRowAssignment> assignRows(
+    List<MCalMonthEventSegment> segments,
   ) {
-    final assignments = <MCalSegmentRowAssignment>[];
+    final assignments = <MCalMonthSegmentRowAssignment>[];
     // Track which columns are occupied at each row
     // rowOccupancy[row] = Set of occupied column indices
     final rowOccupancy = <int, Set<int>>{};
@@ -93,7 +93,7 @@ class MCalDefaultWeekLayoutBuilder {
       }
 
       assignments.add(
-        MCalSegmentRowAssignment(segment: segment, row: assignedRow),
+        MCalMonthSegmentRowAssignment(segment: segment, row: assignedRow),
       );
     }
 
@@ -103,11 +103,11 @@ class MCalDefaultWeekLayoutBuilder {
   /// Calculates overflow info per day column.
   ///
   /// Correctly counts hidden EVENTS per day, not hidden rows.
-  static Map<int, MCalOverflowInfo> calculateOverflow({
-    required List<MCalSegmentRowAssignment> assignments,
+  static Map<int, MCalMonthOverflowInfo> calculateOverflow({
+    required List<MCalMonthSegmentRowAssignment> assignments,
     required int maxVisibleRows,
   }) {
-    final result = <int, MCalOverflowInfo>{};
+    final result = <int, MCalMonthOverflowInfo>{};
 
     // Group by day column
     final visibleByDay = <int, List<MCalCalendarEvent>>{};
@@ -140,7 +140,7 @@ class MCalDefaultWeekLayoutBuilder {
     for (int day = 0; day < 7; day++) {
       final hidden = hiddenByDay[day]!;
       if (hidden.isNotEmpty) {
-        result[day] = MCalOverflowInfo(
+        result[day] = MCalMonthOverflowInfo(
           hiddenCount: hidden.length,
           hiddenEvents: hidden,
           visibleEvents: visibleByDay[day]!,
@@ -154,17 +154,17 @@ class MCalDefaultWeekLayoutBuilder {
   /// Builds the default week layout widget.
   ///
   /// Returns a [Widget] that displays the week row with event tiles, date
-  /// labels, and overflow indicators. Uses [MCalWeekLayoutContext] for
+  /// labels, and overflow indicators. Uses [MCalMonthWeekLayoutContext] for
   /// layout data and builder callbacks.
   static Widget build(
     BuildContext context,
-    MCalWeekLayoutContext layoutContext,
+    MCalMonthWeekLayoutContext layoutContext,
   ) {
     final config = layoutContext.config;
     final segments = layoutContext.segments;
 
     // Sort segments: longer spans first, then by start day
-    final sortedSegments = List<MCalEventSegment>.from(segments)
+    final sortedSegments = List<MCalMonthEventSegment>.from(segments)
       ..sort((a, b) {
         final spanCompare = b.spanDays.compareTo(a.spanDays);
         if (spanCompare != 0) return spanCompare;
@@ -326,7 +326,7 @@ class MCalDefaultWeekLayoutBuilder {
           final dayIndex = entry.key;
           final info = entry.value;
 
-          final overflowContext = MCalOverflowIndicatorContext(
+          final overflowContext = MCalMonthOverflowIndicatorContext(
             date: layoutContext.dates[dayIndex],
             hiddenEventCount: info.hiddenCount,
             hiddenEvents: info.hiddenEvents,

@@ -236,9 +236,9 @@ void main() {
     });
   });
 
-  group('MCalDayHeaderContext', () {
+  group('MCalMonthDayHeaderContext', () {
     test('can be instantiated with required parameters', () {
-      final context = MCalDayHeaderContext(
+      final context = MCalMonthDayHeaderContext(
         dayOfWeek: 1,
         dayName: 'Monday',
       );
@@ -248,8 +248,8 @@ void main() {
     });
 
     test('can be instantiated with const constructor', () {
-      // All fields can be const for MCalDayHeaderContext
-      const context = MCalDayHeaderContext(
+      // All fields can be const for MCalMonthDayHeaderContext
+      const context = MCalMonthDayHeaderContext(
         dayOfWeek: 0,
         dayName: 'Sunday',
       );
@@ -259,7 +259,7 @@ void main() {
     });
 
     test('all fields are final and accessible', () {
-      final context = MCalDayHeaderContext(
+      final context = MCalMonthDayHeaderContext(
         dayOfWeek: 6,
         dayName: 'Saturday',
       );
@@ -269,7 +269,7 @@ void main() {
     });
 
     test('fields are correctly typed', () {
-      final context = MCalDayHeaderContext(
+      final context = MCalMonthDayHeaderContext(
         dayOfWeek: 3,
         dayName: 'Wednesday',
       );

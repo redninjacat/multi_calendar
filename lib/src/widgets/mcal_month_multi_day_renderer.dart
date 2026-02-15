@@ -1,6 +1,6 @@
 import '../models/mcal_calendar_event.dart';
 import '../utils/date_utils.dart';
-import 'mcal_week_layout_contexts.dart';
+import 'mcal_month_week_layout_contexts.dart';
 
 /// Represents one segment of a multi-day event within a single week row.
 ///
@@ -586,12 +586,12 @@ class MCalMultiDayRenderer {
   /// Calculates event segments for ALL events (single-day and multi-day) in a month.
   ///
   /// Unlike [calculateLayouts] which only handles multi-day events, this method
-  /// creates [MCalEventSegment] objects for every event, making it suitable for
+  /// creates [MCalMonthEventSegment] objects for every event, making it suitable for
   /// the unified layered architecture.
   ///
   /// Single-day events get a segment with spanDays=1 and both isFirstSegment
   /// and isLastSegment set to true.
-  static List<List<MCalEventSegment>> calculateAllEventSegments({
+  static List<List<MCalMonthEventSegment>> calculateAllEventSegments({
     required List<MCalCalendarEvent> events,
     required DateTime monthStart,
     required int firstDayOfWeek,
@@ -605,7 +605,7 @@ class MCalMultiDayRenderer {
     final weekCount = (monthDates.length / 7).ceil();
 
     // Initialize per-week segment lists
-    final weekSegments = List.generate(weekCount, (_) => <MCalEventSegment>[]);
+    final weekSegments = List.generate(weekCount, (_) => <MCalMonthEventSegment>[]);
 
     // Sort all events: multi-day first, then by start time, then by duration
     final sortedEvents = List<MCalCalendarEvent>.from(events)
@@ -646,7 +646,7 @@ class MCalMultiDayRenderer {
         final isLastSegment = segmentEndGridIndex == endGridIndex && visibleEnd == eventEndDay;
 
         if (weekRowIndex < weekCount) {
-          weekSegments[weekRowIndex].add(MCalEventSegment(
+          weekSegments[weekRowIndex].add(MCalMonthEventSegment(
             event: event,
             weekRowIndex: weekRowIndex,
             startDayInWeek: dayInRow,

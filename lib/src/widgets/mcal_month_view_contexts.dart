@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/mcal_calendar_event.dart';
 import '../models/mcal_recurrence_rule.dart';
 import 'mcal_callback_details.dart';
-import 'mcal_week_layout_contexts.dart';
+import 'mcal_month_week_layout_contexts.dart';
 
 /// The keyboard interaction state of an event tile.
 ///
@@ -147,7 +147,7 @@ class MCalEventTileContext {
   /// The event segment information for layout purposes.
   /// Contains position within week, first/last segment flags, and span info.
   /// May be null for backward compatibility with existing code.
-  final MCalEventSegment? segment;
+  final MCalMonthEventSegment? segment;
 
   /// The computed width for this tile.
   /// May be null if not available during construction.
@@ -274,15 +274,15 @@ class MCalEventTileContext {
 ///   );
 /// }
 /// ```
-class MCalDayHeaderContext {
+class MCalMonthDayHeaderContext {
   /// Day of week index (0-6, where 0 is typically Sunday or first day of week).
   final int dayOfWeek;
 
   /// Localized day name (e.g., "Monday", "Lundi", "月曜日").
   final String dayName;
 
-  /// Creates a new [MCalDayHeaderContext] instance.
-  const MCalDayHeaderContext({required this.dayOfWeek, required this.dayName});
+  /// Creates a new [MCalMonthDayHeaderContext] instance.
+  const MCalMonthDayHeaderContext({required this.dayOfWeek, required this.dayName});
 }
 
 /// Context object for navigator builder callbacks.

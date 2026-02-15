@@ -4,7 +4,7 @@ import '../models/mcal_calendar_event.dart';
 import 'mcal_callback_details.dart';
 import 'mcal_draggable_event_tile.dart';
 import 'mcal_month_view_contexts.dart';
-import 'mcal_week_layout_contexts.dart';
+import 'mcal_month_week_layout_contexts.dart';
 import 'mcal_drag_handler.dart';
 
 /// Utility class that wraps developer-provided builders with interaction handlers.
@@ -98,7 +98,7 @@ class MCalBuilderWrapper {
         Widget defaultFeedbackBuilder(double tileWidth) {
           // Create a synthetic segment with isFirstSegment=true, isLastSegment=true
           // This ensures uniform corners and borders (no continuation styling)
-          final syntheticSegment = MCalEventSegment(
+          final syntheticSegment = MCalMonthEventSegment(
             event: event,
             weekRowIndex: 0,
             startDayInWeek: 0,
@@ -295,18 +295,18 @@ class MCalBuilderWrapper {
   static MCalOverflowIndicatorBuilder wrapOverflowIndicatorBuilder({
     required Widget Function(
       BuildContext,
-      MCalOverflowIndicatorContext,
+      MCalMonthOverflowIndicatorContext,
       Widget,
     )?
     developerBuilder,
-    required Widget Function(BuildContext, MCalOverflowIndicatorContext)
+    required Widget Function(BuildContext, MCalMonthOverflowIndicatorContext)
     defaultBuilder,
     void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap,
     void Function(BuildContext, MCalOverflowTapDetails)? onOverflowLongPress,
   }) {
     return (
       BuildContext context,
-      MCalOverflowIndicatorContext overflowContext,
+      MCalMonthOverflowIndicatorContext overflowContext,
     ) {
       final defaultWidget = defaultBuilder(context, overflowContext);
 

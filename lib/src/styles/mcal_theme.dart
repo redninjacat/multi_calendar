@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../widgets/mcal_week_layout_contexts.dart' show DateLabelPosition;
+import '../widgets/mcal_month_week_layout_contexts.dart' show DateLabelPosition;
 
 // Re-export DateLabelPosition so it's accessible from this file's exports
-export '../widgets/mcal_week_layout_contexts.dart' show DateLabelPosition;
+export '../widgets/mcal_month_week_layout_contexts.dart' show DateLabelPosition;
 
 /// An InheritedWidget that provides [MCalThemeData] to descendant widgets.
 ///
@@ -302,6 +302,173 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
   /// Falls back to [eventTileBorderWidth] then 0.0 when null.
   final double? dropTargetTileBorderWidth;
 
+  // ===== Day View Theme Properties =====
+
+  /// Text style for day of week in Day View header (e.g., "Monday").
+  ///
+  /// Used by the Day View day header component to display the day name.
+  /// Defaults to Material 3 labelMedium with medium weight.
+  final TextStyle? dayHeaderDayOfWeekStyle;
+
+  /// Text style for date number in Day View header (e.g., "14").
+  ///
+  /// Used by the Day View day header component to display the date.
+  /// Defaults to Material 3 headlineMedium with bold weight.
+  final TextStyle? dayHeaderDateStyle;
+
+  /// Text color for week numbers in Day View.
+  ///
+  /// Used when [showWeekNumber] is true in Day View.
+  /// Defaults to Material 3 onSurfaceVariant color.
+  final Color? weekNumberTextColor;
+
+  /// Width of the time legend column in Day View (in pixels).
+  ///
+  /// The time legend displays hour labels (e.g., "9 AM", "2 PM") along the
+  /// left edge of the Day View. This width should accommodate the formatted
+  /// time strings in the current locale.
+  /// Defaults to 60.0 pixels.
+  final double? timeLegendWidth;
+
+  /// Text style for time labels in Day View time legend.
+  ///
+  /// Used for hour labels in the time legend column.
+  /// Defaults to Material 3 labelSmall with onSurfaceVariant color.
+  final TextStyle? timeLegendTextStyle;
+
+  /// Background color for the time legend column in Day View.
+  ///
+  /// Defaults to Material 3 surfaceContainerLow.
+  final Color? timeLegendBackgroundColor;
+
+  /// Color for hour gridlines in Day View (lines at top of each hour).
+  ///
+  /// Hour gridlines are the most prominent gridlines, drawn at the start of
+  /// each hour (e.g., 9:00, 10:00, 11:00).
+  /// Defaults to Material 3 outline with 20% opacity.
+  final Color? hourGridlineColor;
+
+  /// Width of hour gridlines in Day View (in pixels).
+  ///
+  /// Defaults to 1.0 pixel.
+  final double? hourGridlineWidth;
+
+  /// Color for major gridlines in Day View (e.g., 30-minute marks).
+  ///
+  /// Major gridlines are drawn at significant intervals within the hour,
+  /// typically at the 30-minute mark.
+  /// Defaults to Material 3 outline with 15% opacity.
+  final Color? majorGridlineColor;
+
+  /// Width of major gridlines in Day View (in pixels).
+  ///
+  /// Defaults to 1.0 pixel.
+  final double? majorGridlineWidth;
+
+  /// Color for minor gridlines in Day View (e.g., 15-minute marks).
+  ///
+  /// Minor gridlines are the most subtle, drawn at smaller intervals
+  /// (e.g., every 15 minutes) to help with time estimation.
+  /// Defaults to Material 3 outline with 8% opacity.
+  final Color? minorGridlineColor;
+
+  /// Width of minor gridlines in Day View (in pixels).
+  ///
+  /// Defaults to 0.5 pixels.
+  final double? minorGridlineWidth;
+
+  /// Color for the current time indicator line in Day View.
+  ///
+  /// The current time indicator is a horizontal line that shows the current
+  /// time of day with a leading dot indicator.
+  /// Defaults to Material 3 primary color.
+  final Color? currentTimeIndicatorColor;
+
+  /// Width of the current time indicator line in Day View (in pixels).
+  ///
+  /// Defaults to 2.0 pixels.
+  final double? currentTimeIndicatorWidth;
+
+  /// Radius of the dot at the start of the current time indicator (in pixels).
+  ///
+  /// The dot appears at the leading edge (RTL-aware) of the current time line.
+  /// Defaults to 6.0 pixels.
+  final double? currentTimeIndicatorDotRadius;
+
+  /// Maximum number of rows to display in the Day View all-day events section.
+  ///
+  /// When the number of all-day events exceeds this limit, an overflow
+  /// indicator is shown. Users can typically tap the overflow to see more events.
+  /// Defaults to 3 rows.
+  final int? allDaySectionMaxRows;
+
+  /// Minimum height for timed event tiles in Day View (in pixels).
+  ///
+  /// Even very short events (e.g., 5 minutes) will be rendered at least this
+  /// tall to ensure they are visible and tappable.
+  /// Defaults to 20.0 pixels.
+  final double? timedEventMinHeight;
+
+  /// Border radius for timed event tiles in Day View (in pixels).
+  ///
+  /// Rounds the corners of timed event tile rectangles.
+  /// Defaults to 4.0 pixels.
+  final double? timedEventBorderRadius;
+
+  /// Padding inside timed event tiles in Day View.
+  ///
+  /// Controls spacing between the tile border and the event content (title, time).
+  /// Defaults to EdgeInsets.all(2.0).
+  final EdgeInsets? timedEventPadding;
+
+  /// Background color for special (non-blocking) time regions in Day View.
+  ///
+  /// Special time regions are visual indicators for specific time periods
+  /// (e.g., lunch break, focus time) that don't prevent event interactions.
+  /// When [blockInteraction] is false on a time region, this color is used.
+  /// Defaults to Material 3 surfaceContainer with 50% opacity.
+  final Color? specialTimeRegionColor;
+
+  /// Background color for blocked time regions in Day View.
+  ///
+  /// Blocked time regions indicate time periods where events cannot be placed
+  /// or moved (e.g., past time, holidays, non-working hours).
+  /// When [blockInteraction] is true on a time region, this color is used.
+  /// Defaults to Material 3 surfaceContainerHighest with 70% opacity.
+  final Color? blockedTimeRegionColor;
+
+  /// Border color for time region overlays in Day View.
+  ///
+  /// Draws a border around time region rectangles to distinguish them from
+  /// the background.
+  /// Defaults to Material 3 outline with 30% opacity.
+  final Color? timeRegionBorderColor;
+
+  /// Text color for labels inside time regions in Day View.
+  ///
+  /// Used when time regions display text (e.g., "Lunch", "Blocked").
+  /// Defaults to Material 3 onSurfaceVariant with 60% opacity.
+  final Color? timeRegionTextColor;
+
+  /// Text style for labels inside time regions in Day View.
+  ///
+  /// Used when time regions display text.
+  /// Defaults to Material 3 labelSmall with onSurfaceVariant color at 60% opacity.
+  final TextStyle? timeRegionTextStyle;
+
+  /// Hit area size for resize handles on timed events (in logical pixels).
+  ///
+  /// The resize handle provides an ~8dp hit area at the top and bottom edges
+  /// of event tiles for drag-to-resize. Defaults to 8.0.
+  final double? resizeHandleSize;
+
+  /// Minimum event duration (in minutes) required to show resize handles.
+  ///
+  /// Events shorter than this duration will not display resize handles,
+  /// since resizing them could violate the minimum duration constraint.
+  /// Defaults to 15 minutes.
+  final int? minResizeDurationMinutes;
+
   /// Creates a new [MCalThemeData] instance.
   ///
   /// All parameters are optional, allowing partial customization.
@@ -353,6 +520,33 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     this.dropTargetTileCornerRadius,
     this.dropTargetTileBorderColor,
     this.dropTargetTileBorderWidth,
+    // Day View properties
+    this.dayHeaderDayOfWeekStyle,
+    this.dayHeaderDateStyle,
+    this.weekNumberTextColor,
+    this.timeLegendWidth,
+    this.timeLegendTextStyle,
+    this.timeLegendBackgroundColor,
+    this.hourGridlineColor,
+    this.hourGridlineWidth,
+    this.majorGridlineColor,
+    this.majorGridlineWidth,
+    this.minorGridlineColor,
+    this.minorGridlineWidth,
+    this.currentTimeIndicatorColor,
+    this.currentTimeIndicatorWidth,
+    this.currentTimeIndicatorDotRadius,
+    this.allDaySectionMaxRows,
+    this.timedEventMinHeight,
+    this.timedEventBorderRadius,
+    this.timedEventPadding,
+    this.specialTimeRegionColor,
+    this.blockedTimeRegionColor,
+    this.timeRegionBorderColor,
+    this.timeRegionTextColor,
+    this.timeRegionTextStyle,
+    this.resizeHandleSize,
+    this.minResizeDurationMinutes,
   });
 
   /// Creates a [MCalThemeData] instance with default values derived
@@ -434,6 +628,41 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
       overflowIndicatorHeight: 14.0,
       eventTileCornerRadius: 3.0,
       ignoreEventColors: false,
+      // Day View properties
+      dayHeaderDayOfWeekStyle: textTheme.labelMedium?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w500,
+      ),
+      dayHeaderDateStyle: textTheme.headlineMedium?.copyWith(
+        color: colorScheme.onSurface,
+        fontWeight: FontWeight.bold,
+      ),
+      weekNumberTextColor: colorScheme.onSurfaceVariant,
+      timeLegendWidth: 60.0,
+      timeLegendTextStyle: textTheme.labelSmall?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+      ),
+      timeLegendBackgroundColor: colorScheme.surfaceContainerLow,
+      hourGridlineColor: colorScheme.outline.withValues(alpha: 0.2),
+      hourGridlineWidth: 1.0,
+      majorGridlineColor: colorScheme.outline.withValues(alpha: 0.15),
+      majorGridlineWidth: 1.0,
+      minorGridlineColor: colorScheme.outline.withValues(alpha: 0.08),
+      minorGridlineWidth: 0.5,
+      currentTimeIndicatorColor: colorScheme.primary,
+      currentTimeIndicatorWidth: 2.0,
+      currentTimeIndicatorDotRadius: 6.0,
+      allDaySectionMaxRows: 3,
+      timedEventMinHeight: 20.0,
+      timedEventBorderRadius: 4.0,
+      timedEventPadding: const EdgeInsets.all(2.0),
+      specialTimeRegionColor: colorScheme.surfaceContainer.withValues(alpha: 0.5),
+      blockedTimeRegionColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+      timeRegionBorderColor: colorScheme.outline.withValues(alpha: 0.3),
+      timeRegionTextColor: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+      timeRegionTextStyle: textTheme.labelSmall?.copyWith(
+        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+      ),
     );
   }
 
@@ -490,6 +719,33 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
     double? dropTargetTileCornerRadius,
     Color? dropTargetTileBorderColor,
     double? dropTargetTileBorderWidth,
+    // Day View parameters
+    TextStyle? dayHeaderDayOfWeekStyle,
+    TextStyle? dayHeaderDateStyle,
+    Color? weekNumberTextColor,
+    double? timeLegendWidth,
+    TextStyle? timeLegendTextStyle,
+    Color? timeLegendBackgroundColor,
+    Color? hourGridlineColor,
+    double? hourGridlineWidth,
+    Color? majorGridlineColor,
+    double? majorGridlineWidth,
+    Color? minorGridlineColor,
+    double? minorGridlineWidth,
+    Color? currentTimeIndicatorColor,
+    double? currentTimeIndicatorWidth,
+    double? currentTimeIndicatorDotRadius,
+    int? allDaySectionMaxRows,
+    double? timedEventMinHeight,
+    double? timedEventBorderRadius,
+    EdgeInsets? timedEventPadding,
+    Color? specialTimeRegionColor,
+    Color? blockedTimeRegionColor,
+    Color? timeRegionBorderColor,
+    Color? timeRegionTextColor,
+    TextStyle? timeRegionTextStyle,
+    double? resizeHandleSize,
+    int? minResizeDurationMinutes,
   }) {
     return MCalThemeData(
       cellBackgroundColor: cellBackgroundColor ?? this.cellBackgroundColor,
@@ -568,6 +824,33 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
           this.dropTargetTileBorderColor,
       dropTargetTileBorderWidth: dropTargetTileBorderWidth ??
           this.dropTargetTileBorderWidth,
+      // Day View properties
+      dayHeaderDayOfWeekStyle: dayHeaderDayOfWeekStyle ?? this.dayHeaderDayOfWeekStyle,
+      dayHeaderDateStyle: dayHeaderDateStyle ?? this.dayHeaderDateStyle,
+      weekNumberTextColor: weekNumberTextColor ?? this.weekNumberTextColor,
+      timeLegendWidth: timeLegendWidth ?? this.timeLegendWidth,
+      timeLegendTextStyle: timeLegendTextStyle ?? this.timeLegendTextStyle,
+      timeLegendBackgroundColor: timeLegendBackgroundColor ?? this.timeLegendBackgroundColor,
+      hourGridlineColor: hourGridlineColor ?? this.hourGridlineColor,
+      hourGridlineWidth: hourGridlineWidth ?? this.hourGridlineWidth,
+      majorGridlineColor: majorGridlineColor ?? this.majorGridlineColor,
+      majorGridlineWidth: majorGridlineWidth ?? this.majorGridlineWidth,
+      minorGridlineColor: minorGridlineColor ?? this.minorGridlineColor,
+      minorGridlineWidth: minorGridlineWidth ?? this.minorGridlineWidth,
+      currentTimeIndicatorColor: currentTimeIndicatorColor ?? this.currentTimeIndicatorColor,
+      currentTimeIndicatorWidth: currentTimeIndicatorWidth ?? this.currentTimeIndicatorWidth,
+      currentTimeIndicatorDotRadius: currentTimeIndicatorDotRadius ?? this.currentTimeIndicatorDotRadius,
+      allDaySectionMaxRows: allDaySectionMaxRows ?? this.allDaySectionMaxRows,
+      timedEventMinHeight: timedEventMinHeight ?? this.timedEventMinHeight,
+      timedEventBorderRadius: timedEventBorderRadius ?? this.timedEventBorderRadius,
+      timedEventPadding: timedEventPadding ?? this.timedEventPadding,
+      specialTimeRegionColor: specialTimeRegionColor ?? this.specialTimeRegionColor,
+      blockedTimeRegionColor: blockedTimeRegionColor ?? this.blockedTimeRegionColor,
+      timeRegionBorderColor: timeRegionBorderColor ?? this.timeRegionBorderColor,
+      timeRegionTextColor: timeRegionTextColor ?? this.timeRegionTextColor,
+      timeRegionTextStyle: timeRegionTextStyle ?? this.timeRegionTextStyle,
+      resizeHandleSize: resizeHandleSize ?? this.resizeHandleSize,
+      minResizeDurationMinutes: minResizeDurationMinutes ?? this.minResizeDurationMinutes,
     );
   }
 
@@ -789,6 +1072,125 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
         other.dropTargetTileBorderWidth,
         t,
       ),
+      // Day View properties
+      dayHeaderDayOfWeekStyle: TextStyle.lerp(
+        dayHeaderDayOfWeekStyle,
+        other.dayHeaderDayOfWeekStyle,
+        t,
+      ),
+      dayHeaderDateStyle: TextStyle.lerp(
+        dayHeaderDateStyle,
+        other.dayHeaderDateStyle,
+        t,
+      ),
+      weekNumberTextColor: Color.lerp(
+        weekNumberTextColor,
+        other.weekNumberTextColor,
+        t,
+      ),
+      timeLegendWidth: _lerpDouble(timeLegendWidth, other.timeLegendWidth, t),
+      timeLegendTextStyle: TextStyle.lerp(
+        timeLegendTextStyle,
+        other.timeLegendTextStyle,
+        t,
+      ),
+      timeLegendBackgroundColor: Color.lerp(
+        timeLegendBackgroundColor,
+        other.timeLegendBackgroundColor,
+        t,
+      ),
+      hourGridlineColor: Color.lerp(
+        hourGridlineColor,
+        other.hourGridlineColor,
+        t,
+      ),
+      hourGridlineWidth: _lerpDouble(
+        hourGridlineWidth,
+        other.hourGridlineWidth,
+        t,
+      ),
+      majorGridlineColor: Color.lerp(
+        majorGridlineColor,
+        other.majorGridlineColor,
+        t,
+      ),
+      majorGridlineWidth: _lerpDouble(
+        majorGridlineWidth,
+        other.majorGridlineWidth,
+        t,
+      ),
+      minorGridlineColor: Color.lerp(
+        minorGridlineColor,
+        other.minorGridlineColor,
+        t,
+      ),
+      minorGridlineWidth: _lerpDouble(
+        minorGridlineWidth,
+        other.minorGridlineWidth,
+        t,
+      ),
+      currentTimeIndicatorColor: Color.lerp(
+        currentTimeIndicatorColor,
+        other.currentTimeIndicatorColor,
+        t,
+      ),
+      currentTimeIndicatorWidth: _lerpDouble(
+        currentTimeIndicatorWidth,
+        other.currentTimeIndicatorWidth,
+        t,
+      ),
+      currentTimeIndicatorDotRadius: _lerpDouble(
+        currentTimeIndicatorDotRadius,
+        other.currentTimeIndicatorDotRadius,
+        t,
+      ),
+      allDaySectionMaxRows: t < 0.5 ? allDaySectionMaxRows : other.allDaySectionMaxRows,
+      timedEventMinHeight: _lerpDouble(
+        timedEventMinHeight,
+        other.timedEventMinHeight,
+        t,
+      ),
+      timedEventBorderRadius: _lerpDouble(
+        timedEventBorderRadius,
+        other.timedEventBorderRadius,
+        t,
+      ),
+      timedEventPadding: EdgeInsets.lerp(
+        timedEventPadding,
+        other.timedEventPadding,
+        t,
+      ),
+      specialTimeRegionColor: Color.lerp(
+        specialTimeRegionColor,
+        other.specialTimeRegionColor,
+        t,
+      ),
+      blockedTimeRegionColor: Color.lerp(
+        blockedTimeRegionColor,
+        other.blockedTimeRegionColor,
+        t,
+      ),
+      timeRegionBorderColor: Color.lerp(
+        timeRegionBorderColor,
+        other.timeRegionBorderColor,
+        t,
+      ),
+      timeRegionTextColor: Color.lerp(
+        timeRegionTextColor,
+        other.timeRegionTextColor,
+        t,
+      ),
+      timeRegionTextStyle: TextStyle.lerp(
+        timeRegionTextStyle,
+        other.timeRegionTextStyle,
+        t,
+      ),
+      resizeHandleSize: _lerpDouble(
+        resizeHandleSize,
+        other.resizeHandleSize,
+        t,
+      ),
+      minResizeDurationMinutes: t < 0.5 ? minResizeDurationMinutes : other.minResizeDurationMinutes,
     );
   }
 

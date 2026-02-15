@@ -48,7 +48,7 @@ enum DateLabelPosition {
 /// );
 /// print(segment.spanDays); // 3
 /// ```
-class MCalEventSegment {
+class MCalMonthEventSegment {
   /// The calendar event this segment represents.
   final MCalCalendarEvent event;
 
@@ -75,8 +75,8 @@ class MCalEventSegment {
   /// Used for rendering visual continuity (e.g., rounded right edge).
   final bool isLastSegment;
 
-  /// Creates a new [MCalEventSegment] instance.
-  const MCalEventSegment({
+  /// Creates a new [MCalMonthEventSegment] instance.
+  const MCalMonthEventSegment({
     required this.event,
     required this.weekRowIndex,
     required this.startDayInWeek,
@@ -100,7 +100,7 @@ class MCalEventSegment {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is MCalEventSegment &&
+    return other is MCalMonthEventSegment &&
         other.event == event &&
         other.weekRowIndex == weekRowIndex &&
         other.startDayInWeek == startDayInWeek &&
@@ -147,12 +147,12 @@ class MCalEventSegment {
 /// ```dart
 /// final config = MCalWeekLayoutConfig.fromTheme(theme);
 /// // Or with custom overrides:
-/// final customConfig = MCalWeekLayoutConfig(
+/// final customConfig = MCalMonthWeekLayoutConfig(
 ///   tileHeight: 24.0,
 ///   dateLabelPosition: DateLabelPosition.topCenter,
 /// );
 /// ```
-class MCalWeekLayoutConfig {
+class MCalMonthWeekLayoutConfig {
   /// Height of event tiles in pixels.
   ///
   /// Defaults to 18.0 when using [fromTheme].
@@ -203,7 +203,7 @@ class MCalWeekLayoutConfig {
   final int maxVisibleEventsPerDay;
 
   /// Creates a new [MCalWeekLayoutConfig] instance.
-  const MCalWeekLayoutConfig({
+  const MCalMonthWeekLayoutConfig({
     required this.tileHeight,
     required this.tileVerticalSpacing,
     required this.tileHorizontalSpacing,
@@ -228,11 +228,11 @@ class MCalWeekLayoutConfig {
   /// - dateLabelPosition: DateLabelPosition.topLeft
   /// - overflowIndicatorHeight: 14.0
   /// - maxVisibleEventsPerDay: defaults to 5
-  factory MCalWeekLayoutConfig.fromTheme(
+  factory MCalMonthWeekLayoutConfig.fromTheme(
     MCalThemeData theme, {
     int maxVisibleEventsPerDay = 5,
   }) {
-    return MCalWeekLayoutConfig(
+    return MCalMonthWeekLayoutConfig(
       tileHeight: theme.eventTileHeight ?? 18.0,
       tileVerticalSpacing: theme.eventTileVerticalSpacing ?? 2.0,
       tileHorizontalSpacing: theme.eventTileHorizontalSpacing ?? 2.0,
@@ -248,7 +248,7 @@ class MCalWeekLayoutConfig {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is MCalWeekLayoutConfig &&
+    return other is MCalMonthWeekLayoutConfig &&
         other.tileHeight == tileHeight &&
         other.tileVerticalSpacing == tileVerticalSpacing &&
         other.tileHorizontalSpacing == tileHorizontalSpacing &&
@@ -277,7 +277,7 @@ class MCalWeekLayoutConfig {
 
   @override
   String toString() {
-    return 'MCalWeekLayoutConfig('
+    return 'MCalMonthWeekLayoutConfig('
         'tileHeight: $tileHeight, '
         'tileVerticalSpacing: $tileVerticalSpacing, '
         'tileHorizontalSpacing: $tileHorizontalSpacing, '
@@ -316,7 +316,7 @@ class MCalWeekLayoutConfig {
 /// **Note:** The overflow indicator does not support drag-and-drop. Only
 /// visible event tiles can be dragged. Use [onOverflowTap] or [onOverflowLongPress]
 /// to let users view hidden events in a separate UI.
-class MCalOverflowIndicatorContext {
+class MCalMonthOverflowIndicatorContext {
   /// The date for which overflow is occurring.
   final DateTime date;
 
@@ -336,7 +336,7 @@ class MCalOverflowIndicatorContext {
   final double height;
 
   /// Creates a new [MCalOverflowIndicatorContext] instance.
-  const MCalOverflowIndicatorContext({
+  const MCalMonthOverflowIndicatorContext({
     required this.date,
     required this.hiddenEventCount,
     required this.hiddenEvents,
@@ -348,7 +348,7 @@ class MCalOverflowIndicatorContext {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    if (other is! MCalOverflowIndicatorContext) return false;
+    if (other is! MCalMonthOverflowIndicatorContext) return false;
     if (other.date != date ||
         other.hiddenEventCount != hiddenEventCount ||
         other.width != width ||
@@ -382,7 +382,7 @@ class MCalOverflowIndicatorContext {
 
   @override
   String toString() {
-    return 'MCalOverflowIndicatorContext('
+    return 'MCalMonthOverflowIndicatorContext('
         'date: $date, '
         'hiddenEventCount: $hiddenEventCount, '
         'hiddenEvents: ${hiddenEvents.length} items, '
@@ -410,7 +410,7 @@ typedef MCalDateLabelBuilder =
 typedef MCalOverflowIndicatorBuilder =
     Widget Function(
       BuildContext context,
-      MCalOverflowIndicatorContext overflowContext,
+      MCalMonthOverflowIndicatorContext overflowContext,
     );
 
 /// Context object for week layout builder callbacks.
@@ -447,12 +447,12 @@ typedef MCalOverflowIndicatorBuilder =
 ///   );
 /// }
 /// ```
-class MCalWeekLayoutContext {
+class MCalMonthWeekLayoutContext {
   /// List of event segments to render within this week row.
   ///
   /// Each segment represents either a complete single-day event or
   /// a portion of a multi-day event visible within this week.
-  final List<MCalEventSegment> segments;
+  final List<MCalMonthEventSegment> segments;
 
   /// The seven dates represented by this week row.
   ///
@@ -478,7 +478,7 @@ class MCalWeekLayoutContext {
   final DateTime currentMonth;
 
   /// Configuration for layout values (tile heights, spacing, etc.).
-  final MCalWeekLayoutConfig config;
+  final MCalMonthWeekLayoutConfig config;
 
   /// Builder function for rendering event tiles.
   ///
@@ -499,7 +499,7 @@ class MCalWeekLayoutContext {
   final MCalOverflowIndicatorBuilder overflowIndicatorBuilder;
 
   /// Creates a new [MCalWeekLayoutContext] instance.
-  const MCalWeekLayoutContext({
+  const MCalMonthWeekLayoutContext({
     required this.segments,
     required this.dates,
     required this.columnWidths,
@@ -514,7 +514,7 @@ class MCalWeekLayoutContext {
 
   @override
   String toString() {
-    return 'MCalWeekLayoutContext('
+    return 'MCalMonthWeekLayoutContext('
         'segments: ${segments.length} items, '
         'dates: ${dates.isNotEmpty ? "${dates.first} - ${dates.last}" : "empty"}, '
         'columnWidths: ${columnWidths.length} items, '

@@ -282,7 +282,7 @@ void main() {
     testWidgets('dayHeaderBuilder callback works when provided', (
       tester,
     ) async {
-      MCalDayHeaderContext? capturedContext;
+      MCalMonthDayHeaderContext? capturedContext;
       Widget? capturedDefault;
 
       await tester.pumpWidget(
@@ -3262,7 +3262,7 @@ void main() {
           // Check that segment info is provided
           final segments = weekSpanContexts
               .map((c) => c.segment)
-              .whereType<MCalEventSegment>();
+              .whereType<MCalMonthEventSegment>();
           if (segments.isNotEmpty) {
             // First segment should have isFirstSegment = true
             expect(segments.any((s) => s.isFirstSegment), isTrue);
@@ -3378,7 +3378,7 @@ void main() {
     });
 
     testWidgets(
-      'MCalEventSegment provides correct segment info for multi-day events',
+      'MCalMonthEventSegment provides correct segment info for multi-day events (Month View)',
       (tester) async {
         final testController = MockMCalEventController(
           initialDate: DateTime(2025, 1, 1),

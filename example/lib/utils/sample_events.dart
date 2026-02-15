@@ -199,6 +199,99 @@ List<MCalCalendarEvent> createSampleEvents() {
   ];
 }
 
+/// Event title templates for stress test generation.
+const List<String> _stressTestTitles = [
+  'Meeting',
+  'Standup',
+  'Review',
+  'Workshop',
+  'Call',
+  'Sync',
+  'Planning',
+  'Retro',
+  'Demo',
+  'Training',
+  'Interview',
+  'Brainstorm',
+  'Sprint',
+  'Design',
+  'Code Review',
+];
+
+/// Creates a large set of events for Day View performance stress testing.
+///
+/// Generates [count] events (default 200) for [date], with many overlapping
+/// timed events to stress overlap detection and layout. Uses [startHour] to
+/// [endHour] for event placement. Includes some all-day events.
+///
+/// Events are distributed across the day with intentional overlaps to
+/// demonstrate efficient rendering with CustomPainter and overlap handling.
+List<MCalCalendarEvent> createDayViewStressTestEvents(
+  DateTime date, {
+  int count = 200,
+  int startHour = 0,
+  int endHour = 24,
+}) {
+  final d = DateTime(date.year, date.month, date.day);
+  final events = <MCalCalendarEvent>[];
+  final random = _SeededRandom(count);
+
+  final hourSpan = (endHour - startHour).clamp(1, 24);
+  final colorCount = _eventColors.length;
+
+  // Add 5-10 all-day events
+  final allDayCount = 5 + (count ~/ 50).clamp(0, 5);
+  for (var i = 0; i < allDayCount; i++) {
+    events.add(MCalCalendarEvent(
+      id: 'stress-allday-$i',
+      title: 'All-day ${_stressTestTitles[i % _stressTestTitles.length]} $i',
+      start: DateTime(d.year, d.month, d.day, 0, 0),
+      end: DateTime(d.year, d.month, d.day, 0, 0),
+      isAllDay: true,
+      color: _eventColors[i % colorCount],
+    ));
+  }
+
+  // Add timed events - many overlapping
+  final timedCount = count - allDayCount;
+  for (var i = 0; i < timedCount; i++) {
+    final durationMinutes = [15, 30, 45, 60, 90, 120][random.nextInt(6)];
+    final startMinutes = random.nextInt(hourSpan * 60);
+    final start = DateTime(
+      d.year,
+      d.month,
+      d.day,
+      startHour + (startMinutes ~/ 60),
+      startMinutes % 60,
+    );
+    final end = start.add(Duration(minutes: durationMinutes));
+
+    events.add(MCalCalendarEvent(
+      id: 'stress-timed-$i',
+      title: '${_stressTestTitles[i % _stressTestTitles.length]} $i',
+      start: start,
+      end: end,
+      isAllDay: false,
+      color: _eventColors[i % colorCount],
+    ));
+  }
+
+  return events;
+}
+
+/// Simple seeded random for deterministic stress test event generation.
+class _SeededRandom {
+  _SeededRandom(this._seed);
+
+  int _seed;
+
+  int nextInt(int max) {
+    if (max <= 0) return 0;
+    _seed = (_seed * 1103515245 + 12345) & 0x7fffffff;
+    return _seed % max;
+  }
+}
+
 /// Returns the most recent Monday on or before [date].
 DateTime _previousOrCurrentMonday(DateTime date) {
   final daysFromMonday = (date.weekday - DateTime.monday) % 7;
@@ -211,4 +304,52 @@ DateTime _previousOrCurrentFriday(DateTime date) {
   final daysFromFriday = (date.weekday - DateTime.friday + 7) % 7;
   final friday = date.subtract(Duration(days: daysFromFriday));
   return DateTime(friday.year, friday.month, friday.day);
+}
+
+/// Creates sample events for Day View testing (timed + all-day for [date]).
+List<MCalCalendarEvent> createDayViewSampleEvents(DateTime date) {
+  final d = DateTime(date.year, date.month, date.day);
+  return [
+    MCalCalendarEvent(
+      id: 'dv-timed-1',
+      title: 'Team Standup',
+      start: DateTime(d.year, d.month, d.day, 9, 0),
+      end: DateTime(d.year, d.month, d.day, 9, 30),
+      isAllDay: false,
+      color: _eventColors[0],
+    ),
+    MCalCalendarEvent(
+      id: 'dv-timed-2',
+      title: 'Code Review',
+      start: DateTime(d.year, d.month, d.day, 15, 0),
+      end: DateTime(d.year, d.month, d.day, 16, 0),
+      isAllDay: false,
+      color: _eventColors[4],
+    ),
+    MCalCalendarEvent(
+      id: 'dv-timed-3',
+      title: 'Design Workshop',
+      start: DateTime(d.year, d.month, d.day, 10, 30),
+      end: DateTime(d.year, d.month, d.day, 12, 0),
+      isAllDay: false,
+      color: _eventColors[2],
+    ),
+    MCalCalendarEvent(
+      id: 'dv-allday-1',
+      title: 'Holiday',
+      start: DateTime(d.year, d.month, d.day, 0, 0),
+      end: DateTime(d.year, d.month, d.day, 0, 0),
+      isAllDay: true,
+      comment: 'All-day event for drag testing',
+      color: _eventColors[2],
+    ),
+    MCalCalendarEvent(
+      id: 'dv-allday-2',
+      title: 'Project Kickoff',
+      start: DateTime(d.year, d.month, d.day, 0, 0),
+      end: DateTime(d.year, d.month, d.day, 0, 0),
+      isAllDay: true,
+      color: _eventColors[5],
+    ),
+  ];
 }

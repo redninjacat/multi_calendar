@@ -112,17 +112,23 @@ class MCalLocalizations {
 
   /// Detects if the locale uses right-to-left (RTL) text direction.
   ///
-  /// Currently returns false for all supported locales (English and Spanish).
-  /// This method is prepared for future RTL language support.
+  /// Returns true for RTL languages such as Arabic and Hebrew.
+  /// Used by Day View navigator and other components for proper RTL layout.
   ///
   /// Parameters:
   /// - [locale]: The locale to check
   ///
   /// Returns true if the locale is RTL, false otherwise.
   bool isRTL(Locale locale) {
-    // English and Spanish are LTR
-    // Future: Add RTL language detection (e.g., Arabic, Hebrew)
-    return false;
+    switch (locale.languageCode) {
+      case 'ar': // Arabic
+      case 'he': // Hebrew
+      case 'fa': // Persian
+      case 'ur': // Urdu
+        return true;
+      default:
+        return false;
+    }
   }
 
   /// Gets the list of supported locales.

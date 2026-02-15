@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+import '../views/comparison/comparison_view.dart';
+import '../views/day_view/day_view_showcase.dart';
 import '../views/month_view/month_view_showcase.dart';
 
 /// Information about a view type for navigation
@@ -37,29 +40,61 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedViewType = 0;
 
-  // View types that will be available (Month, Week, Day, etc.)
-  static const List<ViewTypeInfo> _viewTypes = [
-    ViewTypeInfo(
-      name: 'Month View',
-      icon: Icons.calendar_view_month,
-      description: 'Different styles for the month calendar view',
-    ),
-    // Future view types can be added here:
-    // ViewTypeInfo(name: 'Week View', icon: Icons.view_week, description: '...'),
-    // ViewTypeInfo(name: 'Day View', icon: Icons.view_day, description: '...'),
-    // ViewTypeInfo(name: 'Schedule View', icon: Icons.schedule, description: '...'),
+  static const List<IconData> _viewTypeIcons = [
+    Icons.calendar_view_month,
+    Icons.view_day,
+    Icons.compare_arrows,
   ];
+
+  List<ViewTypeInfo> _buildViewTypes(AppLocalizations l10n) => [
+        ViewTypeInfo(
+          name: l10n.monthView,
+          icon: _viewTypeIcons[0],
+          description: l10n.monthViewDescription,
+        ),
+        ViewTypeInfo(
+          name: l10n.dayView,
+          icon: _viewTypeIcons[1],
+          description: l10n.dayViewDescription,
+        ),
+        ViewTypeInfo(
+          name: l10n.comparisonView,
+          icon: _viewTypeIcons[2],
+          description: l10n.comparisonViewDescription,
+        ),
+      ];
+
+  PopupMenuItem<Locale> _buildLocaleMenuItem(
+    Locale locale,
+    String label,
+    ColorScheme colorScheme,
+  ) {
+    final isSelected = widget.currentLocale.languageCode == locale.languageCode;
+    return PopupMenuItem<Locale>(
+      value: locale,
+      child: Row(
+        children: [
+          if (isSelected)
+            Icon(Icons.check, size: 18, color: colorScheme.primary),
+          if (isSelected) const SizedBox(width: 8),
+          Text(label),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final viewTypes = _buildViewTypes(l10n);
 
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
         backgroundColor: colorScheme.surface,
         title: Text(
-          'Multi Calendar',
+          l10n.appTitle,
           style: TextStyle(
             color: colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -74,36 +109,32 @@ class _MainScreenState extends State<MainScreen> {
               color: colorScheme.onSurface,
             ),
             onPressed: widget.onThemeToggle,
-            tooltip: 'Toggle theme',
+            tooltip: l10n.toggleTheme,
           ),
           PopupMenuButton<Locale>(
             icon: Icon(Icons.translate, color: colorScheme.onSurface),
-            tooltip: 'Change language',
+            tooltip: l10n.changeLanguage,
             onSelected: widget.onLocaleChanged,
             itemBuilder: (context) => [
-              PopupMenuItem(
-                value: const Locale('en'),
-                child: Row(
-                  children: [
-                    if (widget.currentLocale.languageCode == 'en')
-                      Icon(Icons.check, size: 18, color: colorScheme.primary),
-                    if (widget.currentLocale.languageCode == 'en')
-                      const SizedBox(width: 8),
-                    const Text('English'),
-                  ],
-                ),
+              _buildLocaleMenuItem(
+                const Locale('en'),
+                l10n.languageEnglish,
+                colorScheme,
               ),
-              PopupMenuItem(
-                value: const Locale('es', 'MX'),
-                child: Row(
-                  children: [
-                    if (widget.currentLocale.languageCode == 'es')
-                      Icon(Icons.check, size: 18, color: colorScheme.primary),
-                    if (widget.currentLocale.languageCode == 'es')
-                      const SizedBox(width: 8),
-                    const Text('Español (México)'),
-                  ],
-                ),
+              _buildLocaleMenuItem(
+                const Locale('es'),
+                l10n.languageSpanish,
+                colorScheme,
+              ),
+              _buildLocaleMenuItem(
+                const Locale('fr'),
+                l10n.languageFrench,
+                colorScheme,
+              ),
+              _buildLocaleMenuItem(
+                const Locale('ar'),
+                l10n.languageArabic,
+                colorScheme,
               ),
             ],
           ),
@@ -113,14 +144,14 @@ class _MainScreenState extends State<MainScreen> {
         child: Row(
           children: [
             // Side navigation for view types (only show if more than one type)
-            if (_viewTypes.length > 1)
+            if (viewTypes.length > 1)
               NavigationRail(
                 selectedIndex: _selectedViewType,
                 onDestinationSelected: (index) {
                   setState(() => _selectedViewType = index);
                 },
                 labelType: NavigationRailLabelType.all,
-                destinations: _viewTypes
+                destinations: viewTypes
                     .map(
                       (type) => NavigationRailDestination(
                         icon: Icon(type.icon),
@@ -146,11 +177,20 @@ class _MainScreenState extends State<MainScreen> {
           currentLocale: widget.currentLocale,
           isDarkMode: widget.isDarkMode,
         );
-      // Future view types:
-      // case 1: return WeekViewShowcase(...);
-      // case 2: return DayViewShowcase(...);
+      case 1:
+        return DayViewShowcase(
+          currentLocale: widget.currentLocale,
+          isDarkMode: widget.isDarkMode,
+        );
+      case 2:
+        return ComparisonView(
+          currentLocale: widget.currentLocale,
+          isDarkMode: widget.isDarkMode,
+        );
       default:
-        return const Center(child: Text('Coming soon...'));
+        return Center(
+          child: Text(AppLocalizations.of(context)!.comingSoon),
+        );
     }
   }
 }

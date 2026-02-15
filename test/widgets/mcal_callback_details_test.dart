@@ -136,7 +136,7 @@ void main() {
         isLast: false,
       );
 
-      expect(cell == 'not a cell', isFalse);
+      expect(cell == Object(), isFalse);
     });
 
     test('equality: works in list comparison for shouldRepaint', () {
