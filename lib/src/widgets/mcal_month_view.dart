@@ -14,7 +14,8 @@ import '../models/mcal_recurrence_rule.dart';
 import '../styles/mcal_theme.dart';
 import '../utils/color_utils.dart';
 import '../utils/date_utils.dart';
-import '../utils/mcal_localization.dart';
+import '../utils/mcal_date_format_utils.dart';
+import '../../l10n/mcal_localizations.dart';
 import 'mcal_builder_wrapper.dart';
 import 'mcal_callback_details.dart';
 import 'mcal_month_default_week_layout.dart';
@@ -1364,13 +1365,13 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// when the displayed month changes (e.g., "January 2026").
   void _announceMonthChange(DateTime month) {
     final locale = widget.locale ?? Localizations.localeOf(context);
-    final localizations = MCalLocalizations();
+    final localizations = MCalDateFormatUtils();
     final monthYearText = localizations.formatMonthYear(month, locale);
 
     // Announce the new month to screen readers
     // Use sendAnnouncement for compatibility with multiple windows
     final view = View.of(context);
-    SemanticsService.sendAnnouncement(view, monthYearText, TextDirection.ltr);
+    SemanticsService.sendAnnouncement(view, monthYearText, Directionality.of(context));
   }
 
   /// Loads events for the current month plus previous and next months.
@@ -1450,8 +1451,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     MCalThemeData resolvedTheme,
     Locale resolvedLocale,
   ) {
-    final localizations = MCalLocalizations();
-    final isRTL = localizations.isRTL(resolvedLocale);
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
 
     // Task 9: Determine scroll physics based on swipe navigation setting and boundaries.
     // During an active resize, use NeverScrollableScrollPhysics to prevent the
@@ -1654,9 +1654,10 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     );
 
     // Generate default semantics label if not provided
-    final localizations = MCalLocalizations();
+    final l10n = MCalLocalizations.of(context);
+    final localizations = MCalDateFormatUtils();
     final defaultSemanticsLabel =
-        '${localizations.getLocalizedString('calendar', locale)}, ${localizations.formatMonthYear(_currentMonth, locale)}';
+        '${l10n.calendar}, ${localizations.formatMonthYear(_currentMonth, locale)}';
     final semanticsLabel = widget.semanticsLabel ?? defaultSemanticsLabel;
 
     // Wrap in Focus widget for keyboard navigation and drag cancellation (Task 21)
@@ -1737,6 +1738,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       return KeyEventResult.ignored;
     }
 
+    // Obtain localization for announcements
+    final l10n = MCalLocalizations.of(context);
+
     // Handle Escape key — works even if keyboard navigation is disabled.
     // Priority: keyboard resize mode > keyboard move mode > keyboard selection mode > pointer drag.
     if (event.logicalKey == LogicalKeyboardKey.escape) {
@@ -1747,7 +1751,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         setState(() {});
         SemanticsService.sendAnnouncement(
           View.of(context),
-          'Resize cancelled',
+          l10n.announcementResizeCancelled,
           Directionality.of(context),
         );
         return KeyEventResult.handled;
@@ -1760,7 +1764,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         setState(() {});
         SemanticsService.sendAnnouncement(
           View.of(context),
-          'Move cancelled for $title',
+          l10n.announcementMoveCancelled(title),
           Directionality.of(context),
         );
         return KeyEventResult.handled;
@@ -1770,7 +1774,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         setState(() {});
         SemanticsService.sendAnnouncement(
           View.of(context),
-          'Event selection cancelled',
+          l10n.announcementEventSelectionCancelled,
           Directionality.of(context),
         );
         return KeyEventResult.handled;
@@ -1816,6 +1820,10 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     DateTime? newFocusedDate;
     bool handled = false;
 
+    // RTL support: reverse arrow keys in RTL mode
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
+    final rtlMult = isRTL ? -1 : 1;
+
     // Arrow key navigation
     // Use calendar-day arithmetic (not Duration) to avoid DST issues.
     // On DST fall-back (e.g. Nov 2, 2025 US), Duration(days: 1) = 24h can
@@ -1824,14 +1832,14 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       newFocusedDate = DateTime(
         focusedDate.year,
         focusedDate.month,
-        focusedDate.day - 1,
+        focusedDate.day + (-1 * rtlMult),
       );
       handled = true;
     } else if (key == LogicalKeyboardKey.arrowRight) {
       newFocusedDate = DateTime(
         focusedDate.year,
         focusedDate.month,
-        focusedDate.day + 1,
+        focusedDate.day + (1 * rtlMult),
       );
       handled = true;
     } else if (key == LogicalKeyboardKey.arrowUp) {
@@ -2051,13 +2059,16 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       _selectKeyboardMoveEvent(events.first);
     } else {
       // Multiple events: enter cycling mode
+      final l10n = MCalLocalizations.of(context);
       _isKeyboardEventSelectionMode = true;
       _keyboardMoveEventIndex = 0;
       setState(() {});
       SemanticsService.sendAnnouncement(
         View.of(context),
-        '${events.length} events. ${events.first.title} highlighted. '
-        'Tab to cycle, Enter to confirm.',
+        l10n.announcementEventsHighlighted(
+          events.length.toString(),
+          events.first.title,
+        ),
         Directionality.of(context),
       );
     }
@@ -2068,6 +2079,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Sets up the move state with the event's original dates and the proposed
   /// date initialized to the event's normalized start date.
   void _selectKeyboardMoveEvent(MCalCalendarEvent event) {
+    final l10n = MCalLocalizations.of(context);
     _isKeyboardEventSelectionMode = false;
     _isKeyboardMoveMode = true;
     _keyboardMoveEvent = event;
@@ -2081,8 +2093,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     setState(() {});
     SemanticsService.sendAnnouncement(
       View.of(context),
-      'Selected ${event.title}. '
-      'Arrow keys to move, Enter to confirm, Escape to cancel.',
+      l10n.announcementEventSelected(event.title),
       Directionality.of(context),
     );
   }
@@ -2093,6 +2104,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Enter confirms the selection and enters move mode.
   /// Escape exits selection mode.
   KeyEventResult _handleKeyboardSelectionModeKey(KeyEvent event) {
+    final l10n = MCalLocalizations.of(context);
     final key = event.logicalKey;
     final focusedDate =
         widget.controller.focusedDate ?? widget.controller.displayDate;
@@ -2117,8 +2129,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       setState(() {});
       SemanticsService.sendAnnouncement(
         View.of(context),
-        '${highlighted.title}. '
-        '${_keyboardMoveEventIndex + 1} of ${dayEvents.length}.',
+        l10n.announcementEventCycled(
+          highlighted.title,
+          (_keyboardMoveEventIndex + 1).toString(),
+          dayEvents.length.toString(),
+        ),
         Directionality.of(context),
       );
       return KeyEventResult.handled;
@@ -2150,16 +2165,21 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Enter confirms via [_handleKeyboardDrop], reusing the same drop logic
   /// as pointer-based drag-and-drop.
   KeyEventResult _handleKeyboardMoveModeKey(KeyEvent event) {
+    final l10n = MCalLocalizations.of(context);
     final key = event.logicalKey;
     final moveEvent = _keyboardMoveEvent;
     if (moveEvent == null) return KeyEventResult.ignored;
 
+    // RTL support: reverse arrow keys in RTL mode
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
+    final rtlMult = isRTL ? -1 : 1;
+
     // Determine arrow-key day delta
     int dayDelta = 0;
     if (key == LogicalKeyboardKey.arrowRight) {
-      dayDelta = 1;
+      dayDelta = 1 * rtlMult;
     } else if (key == LogicalKeyboardKey.arrowLeft) {
-      dayDelta = -1;
+      dayDelta = -1 * rtlMult;
     } else if (key == LogicalKeyboardKey.arrowDown) {
       dayDelta = 7;
     } else if (key == LogicalKeyboardKey.arrowUp) {
@@ -2248,7 +2268,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       final dateStr = DateFormat.yMMMd().format(newProposed);
       SemanticsService.sendAnnouncement(
         View.of(context),
-        'Moving ${moveEvent.title} to $dateStr',
+        l10n.announcementMovingEvent(moveEvent.title, dateStr),
         Directionality.of(context),
       );
 
@@ -2297,9 +2317,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       setState(() {});
       SemanticsService.sendAnnouncement(
         View.of(context),
-        'Resize mode. Adjusting end edge. '
-        'Arrow keys to resize, S for start, E for end, '
-        'Enter to confirm, Escape to cancel.',
+        l10n.announcementResizeModeEntered,
         Directionality.of(context),
       );
       return KeyEventResult.handled;
@@ -2335,13 +2353,14 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     if (proposedStart == null ||
         proposedEnd == null ||
         !dragHandler.isProposedDropValid) {
+      final l10n = MCalLocalizations.of(context);
       dragHandler.cancelDrag();
       _isDragActive = false;
       _exitKeyboardMoveMode();
       setState(() {});
       SemanticsService.sendAnnouncement(
         View.of(context),
-        'Move cancelled. Invalid target.',
+        l10n.announcementMoveInvalidTarget,
         Directionality.of(context),
       );
       return;
@@ -2453,10 +2472,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // Announce success
+    final l10n = MCalLocalizations.of(context);
     final dateStr = DateFormat.yMMMd().format(newStartDate);
     SemanticsService.sendAnnouncement(
       View.of(context),
-      'Moved ${event.title} to $dateStr',
+      l10n.announcementEventMoved(event.title, dateStr),
       Directionality.of(context),
     );
 
@@ -2480,11 +2500,16 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// - Enter: confirm resize via [_handleKeyboardResizeEnd]
   /// - Escape: cancel resize, stay in move mode
   KeyEventResult _handleKeyboardResizeModeKey(KeyEvent event) {
+    final l10n = MCalLocalizations.of(context);
     final key = event.logicalKey;
     final resizeEvent = _keyboardMoveEvent;
     if (resizeEvent == null) return KeyEventResult.ignored;
 
     final dragHandler = _ensureDragHandler;
+
+    // RTL support: reverse arrow keys in RTL mode
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
+    final rtlMult = isRTL ? -1 : 1;
 
     // S key: switch to start edge
     if (key == LogicalKeyboardKey.keyS) {
@@ -2506,7 +2531,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       setState(() {});
       SemanticsService.sendAnnouncement(
         View.of(context),
-        'Resizing start edge',
+        l10n.announcementResizingStartEdge,
         Directionality.of(context),
       );
       return KeyEventResult.handled;
@@ -2532,7 +2557,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       setState(() {});
       SemanticsService.sendAnnouncement(
         View.of(context),
-        'Resizing end edge',
+        l10n.announcementResizingEndEdge,
         Directionality.of(context),
       );
       return KeyEventResult.handled;
@@ -2545,7 +2570,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       setState(() {});
       SemanticsService.sendAnnouncement(
         View.of(context),
-        'Move mode',
+        l10n.announcementMoveMode,
         Directionality.of(context),
       );
       return KeyEventResult.handled;
@@ -2554,9 +2579,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // Arrow keys: adjust active edge
     final int delta;
     if (key == LogicalKeyboardKey.arrowRight) {
-      delta = 1;
+      delta = 1 * rtlMult;
     } else if (key == LogicalKeyboardKey.arrowLeft) {
-      delta = -1;
+      delta = -1 * rtlMult;
     } else if (key == LogicalKeyboardKey.arrowDown) {
       delta = 7;
     } else if (key == LogicalKeyboardKey.arrowUp) {
@@ -2624,7 +2649,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       final dateStr = DateFormat.yMMMd().format(activeDate);
       SemanticsService.sendAnnouncement(
         View.of(context),
-        'Resizing ${resizeEvent.title} ${_keyboardResizeEdge.name} to $dateStr, $spanDays days',
+        l10n.announcementResizingProgress(
+          resizeEvent.title,
+          _keyboardResizeEdge.name,
+          dateStr,
+          spanDays.toString(),
+        ),
         Directionality.of(context),
       );
 
@@ -2656,7 +2686,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       setState(() {});
       SemanticsService.sendAnnouncement(
         View.of(context),
-        'Resize cancelled',
+        l10n.announcementResizeCancelled,
         Directionality.of(context),
       );
       return KeyEventResult.handled;
@@ -2703,11 +2733,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final result = dragHandler.completeResize();
     if (result == null) {
       // Invalid resize
+      final l10n = MCalLocalizations.of(context);
       _exitKeyboardResizeMode();
       setState(() {});
       SemanticsService.sendAnnouncement(
         View.of(context),
-        'Resize cancelled. Invalid resize.',
+        l10n.announcementResizeInvalid,
         Directionality.of(context),
       );
       return;
@@ -2821,11 +2852,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // Announce success
+    final l10n = MCalLocalizations.of(context);
     final startStr = DateFormat.yMMMd().format(newStartDate);
     final endStr = DateFormat.yMMMd().format(newEndDate);
     SemanticsService.sendAnnouncement(
       View.of(context),
-      'Resized ${event.title} to $startStr through $endStr',
+      l10n.announcementEventResized(event.title, startStr, endStr),
       Directionality.of(context),
     );
 
@@ -3988,12 +4020,10 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
     final isValid = dragHandler.isProposedDropValid;
     final locale = widget.locale;
-    final localizations = MCalLocalizations();
-    final prefix = localizations.getLocalizedString('dropTargetPrefix', locale);
-    final validStr = localizations.getLocalizedString(
-      isValid ? 'dropTargetValid' : 'dropTargetInvalid',
-      locale,
-    );
+    final l10n = MCalLocalizations.of(context);
+    final localizations = MCalDateFormatUtils();
+    final prefix = l10n.dropTargetPrefix;
+    final validStr = isValid ? l10n.dropTargetValid : l10n.dropTargetInvalid;
 
     final firstDate = highlightedCells.first.date;
     final firstDateStr = localizations.formatDate(firstDate, locale);
@@ -4004,10 +4034,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     } else {
       final lastDate = highlightedCells.last.date;
       final lastDateStr = localizations.formatDate(lastDate, locale);
-      final toStr = localizations.getLocalizedString(
-        'dropTargetDateRangeTo',
-        locale,
-      );
+      final toStr = l10n.dropTargetDateRangeTo;
       dateRangeStr = '$firstDateStr $toStr $lastDateStr';
     }
 
@@ -6294,7 +6321,7 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
     // This ensures drop targets are on top of events and always receive pointer events
 
     // Wrap in gesture detector for tap/long-press/double-tap (Day View pattern)
-    final localizations = MCalLocalizations();
+    final l10n = MCalLocalizations.of(context);
     final hasCellDoubleTap = isInteractive && widget.onCellDoubleTap != null;
     Widget result = GestureDetector(
       onDoubleTapDown: hasCellDoubleTap
@@ -6337,7 +6364,7 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
         label: _getSemanticLabel(),
         selected: widget.isFocused,
         hint: isInteractive
-            ? localizations.getLocalizedString('doubleTapToSelect', widget.locale)
+            ? l10n.doubleTapToSelect
             : null,
         child: cell,
       ),
@@ -6772,7 +6799,8 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
   /// - "previous month" or "next month" if outside the display month
   /// - Event count (e.g., "3 events")
   String _getSemanticLabel() {
-    final localizations = MCalLocalizations();
+    final l10n = MCalLocalizations.of(context);
+    final localizations = MCalDateFormatUtils();
 
     // Full date with day name for better screen reader experience
     final dateStr = localizations.formatFullDateWithDayName(widget.date, widget.locale);
@@ -6781,12 +6809,12 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
 
     // Add "today" indicator
     if (widget.isToday) {
-      parts.add(localizations.getLocalizedString('today', widget.locale));
+      parts.add(l10n.today);
     }
 
     // Add focused/selected indicator
     if (widget.isFocused) {
-      parts.add(localizations.getLocalizedString('focused', widget.locale));
+      parts.add(l10n.focused);
     }
 
     // Add month context for dates outside current month
@@ -6800,17 +6828,17 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
       );
 
       if (dateMonth.isBefore(currentDisplayMonth)) {
-        parts.add(localizations.getLocalizedString('previousMonth', widget.locale));
+        parts.add(l10n.previousMonth);
       } else {
-        parts.add(localizations.getLocalizedString('nextMonth', widget.locale));
+        parts.add(l10n.nextMonth);
       }
     }
 
     // Add event count
     if (widget.events.isNotEmpty) {
       final eventWord = widget.events.length == 1
-          ? localizations.getLocalizedString('event', widget.locale)
-          : localizations.getLocalizedString('events', widget.locale);
+          ? l10n.event
+          : l10n.events;
       parts.add('${widget.events.length} $eventWord');
     }
 
@@ -7102,11 +7130,11 @@ class _EventTileWidgetState extends State<_EventTileWidget> {
 
   /// Gets the semantic label for accessibility.
   String _getSemanticLabel() {
-    final localizations = MCalLocalizations();
-    final timeStr = _formatEventTime(localizations);
+    final timeStr = _formatEventTime();
     var label = '${widget.event.title}, $timeStr';
 
     if (widget.spanLength > 1) {
+      final l10n = MCalLocalizations.of(context);
       final eventStartDate = DateTime(
         widget.event.start.year,
         widget.event.start.month,
@@ -7118,10 +7146,10 @@ class _EventTileWidgetState extends State<_EventTileWidget> {
         widget.displayDate.day,
       );
       final dayPosition = daysBetween(eventStartDate, cellDate) + 1;
-      final spanLabel = localizations.formatMultiDaySpanLabel(
+      final spanLabel = MCalDateFormatUtils().formatMultiDaySpanLabel(
+        l10n,
         widget.spanLength,
         dayPosition,
-        widget.locale,
       );
       label = '$label, $spanLabel';
     }
@@ -7130,11 +7158,12 @@ class _EventTileWidgetState extends State<_EventTileWidget> {
   }
 
   /// Formats the event time for display.
-  String _formatEventTime(MCalLocalizations localizations) {
+  String _formatEventTime() {
     if (widget.isAllDay) {
       return 'all day';
     }
 
+    final localizations = MCalDateFormatUtils();
     final startTime = localizations.formatTime(widget.event.start, widget.locale);
     final endTime = localizations.formatTime(widget.event.end, widget.locale);
     return '$startTime to $endTime';
@@ -7373,7 +7402,7 @@ class _OverflowIndicatorWidget extends StatelessWidget {
 
   /// Shows the default bottom sheet with all events for the day.
   void _showDefaultBottomSheet(BuildContext context) {
-    final localizations = MCalLocalizations();
+    final localizations = MCalDateFormatUtils();
     final dateStr = localizations.formatDate(date, locale);
 
     showModalBottomSheet<void>(
@@ -7451,16 +7480,13 @@ class _OverflowIndicatorWidget extends StatelessWidget {
 
   /// Builds a list item for an event in the bottom sheet.
   Widget _buildEventListItem(BuildContext context, MCalCalendarEvent event) {
-    final localizations = MCalLocalizations();
+    final l10n = MCalLocalizations.of(context);
+    final localizations = MCalDateFormatUtils();
 
     // Format time string
     String timeStr;
     if (event.isAllDay) {
-      timeStr = localizations.getLocalizedString('allDay', locale);
-      // Fallback if localization doesn't have allDay
-      if (timeStr == 'allDay') {
-        timeStr = 'All day';
-      }
+      timeStr = l10n.allDay;
     } else {
       final startTime = localizations.formatTime(event.start, locale);
       final endTime = localizations.formatTime(event.end, locale);
@@ -7555,27 +7581,15 @@ class _WeekdayHeaderRowWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = MCalLocalizations();
-    final isRTL = localizations.isRTL(locale);
+    final l10n = MCalLocalizations.of(context);
+    final isRTL = MCalDateFormatUtils().isRTL(locale);
 
     // Generate weekday names in the correct order based on firstDayOfWeek
     // Use abbreviated names (Short) for better fit
     final weekdayNames = <String>[];
-    final weekdayKeys = [
-      'daySundayShort',
-      'dayMondayShort',
-      'dayTuesdayShort',
-      'dayWednesdayShort',
-      'dayThursdayShort',
-      'dayFridayShort',
-      'daySaturdayShort',
-    ];
-
     for (int i = 0; i < 7; i++) {
       final dayIndex = (firstDayOfWeek + i) % 7;
-      weekdayNames.add(
-        localizations.getLocalizedString(weekdayKeys[dayIndex], locale),
-      );
+      weekdayNames.add(MCalDateFormatUtils.weekdayShortName(l10n, dayIndex));
     }
 
     // If RTL, reverse the order
@@ -7687,15 +7701,15 @@ class _NavigatorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = MCalLocalizations();
-    final isRTL = localizations.isRTL(locale);
+    final l10n = MCalLocalizations.of(context);
+    final isRTL = MCalDateFormatUtils().isRTL(locale);
 
     // Calculate if navigation is allowed
     final canGoPrevious = _canGoPrevious();
     final canGoNext = _canGoNext();
 
     // Format month/year display
-    final monthName = _getMonthName(localizations);
+    final monthName = _getMonthName(l10n);
     final year = currentMonth.year.toString();
     final monthYearText = '$monthName $year';
 
@@ -7742,12 +7756,12 @@ class _NavigatorWidget extends StatelessWidget {
                 ),
               ),
               Semantics(
-                label: localizations.getLocalizedString('today', locale),
+                label: l10n.today,
                 button: true,
                 child: IconButton(
                   icon: const Icon(Icons.today),
                   onPressed: onToday,
-                  tooltip: localizations.getLocalizedString('today', locale),
+                  tooltip: l10n.today,
                 ),
               ),
             ],
@@ -7797,25 +7811,8 @@ class _NavigatorWidget extends StatelessWidget {
   }
 
   /// Gets the localized month name.
-  String _getMonthName(MCalLocalizations localizations) {
-    final monthKeys = [
-      'monthJanuary',
-      'monthFebruary',
-      'monthMarch',
-      'monthApril',
-      'monthMay',
-      'monthJune',
-      'monthJuly',
-      'monthAugust',
-      'monthSeptember',
-      'monthOctober',
-      'monthNovember',
-      'monthDecember',
-    ];
-    return localizations.getLocalizedString(
-      monthKeys[currentMonth.month - 1],
-      locale,
-    );
+  String _getMonthName(MCalLocalizations l10n) {
+    return MCalDateFormatUtils.monthName(l10n, currentMonth.month);
   }
 }
 

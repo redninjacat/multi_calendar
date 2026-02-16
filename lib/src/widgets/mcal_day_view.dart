@@ -9,7 +9,8 @@ import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
 import '../models/mcal_time_region.dart';
 import '../styles/mcal_theme.dart';
-import '../utils/mcal_localization.dart';
+import '../utils/mcal_date_format_utils.dart';
+import '../../l10n/mcal_localizations.dart';
 import '../utils/day_view_overlap.dart';
 import '../utils/time_utils.dart';
 import 'mcal_callback_details.dart';
@@ -1545,7 +1546,9 @@ class MCalDayViewState extends State<MCalDayView> {
       case LogicalKeyboardKey.arrowLeft:
       case LogicalKeyboardKey.arrowRight:
         if (widget.showNavigator) {
-          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          final isRTL = Directionality.of(context) == TextDirection.rtl;
+          if ((event.logicalKey == LogicalKeyboardKey.arrowLeft && !isRTL) ||
+              (event.logicalKey == LogicalKeyboardKey.arrowRight && isRTL)) {
             _handleNavigatePrevious();
           } else {
             _handleNavigateNext();
@@ -1579,6 +1582,9 @@ class MCalDayViewState extends State<MCalDayView> {
     final proposedEnd = _keyboardMoveProposedEnd;
     if (ev == null || proposedStart == null || proposedEnd == null) return null;
 
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
+    final rtlMult = isRTL ? -1 : 1;
+
     switch (event.logicalKey) {
       case LogicalKeyboardKey.escape:
         _exitKeyboardMoveMode(cancel: true);
@@ -1594,10 +1600,10 @@ class MCalDayViewState extends State<MCalDayView> {
         _keyboardMoveBySlots(1);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowLeft:
-        _keyboardMoveByDays(-1);
+        _keyboardMoveByDays(-1 * rtlMult);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowRight:
-        _keyboardMoveByDays(1);
+        _keyboardMoveByDays(1 * rtlMult);
         return KeyEventResult.handled;
       default:
         return null;
@@ -3343,10 +3349,9 @@ class MCalDayViewState extends State<MCalDayView> {
     final dateStr = DateFormat.yMMMMEEEEd(
       locale.toString(),
     ).format(_displayDate);
-    final localizations = MCalLocalizations();
-    final scheduleLabel = localizations.getLocalizedString('scheduleFor', locale)
-        .replaceAll('{date}', dateStr);
-    final doubleTapHint = localizations.getLocalizedString('doubleTapToCreateEvent', locale);
+    final l10n = MCalLocalizations.of(context);
+    final scheduleLabel = l10n.scheduleFor(dateStr);
+    final doubleTapHint = l10n.doubleTapToCreateEvent;
     final gestureChild = hasEmptySlotCallbacks
         ? GestureDetector(
             key: const ValueKey('day_view_schedule'),
@@ -3412,12 +3417,11 @@ class MCalDayViewState extends State<MCalDayView> {
     if (!_isDragActive && !_isResizeActive) return null;
 
     final locale = widget.locale ?? Localizations.localeOf(context);
-    final localizations = MCalLocalizations();
-    final prefix = localizations.getLocalizedString('dropTargetPrefix', locale);
-    final validStr = localizations.getLocalizedString(
-      dragHandler.isProposedDropValid ? 'dropTargetValid' : 'dropTargetInvalid',
-      locale,
-    );
+    final l10n = MCalLocalizations.of(context);
+    final prefix = l10n.dropTargetPrefix;
+    final validStr = dragHandler.isProposedDropValid 
+        ? l10n.dropTargetValid 
+        : l10n.dropTargetInvalid;
 
     final startTimeStr = DateFormat.Hm(locale.toString()).format(proposedStart);
     final endTimeStr = DateFormat.Hm(locale.toString()).format(proposedEnd);
@@ -3869,8 +3873,9 @@ class _DayNavigator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = MCalLocalizations();
+    final localizations = MCalDateFormatUtils();
     final isRTL = localizations.isRTL(locale);
+    final l10n = MCalLocalizations.of(context);
 
     // Calculate if navigation is allowed
     final canGoPrevious = _canGoPrevious();
@@ -3891,13 +3896,13 @@ class _DayNavigator extends StatelessWidget {
                 canGoPrevious,
                 canGoNext,
                 formattedDate,
-                localizations,
+                l10n,
               )
             : _buildLTRButtons(
                 canGoPrevious,
                 canGoNext,
                 formattedDate,
-                localizations,
+                l10n,
               ),
       ),
     );
@@ -3920,13 +3925,13 @@ class _DayNavigator extends StatelessWidget {
     return [
       // Previous day button
       Semantics(
-        label: localizations.getLocalizedString('previousDay', locale),
+        label: localizations.previousDay,
         button: true,
         enabled: canGoPrevious,
         child: IconButton(
           icon: const Icon(Icons.chevron_left),
           onPressed: canGoPrevious ? onPrevious : null,
-          tooltip: localizations.getLocalizedString('previousDay', locale),
+          tooltip: localizations.previousDay,
         ),
       ),
 
@@ -3951,24 +3956,24 @@ class _DayNavigator extends StatelessWidget {
 
       // Today button
       Semantics(
-        label: localizations.getLocalizedString('today', locale),
+        label: localizations.today,
         button: true,
         child: IconButton(
           icon: const Icon(Icons.today),
           onPressed: onToday,
-          tooltip: localizations.getLocalizedString('today', locale),
+          tooltip: localizations.today,
         ),
       ),
 
       // Next day button
       Semantics(
-        label: localizations.getLocalizedString('nextDay', locale),
+        label: localizations.nextDay,
         button: true,
         enabled: canGoNext,
         child: IconButton(
           icon: const Icon(Icons.chevron_right),
           onPressed: canGoNext ? onNext : null,
-          tooltip: localizations.getLocalizedString('nextDay', locale),
+          tooltip: localizations.nextDay,
         ),
       ),
     ];
@@ -3984,24 +3989,24 @@ class _DayNavigator extends StatelessWidget {
     return [
       // Next day button (on left in RTL)
       Semantics(
-        label: localizations.getLocalizedString('nextDay', locale),
+        label: localizations.nextDay,
         button: true,
         enabled: canGoNext,
         child: IconButton(
           icon: const Icon(Icons.chevron_left), // Left arrow for next in RTL
           onPressed: canGoNext ? onNext : null,
-          tooltip: localizations.getLocalizedString('nextDay', locale),
+          tooltip: localizations.nextDay,
         ),
       ),
 
       // Today button
       Semantics(
-        label: localizations.getLocalizedString('today', locale),
+        label: localizations.today,
         button: true,
         child: IconButton(
           icon: const Icon(Icons.today),
           onPressed: onToday,
-          tooltip: localizations.getLocalizedString('today', locale),
+          tooltip: localizations.today,
         ),
       ),
 
@@ -4026,7 +4031,7 @@ class _DayNavigator extends StatelessWidget {
 
       // Previous day button (on right in RTL)
       Semantics(
-        label: localizations.getLocalizedString('previousDay', locale),
+        label: localizations.previousDay,
         button: true,
         enabled: canGoPrevious,
         child: IconButton(
@@ -4034,7 +4039,7 @@ class _DayNavigator extends StatelessWidget {
             Icons.chevron_right,
           ), // Right arrow for previous in RTL
           onPressed: canGoPrevious ? onPrevious : null,
-          tooltip: localizations.getLocalizedString('previousDay', locale),
+          tooltip: localizations.previousDay,
         ),
       ),
     ];
@@ -4272,7 +4277,7 @@ class _TimeLegendColumn extends StatelessWidget {
     final legendWidth = theme.dayTheme?.timeLegendWidth ?? 60.0;
 
     // Check RTL for tick positioning
-    final localizations = MCalLocalizations();
+    final localizations = MCalDateFormatUtils();
     final isRTL = localizations.isRTL(locale);
 
     // Check if ticks should be shown
@@ -4549,7 +4554,7 @@ class _CurrentTimeIndicatorState extends State<_CurrentTimeIndicator> {
     );
 
     // Check RTL
-    final localizations = MCalLocalizations();
+    final localizations = MCalDateFormatUtils();
     final isRTL = localizations.isRTL(widget.locale);
 
     // Create context for custom builder
@@ -4561,8 +4566,8 @@ class _CurrentTimeIndicatorState extends State<_CurrentTimeIndicator> {
     // Format time for semantic label
     final timeFormat = DateFormat('h:mm a', widget.locale.toString());
     final formattedTime = timeFormat.format(_currentTime);
-    final semanticLabel = localizations.getLocalizedString('currentTime', widget.locale)
-        .replaceAll('{time}', formattedTime);
+    final l10n = MCalLocalizations.of(context);
+    final semanticLabel = l10n.currentTime(formattedTime);
 
     // Use custom builder if provided
     if (widget.builder != null) {
@@ -4900,8 +4905,8 @@ class _GridlinesLayer extends StatelessWidget {
 
     // Default: Use CustomPainter for performance
     // Wrap in Semantics for accessibility (optional, design: can be noisy if per-line)
-    final localizations = MCalLocalizations();
-    final timeGridLabel = localizations.getLocalizedString('timeGrid', locale);
+    final l10n = MCalLocalizations.of(context);
+    final timeGridLabel = l10n.timeGrid;
     return Semantics(
       container: true,
       label: timeGridLabel,

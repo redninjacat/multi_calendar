@@ -1,5 +1,6 @@
 {
   "@@locale": "en",
+  
   "appTitle": "Multi Calendar",
   "toggleTheme": "Toggle theme",
   "changeLanguage": "Change language",
@@ -8,125 +9,282 @@
   "languageFrench": "French",
   "languageArabic": "Arabic (RTL)",
   "languageHebrew": "Hebrew (RTL)",
+  
+  "tabMonthView": "Month View",
+  "tabDayView": "Day View",
+  "tabComparison": "Comparison",
+  "tabFeatures": "Features",
+  "tabTheme": "Theme",
+  "tabStyles": "Styles",
+  "tabStressTest": "Stress Test",
+  "tabAccessibility": "Accessibility",
+  "tabDayFeatures": "Features",
+  "tabDayTheme": "Theme",
+  "tabDayStyles": "Styles",
+  "tabDayStressTest": "Stress Test",
+  "tabDayAccessibility": "Accessibility",
+  
   "monthView": "Month View",
   "dayView": "Day View",
   "monthViewDescription": "Different styles for the month calendar view",
   "dayViewDescription": "Day view with drag-and-drop, timed and all-day events",
   "comingSoon": "Coming soon...",
+  
+  "sectionSettings": "Settings",
+  "sectionNavigation": "Navigation",
+  "sectionDisplay": "Display",
+  "sectionDragDrop": "Drag & Drop",
+  "sectionDragAndDrop": "Drag & Drop",
+  "sectionResize": "Resize",
+  "sectionSnapping": "Snapping",
+  "sectionAnimation": "Animation",
+  "sectionKeyboard": "Keyboard",
+  "sectionTimeRange": "Time Range",
+  "sectionTimeRegions": "Time Regions",
+  "sectionBlackoutDays": "Blackout Days",
+  "sectionCells": "Cells",
+  "sectionEventTiles": "Event Tiles",
+  "sectionHeaders": "Headers",
+  "sectionDateLabels": "Date Labels",
+  "sectionOverflow": "Overflow",
+  "sectionNavigator": "Navigator",
+  "sectionHover": "Hover",
+  "sectionWeekNumbers": "Week Numbers",
+  "sectionTimeLegend": "Time Legend",
+  "sectionGridlines": "Gridlines",
+  "sectionCurrentTime": "Current Time Indicator",
+  "sectionEvents": "Events",
+  "sectionAllDayEvents": "All-Day Events",
+  
+  "settingShowNavigator": "Show Navigator",
+  "settingEnableSwipeNavigation": "Enable Swipe Navigation",
+  "settingSwipeDirection": "Swipe Direction",
+  "settingFirstDayOfWeek": "First Day of Week",
+  "settingShowWeekNumbers": "Show Week Numbers",
+  "settingShowWeekNumber": "Show Week Number",
+  "settingMaxVisibleEventsPerDay": "Max Visible Events Per Day",
+  "settingEnableDragToMove": "Enable Drag to Move",
+  "settingShowDropTargetTiles": "Show Drop Target Tiles",
+  "settingShowDropTargetPreview": "Show Drop Target Preview",
+  "settingShowDropTargetOverlay": "Show Drop Target Overlay",
+  "settingDropTargetTilesAboveOverlay": "Drop Target Tiles Above Overlay",
+  "settingDragEdgeNavigationEnabled": "Drag Edge Navigation Enabled",
+  "settingDragEdgeNavigationDelay": "Drag Edge Navigation Delay",
+  "settingDragLongPressDelay": "Drag Long Press Delay",
+  "settingEnableDragToResize": "Enable Drag to Resize",
+  "settingEnableAnimations": "Enable Animations",
+  "settingAnimationDuration": "Animation Duration",
+  "settingAnimationCurve": "Animation Curve",
+  "settingEnableKeyboardNavigation": "Enable Keyboard Navigation",
+  "settingAutoFocusOnCellTap": "Auto Focus on Cell Tap",
+  "settingAutoFocusOnEventTap": "Auto Focus on Event Tap",
+  "settingEnableBlackoutDays": "Enable Blackout Days",
+  "settingCellBackgroundColor": "Cell Background Color",
+  "settingCellBorderColor": "Cell Border Color",
+  "settingTodayBackgroundColor": "Today Background Color",
+  "settingEventTileBackgroundColor": "Event Tile Background Color",
+  "settingEventTileHeight": "Event Tile Height",
+  "settingEventTileCornerRadius": "Event Tile Corner Radius",
+  "settingEventTileHorizontalSpacing": "Event Tile Horizontal Spacing",
+  "settingEventTileVerticalSpacing": "Event Tile Vertical Spacing",
+  "settingEventTileBorderWidth": "Event Tile Border Width",
+  "settingIgnoreEventColors": "Ignore Event Colors",
+  "settingWeekdayHeaderBackgroundColor": "Weekday Header Background Color",
+  "settingDateLabelHeight": "Date Label Height",
+  "settingDateLabelPosition": "Date Label Position",
+  "settingOverflowIndicatorHeight": "Overflow Indicator Height",
+  "settingNavigatorBackgroundColor": "Navigator Background Color",
+  "settingDropTargetCellValidColor": "Valid Drop Target Color",
+  "settingDropTargetCellInvalidColor": "Invalid Drop Target Color",
+  "settingDragSourceOpacity": "Drag Source Opacity",
+  "settingDraggedTileElevation": "Dragged Tile Elevation",
+  "settingHoverCellBackgroundColor": "Hover Cell Background Color",
+  "settingHoverEventBackgroundColor": "Hover Event Background Color",
+  "settingWeekNumberBackgroundColor": "Week Number Background Color",
+  "settingStartHour": "Start Hour",
+  "settingEndHour": "End Hour",
+  "settingTimeSlotDuration": "Time Slot Duration",
+  "settingGridlineInterval": "Gridline Interval",
+  "settingHourHeight": "Hour Height",
+  "settingAutoScrollToCurrentTime": "Auto Scroll to Current Time",
+  "settingShowCurrentTimeIndicator": "Show Current Time Indicator",
+  "settingAllDaySectionMaxRows": "All-Day Section Max Rows",
+  "settingAllDayToTimedDuration": "All-Day to Timed Duration",
+  "settingSnapToTimeSlots": "Snap to Time Slots",
+  "settingSnapToOtherEvents": "Snap to Other Events",
+  "settingSnapToCurrentTime": "Snap to Current Time",
+  "settingSnapRange": "Snap Range",
+  "settingEnableSpecialTimeRegions": "Enable Special Time Regions",
+  "settingEnableBlackoutTimes": "Enable Blackout Times",
+  "settingTimeLegendWidth": "Time Legend Width",
+  "settingShowTimeLegendTicks": "Show Time Legend Ticks",
+  "settingTimeLegendTickColor": "Time Legend Tick Color",
+  "settingTimeLegendTickWidth": "Time Legend Tick Width",
+  "settingTimeLegendTickLength": "Time Legend Tick Length",
+  "settingHourGridlineColor": "Hour Gridline Color",
+  "settingHourGridlineWidth": "Hour Gridline Width",
+  "settingMajorGridlineColor": "Major Gridline Color",
+  "settingMajorGridlineWidth": "Major Gridline Width",
+  "settingMinorGridlineColor": "Minor Gridline Color",
+  "settingMinorGridlineWidth": "Minor Gridline Width",
+  "settingCurrentTimeIndicatorColor": "Current Time Indicator Color",
+  "settingCurrentTimeIndicatorWidth": "Current Time Indicator Width",
+  "settingCurrentTimeIndicatorDotRadius": "Current Time Indicator Dot Radius",
+  "settingTimedEventBorderRadius": "Timed Event Border Radius",
+  "settingTimedEventMinHeight": "Timed Event Min Height",
+  "settingTimedEventPadding": "Timed Event Padding",
+  "settingAllDayEventBackgroundColor": "All-Day Event Background Color",
+  "settingAllDayEventBorderColor": "All-Day Event Border Color",
+  "settingAllDayEventBorderWidth": "All-Day Event Border Width",
+  "settingSpecialTimeRegionColor": "Special Time Region Color",
+  "settingBlockedTimeRegionColor": "Blocked Time Region Color",
+  "settingTimeRegionBorderColor": "Time Region Border Color",
+  "settingTimeRegionTextColor": "Time Region Text Color",
+  "settingResizeHandleSize": "Resize Handle Size",
+  "settingMinResizeDurationMinutes": "Min Resize Duration (Minutes)",
+  
   "styleDefault": "Default",
   "styleClassic": "Classic",
   "styleModern": "Modern",
   "styleColorful": "Colorful",
   "styleMinimal": "Minimal",
-  "styleMinimalDescription": "Bare bones, text-only design. Maximum whitespace, minimal gridlines, subtle colors. Clean and spacious.",
   "styleFeaturesDemo": "Features",
-  "styleFeaturesDemoDescription": "Comprehensive showcase: special time regions (lunch, after-hours), blocked slots, drag-drop, resize, keyboard nav, snap-to-time. Try dropping events into blocked zones.",
-  "styleDefaultDescription": "Out-of-the-box Day View with default theme. Drag events to move, resize from edges. Double-tap empty space to create. Shows all-day and timed events.",
-  "styleClassicDescription": "Traditional grid with borders, square corners, uniform colors. Business hours 8–18, 15-minute gridlines.",
-  "styleModernDescription": "Clean, rounded design with colorful event indicators. Extended hours 7–21, 30-minute major gridlines.",
-  "styleColorfulDescription": "Vibrant gradients and bold colors. Full 24-hour range. Playful, creative aesthetic.",
   "styleStressTest": "Stress Test",
-  "styleStressTestDescription": "Performance demo with 100–500 events. Toggle stress mode, select event count, view FPS and frame metrics. Demonstrates smooth rendering with many overlapping events.",
-  "styleRtlDemo": "RTL Demo",
-  "styleRtlDemoDescription": "Day View in right-to-left layout (Arabic). Time legend on right, navigator arrows flipped. Demonstrates full RTL support for Arabic and other RTL languages.",
-  "styleThemeCustomization": "Theme Customization",
-  "styleThemeCustomizationDescription": "Customize theme properties: hour height, gridlines, time slots, event tiles, resize handles. Presets for common configurations. Changes apply immediately.",
-  "notes": "Notes",
-  "allDay": "All day",
-  "allDayRange": "{startDate} - {endDate} (All day)",
-  "allDaySingle": "{date} (All day)",
-  "@allDayRange": {
-    "placeholders": {
-      "startDate": {},
-      "endDate": {}
-    }
-  },
-  "@allDaySingle": {
-    "placeholders": {
-      "date": {}
-    }
-  },
-  "daysCount": "{count} days",
-  "@daysCount": {
-    "placeholders": {
-      "count": {}
-    }
-  },
-  "hoursMinutes": "{hours} hr {minutes} min",
-  "hoursOnly": "{hours} hr",
-  "minutesOnly": "{minutes} min",
-  "@hoursMinutes": {
-    "placeholders": {
-      "hours": {},
-      "minutes": {}
-    }
-  },
-  "@hoursOnly": {
-    "placeholders": {
-      "hours": {}
-    }
-  },
-  "@minutesOnly": {
-    "placeholders": {
-      "minutes": {}
-    }
-  },
-  "eventMoved": "Moved: {title} to {time}",
-  "eventResized": "Resized: {title} to {minutes} min",
-  "doubleTapCreate": "Double-tap at {time} - Create event",
-  "@eventMoved": {
-    "placeholders": {
-      "title": {},
-      "time": {}
-    }
-  },
-  "@eventResized": {
-    "placeholders": {
-      "title": {},
-      "minutes": {}
-    }
-  },
-  "@doubleTapCreate": {
-    "placeholders": {
-      "time": {}
-    }
-  },
-  "eventId": "Event ID: {id}",
-  "externalId": "External ID: {id}",
-  "@eventId": {
-    "placeholders": {
-      "id": {}
-    }
-  },
-  "@externalId": {
-    "placeholders": {
-      "id": {}
-    }
-  },
-  "eventCreated": "Created: {title}",
-  "eventUpdated": "Updated: {title}",
-  "eventDeleted": "Deleted: {title}",
-  "deleteEvent": "Delete Event",
-  "deleteEventConfirm": "Delete \"{title}\"?",
-  "cancel": "Cancel",
-  "delete": "Delete",
-  "edit": "Edit",
-  "@eventCreated": { "placeholders": { "title": {} } },
-  "@eventUpdated": { "placeholders": { "title": {} } },
-  "@eventDeleted": { "placeholders": { "title": {} } },
-  "@deleteEventConfirm": { "placeholders": { "title": {} } },
-  "comparisonView": "Comparison",
-  "comparisonViewDescription": "Month and Day views side by side with shared data",
-  "comparisonUseMonthView": "Overview, planning, multi-day events",
-  "comparisonUseDayView": "Schedule details, time slots, drag-and-drop",
-  "comparisonDaySelected": "Selected {date}",
-  "@comparisonDaySelected": { "placeholders": { "date": {} } },
   "styleAccessibility": "Accessibility",
+  "styleRtlDemo": "RTL Demo",
+  "styleThemeCustomization": "Theme Customization",
+  "styleDefaultDescription": "Out-of-the-box view with default theme. Drag events to move, resize from edges. Shows all features with library defaults.",
+  "styleClassicDescription": "Traditional grid with borders, square corners, uniform colors. Business-focused aesthetic.",
+  "styleModernDescription": "Clean, rounded design with colorful event indicators. Contemporary look and feel.",
+  "styleColorfulDescription": "Vibrant gradients and bold colors. Playful, creative aesthetic.",
+  "styleMinimalDescription": "Bare bones, text-only design. Maximum whitespace, minimal gridlines, subtle colors. Clean and spacious.",
+  "styleFeaturesDemoDescription": "Comprehensive showcase of all calendar features: drag-drop, resize, keyboard navigation, gesture handlers, and interactive controls.",
+  "styleStressTestDescription": "Performance demo with 100–500 events. Toggle stress mode, select event count, view FPS and frame metrics. Demonstrates smooth rendering with many overlapping events.",
   "styleAccessibilityDescription": "Demonstrate accessibility features: keyboard shortcuts, screen reader support, high contrast mode. WCAG 2.1 AA compliant.",
+  "styleRtlDemoDescription": "Day View in right-to-left layout (Arabic). Time legend on right, navigator arrows flipped. Demonstrates full RTL support for Arabic and other RTL languages.",
+  "styleThemeCustomizationDescription": "Customize theme properties: hour height, gridlines, time slots, event tiles, resize handles. Presets for common configurations. Changes apply immediately.",
+  
+  "themeSettings": "Theme Settings",
+  "themePresets": "Theme Presets",
+  "presetDefault": "Default",
+  "presetCompact": "Compact",
+  "presetSpacious": "Spacious",
+  "presetHighContrast": "High Contrast",
+  "presetMinimal": "Minimal",
+  
+  "dateLabelPositionTopLeft": "Top Left",
+  "dateLabelPositionTopCenter": "Top Center",
+  "dateLabelPositionTopRight": "Top Right",
+  "dateLabelPositionBottomLeft": "Bottom Left",
+  "dateLabelPositionBottomCenter": "Bottom Center",
+  "dateLabelPositionBottomRight": "Bottom Right",
+  
+  "swipeDirectionHorizontal": "Horizontal",
+  "swipeDirectionVertical": "Vertical",
+  
+  "dayMonday": "Monday",
+  "dayTuesday": "Tuesday",
+  "dayWednesday": "Wednesday",
+  "dayThursday": "Thursday",
+  "dayFriday": "Friday",
+  "daySaturday": "Saturday",
+  "daySunday": "Sunday",
+  
+  "stressTestMode": "Stress Test Mode",
+  "stressTestEventCount": "Event Count",
+  "stressTestEventCount100": "100 Events",
+  "stressTestEventCount200": "200 Events",
+  "stressTestEventCount300": "300 Events",
+  "stressTestEventCount500": "500 Events",
+  "stressTestShowOverlay": "Show Performance Overlay",
+  "stressTestSettings": "Stress Test Settings",
+  "stressTestControls": "Controls",
+  "stressTestMetrics": "Performance Metrics",
+  "stressTestPerformanceGood": "Good",
+  "stressTestPerformancePoor": "Poor",
+  "stressTestEventCountLabel": "Event Count: {count}",
+  "@stressTestEventCountLabel": {
+    "description": "Number of events in stress test",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "stressTestAvgFrameTime": "Avg Frame Time: {ms} ms",
+  "@stressTestAvgFrameTime": {
+    "description": "Average frame time in milliseconds",
+    "placeholders": {
+      "ms": {
+        "type": "String"
+      }
+    }
+  },
+  "stressTestFps": "FPS: {fps}",
+  "@stressTestFps": {
+    "description": "Frames per second",
+    "placeholders": {
+      "fps": {
+        "type": "String"
+      }
+    }
+  },
+  "stressTestMetricEventCount": "Event Count: {count}",
+  "@stressTestMetricEventCount": {
+    "description": "Number of events in stress test",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stressTestMetricAvgFrame": "Avg Frame Time: {ms} ms",
+  "@stressTestMetricAvgFrame": {
+    "description": "Average frame time in milliseconds",
+    "placeholders": {
+      "ms": {
+        "type": "String"
+      }
+    }
+  },
+  "stressTestMetricFps": "FPS: {fps}",
+  "@stressTestMetricFps": {
+    "description": "Frames per second",
+    "placeholders": {
+      "fps": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "accessibilityTitle": "Accessibility",
   "accessibilityKeyboardShortcuts": "Keyboard Shortcuts",
   "accessibilityShortcutCreate": "Create event",
   "accessibilityShortcutEdit": "Edit event",
   "accessibilityShortcutDelete": "Delete event",
+  "accessibilityShortcutDeleteKeys": "D: Delete selected event",
+  "accessibilityShortcutNavigate": "Navigate",
+  "accessibilityShortcutNavigateDays": "Arrow keys: Navigate days",
+  "accessibilityShortcutCycleEvents": "Tab: Cycle through events",
+  "accessibilityShortcutActivate": "Enter: Activate event",
+  "accessibilityShortcutDrag": "Drag",
+  "accessibilityShortcutDragMove": "Arrow keys during drag: Move event",
+  "accessibilityShortcutResize": "Resize",
+  "accessibilityShortcutResizeEvent": "Shift+Arrow keys: Resize event",
+  "accessibilityShortcutArrows": "Arrow keys",
+  "accessibilityShortcutEnter": "Enter / Space",
+  "accessibilityShortcutHome": "Home",
+  "accessibilityShortcutEnd": "End",
+  "accessibilityShortcutPageUp": "Page Up",
+  "accessibilityShortcutPageDown": "Page Down",
+  "accessibilityShortcutTab": "Tab / Shift+Tab",
+  "accessibilityShortcutEscape": "Escape",
+  "accessibilityShortcutR": "R",
+  "accessibilityShortcutS": "S",
+  "accessibilityShortcutE": "E",
+  "accessibilityShortcutM": "M",
+  "accessibilityKeyboardNavInstructions": "Keyboard Navigation Instructions",
+  "accessibilityKeyboardNavInstructionsDetail": "Use Tab to focus the calendar, then use arrow keys to navigate between days and events. Press Enter to activate an event, Cmd/Ctrl+N to create a new event, E to edit, and D to delete.",
   "accessibilityScreenReaderGuide": "Screen Reader Guide",
   "accessibilityScreenReaderInstructions": "Enable VoiceOver (iOS/macOS) or TalkBack (Android) to hear semantic labels. Events announce title, time range, and duration. Navigator buttons announce Previous day, Today, Next day. Time slots announce hour. Resize handles announce Resize start edge or Resize end edge.",
   "accessibilityChecklist": "Accessibility Checklist",
@@ -139,8 +297,673 @@
   "accessibilityHighContrast": "High Contrast Mode",
   "accessibilityHighContrastDescription": "Toggle to see high-contrast styling for low vision users.",
   "accessibilityKeyboardNavFlow": "Keyboard Navigation Flow",
-  "accessibilityKeyboardNavStep1": "Tab or click to focus Day View",
+  "accessibilityKeyboardNavStep1": "Tab or click to focus calendar view",
   "accessibilityKeyboardNavStep2": "Tab to move between events chronologically",
   "accessibilityKeyboardNavStep3": "Enter to activate (open event details)",
-  "accessibilityKeyboardNavStep4": "Cmd/Ctrl+N to create, E to edit, D to delete focused event"
+  "accessibilityKeyboardNavStep4": "Cmd/Ctrl+N to create, E to edit, D to delete focused event",
+  "accessibilityMonthKeyboardShortcuts": "Month View Keyboard Shortcuts",
+  "accessibilityMonthShortcutArrows": "Arrow keys: Navigate cells",
+  "accessibilityMonthShortcutEnterSpace": "Enter/Space: Select cell or enter event mode",
+  "accessibilityMonthShortcutHome": "Home: First day of month",
+  "accessibilityMonthShortcutEnd": "End: Last day of month",
+  "accessibilityMonthShortcutPageUp": "Page Up: Previous month",
+  "accessibilityMonthShortcutPageDown": "Page Down: Next month",
+  "accessibilityMonthShortcutTab": "Tab/Shift+Tab: Cycle events in selected cell",
+  "accessibilityMonthShortcutEnterConfirm": "Enter: Confirm move",
+  "accessibilityMonthShortcutEscape": "Escape: Cancel operation",
+  "accessibilityMonthShortcutR": "R: Enter resize mode",
+  "accessibilityMonthShortcutS": "S: Switch to start edge",
+  "accessibilityMonthShortcutE": "E: Switch to end edge",
+  "accessibilityMonthShortcutM": "M: Return to move mode",
+  "accessibilityDayKeyboardShortcuts": "Day View Keyboard Shortcuts",
+  "accessibilityDayShortcutArrows": "Arrow keys: Navigate days/events",
+  "accessibilityDayShortcutTab": "Tab: Cycle through events",
+  "accessibilityDayShortcutEnter": "Enter: Activate event",
+  "accessibilityDayShortcutCreate": "Cmd/Ctrl+N: Create new event",
+  "accessibilityDayShortcutEdit": "E: Edit selected event",
+  "accessibilityDayShortcutDelete": "D: Delete selected event",
+  "accessibilityDayShortcutDragMove": "Arrow keys during drag: Move event",
+  "accessibilityDayShortcutResize": "Shift+Arrow keys: Resize event",
+  
+  "snackbarCellTap": "Cell tapped: {date}",
+  "@snackbarCellTap": {
+    "description": "Message shown when a cell is tapped",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarCellLongPress": "Cell long pressed: {date}",
+  "@snackbarCellLongPress": {
+    "description": "Message shown when a cell is long pressed",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarCellDoubleTap": "Cell double tapped: {date}",
+  "@snackbarCellDoubleTap": {
+    "description": "Message shown when a cell is double tapped",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarDateLabelTap": "Date label tapped: {date}",
+  "@snackbarDateLabelTap": {
+    "description": "Message shown when a date label is tapped",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarDateLabelLongPress": "Date label long pressed: {date}",
+  "@snackbarDateLabelLongPress": {
+    "description": "Message shown when a date label is long pressed",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarEventTap": "Event tapped: {title}",
+  "@snackbarEventTap": {
+    "description": "Message shown when an event is tapped",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarEventLongPress": "Event long pressed: {title}",
+  "@snackbarEventLongPress": {
+    "description": "Message shown when an event is long pressed",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarEventDoubleTap": "Event double tapped: {title}",
+  "@snackbarEventDoubleTap": {
+    "description": "Message shown when an event is double tapped",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarOverflowTap": "Overflow tapped: {count} events",
+  "@snackbarOverflowTap": {
+    "description": "Message shown when overflow indicator is tapped",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "snackbarOverflowLongPress": "Overflow long pressed: {date} ({count} hidden events)",
+  "@snackbarOverflowLongPress": {
+    "description": "Message shown when overflow indicator is long pressed",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "snackbarHoverCell": "Hovering over cell: {date}",
+  "@snackbarHoverCell": {
+    "description": "Message shown when hovering over a cell",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarHoverEvent": "Hovering over event: {title}",
+  "@snackbarHoverEvent": {
+    "description": "Message shown when hovering over an event",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarDragWillAccept": "Drag will accept: {title} at {date}",
+  "@snackbarDragWillAccept": {
+    "description": "Message shown when drag operation will be accepted",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarDropRejected": "Drop rejected: {date} is blocked",
+  "@snackbarDropRejected": {
+    "description": "Message shown when drop is rejected due to blackout date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarEventDropped": "Event dropped: {title} at {time}",
+  "@snackbarEventDropped": {
+    "description": "Message shown when an event is dropped",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarEventResized": "Event resized: {title} to {minutes} min",
+  "@snackbarEventResized": {
+    "description": "Message shown when an event is resized",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarResizeWillAccept": "Resize will accept: {title} to {minutes} min",
+  "@snackbarResizeWillAccept": {
+    "description": "Message shown when resize operation will be accepted",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarEventResizedDays": "Event resized: {title} to {days} days",
+  "@snackbarEventResizedDays": {
+    "description": "Message shown when a multi-day event is resized",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "snackbarFocusedDateChanged": "Focused date changed: {date}",
+  "@snackbarFocusedDateChanged": {
+    "description": "Message shown when focused date changes",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarSwipeNavigation": "Swiped to {direction}",
+  "@snackbarSwipeNavigation": {
+    "description": "Message shown when swipe navigation occurs",
+    "placeholders": {
+      "direction": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarDayHeaderTap": "Day header tapped: {date}",
+  "@snackbarDayHeaderTap": {
+    "description": "Message shown when day header is tapped",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarDayHeaderLongPress": "Day header long pressed: {date}",
+  "@snackbarDayHeaderLongPress": {
+    "description": "Message shown when day header is long pressed",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarTimeLabelTap": "Time label tapped: {time}",
+  "@snackbarTimeLabelTap": {
+    "description": "Message shown when time label is tapped",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarTimeSlotTap": "Time slot tapped: {time}",
+  "@snackbarTimeSlotTap": {
+    "description": "Message shown when time slot is tapped",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarTimeSlotLongPress": "Time slot long pressed: {time}",
+  "@snackbarTimeSlotLongPress": {
+    "description": "Message shown when time slot is long pressed",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarEmptySpaceDoubleTap": "Empty space double tapped: {time}",
+  "@snackbarEmptySpaceDoubleTap": {
+    "description": "Message shown when empty space is double tapped",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarHoverTimeSlot": "Hovering over time slot: {time}",
+  "@snackbarHoverTimeSlot": {
+    "description": "Message shown when hovering over time slot",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarEventCreated": "Created: {title}",
+  "@snackbarEventCreated": {
+    "description": "Message shown when event is created",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarEventUpdated": "Updated: {title}",
+  "@snackbarEventUpdated": {
+    "description": "Message shown when event is updated",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarEventDeleted": "Deleted: {title}",
+  "@snackbarEventDeleted": {
+    "description": "Message shown when event is deleted",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "dialogTitle": "Event Details",
+  "dialogTitleCreate": "Create Event",
+  "dialogTitleEdit": "Edit Event",
+  "dialogNewEvent": "New Event",
+  "dialogEditEvent": "Edit Event",
+  "dialogSave": "Save",
+  "dialogCancel": "Cancel",
+  "dialogDelete": "Delete",
+  "dialogEdit": "Edit",
+  "dialogClose": "Close",
+  "dialogCreate": "Create",
+  "dialogStartDate": "Start Date",
+  "dialogEndDate": "End Date",
+  "dialogStartTime": "Start Time",
+  "dialogEndTime": "End Time",
+  "dialogAllDay": "All Day",
+  "dialogAllDayEvent": "All Day Event",
+  "dialogColor": "Color",
+  "dialogTitleField": "Title",
+  "dialogTitleRequired": "Title is required",
+  "dialogEndTimeAfterStart": "End time must be after start time",
+  "dialogSelectStartDate": "Select start date",
+  "dialogSelectStartTime": "Select start time",
+  "dialogSelectEndDate": "Select end date",
+  "dialogSelectEndTime": "Select end time",
+  "dialogDeleteEventTitle": "Delete Event",
+  "dialogDeleteEventConfirm": "Are you sure you want to delete \"{title}\"?",
+  "@dialogDeleteEventConfirm": {
+    "description": "Confirmation message for deleting event",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "dialogDescriptionField": "Description",
+  "dialogLocationField": "Location",
+  "dialogRecurrence": "Recurrence",
+  "dialogAddRecurrence": "Add Recurrence",
+  "dialogEditRecurrence": "Edit Recurrence",
+  "dialogRemoveRecurrence": "Remove Recurrence",
+  
+  "buttonSave": "Save",
+  "buttonCancel": "Cancel",
+  "buttonDelete": "Delete",
+  "buttonEdit": "Edit",
+  "buttonClose": "Close",
+  "buttonCreate": "Create",
+  "buttonAdd": "Add",
+  "buttonRemove": "Remove",
+  "buttonApply": "Apply",
+  "buttonReset": "Reset",
+  
+  "valueEnabled": "Enabled",
+  "valueDisabled": "Disabled",
+  "valueNone": "None",
+  "valueMinutes": "{minutes} min",
+  "@valueMinutes": {
+    "description": "Minutes value label",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "valueMilliseconds": "{ms} ms",
+  "@valueMilliseconds": {
+    "description": "Milliseconds value label",
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "valuePrevious": "previous",
+  "valueNext": "next",
+  "valueEaseInOut": "Ease In Out",
+  "valueLinear": "Linear",
+  "valueEaseIn": "Ease In",
+  "valueEaseOut": "Ease Out",
+  "valueBounceInOut": "Bounce In Out",
+  
+  "instructionSelectDaysToBlock": "Select days of week to block:",
+  
+  "accessibilityScreenReaderCellLabels": "Cell Labels",
+  "accessibilityScreenReaderCellLabelsContent": "Each cell announces date, day of week, and number of events. Example: \"Monday, February 10, 2026. 3 events.\"",
+  "accessibilityScreenReaderEventLabels": "Event Labels",
+  "accessibilityScreenReaderEventLabelsContent": "Events announce title, duration, and position. Example: \"Team Meeting. February 10-12. Spans 3 days.\"",
+  "accessibilityScreenReaderMultiDayEvents": "Multi-day Events",
+  "accessibilityScreenReaderMultiDayEventsContent": "Multi-day event spans are announced with clear start and end dates and total duration.",
+  "accessibilityScreenReaderNavigator": "Navigator",
+  "accessibilityScreenReaderNavigatorContent": "Navigation buttons announce current month/year and action. Example: \"February 2026. Previous month button.\"",
+  "accessibilityScreenReaderOverflow": "Overflow Indicators",
+  "accessibilityScreenReaderOverflowContent": "When a day has more events than can display, overflow indicator announces: \"+3 more events. Tap to view all.\"",
+  "settingEnableHighContrast": "Enable High Contrast",
+  "accessibilityChecklistItem7": "Full keyboard navigation support",
+  "accessibilityChecklistItem8": "Respects reduced motion preferences",
+  "accessibilityKeyboardNavFlowStep5": "Use arrow keys to navigate between calendar cells. Focus indicator shows current cell.",
+  "accessibilityKeyboardNavFlowStep6": "Press Enter or Space on a cell to select it. If the cell has events, press Tab to cycle through them.",
+  "accessibilityKeyboardNavFlowStep7": "With an event focused, press Enter to start move mode. Use arrows to navigate to target cell, Enter to confirm, or Escape to cancel.",
+  "accessibilityKeyboardNavFlowStep8": "Press R to enter resize mode. Use S/E to switch which edge to resize, arrows to resize, Enter to confirm, or M to return to move mode.",
+  "accessibilityShortcutEnterOnEvent": "Enter (on event)",
+  "accessibilityShortcutSE": "S / E",
+  
+  "comparisonView": "Comparison",
+  "comparisonViewDescription": "Month and Day views side by side with shared data",
+  "comparisonUseMonthView": "Overview, planning, multi-day events",
+  "comparisonUseDayView": "Schedule details, time slots, drag-and-drop",
+  "comparisonDaySelected": "Selected {date}",
+  "@comparisonDaySelected": {
+    "description": "Message when a day is selected in comparison view",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "notes": "Notes",
+  "allDay": "All day",
+  "allDayRange": "{startDate} - {endDate} (All day)",
+  "@allDayRange": {
+    "description": "All day date range display",
+    "placeholders": {
+      "startDate": {
+        "type": "String"
+      },
+      "endDate": {
+        "type": "String"
+      }
+    }
+  },
+  "allDaySingle": "{date} (All day)",
+  "@allDaySingle": {
+    "description": "Single day all-day event display",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "daysCount": "{count} days",
+  "@daysCount": {
+    "description": "Number of days",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursMinutes": "{hours} hr {minutes} min",
+  "@hoursMinutes": {
+    "description": "Hours and minutes duration",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursOnly": "{hours} hr",
+  "@hoursOnly": {
+    "description": "Hours only duration",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "minutesOnly": "{minutes} min",
+  "@minutesOnly": {
+    "description": "Minutes only duration",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "eventMoved": "Moved: {title} to {time}",
+  "@eventMoved": {
+    "description": "Message when event is moved",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "eventResized": "Resized: {title} to {minutes} min",
+  "@eventResized": {
+    "description": "Message when event is resized",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "doubleTapCreate": "Double-tap at {time} - Create event",
+  "@doubleTapCreate": {
+    "description": "Message for double tap to create",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "eventId": "Event ID: {id}",
+  "@eventId": {
+    "description": "Event ID display",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "externalId": "External ID: {id}",
+  "@externalId": {
+    "description": "External ID display",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "eventCreated": "Created: {title}",
+  "@eventCreated": {
+    "description": "Message when event is created",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "eventUpdated": "Updated: {title}",
+  "@eventUpdated": {
+    "description": "Message when event is updated",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "eventDeleted": "Deleted: {title}",
+  "@eventDeleted": {
+    "description": "Message when event is deleted",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteEvent": "Delete Event",
+  "deleteEventConfirm": "Delete \"{title}\"?",
+  "@deleteEventConfirm": {
+    "description": "Confirmation message for deleting event",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "edit": "Edit",
+  
+  "bottomSheetEventCount": "{count, plural, =1{1 event} other{{count} events}}",
+  "@bottomSheetEventCount": {
+    "description": "Event count with plural support",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bottomSheetTapHint": "Tap an event to see details",
+  "bottomSheetNoEvents": "No events",
+  
+  "recurrenceDays": "day(s)",
+  "recurrenceWeeks": "week(s)",
+  "recurrenceMonths": "month(s)",
+  "recurrenceYears": "year(s)",
+  "recurrenceMondayShort": "Mon",
+  "recurrenceTuesdayShort": "Tue",
+  "recurrenceWednesdayShort": "Wed",
+  "recurrenceThursdayShort": "Thu",
+  "recurrenceFridayShort": "Fri",
+  "recurrenceSaturdayShort": "Sat",
+  "recurrenceSundayShort": "Sun",
+  "recurrenceMonday": "Monday",
+  "recurrenceTuesday": "Tuesday",
+  "recurrenceWednesday": "Wednesday",
+  "recurrenceThursday": "Thursday",
+  "recurrenceFriday": "Friday",
+  "recurrenceSaturday": "Saturday",
+  "recurrenceSunday": "Sunday",
+  "recurrenceEditTitle": "Edit Recurrence",
+  "recurrenceAddTitle": "Add Recurrence",
+  "recurrenceFrequency": "Frequency",
+  "recurrenceRepeatEvery": "Repeat every",
+  "recurrenceOnDays": "On days",
+  "recurrenceOnDaysOfMonth": "On days of month",
+  "recurrenceOnDaysOfYear": "On days of year",
+  "recurrenceInWeekNumbers": "In week numbers",
+  "recurrenceEnds": "Ends",
+  "recurrenceWeekStartsOn": "Week starts on",
+  "recurrenceFrequencyDaily": "Daily",
+  "recurrenceFrequencyWeekly": "Weekly",
+  "recurrenceFrequencyMonthly": "Monthly",
+  "recurrenceFrequencyYearly": "Yearly",
+  "recurrenceDaysOfYearHint": "Enter day numbers (1-366). Negative values count from year end.",
+  "recurrenceWeekNumbersHint": "Enter ISO week numbers (1-53). Negative values count from year end.",
+  "recurrenceValidationMin1": "Min 1",
+  "recurrenceDay": "Day {day}",
+  "@recurrenceDay": {
+    "description": "Day number label for recurrence",
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "recurrenceDayPlaceholder": "e.g. 1, 100, 200",
+  "recurrenceWeek": "Week {week}",
+  "@recurrenceWeek": {
+    "description": "Week number label for recurrence",
+    "placeholders": {
+      "week": {
+        "type": "int"
+      }
+    }
+  },
+  "recurrenceWeekPlaceholder": "e.g. 1, 20, 52",
+  "recurrenceEndsNever": "Never",
+  "recurrenceEndsNeverSubtitle": "Repeats indefinitely",
+  "recurrenceEndsAfter": "After",
+  "recurrenceEndsOnDate": "On date",
+  "recurrenceTimes": "times",
+  
+  "recurrenceScopeTitle": "Edit recurring event",
+  "recurrenceScopeThisEvent": "This event only",
+  "recurrenceScopeThisEventSubtitle": "Only change this occurrence",
+  "recurrenceScopeThisAndFollowing": "This and following events",
+  "recurrenceScopeThisAndFollowingSubtitle": "Change this and all future occurrences",
+  "recurrenceScopeAllEvents": "All events",
+  "recurrenceScopeAllEventsSubtitle": "Change every occurrence in the series"
 }

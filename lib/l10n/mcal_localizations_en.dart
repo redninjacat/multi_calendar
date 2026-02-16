@@ -166,4 +166,74 @@ class MCalLocalizationsEn extends MCalLocalizations {
 
   @override
   String get allDay => 'All day';
+
+  @override
+  String get announcementResizeCancelled => 'Resize cancelled';
+
+  @override
+  String announcementMoveCancelled(Object title) {
+    return 'Move cancelled for $title';
+  }
+
+  @override
+  String get announcementEventSelectionCancelled => 'Event selection cancelled';
+
+  @override
+  String announcementEventsHighlighted(Object count, Object title) {
+    return '$count events. $title highlighted. Tab to cycle, Enter to confirm.';
+  }
+
+  @override
+  String announcementEventSelected(Object title) {
+    return 'Selected $title. Arrow keys to move, Enter to confirm, Escape to cancel.';
+  }
+
+  @override
+  String announcementEventCycled(Object title, Object index, Object total) {
+    return '$title. $index of $total.';
+  }
+
+  @override
+  String announcementMovingEvent(Object title, Object date) {
+    return 'Moving $title to $date';
+  }
+
+  @override
+  String get announcementResizeModeEntered =>
+      'Resize mode. Adjusting end edge. Arrow keys to resize, S for start, E for end, M for move mode, Enter to confirm.';
+
+  @override
+  String get announcementResizingStartEdge => 'Resizing start edge';
+
+  @override
+  String get announcementResizingEndEdge => 'Resizing end edge';
+
+  @override
+  String get announcementMoveMode => 'Move mode';
+
+  @override
+  String get announcementMoveInvalidTarget => 'Move cancelled. Invalid target.';
+
+  @override
+  String announcementEventMoved(Object title, Object date) {
+    return 'Moved $title to $date';
+  }
+
+  @override
+  String announcementResizingProgress(
+    Object title,
+    Object edge,
+    Object date,
+    Object days,
+  ) {
+    return 'Resizing $title $edge to $date, $days days';
+  }
+
+  @override
+  String get announcementResizeInvalid => 'Resize cancelled. Invalid resize.';
+
+  @override
+  String announcementEventResized(Object title, Object start, Object end) {
+    return 'Resized $title to $start through $end';
+  }
 }

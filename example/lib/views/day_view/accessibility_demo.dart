@@ -195,7 +195,7 @@ class _AccessibilityDemoState extends State<AccessibilityDemo> {
                         _showSnackBar(
                           l10n.eventResized(
                             details.event.title,
-                            minutes,
+                            minutes.toString(),
                           ),
                         );
                       }

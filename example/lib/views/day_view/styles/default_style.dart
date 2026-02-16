@@ -149,7 +149,7 @@ class _DefaultDayStyleState extends State<DefaultDayStyle> {
                 _showSnackBar(
                   AppLocalizations.of(
                     context,
-                  )!.eventResized(details.event.title, minutes),
+                  )!.eventResized(details.event.title, minutes.toString()),
                 );
               }
             },

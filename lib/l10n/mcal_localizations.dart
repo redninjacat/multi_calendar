@@ -100,7 +100,6 @@ abstract class MCalLocalizations {
     Locale('ar'),
     Locale('en'),
     Locale('es'),
-    Locale('es', 'MX'),
     Locale('fr'),
     Locale('he'),
   ];
@@ -410,6 +409,107 @@ abstract class MCalLocalizations {
   /// In en, this message translates to:
   /// **'All day'**
   String get allDay;
+
+  /// No description provided for @announcementResizeCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize cancelled'**
+  String get announcementResizeCancelled;
+
+  /// No description provided for @announcementMoveCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Move cancelled for {title}'**
+  String announcementMoveCancelled(Object title);
+
+  /// No description provided for @announcementEventSelectionCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Event selection cancelled'**
+  String get announcementEventSelectionCancelled;
+
+  /// No description provided for @announcementEventsHighlighted.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} events. {title} highlighted. Tab to cycle, Enter to confirm.'**
+  String announcementEventsHighlighted(Object count, Object title);
+
+  /// No description provided for @announcementEventSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected {title}. Arrow keys to move, Enter to confirm, Escape to cancel.'**
+  String announcementEventSelected(Object title);
+
+  /// No description provided for @announcementEventCycled.
+  ///
+  /// In en, this message translates to:
+  /// **'{title}. {index} of {total}.'**
+  String announcementEventCycled(Object title, Object index, Object total);
+
+  /// No description provided for @announcementMovingEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving {title} to {date}'**
+  String announcementMovingEvent(Object title, Object date);
+
+  /// No description provided for @announcementResizeModeEntered.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize mode. Adjusting end edge. Arrow keys to resize, S for start, E for end, M for move mode, Enter to confirm.'**
+  String get announcementResizeModeEntered;
+
+  /// No description provided for @announcementResizingStartEdge.
+  ///
+  /// In en, this message translates to:
+  /// **'Resizing start edge'**
+  String get announcementResizingStartEdge;
+
+  /// No description provided for @announcementResizingEndEdge.
+  ///
+  /// In en, this message translates to:
+  /// **'Resizing end edge'**
+  String get announcementResizingEndEdge;
+
+  /// No description provided for @announcementMoveMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Move mode'**
+  String get announcementMoveMode;
+
+  /// No description provided for @announcementMoveInvalidTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Move cancelled. Invalid target.'**
+  String get announcementMoveInvalidTarget;
+
+  /// No description provided for @announcementEventMoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved {title} to {date}'**
+  String announcementEventMoved(Object title, Object date);
+
+  /// No description provided for @announcementResizingProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Resizing {title} {edge} to {date}, {days} days'**
+  String announcementResizingProgress(
+    Object title,
+    Object edge,
+    Object date,
+    Object days,
+  );
+
+  /// No description provided for @announcementResizeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize cancelled. Invalid resize.'**
+  String get announcementResizeInvalid;
+
+  /// No description provided for @announcementEventResized.
+  ///
+  /// In en, this message translates to:
+  /// **'Resized {title} to {start} through {end}'**
+  String announcementEventResized(Object title, Object start, Object end);
 }
 
 class _MCalLocalizationsDelegate
@@ -432,18 +532,6 @@ class _MCalLocalizationsDelegate
 }
 
 MCalLocalizations lookupMCalLocalizations(Locale locale) {
-  // Lookup logic when language+country codes are specified.
-  switch (locale.languageCode) {
-    case 'es':
-      {
-        switch (locale.countryCode) {
-          case 'MX':
-            return MCalLocalizationsEsMx();
-        }
-        break;
-      }
-  }
-
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
     case 'ar':

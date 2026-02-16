@@ -166,4 +166,75 @@ class MCalLocalizationsHe extends MCalLocalizations {
 
   @override
   String get allDay => 'כל היום';
+
+  @override
+  String get announcementResizeCancelled => 'שינוי גודל בוטל';
+
+  @override
+  String announcementMoveCancelled(Object title) {
+    return 'העברה בוטלה עבור $title';
+  }
+
+  @override
+  String get announcementEventSelectionCancelled => 'בחירת אירוע בוטלה';
+
+  @override
+  String announcementEventsHighlighted(Object count, Object title) {
+    return '$count אירועים. $title מודגש. Tab למעבר, Enter לאישור.';
+  }
+
+  @override
+  String announcementEventSelected(Object title) {
+    return 'נבחר $title. מקשי חצים להעברה, Enter לאישור, Escape לביטול.';
+  }
+
+  @override
+  String announcementEventCycled(Object title, Object index, Object total) {
+    return '$title. $index מתוך $total.';
+  }
+
+  @override
+  String announcementMovingEvent(Object title, Object date) {
+    return 'מעביר את $title ל-$date';
+  }
+
+  @override
+  String get announcementResizeModeEntered =>
+      'מצב שינוי גודל. התאמת קצה סיום. מקשי חצים לשינוי גודל, S להתחלה, E לסיום, M למצב העברה, Enter לאישור.';
+
+  @override
+  String get announcementResizingStartEdge => 'משנה גודל קצה התחלה';
+
+  @override
+  String get announcementResizingEndEdge => 'משנה גודל קצה סיום';
+
+  @override
+  String get announcementMoveMode => 'מצב העברה';
+
+  @override
+  String get announcementMoveInvalidTarget => 'העברה בוטלה. יעד לא תקין.';
+
+  @override
+  String announcementEventMoved(Object title, Object date) {
+    return 'הועבר $title ל-$date';
+  }
+
+  @override
+  String announcementResizingProgress(
+    Object title,
+    Object edge,
+    Object date,
+    Object days,
+  ) {
+    return 'משנה גודל $title $edge ל-$date, $days ימים';
+  }
+
+  @override
+  String get announcementResizeInvalid =>
+      'שינוי גודל בוטל. שינוי גודל לא תקין.';
+
+  @override
+  String announcementEventResized(Object title, Object start, Object end) {
+    return 'שונה גודל $title מ-$start עד $end';
+  }
 }

@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:multi_calendar/multi_calendar.dart';
 
-import '../../utils/sample_events.dart';
-import 'styles/default_style.dart';
-import 'styles/modern_style.dart';
-import 'styles/classic_style.dart';
-import 'styles/minimal_style.dart';
-import 'styles/colorful_style.dart';
-import 'styles/features_demo_style.dart';
+import '../../l10n/app_localizations.dart';
+import 'tabs/month_accessibility_tab.dart';
+import 'tabs/month_features_tab.dart';
+import 'tabs/month_stress_test_tab.dart';
+import 'tabs/month_styles_tab.dart';
+import 'tabs/month_theme_tab.dart';
 
-/// Information about a style tab.
-class StyleTabInfo {
-  final String name;
-  final String description;
-
-  const StyleTabInfo({required this.name, required this.description});
-}
-
-/// Showcase for Month View with multiple style tabs.
+/// Month View showcase with 5 tabs demonstrating different aspects of MCalMonthView.
+///
+/// Tabs:
+/// - Features: Widget-level settings and gesture handlers
+/// - Theme: Theme customization with presets
+/// - Styles: Pre-built style examples
+/// - Stress Test: Performance testing with many events
+/// - Accessibility: Keyboard navigation and screen reader support
 class MonthViewShowcase extends StatefulWidget {
   const MonthViewShowcase({
     super.key,
@@ -35,75 +32,40 @@ class MonthViewShowcase extends StatefulWidget {
 class _MonthViewShowcaseState extends State<MonthViewShowcase>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  late MCalEventController _eventController;
-  DateTime? _selectedDate;
-
-  static const List<StyleTabInfo> _styles = [
-    StyleTabInfo(
-      name: 'Features',
-      description:
-          'Interactive demo of all features: swipe navigation with peek preview, multi-day events with contiguous rendering, drag-and-drop with cross-month navigation, keyboard navigation, hover feedback, week numbers, and more.',
-    ),
-    StyleTabInfo(
-      name: 'Default',
-      description:
-          'The out-of-the-box MonthView with no customization. Uses the library\'s built-in theme derived from your app\'s ThemeData.',
-    ),
-    StyleTabInfo(
-      name: 'Modern',
-      description:
-          'A clean, modern design with rounded corners, subtle shadows, and colorful event indicators. Great for contemporary apps.',
-    ),
-    StyleTabInfo(
-      name: 'Classic',
-      description:
-          'A traditional calendar look with grid borders and minimal styling. Familiar and functional.',
-    ),
-    StyleTabInfo(
-      name: 'Minimal',
-      description:
-          'Ultra-clean design with maximum whitespace. Perfect for apps that prioritize content over chrome.',
-    ),
-    StyleTabInfo(
-      name: 'Colorful',
-      description:
-          'Bold, vibrant colors with gradient backgrounds. Ideal for playful, creative applications.',
-    ),
-  ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _styles.length, vsync: this);
-    _eventController = MCalEventController();
-    _eventController.addEvents(createSampleEvents());
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _eventController.dispose();
     super.dispose();
-  }
-
-  void _onDateSelected(DateTime date) {
-    setState(() => _selectedDate = date);
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       children: [
-        // Tab bar for different styles
+        // Tab bar
         Container(
           color: colorScheme.surfaceContainerHighest,
           child: TabBar(
             controller: _tabController,
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            tabs: _styles.map((style) => Tab(text: style.name)).toList(),
+            tabs: [
+              Tab(text: l10n.tabFeatures),
+              Tab(text: l10n.tabTheme),
+              Tab(text: l10n.tabStyles),
+              Tab(text: l10n.tabStressTest),
+              Tab(text: l10n.tabAccessibility),
+            ],
           ),
         ),
         // Tab content
@@ -111,48 +73,19 @@ class _MonthViewShowcaseState extends State<MonthViewShowcase>
           child: TabBarView(
             controller: _tabController,
             children: [
-              FeaturesDemoStyle(
+              // Features tab
+              const MonthFeaturesTab(),
+              // Theme tab
+              const MonthThemeTab(),
+              // Styles tab
+              MonthStylesTab(
                 locale: widget.currentLocale,
                 isDarkMode: widget.isDarkMode,
-                description: _styles[0].description,
               ),
-              DefaultMonthStyle(
-                eventController: _eventController,
-                locale: widget.currentLocale,
-                description: _styles[1].description,
-              ),
-              ModernMonthStyle(
-                eventController: _eventController,
-                locale: widget.currentLocale,
-                isDarkMode: widget.isDarkMode,
-                selectedDate: _selectedDate,
-                onDateSelected: _onDateSelected,
-                description: _styles[2].description,
-              ),
-              ClassicMonthStyle(
-                eventController: _eventController,
-                locale: widget.currentLocale,
-                isDarkMode: widget.isDarkMode,
-                selectedDate: _selectedDate,
-                onDateSelected: _onDateSelected,
-                description: _styles[3].description,
-              ),
-              MinimalMonthStyle(
-                eventController: _eventController,
-                locale: widget.currentLocale,
-                isDarkMode: widget.isDarkMode,
-                selectedDate: _selectedDate,
-                onDateSelected: _onDateSelected,
-                description: _styles[4].description,
-              ),
-              ColorfulMonthStyle(
-                eventController: _eventController,
-                locale: widget.currentLocale,
-                isDarkMode: widget.isDarkMode,
-                selectedDate: _selectedDate,
-                onDateSelected: _onDateSelected,
-                description: _styles[5].description,
-              ),
+              // Stress Test tab
+              const MonthStressTestTab(),
+              // Accessibility tab
+              const MonthAccessibilityTab(),
             ],
           ),
         ),

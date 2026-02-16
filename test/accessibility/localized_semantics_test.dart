@@ -22,6 +22,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en', 'US'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,
@@ -46,6 +48,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en', 'US'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,
@@ -73,6 +77,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en', 'US'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,
@@ -375,6 +381,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en', 'US'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,
@@ -424,85 +432,128 @@ void main() {
   });
 
   group('MCalLocalizations accessibility strings', () {
-    test('getLocalizedString returns correct timeGrid for all languages', () {
-      final localizations = MCalLocalizations();
+    testWidgets('timeGrid has correct strings for all languages',
+        (tester) async {
+      const testCases = [
+        (Locale('en'), 'Time grid'),
+        (Locale('es'), 'Cuadrícula de tiempo'),
+        (Locale('fr'), 'Grille horaire'),
+        (Locale('ar'), 'شبكة الوقت'),
+        (Locale('he'), 'רשת זמן'),
+      ];
 
-      expect(
-        localizations.getLocalizedString('timeGrid', const Locale('en')),
-        equals('Time grid'),
-      );
-      expect(
-        localizations.getLocalizedString('timeGrid', const Locale('es')),
-        equals('Cuadrícula de tiempo'),
-      );
-      expect(
-        localizations.getLocalizedString('timeGrid', const Locale('fr')),
-        equals('Grille horaire'),
-      );
-      expect(
-        localizations.getLocalizedString('timeGrid', const Locale('ar')),
-        equals('شبكة الوقت'),
-      );
-      expect(
-        localizations.getLocalizedString('timeGrid', const Locale('he')),
-        equals('רשת זמן'),
-      );
+      for (final (locale, expected) in testCases) {
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: locale,
+            localizationsDelegates: MCalLocalizations.localizationsDelegates,
+            supportedLocales: MCalLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                final l10n = MCalLocalizations.of(context);
+                return Text(l10n.timeGrid);
+              },
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text(expected), findsOneWidget);
+      }
     });
 
-    test('getLocalizedString returns correct today for all languages', () {
-      final localizations = MCalLocalizations();
+    testWidgets('today has correct strings for all languages', (tester) async {
+      const testCases = [
+        (Locale('en'), 'Today'),
+        (Locale('es'), 'Hoy'),
+        (Locale('fr'), 'Aujourd\'hui'),
+      ];
 
-      expect(
-        localizations.getLocalizedString('today', const Locale('en')),
-        equals('Today'),
-      );
-      expect(
-        localizations.getLocalizedString('today', const Locale('es')),
-        equals('Hoy'),
-      );
-      expect(
-        localizations.getLocalizedString('today', const Locale('fr')),
-        equals('Aujourd\'hui'),
-      );
+      for (final (locale, expected) in testCases) {
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: locale,
+            localizationsDelegates: MCalLocalizations.localizationsDelegates,
+            supportedLocales: MCalLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                final l10n = MCalLocalizations.of(context);
+                return Text(l10n.today);
+              },
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text(expected), findsOneWidget);
+      }
     });
 
-    test('getLocalizedString returns correct doubleTapToCreateEvent', () {
-      final localizations = MCalLocalizations();
+    testWidgets('doubleTapToCreateEvent is not empty', (tester) async {
+      const testCases = [Locale('en'), Locale('es')];
 
-      expect(
-        localizations.getLocalizedString(
-          'doubleTapToCreateEvent',
-          const Locale('en'),
+      for (final locale in testCases) {
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: locale,
+            localizationsDelegates: MCalLocalizations.localizationsDelegates,
+            supportedLocales: MCalLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                final l10n = MCalLocalizations.of(context);
+                return Text(l10n.doubleTapToCreateEvent);
+              },
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        final textWidget = tester.widget<Text>(find.byType(Text));
+        expect(textWidget.data, isNotEmpty);
+      }
+    });
+
+    testWidgets('scheduleFor has parameter substitution', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              final l10n = MCalLocalizations.of(context);
+              return Text(l10n.scheduleFor('Feb 15'));
+            },
+          ),
         ),
-        isNotEmpty,
       );
-      expect(
-        localizations.getLocalizedString(
-          'doubleTapToCreateEvent',
-          const Locale('es'),
+
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Feb 15'), findsOneWidget);
+    });
+
+    testWidgets('currentTime has parameter substitution', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              final l10n = MCalLocalizations.of(context);
+              return Text(l10n.currentTime('2:30 PM'));
+            },
+          ),
         ),
-        isNotEmpty,
       );
-    });
 
-    test('getLocalizedString returns correct scheduleFor with placeholder', () {
-      final localizations = MCalLocalizations();
+      await tester.pumpAndSettle();
 
-      final en = localizations.getLocalizedString(
-        'scheduleFor',
-        const Locale('en'),
-      );
-      expect(en, contains('{date}'));
-    });
-
-    test('getLocalizedString returns correct currentTime with placeholder', () {
-      final localizations = MCalLocalizations();
-
-      final en = localizations.getLocalizedString(
-        'currentTime',
-        const Locale('en'),
-      );
-      expect(en, contains('{time}'));
+      expect(find.textContaining('2:30 PM'), findsOneWidget);
     });
   });
 
@@ -515,6 +566,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en', 'US'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,

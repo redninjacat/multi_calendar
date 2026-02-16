@@ -227,30 +227,38 @@ void main() {
     });
 
     testWidgets(
-      'MCalLocalizations.formatMultiDaySpanLabel returns correct span info',
+      'MCalDateFormatUtils.formatMultiDaySpanLabel returns correct span info',
       (tester) async {
         // Test the localization function directly since multi-day events
         // in the default week layout use spanning tiles (Layer 2) where
         // the span semantic label is set on _EventTileWidget (Layer 3).
-        final localizations = MCalLocalizations();
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: MCalLocalizations.localizationsDelegates,
+            supportedLocales: MCalLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                final l10n = MCalLocalizations.of(context);
+                final utils = MCalDateFormatUtils();
 
-        // 3-day event, day 2 of 3
-        final label = localizations.formatMultiDaySpanLabel(
-          3,
-          2,
-          const Locale('en'),
-        );
-        expect(label, contains('3-day event'));
-        expect(label, contains('day 2 of 3'));
+                // 3-day event, day 2 of 3
+                final label = utils.formatMultiDaySpanLabel(l10n, 3, 2);
+                expect(label, contains('3-day event'));
+                expect(label, contains('day 2 of 3'));
 
-        // 5-day event, day 1 of 5
-        final label2 = localizations.formatMultiDaySpanLabel(
-          5,
-          1,
-          const Locale('en'),
+                // 5-day event, day 1 of 5
+                final label2 = utils.formatMultiDaySpanLabel(l10n, 5, 1);
+                expect(label2, contains('5-day event'));
+                expect(label2, contains('day 1 of 5'));
+
+                return const SizedBox();
+              },
+            ),
+          ),
         );
-        expect(label2, contains('5-day event'));
-        expect(label2, contains('day 1 of 5'));
+
+        await tester.pumpAndSettle();
       },
     );
 
@@ -291,18 +299,30 @@ void main() {
     );
 
     testWidgets(
-      'MCalLocalizations.formatMultiDaySpanLabel works for Spanish locale',
+      'MCalDateFormatUtils.formatMultiDaySpanLabel works for Spanish locale',
       (tester) async {
-        final localizations = MCalLocalizations();
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('es'),
+            localizationsDelegates: MCalLocalizations.localizationsDelegates,
+            supportedLocales: MCalLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                final l10n = MCalLocalizations.of(context);
+                final utils = MCalDateFormatUtils();
 
-        final label = localizations.formatMultiDaySpanLabel(
-          3,
-          2,
-          const Locale('es', 'MX'),
+                final label = utils.formatMultiDaySpanLabel(l10n, 3, 2);
+                // Spanish template: 'evento de {days} días, día {position} de {days}'
+                expect(label, contains('3'));
+                expect(label, contains('2'));
+
+                return const SizedBox();
+              },
+            ),
+          ),
         );
-        // Spanish template: 'evento de {days} días, día {position} de {days}'
-        expect(label, contains('3'));
-        expect(label, contains('2'));
+
+        await tester.pumpAndSettle();
       },
     );
   });

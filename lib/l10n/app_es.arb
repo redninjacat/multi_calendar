@@ -50,5 +50,21 @@
   "scheduleFor": "Horario para {date}",
   "timeGrid": "Cuadrícula de tiempo",
   "doubleTapToCreateEvent": "Toca dos veces para crear evento",
-  "allDay": "Todo el día"
+  "allDay": "Todo el día",
+  "announcementResizeCancelled": "Redimensión cancelada",
+  "announcementMoveCancelled": "Movimiento cancelado para {title}",
+  "announcementEventSelectionCancelled": "Selección de evento cancelada",
+  "announcementEventsHighlighted": "{count} eventos. {title} resaltado. Tab para recorrer, Enter para confirmar.",
+  "announcementEventSelected": "Seleccionado {title}. Flechas para mover, Enter para confirmar, Escape para cancelar.",
+  "announcementEventCycled": "{title}. {index} de {total}.",
+  "announcementMovingEvent": "Moviendo {title} a {date}",
+  "announcementResizeModeEntered": "Modo redimensión. Ajustando borde final. Flechas para redimensionar, S para inicio, E para final, M para modo mover, Enter para confirmar.",
+  "announcementResizingStartEdge": "Redimensionando borde inicial",
+  "announcementResizingEndEdge": "Redimensionando borde final",
+  "announcementMoveMode": "Modo mover",
+  "announcementMoveInvalidTarget": "Movimiento cancelado. Destino no válido.",
+  "announcementEventMoved": "Movido {title} a {date}",
+  "announcementResizingProgress": "Redimensionando {title} {edge} a {date}, {days} días",
+  "announcementResizeInvalid": "Redimensión cancelada. Redimensión no válida.",
+  "announcementEventResized": "Redimensionado {title} de {start} a {end}"
 }

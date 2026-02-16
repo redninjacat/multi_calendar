@@ -50,5 +50,21 @@
   "scheduleFor": "الجدول الزمني لـ {date}",
   "timeGrid": "شبكة الوقت",
   "doubleTapToCreateEvent": "انقر مرتين لإنشاء حدث",
-  "allDay": "طوال اليوم"
+  "allDay": "طوال اليوم",
+  "announcementResizeCancelled": "تم إلغاء تغيير الحجم",
+  "announcementMoveCancelled": "تم إلغاء النقل لـ {title}",
+  "announcementEventSelectionCancelled": "تم إلغاء تحديد الحدث",
+  "announcementEventsHighlighted": "{count} أحداث. {title} مميز. Tab للتنقل، Enter للتأكيد.",
+  "announcementEventSelected": "تم تحديد {title}. مفاتيح الأسهم للنقل، Enter للتأكيد، Escape للإلغاء.",
+  "announcementEventCycled": "{title}. {index} من {total}.",
+  "announcementMovingEvent": "نقل {title} إلى {date}",
+  "announcementResizeModeEntered": "وضع تغيير الحجم. ضبط الحافة النهائية. مفاتيح الأسهم لتغيير الحجم، S للبداية، E للنهاية، M لوضع النقل، Enter للتأكيد.",
+  "announcementResizingStartEdge": "تغيير حجم الحافة الأولى",
+  "announcementResizingEndEdge": "تغيير حجم الحافة النهائية",
+  "announcementMoveMode": "وضع النقل",
+  "announcementMoveInvalidTarget": "تم إلغاء النقل. الهدف غير صالح.",
+  "announcementEventMoved": "تم نقل {title} إلى {date}",
+  "announcementResizingProgress": "تغيير حجم {title} {edge} إلى {date}، {days} أيام",
+  "announcementResizeInvalid": "تم إلغاء تغيير الحجم. تغيير الحجم غير صالح.",
+  "announcementEventResized": "تم تغيير حجم {title} من {start} إلى {end}"
 }

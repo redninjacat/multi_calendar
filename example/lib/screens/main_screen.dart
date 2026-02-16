@@ -5,20 +5,6 @@ import '../views/comparison/comparison_view.dart';
 import '../views/day_view/day_view_showcase.dart';
 import '../views/month_view/month_view_showcase.dart';
 
-/// Information about a view type for navigation
-class ViewTypeInfo {
-  final String name;
-  final IconData icon;
-  final String description;
-
-  const ViewTypeInfo({
-    required this.name,
-    required this.icon,
-    required this.description,
-  });
-}
-
-/// Main screen with navigation to different view type sections
 class MainScreen extends StatefulWidget {
   const MainScreen({
     super.key,
@@ -39,30 +25,6 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedViewType = 0;
-
-  static const List<IconData> _viewTypeIcons = [
-    Icons.calendar_view_month,
-    Icons.view_day,
-    Icons.compare_arrows,
-  ];
-
-  List<ViewTypeInfo> _buildViewTypes(AppLocalizations l10n) => [
-    ViewTypeInfo(
-      name: l10n.monthView,
-      icon: _viewTypeIcons[0],
-      description: l10n.monthViewDescription,
-    ),
-    ViewTypeInfo(
-      name: l10n.dayView,
-      icon: _viewTypeIcons[1],
-      description: l10n.dayViewDescription,
-    ),
-    ViewTypeInfo(
-      name: l10n.comparisonView,
-      icon: _viewTypeIcons[2],
-      description: l10n.comparisonViewDescription,
-    ),
-  ];
 
   PopupMenuItem<Locale> _buildLocaleMenuItem(
     Locale locale,
@@ -87,7 +49,6 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final viewTypes = _buildViewTypes(l10n);
 
     return Scaffold(
       appBar: AppBar(
@@ -148,24 +109,27 @@ class _MainScreenState extends State<MainScreen> {
       body: SafeArea(
         child: Row(
           children: [
-            // Side navigation for view types (only show if more than one type)
-            if (viewTypes.length > 1)
-              NavigationRail(
-                selectedIndex: _selectedViewType,
-                onDestinationSelected: (index) {
-                  setState(() => _selectedViewType = index);
-                },
-                labelType: NavigationRailLabelType.all,
-                destinations: viewTypes
-                    .map(
-                      (type) => NavigationRailDestination(
-                        icon: Icon(type.icon),
-                        label: Text(type.name),
-                      ),
-                    )
-                    .toList(),
-              ),
-            // Main content area
+            NavigationRail(
+              selectedIndex: _selectedViewType,
+              onDestinationSelected: (index) {
+                setState(() => _selectedViewType = index);
+              },
+              labelType: NavigationRailLabelType.all,
+              destinations: [
+                NavigationRailDestination(
+                  icon: const Icon(Icons.calendar_view_month),
+                  label: Text(l10n.monthView),
+                ),
+                NavigationRailDestination(
+                  icon: const Icon(Icons.view_day),
+                  label: Text(l10n.dayView),
+                ),
+                NavigationRailDestination(
+                  icon: const Icon(Icons.compare_arrows),
+                  label: Text(l10n.comparisonView),
+                ),
+              ],
+            ),
             Expanded(child: _buildViewTypeContent()),
           ],
         ),
@@ -174,24 +138,24 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildViewTypeContent() {
-    switch (_selectedViewType) {
-      case 0:
-        return MonthViewShowcase(
+    // Use IndexedStack to keep all views alive and preserve their state
+    // This ensures tab selections are remembered when switching between views
+    return IndexedStack(
+      index: _selectedViewType,
+      children: [
+        MonthViewShowcase(
           currentLocale: widget.currentLocale,
           isDarkMode: widget.isDarkMode,
-        );
-      case 1:
-        return DayViewShowcase(
+        ),
+        DayViewShowcase(
           currentLocale: widget.currentLocale,
           isDarkMode: widget.isDarkMode,
-        );
-      case 2:
-        return ComparisonView(
+        ),
+        ComparisonView(
           currentLocale: widget.currentLocale,
           isDarkMode: widget.isDarkMode,
-        );
-      default:
-        return Center(child: Text(AppLocalizations.of(context)!.comingSoon));
-    }
+        ),
+      ],
+    );
   }
 }

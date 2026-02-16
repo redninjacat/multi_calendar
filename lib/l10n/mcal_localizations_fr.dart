@@ -167,4 +167,78 @@ class MCalLocalizationsFr extends MCalLocalizations {
 
   @override
   String get allDay => 'Toute la journée';
+
+  @override
+  String get announcementResizeCancelled => 'Redimensionnement annulé';
+
+  @override
+  String announcementMoveCancelled(Object title) {
+    return 'Déplacement annulé pour $title';
+  }
+
+  @override
+  String get announcementEventSelectionCancelled =>
+      'Sélection d\'événement annulée';
+
+  @override
+  String announcementEventsHighlighted(Object count, Object title) {
+    return '$count événements. $title mis en surbrillance. Tab pour parcourir, Entrée pour confirmer.';
+  }
+
+  @override
+  String announcementEventSelected(Object title) {
+    return 'Sélectionné $title. Touches fléchées pour déplacer, Entrée pour confirmer, Échap pour annuler.';
+  }
+
+  @override
+  String announcementEventCycled(Object title, Object index, Object total) {
+    return '$title. $index sur $total.';
+  }
+
+  @override
+  String announcementMovingEvent(Object title, Object date) {
+    return 'Déplacement de $title vers $date';
+  }
+
+  @override
+  String get announcementResizeModeEntered =>
+      'Mode redimensionnement. Ajustement du bord final. Touches fléchées pour redimensionner, S pour début, E pour fin, M pour mode déplacement, Entrée pour confirmer.';
+
+  @override
+  String get announcementResizingStartEdge =>
+      'Redimensionnement du bord de début';
+
+  @override
+  String get announcementResizingEndEdge => 'Redimensionnement du bord de fin';
+
+  @override
+  String get announcementMoveMode => 'Mode déplacement';
+
+  @override
+  String get announcementMoveInvalidTarget =>
+      'Déplacement annulé. Cible invalide.';
+
+  @override
+  String announcementEventMoved(Object title, Object date) {
+    return 'Déplacé $title vers $date';
+  }
+
+  @override
+  String announcementResizingProgress(
+    Object title,
+    Object edge,
+    Object date,
+    Object days,
+  ) {
+    return 'Redimensionnement de $title $edge vers $date, $days jours';
+  }
+
+  @override
+  String get announcementResizeInvalid =>
+      'Redimensionnement annulé. Redimensionnement invalide.';
+
+  @override
+  String announcementEventResized(Object title, Object start, Object end) {
+    return 'Redimensionné $title de $start à $end';
+  }
 }

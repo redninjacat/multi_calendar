@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../../utils/sample_events.dart';
-import '../../widgets/event_detail_dialog.dart';
+import '../../shared/utils/sample_events.dart';
+import '../../shared/widgets/event_detail_dialog.dart';
 
 /// Comparison view showing Month View and Day View side by side.
 ///
@@ -158,6 +158,7 @@ class _ComparisonHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -172,12 +173,12 @@ class _ComparisonHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Month View: $useMonthView',
+                  '${l10n.monthView}: $useMonthView',
                   style: theme.textTheme.bodySmall,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Day View: $useDayView',
+                  '${l10n.dayView}: $useDayView',
                   style: theme.textTheme.bodySmall,
                 ),
               ],
@@ -203,13 +204,15 @@ class _MonthViewPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: const EdgeInsets.all(8),
           child: Text(
-            'Month View',
+            l10n.monthView,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -246,13 +249,15 @@ class _DayViewPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: const EdgeInsets.all(8),
           child: Text(
-            'Day View',
+            l10n.dayView,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),

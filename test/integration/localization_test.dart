@@ -7,7 +7,6 @@ void main() {
   setUpAll(() async {
     await initializeDateFormatting('en', null);
     await initializeDateFormatting('es', null);
-    await initializeDateFormatting('es_MX', null);
     await initializeDateFormatting('fr', null);
     await initializeDateFormatting('ar', null);
     await initializeDateFormatting('he', null);
@@ -40,9 +39,8 @@ void main() {
       );
     });
 
-    test('getSupportedLocales returns unmodifiable list', () {
-      final localizations = MCalLocalizations();
-      final locales = localizations.getSupportedLocales();
+    test('supportedLocales is unmodifiable', () {
+      final locales = MCalDateFormatUtils.supportedLocales;
 
       expect(locales, isNotNull);
       expect(locales, isA<List<Locale>>());
@@ -51,216 +49,277 @@ void main() {
   });
 
   group('MCalLocalizations - English (en)', () {
-    test('getLocalizedString returns English for day names', () {
-      final localizations = MCalLocalizations();
+    testWidgets('provides English for day names', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              final l10n = MCalLocalizations.of(context);
+              return Column(
+                children: [
+                  Text(l10n.dayMonday),
+                  Text(l10n.daySunday),
+                  Text(l10n.previousDay),
+                  Text(l10n.nextDay),
+                ],
+              );
+            },
+          ),
+        ),
+      );
 
-      expect(
-        localizations.getLocalizedString('dayMonday', const Locale('en')),
-        equals('Monday'),
-      );
-      expect(
-        localizations.getLocalizedString('daySunday', const Locale('en')),
-        equals('Sunday'),
-      );
-      expect(
-        localizations.getLocalizedString('previousDay', const Locale('en')),
-        equals('Previous day'),
-      );
-      expect(
-        localizations.getLocalizedString('nextDay', const Locale('en')),
-        equals('Next day'),
-      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Monday'), findsOneWidget);
+      expect(find.text('Sunday'), findsOneWidget);
+      expect(find.text('Previous day'), findsOneWidget);
+      expect(find.text('Next day'), findsOneWidget);
     });
 
-    test('getLocalizedString returns English for month names', () {
-      final localizations = MCalLocalizations();
-
-      expect(
-        localizations.getLocalizedString('monthJanuary', const Locale('en')),
-        equals('January'),
+    testWidgets('provides English for month names', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              final l10n = MCalLocalizations.of(context);
+              return Column(
+                children: [
+                  Text(l10n.monthJanuary),
+                  Text(l10n.monthDecember),
+                ],
+              );
+            },
+          ),
+        ),
       );
-      expect(
-        localizations.getLocalizedString('monthDecember', const Locale('en')),
-        equals('December'),
-      );
-    });
 
-    test('getLocalizedString returns key when key not found', () {
-      final localizations = MCalLocalizations();
+      await tester.pumpAndSettle();
 
-      expect(
-        localizations.getLocalizedString('nonexistentKey', const Locale('en')),
-        equals('nonexistentKey'),
-      );
+      expect(find.text('January'), findsOneWidget);
+      expect(find.text('December'), findsOneWidget);
     });
   });
 
   group('MCalLocalizations - Spanish (es)', () {
-    test('getLocalizedString returns Spanish for day names', () {
-      final localizations = MCalLocalizations();
+    testWidgets('provides Spanish for day names', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('es'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              final l10n = MCalLocalizations.of(context);
+              return Column(
+                children: [
+                  Text(l10n.dayMonday),
+                  Text(l10n.daySunday),
+                  Text(l10n.previousDay),
+                  Text(l10n.nextDay),
+                ],
+              );
+            },
+          ),
+        ),
+      );
 
-      expect(
-        localizations.getLocalizedString('dayMonday', const Locale('es')),
-        equals('Lunes'),
-      );
-      expect(
-        localizations.getLocalizedString('daySunday', const Locale('es')),
-        equals('Domingo'),
-      );
-    });
+      await tester.pumpAndSettle();
 
-    test('getLocalizedString returns Spanish for Day View strings', () {
-      final localizations = MCalLocalizations();
-
-      expect(
-        localizations.getLocalizedString('previousDay', const Locale('es')),
-        equals('Día anterior'),
-      );
-      expect(
-        localizations.getLocalizedString('nextDay', const Locale('es')),
-        equals('Día siguiente'),
-      );
+      expect(find.text('Lunes'), findsOneWidget);
+      expect(find.text('Domingo'), findsOneWidget);
+      expect(find.text('Día anterior'), findsOneWidget);
+      expect(find.text('Día siguiente'), findsOneWidget);
     });
   });
 
   group('MCalLocalizations - French (fr)', () {
-    test('getLocalizedString returns French for day names', () {
-      final localizations = MCalLocalizations();
-
-      expect(
-        localizations.getLocalizedString('dayMonday', const Locale('fr')),
-        equals('Lundi'),
+    testWidgets('provides French for day names and months', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('fr'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              final l10n = MCalLocalizations.of(context);
+              return Column(
+                children: [
+                  Text(l10n.dayMonday),
+                  Text(l10n.daySaturday),
+                  Text(l10n.monthJanuary),
+                ],
+              );
+            },
+          ),
+        ),
       );
-      expect(
-        localizations.getLocalizedString('daySaturday', const Locale('fr')),
-        equals('Samedi'),
-      );
-    });
 
-    test('getLocalizedString returns French for month names', () {
-      final localizations = MCalLocalizations();
+      await tester.pumpAndSettle();
 
-      expect(
-        localizations.getLocalizedString('monthJanuary', const Locale('fr')),
-        equals('Janvier'),
-      );
+      expect(find.text('Lundi'), findsOneWidget);
+      expect(find.text('Samedi'), findsOneWidget);
+      expect(find.text('Janvier'), findsOneWidget);
     });
   });
 
   group('MCalLocalizations - Arabic (ar)', () {
-    test('getLocalizedString returns Arabic for day names', () {
-      final localizations = MCalLocalizations();
+    testWidgets('provides Arabic for day names', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('ar'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              final l10n = MCalLocalizations.of(context);
+              return Text(l10n.dayMonday);
+            },
+          ),
+        ),
+      );
 
-      final monday = localizations.getLocalizedString('dayMonday', const Locale('ar'));
-      expect(monday, isNotEmpty);
-      expect(monday, isNot(equals('Monday')));
+      await tester.pumpAndSettle();
+
+      final mondayWidget = find.byType(Text);
+      expect(mondayWidget, findsOneWidget);
+      final text = tester.widget<Text>(mondayWidget).data;
+      expect(text, isNotEmpty);
+      expect(text, isNot(equals('Monday')));
     });
 
     test('isRTL returns true for Arabic', () {
-      final localizations = MCalLocalizations();
-
-      expect(localizations.isRTL(const Locale('ar')), isTrue);
+      final utils = MCalDateFormatUtils();
+      expect(utils.isRTL(const Locale('ar')), isTrue);
     });
   });
 
   group('MCalLocalizations - Hebrew (he)', () {
-    test('getLocalizedString returns Hebrew for day names', () {
-      final localizations = MCalLocalizations();
+    testWidgets('provides Hebrew for day names', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('he'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              final l10n = MCalLocalizations.of(context);
+              return Text(l10n.dayMonday);
+            },
+          ),
+        ),
+      );
 
-      final monday = localizations.getLocalizedString('dayMonday', const Locale('he'));
-      expect(monday, isNotEmpty);
-      expect(monday, isNot(equals('Monday')));
+      await tester.pumpAndSettle();
+
+      final mondayWidget = find.byType(Text);
+      expect(mondayWidget, findsOneWidget);
+      final text = tester.widget<Text>(mondayWidget).data;
+      expect(text, isNotEmpty);
+      expect(text, isNot(equals('Monday')));
     });
 
     test('isRTL returns true for Hebrew', () {
-      final localizations = MCalLocalizations();
-
-      expect(localizations.isRTL(const Locale('he')), isTrue);
+      final utils = MCalDateFormatUtils();
+      expect(utils.isRTL(const Locale('he')), isTrue);
     });
   });
 
-  group('MCalLocalizations - RTL detection', () {
+  group('MCalDateFormatUtils - RTL detection', () {
     test('isRTL returns false for LTR languages', () {
-      final localizations = MCalLocalizations();
+      final utils = MCalDateFormatUtils();
 
-      expect(localizations.isRTL(const Locale('en')), isFalse);
-      expect(localizations.isRTL(const Locale('es')), isFalse);
-      expect(localizations.isRTL(const Locale('fr')), isFalse);
+      expect(utils.isRTL(const Locale('en')), isFalse);
+      expect(utils.isRTL(const Locale('es')), isFalse);
+      expect(utils.isRTL(const Locale('fr')), isFalse);
     });
 
     test('isRTL returns true for RTL languages', () {
-      final localizations = MCalLocalizations();
+      final utils = MCalDateFormatUtils();
 
-      expect(localizations.isRTL(const Locale('ar')), isTrue);
-      expect(localizations.isRTL(const Locale('he')), isTrue);
-    });
-  });
-
-  group('MCalLocalizations - locale fallback', () {
-    test('es_MX falls back to es strings', () {
-      final localizations = MCalLocalizations();
-
-      final monday = localizations.getLocalizedString(
-        'dayMonday',
-        const Locale('es', 'MX'),
-      );
-      expect(monday, equals('Lunes'));
-    });
-
-    test('unsupported locale falls back to English', () {
-      final localizations = MCalLocalizations();
-
-      final monday = localizations.getLocalizedString(
-        'dayMonday',
-        const Locale('de'),
-      );
-      expect(monday, equals('Monday'));
+      expect(utils.isRTL(const Locale('ar')), isTrue);
+      expect(utils.isRTL(const Locale('he')), isTrue);
     });
   });
 
   group('MCalLocalizations - parameter substitution', () {
-    test('formatMultiDaySpanLabel substitutes placeholders', () {
-      final localizations = MCalLocalizations();
-
-      final label = localizations.formatMultiDaySpanLabel(
-        3,
-        2,
-        const Locale('en'),
+    testWidgets('multiDaySpanLabel substitutes placeholders', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              final l10n = MCalLocalizations.of(context);
+              return Text(l10n.multiDaySpanLabel('3', '2'));
+            },
+          ),
+        ),
       );
 
-      expect(label, contains('3'));
-      expect(label, contains('2'));
-      expect(label, contains('day'));
-      expect(label, contains('event'));
+      await tester.pumpAndSettle();
+
+      final textWidget = find.byType(Text);
+      expect(textWidget, findsOneWidget);
+      final text = tester.widget<Text>(textWidget).data;
+      expect(text, contains('3'));
+      expect(text, contains('2'));
+      expect(text, contains('day'));
     });
 
-    test('currentTime string has placeholder', () {
-      final localizations = MCalLocalizations();
-
-      final template = localizations.getLocalizedString(
-        'currentTime',
-        const Locale('en'),
+    testWidgets('currentTime has placeholder substitution', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              final l10n = MCalLocalizations.of(context);
+              return Text(l10n.currentTime('2:30 PM'));
+            },
+          ),
+        ),
       );
-      expect(template, contains('{time}'));
+
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('2:30 PM'), findsOneWidget);
     });
 
-    test('scheduleFor string has placeholder', () {
-      final localizations = MCalLocalizations();
-
-      final template = localizations.getLocalizedString(
-        'scheduleFor',
-        const Locale('en'),
+    testWidgets('scheduleFor has placeholder substitution', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              final l10n = MCalLocalizations.of(context);
+              return Text(l10n.scheduleFor('Feb 15'));
+            },
+          ),
+        ),
       );
-      expect(template, contains('{date}'));
+
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Feb 15'), findsOneWidget);
     });
   });
 
-  group('MCalLocalizations - date/time formatting', () {
+  group('MCalDateFormatUtils - date/time formatting', () {
     test('formatDate formats date for English locale', () {
-      final localizations = MCalLocalizations();
+      final utils = MCalDateFormatUtils();
       final date = DateTime(2026, 2, 15);
 
-      final formatted = localizations.formatDate(date, const Locale('en'));
+      final formatted = utils.formatDate(date, const Locale('en'));
 
       expect(formatted, contains('2026'));
       expect(formatted, anyOf(contains('February'), contains('Feb')));
@@ -268,29 +327,29 @@ void main() {
     });
 
     test('formatDate formats date for Spanish locale', () {
-      final localizations = MCalLocalizations();
+      final utils = MCalDateFormatUtils();
       final date = DateTime(2026, 2, 15);
 
-      final formatted = localizations.formatDate(date, const Locale('es'));
+      final formatted = utils.formatDate(date, const Locale('es'));
 
       expect(formatted, contains('2026'));
       expect(formatted, contains('15'));
     });
 
     test('formatTime formats time for English locale', () {
-      final localizations = MCalLocalizations();
+      final utils = MCalDateFormatUtils();
       final time = DateTime(2026, 2, 15, 14, 30);
 
-      final formatted = localizations.formatTime(time, const Locale('en'));
+      final formatted = utils.formatTime(time, const Locale('en'));
 
       expect(formatted, isNotEmpty);
     });
 
     test('formatFullDateWithDayName includes day name', () {
-      final localizations = MCalLocalizations();
+      final utils = MCalDateFormatUtils();
       final date = DateTime(2026, 2, 15); // Sunday
 
-      final formatted = localizations.formatFullDateWithDayName(
+      final formatted = utils.formatFullDateWithDayName(
         date,
         const Locale('en'),
       );
@@ -300,10 +359,10 @@ void main() {
     });
 
     test('formatMonthYear formats month and year', () {
-      final localizations = MCalLocalizations();
+      final utils = MCalDateFormatUtils();
       final date = DateTime(2026, 2, 15);
 
-      final formatted = localizations.formatMonthYear(date, const Locale('en'));
+      final formatted = utils.formatMonthYear(date, const Locale('en'));
 
       expect(formatted, contains('2026'));
       expect(formatted, anyOf(contains('February'), contains('Feb')));
@@ -311,8 +370,8 @@ void main() {
   });
 
   group('MCalLocalizations - Day View strings', () {
-    test('all 5 languages have Day View navigation strings', () {
-      final localizations = MCalLocalizations();
+    testWidgets('all 5 languages have Day View navigation strings',
+        (tester) async {
       const locales = [
         Locale('en'),
         Locale('es'),
@@ -322,16 +381,35 @@ void main() {
       ];
 
       for (final locale in locales) {
-        final prevDay = localizations.getLocalizedString('previousDay', locale);
-        final nextDay = localizations.getLocalizedString('nextDay', locale);
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: locale,
+            localizationsDelegates: MCalLocalizations.localizationsDelegates,
+            supportedLocales: MCalLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                final l10n = MCalLocalizations.of(context);
+                return Column(
+                  children: [
+                    Text(l10n.previousDay),
+                    Text(l10n.nextDay),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
 
-        expect(prevDay, isNotEmpty);
-        expect(nextDay, isNotEmpty);
+        await tester.pumpAndSettle();
+
+        final texts = tester.widgetList<Text>(find.byType(Text)).toList();
+        expect(texts[0].data, isNotEmpty);
+        expect(texts[1].data, isNotEmpty);
       }
     });
 
-    test('timeGrid and doubleTapToCreateEvent exist in all languages', () {
-      final localizations = MCalLocalizations();
+    testWidgets('timeGrid and doubleTapToCreateEvent exist in all languages',
+        (tester) async {
       const locales = [
         Locale('en'),
         Locale('es'),
@@ -341,14 +419,30 @@ void main() {
       ];
 
       for (final locale in locales) {
-        final timeGrid = localizations.getLocalizedString('timeGrid', locale);
-        final doubleTap = localizations.getLocalizedString(
-          'doubleTapToCreateEvent',
-          locale,
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: locale,
+            localizationsDelegates: MCalLocalizations.localizationsDelegates,
+            supportedLocales: MCalLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                final l10n = MCalLocalizations.of(context);
+                return Column(
+                  children: [
+                    Text(l10n.timeGrid),
+                    Text(l10n.doubleTapToCreateEvent),
+                  ],
+                );
+              },
+            ),
+          ),
         );
 
-        expect(timeGrid, isNotEmpty);
-        expect(doubleTap, isNotEmpty);
+        await tester.pumpAndSettle();
+
+        final texts = tester.widgetList<Text>(find.byType(Text)).toList();
+        expect(texts[0].data, isNotEmpty);
+        expect(texts[1].data, isNotEmpty);
       }
     });
   });
@@ -362,6 +456,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en', 'US'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,
@@ -385,6 +481,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('ar'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: Directionality(
               textDirection: TextDirection.rtl,
@@ -411,6 +509,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('he'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: Directionality(
               textDirection: TextDirection.rtl,

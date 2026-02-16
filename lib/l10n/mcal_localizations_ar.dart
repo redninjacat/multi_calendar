@@ -166,4 +166,75 @@ class MCalLocalizationsAr extends MCalLocalizations {
 
   @override
   String get allDay => 'طوال اليوم';
+
+  @override
+  String get announcementResizeCancelled => 'تم إلغاء تغيير الحجم';
+
+  @override
+  String announcementMoveCancelled(Object title) {
+    return 'تم إلغاء النقل لـ $title';
+  }
+
+  @override
+  String get announcementEventSelectionCancelled => 'تم إلغاء تحديد الحدث';
+
+  @override
+  String announcementEventsHighlighted(Object count, Object title) {
+    return '$count أحداث. $title مميز. Tab للتنقل، Enter للتأكيد.';
+  }
+
+  @override
+  String announcementEventSelected(Object title) {
+    return 'تم تحديد $title. مفاتيح الأسهم للنقل، Enter للتأكيد، Escape للإلغاء.';
+  }
+
+  @override
+  String announcementEventCycled(Object title, Object index, Object total) {
+    return '$title. $index من $total.';
+  }
+
+  @override
+  String announcementMovingEvent(Object title, Object date) {
+    return 'نقل $title إلى $date';
+  }
+
+  @override
+  String get announcementResizeModeEntered =>
+      'وضع تغيير الحجم. ضبط الحافة النهائية. مفاتيح الأسهم لتغيير الحجم، S للبداية، E للنهاية، M لوضع النقل، Enter للتأكيد.';
+
+  @override
+  String get announcementResizingStartEdge => 'تغيير حجم الحافة الأولى';
+
+  @override
+  String get announcementResizingEndEdge => 'تغيير حجم الحافة النهائية';
+
+  @override
+  String get announcementMoveMode => 'وضع النقل';
+
+  @override
+  String get announcementMoveInvalidTarget => 'تم إلغاء النقل. الهدف غير صالح.';
+
+  @override
+  String announcementEventMoved(Object title, Object date) {
+    return 'تم نقل $title إلى $date';
+  }
+
+  @override
+  String announcementResizingProgress(
+    Object title,
+    Object edge,
+    Object date,
+    Object days,
+  ) {
+    return 'تغيير حجم $title $edge إلى $date، $days أيام';
+  }
+
+  @override
+  String get announcementResizeInvalid =>
+      'تم إلغاء تغيير الحجم. تغيير الحجم غير صالح.';
+
+  @override
+  String announcementEventResized(Object title, Object start, Object end) {
+    return 'تم تغيير حجم $title من $start إلى $end';
+  }
 }

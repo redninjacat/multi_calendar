@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:multi_calendar/multi_calendar.dart';
 
 import 'l10n/app_localizations.dart';
 import 'screens/main_screen.dart';
@@ -34,7 +35,8 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Multi Calendar Examples',
+      onGenerateTitle: (context) =>
+          AppLocalizations.of(context)?.appTitle ?? 'Multi Calendar Examples',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -52,7 +54,10 @@ class _MyAppState extends State<MyApp> {
       ),
       themeMode: _themeMode,
       locale: _locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: [
+        ...AppLocalizations.localizationsDelegates,
+        MCalLocalizations.delegate,
+      ],
       supportedLocales: AppLocalizations.supportedLocales,
       home: MainScreen(
         onLocaleChanged: _changeLocale,

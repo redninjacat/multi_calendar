@@ -50,5 +50,21 @@
   "scheduleFor": "Programme pour {date}",
   "timeGrid": "Grille horaire",
   "doubleTapToCreateEvent": "Appuyez deux fois pour créer un événement",
-  "allDay": "Toute la journée"
+  "allDay": "Toute la journée",
+  "announcementResizeCancelled": "Redimensionnement annulé",
+  "announcementMoveCancelled": "Déplacement annulé pour {title}",
+  "announcementEventSelectionCancelled": "Sélection d'événement annulée",
+  "announcementEventsHighlighted": "{count} événements. {title} mis en surbrillance. Tab pour parcourir, Entrée pour confirmer.",
+  "announcementEventSelected": "Sélectionné {title}. Touches fléchées pour déplacer, Entrée pour confirmer, Échap pour annuler.",
+  "announcementEventCycled": "{title}. {index} sur {total}.",
+  "announcementMovingEvent": "Déplacement de {title} vers {date}",
+  "announcementResizeModeEntered": "Mode redimensionnement. Ajustement du bord final. Touches fléchées pour redimensionner, S pour début, E pour fin, M pour mode déplacement, Entrée pour confirmer.",
+  "announcementResizingStartEdge": "Redimensionnement du bord de début",
+  "announcementResizingEndEdge": "Redimensionnement du bord de fin",
+  "announcementMoveMode": "Mode déplacement",
+  "announcementMoveInvalidTarget": "Déplacement annulé. Cible invalide.",
+  "announcementEventMoved": "Déplacé {title} vers {date}",
+  "announcementResizingProgress": "Redimensionnement de {title} {edge} vers {date}, {days} jours",
+  "announcementResizeInvalid": "Redimensionnement annulé. Redimensionnement invalide.",
+  "announcementEventResized": "Redimensionné {title} de {start} à {end}"
 }

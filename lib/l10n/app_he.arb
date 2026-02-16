@@ -50,5 +50,21 @@
   "scheduleFor": "לוח זמנים עבור {date}",
   "timeGrid": "רשת זמן",
   "doubleTapToCreateEvent": "הקש פעמיים ליצירת אירוע",
-  "allDay": "כל היום"
+  "allDay": "כל היום",
+  "announcementResizeCancelled": "שינוי גודל בוטל",
+  "announcementMoveCancelled": "העברה בוטלה עבור {title}",
+  "announcementEventSelectionCancelled": "בחירת אירוע בוטלה",
+  "announcementEventsHighlighted": "{count} אירועים. {title} מודגש. Tab למעבר, Enter לאישור.",
+  "announcementEventSelected": "נבחר {title}. מקשי חצים להעברה, Enter לאישור, Escape לביטול.",
+  "announcementEventCycled": "{title}. {index} מתוך {total}.",
+  "announcementMovingEvent": "מעביר את {title} ל-{date}",
+  "announcementResizeModeEntered": "מצב שינוי גודל. התאמת קצה סיום. מקשי חצים לשינוי גודל, S להתחלה, E לסיום, M למצב העברה, Enter לאישור.",
+  "announcementResizingStartEdge": "משנה גודל קצה התחלה",
+  "announcementResizingEndEdge": "משנה גודל קצה סיום",
+  "announcementMoveMode": "מצב העברה",
+  "announcementMoveInvalidTarget": "העברה בוטלה. יעד לא תקין.",
+  "announcementEventMoved": "הועבר {title} ל-{date}",
+  "announcementResizingProgress": "משנה גודל {title} {edge} ל-{date}, {days} ימים",
+  "announcementResizeInvalid": "שינוי גודל בוטל. שינוי גודל לא תקין.",
+  "announcementEventResized": "שונה גודל {title} מ-{start} עד {end}"
 }

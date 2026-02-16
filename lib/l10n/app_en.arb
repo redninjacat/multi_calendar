@@ -66,5 +66,71 @@
   },
   "timeGrid": "Time grid",
   "doubleTapToCreateEvent": "Double tap to create event",
-  "allDay": "All day"
+  "allDay": "All day",
+  "announcementResizeCancelled": "Resize cancelled",
+  "announcementMoveCancelled": "Move cancelled for {title}",
+  "@announcementMoveCancelled": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "announcementEventSelectionCancelled": "Event selection cancelled",
+  "announcementEventsHighlighted": "{count} events. {title} highlighted. Tab to cycle, Enter to confirm.",
+  "@announcementEventsHighlighted": {
+    "placeholders": {
+      "count": {},
+      "title": {}
+    }
+  },
+  "announcementEventSelected": "Selected {title}. Arrow keys to move, Enter to confirm, Escape to cancel.",
+  "@announcementEventSelected": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "announcementEventCycled": "{title}. {index} of {total}.",
+  "@announcementEventCycled": {
+    "placeholders": {
+      "title": {},
+      "index": {},
+      "total": {}
+    }
+  },
+  "announcementMovingEvent": "Moving {title} to {date}",
+  "@announcementMovingEvent": {
+    "placeholders": {
+      "title": {},
+      "date": {}
+    }
+  },
+  "announcementResizeModeEntered": "Resize mode. Adjusting end edge. Arrow keys to resize, S for start, E for end, M for move mode, Enter to confirm.",
+  "announcementResizingStartEdge": "Resizing start edge",
+  "announcementResizingEndEdge": "Resizing end edge",
+  "announcementMoveMode": "Move mode",
+  "announcementMoveInvalidTarget": "Move cancelled. Invalid target.",
+  "announcementEventMoved": "Moved {title} to {date}",
+  "@announcementEventMoved": {
+    "placeholders": {
+      "title": {},
+      "date": {}
+    }
+  },
+  "announcementResizingProgress": "Resizing {title} {edge} to {date}, {days} days",
+  "@announcementResizingProgress": {
+    "placeholders": {
+      "title": {},
+      "edge": {},
+      "date": {},
+      "days": {}
+    }
+  },
+  "announcementResizeInvalid": "Resize cancelled. Invalid resize.",
+  "announcementEventResized": "Resized {title} to {start} through {end}",
+  "@announcementEventResized": {
+    "placeholders": {
+      "title": {},
+      "start": {},
+      "end": {}
+    }
+  }
 }
