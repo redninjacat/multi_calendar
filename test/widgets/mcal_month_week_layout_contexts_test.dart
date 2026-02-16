@@ -118,8 +118,10 @@ void main() {
 
     test('inherits values from theme', () {
       final theme = MCalThemeData(
-        eventTileHeight: 25.0,
-        dateLabelPosition: DateLabelPosition.bottomRight,
+        monthTheme: MCalMonthThemeData(
+          eventTileHeight: 25.0,
+          dateLabelPosition: DateLabelPosition.bottomRight,
+        ),
       );
       final config = MCalMonthWeekLayoutConfig.fromTheme(theme);
 

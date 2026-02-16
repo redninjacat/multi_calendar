@@ -97,8 +97,10 @@ MCalMonthView(
 - **MCalMonthView**: Month calendar view widget (available now)
 - **MCalDayView**: Day calendar view widget — see [Day View documentation](docs/day_view.md)
 - **MCalMultiDayView**: Multi-day calendar view widget (coming soon)
-- **MCalThemeData**: Theme extension for calendar-specific styling
-- **MCalLocalizations**: Built-in support for English and Mexican Spanish
+- **MCalThemeData**: Theme extension for calendar-specific styling (supports nested [MCalDayThemeData] and [MCalMonthThemeData])
+- **MCalDayThemeData**: Day View–specific theme properties (time legend, gridlines, ticks, etc.)
+- **MCalMonthThemeData**: Month View–specific theme properties (event tiles, overflow, etc.)
+- **MCalLocalizations**: Built-in support for English, Spanish, French, Arabic, and Hebrew (with RTL for Arabic and Hebrew)
 
 ## MCalMonthView
 
@@ -148,8 +150,10 @@ MCalMonthView(
 - **`cellInteractivityCallback`**: Callback to determine if a cell is interactive.
 - **`onCellTap`**: Callback when a day cell is tapped.
 - **`onCellLongPress`**: Callback when a day cell is long-pressed.
+- **`onCellDoubleTap`**: Callback when a day cell is double-tapped (e.g., create event).
 - **`onEventTap`**: Callback when an event tile is tapped.
 - **`onEventLongPress`**: Callback when an event tile is long-pressed.
+- **`onEventDoubleTap`**: Callback when an event tile is double-tapped (e.g., open details).
 - **`onSwipeNavigation`**: Callback when a swipe navigation gesture is detected.
 
 **Event Resizing:**
@@ -166,7 +170,61 @@ MCalMonthView(
 
 ### Theme Customization
 
-There are three ways to provide theme data:
+Theme properties are organized into **nested theme classes** for clarity:
+
+- **`MCalThemeData`** — Root theme; holds shared properties and optional `dayTheme` / `monthTheme`.
+- **`MCalDayThemeData`** — Day View–specific: time legend, gridlines, time legend ticks, current time indicator, etc.
+- **`MCalMonthThemeData`** — Month View–specific: event tiles, overflow indicators, weekday headers, etc.
+
+#### Nested Theme Structure
+
+```dart
+MCalTheme(
+  data: MCalThemeData(
+    // Shared
+    cellBackgroundColor: Colors.white,
+    todayBackgroundColor: Colors.blue,
+    // Day View–specific
+    dayTheme: MCalDayThemeData(
+      timeLegendWidth: 56,
+      showTimeLegendTicks: true,
+      timeLegendTickColor: Colors.grey,
+      timeLegendTickLength: 8,
+    ),
+    // Month View–specific
+    monthTheme: MCalMonthThemeData(
+      eventTileHeight: 24,
+      weekdayHeaderTextStyle: TextStyle(fontWeight: FontWeight.bold),
+    ),
+  ),
+  child: MCalMonthView(controller: controller),
+)
+```
+
+**Migration from flat theme:** If you previously used flat properties (e.g. `weekdayHeaderTextStyle` on `MCalThemeData`), move them into `monthTheme` or `dayTheme`:
+
+```dart
+// Before (deprecated flat structure)
+MCalThemeData(weekdayHeaderTextStyle: myStyle)
+
+// After (nested structure)
+MCalThemeData(monthTheme: MCalMonthThemeData(weekdayHeaderTextStyle: myStyle))
+```
+
+#### Time Legend Ticks (Day View)
+
+Customize tick marks on the Day View time legend:
+
+```dart
+MCalThemeData(
+  dayTheme: MCalDayThemeData(
+    showTimeLegendTicks: true,
+    timeLegendTickColor: Colors.grey.withOpacity(0.5),
+    timeLegendTickWidth: 1.0,
+    timeLegendTickLength: 8.0,
+  ),
+)
+```
 
 #### 1. Wrap with MCalTheme InheritedWidget
 
@@ -191,9 +249,11 @@ ThemeData(
       cellBackgroundColor: Colors.white,
       todayBackgroundColor: Colors.blue,
       eventTileBackgroundColor: Colors.green,
-      weekdayHeaderTextStyle: TextStyle(
-        fontWeight: FontWeight.bold,
-        fontSize: 14,
+      monthTheme: MCalMonthThemeData(
+        weekdayHeaderTextStyle: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
       ),
     ),
   ],
@@ -252,6 +312,28 @@ MCalMonthView(
   onEventLongPress: (context, details) {
     // Same MCalEventTapDetails
   },
+  onEventDoubleTap: (context, details) {
+    // Open event details or edit dialog
+    print('Double-tapped: ${details.event.title} at ${details.localPosition}');
+  },
+)
+```
+
+#### Double-Tap Callbacks
+
+Use `onCellDoubleTap` and `onEventDoubleTap` for quick-create or quick-edit flows:
+
+```dart
+MCalMonthView(
+  controller: controller,
+  onCellDoubleTap: (context, details) {
+    // Create new event on this date
+    showCreateEventDialog(context, details.date);
+  },
+  onEventDoubleTap: (context, details) {
+    // Open event editor
+    showEditEventDialog(context, details.event);
+  },
 )
 ```
 
@@ -260,7 +342,9 @@ MCalMonthView(
 | Class | Properties | Used By |
 |-------|-----------|---------|
 | `MCalCellTapDetails` | `date`, `events`, `isCurrentMonth` | `onCellTap`, `onCellLongPress` |
+| `MCalCellDoubleTapDetails` | `date`, `localPosition`, `globalPosition` | `onCellDoubleTap` |
 | `MCalEventTapDetails` | `event`, `displayDate` | `onEventTap`, `onEventLongPress` |
+| `MCalEventDoubleTapDetails` | `event`, `displayDate`, `localPosition`, `globalPosition` | `onEventDoubleTap` |
 | `MCalSwipeNavigationDetails` | `previousMonth`, `newMonth`, `direction` | `onSwipeNavigation` |
 | `MCalOverflowTapDetails` | `date`, `allEvents`, `hiddenCount` | `onOverflowTap`, `onOverflowLongPress` |
 | `MCalCellInteractivityDetails` | `date`, `isCurrentMonth`, `isSelectable` | `cellInteractivityCallback` |
@@ -426,18 +510,23 @@ MCalMonthView(
 
 ### Localization
 
+The package supports **5 languages** out of the box: **English (en)**, **Spanish (es)**, **French (fr)**, **Arabic (ar)**, and **Hebrew (he)**. Arabic and Hebrew use right-to-left (RTL) layout automatically.
+
 ```dart
 // English
-MCalMonthView(
-  controller: controller,
-  locale: Locale('en'),
-)
+MCalMonthView(controller: controller, locale: Locale('en'))
 
 // Spanish (Mexico)
-MCalMonthView(
-  controller: controller,
-  locale: Locale('es', 'MX'),
-)
+MCalMonthView(controller: controller, locale: Locale('es', 'MX'))
+
+// French
+MCalMonthView(controller: controller, locale: Locale('fr'))
+
+// Arabic (RTL)
+MCalMonthView(controller: controller, locale: Locale('ar'))
+
+// Hebrew (RTL)
+MCalMonthView(controller: controller, locale: Locale('he'))
 
 // Custom date format
 MCalMonthView(
@@ -446,6 +535,8 @@ MCalMonthView(
   locale: Locale('en'),
 )
 ```
+
+**Adding a new language:** Add an ARB file (e.g. `app_de.arb`) in `lib/l10n/` with the same keys as `app_en.arb`, run `flutter gen-l10n`, and ensure your app includes the new locale in `supportedLocales` and `localizationsDelegates` (including `MCalLocalizations.delegate`).
 
 ### Accessibility
 

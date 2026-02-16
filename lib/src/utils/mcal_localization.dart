@@ -1,11 +1,13 @@
-import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+import '../../l10n/mcal_localizations.dart' as l10n;
 
 /// Utility class for calendar localization and date/time formatting.
 ///
-/// This class provides methods to get localized strings, format dates and times
-/// according to locale, detect RTL languages, and manage supported locales.
-/// It integrates with the intl package and ARB files for localization.
+/// This class provides a compatibility layer that delegates to the generated
+/// [MCalLocalizations] from Flutter's gen-l10n (see [lookupMCalLocalizations]).
+/// It also provides date/time formatting via the intl package.
 ///
 /// Example:
 /// ```dart
@@ -13,11 +15,19 @@ import 'package:flutter/material.dart';
 /// final dayName = localizations.getLocalizedString('dayMonday', Locale('en'));
 /// final formattedDate = localizations.formatDate(DateTime.now(), Locale('es_MX'));
 /// ```
+///
+/// For apps using [MaterialApp], prefer [MCalLocalizations.of] from the
+/// generated `package:multi_calendar/l10n/mcal_localizations.dart` for
+/// context-based locale resolution.
 class MCalLocalizations {
   /// Supported locales for the calendar package.
   static const List<Locale> supportedLocales = [
     Locale('en'), // English
+    Locale('es'), // Spanish
     Locale('es', 'MX'), // Mexican Spanish
+    Locale('fr'), // French
+    Locale('ar'), // Arabic
+    Locale('he'), // Hebrew
   ];
 
   /// Default locale fallback (English).
@@ -28,8 +38,9 @@ class MCalLocalizations {
 
   /// Gets a localized string for the given key and locale.
   ///
-  /// If the locale is not supported, falls back to English.
-  /// If the key is not found, returns the key itself.
+  /// Delegates to the generated [MCalLocalizations] from gen-l10n.
+  /// For parameterized strings (e.g. currentTime, scheduleFor), returns the
+  /// template with placeholders; callers should use [replaceAll] for substitution.
   ///
   /// Parameters:
   /// - [key]: The localization key (e.g., 'dayMonday', 'today')
@@ -37,94 +48,147 @@ class MCalLocalizations {
   ///
   /// Returns the localized string or the key if not found.
   String getLocalizedString(String key, Locale locale) {
-    // For now, return a simple mapping
-    // In a full implementation, this would load from ARB files
-    final effectiveLocale = _getEffectiveLocale(locale);
-
-    // Simple string mapping - in production this would use generated code from ARB
-    final strings = _getLocalizedStrings(effectiveLocale);
-    return strings[key] ?? key;
+    final l = _lookup(locale);
+    switch (key) {
+      case 'daySunday':
+        return l.daySunday;
+      case 'dayMonday':
+        return l.dayMonday;
+      case 'dayTuesday':
+        return l.dayTuesday;
+      case 'dayWednesday':
+        return l.dayWednesday;
+      case 'dayThursday':
+        return l.dayThursday;
+      case 'dayFriday':
+        return l.dayFriday;
+      case 'daySaturday':
+        return l.daySaturday;
+      case 'daySundayShort':
+        return l.daySundayShort;
+      case 'dayMondayShort':
+        return l.dayMondayShort;
+      case 'dayTuesdayShort':
+        return l.dayTuesdayShort;
+      case 'dayWednesdayShort':
+        return l.dayWednesdayShort;
+      case 'dayThursdayShort':
+        return l.dayThursdayShort;
+      case 'dayFridayShort':
+        return l.dayFridayShort;
+      case 'daySaturdayShort':
+        return l.daySaturdayShort;
+      case 'monthJanuary':
+        return l.monthJanuary;
+      case 'monthFebruary':
+        return l.monthFebruary;
+      case 'monthMarch':
+        return l.monthMarch;
+      case 'monthApril':
+        return l.monthApril;
+      case 'monthMay':
+        return l.monthMay;
+      case 'monthJune':
+        return l.monthJune;
+      case 'monthJuly':
+        return l.monthJuly;
+      case 'monthAugust':
+        return l.monthAugust;
+      case 'monthSeptember':
+        return l.monthSeptember;
+      case 'monthOctober':
+        return l.monthOctober;
+      case 'monthNovember':
+        return l.monthNovember;
+      case 'monthDecember':
+        return l.monthDecember;
+      case 'today':
+        return l.today;
+      case 'week':
+        return l.week;
+      case 'month':
+        return l.month;
+      case 'day':
+        return l.day;
+      case 'year':
+        return l.year;
+      case 'previousDay':
+        return l.previousDay;
+      case 'nextDay':
+        return l.nextDay;
+      case 'previousMonth':
+        return l.previousMonth;
+      case 'nextMonth':
+        return l.nextMonth;
+      case 'currentTime':
+        return l.currentTime('{time}');
+      case 'focused':
+        return l.focused;
+      case 'selected':
+        return l.selected;
+      case 'event':
+        return l.event;
+      case 'events':
+        return l.events;
+      case 'doubleTapToSelect':
+        return l.doubleTapToSelect;
+      case 'calendar':
+        return l.calendar;
+      case 'dropTargetPrefix':
+        return l.dropTargetPrefix;
+      case 'dropTargetDateRangeTo':
+        return l.dropTargetDateRangeTo;
+      case 'dropTargetValid':
+        return l.dropTargetValid;
+      case 'dropTargetInvalid':
+        return l.dropTargetInvalid;
+      case 'multiDaySpanLabel':
+        return l.multiDaySpanLabel('{days}', '{position}');
+      case 'scheduleFor':
+        return l.scheduleFor('{date}');
+      case 'timeGrid':
+        return l.timeGrid;
+      case 'doubleTapToCreateEvent':
+        return l.doubleTapToCreateEvent;
+      case 'allDay':
+        return l.allDay;
+      default:
+        return key;
+    }
   }
 
   /// Formats a date according to the specified locale.
-  ///
-  /// Parameters:
-  /// - [date]: The date to format
-  /// - [locale]: The target locale
-  ///
-  /// Returns a formatted date string.
   String formatDate(DateTime date, Locale locale) {
-    final effectiveLocale = _getEffectiveLocale(locale);
-    final localeString = _localeToString(effectiveLocale);
-
+    final localeString = _localeToString(_getEffectiveLocale(locale));
     return DateFormat.yMMMMd(localeString).format(date);
   }
 
   /// Formats a date with full day name for accessibility.
-  ///
-  /// Returns a full date string including the day name, suitable for
-  /// screen reader announcements (e.g., "Saturday, January 15, 2026").
-  ///
-  /// Parameters:
-  /// - [date]: The date to format
-  /// - [locale]: The target locale
-  ///
-  /// Returns a formatted date string with day name.
   String formatFullDateWithDayName(DateTime date, Locale locale) {
-    final effectiveLocale = _getEffectiveLocale(locale);
-    final localeString = _localeToString(effectiveLocale);
-
-    // EEEE = full day name, yMMMMd = full date
+    final localeString = _localeToString(_getEffectiveLocale(locale));
     return DateFormat('EEEE, ', localeString).format(date) +
         DateFormat.yMMMMd(localeString).format(date);
   }
 
   /// Formats a month and year for accessibility announcements.
-  ///
-  /// Returns a month-year string suitable for screen reader announcements
-  /// (e.g., "January 2026").
-  ///
-  /// Parameters:
-  /// - [date]: The date (only month and year are used)
-  /// - [locale]: The target locale
-  ///
-  /// Returns a formatted month-year string.
   String formatMonthYear(DateTime date, Locale locale) {
-    final effectiveLocale = _getEffectiveLocale(locale);
-    final localeString = _localeToString(effectiveLocale);
-
+    final localeString = _localeToString(_getEffectiveLocale(locale));
     return DateFormat.yMMMM(localeString).format(date);
   }
 
   /// Formats a time according to the specified locale.
-  ///
-  /// Parameters:
-  /// - [time]: The time to format
-  /// - [locale]: The target locale
-  ///
-  /// Returns a formatted time string.
   String formatTime(DateTime time, Locale locale) {
-    final effectiveLocale = _getEffectiveLocale(locale);
-    final localeString = _localeToString(effectiveLocale);
-
+    final localeString = _localeToString(_getEffectiveLocale(locale));
     return DateFormat.jm(localeString).format(time);
   }
 
   /// Detects if the locale uses right-to-left (RTL) text direction.
-  ///
-  /// Returns true for RTL languages such as Arabic and Hebrew.
-  /// Used by Day View navigator and other components for proper RTL layout.
-  ///
-  /// Parameters:
-  /// - [locale]: The locale to check
-  ///
-  /// Returns true if the locale is RTL, false otherwise.
   bool isRTL(Locale locale) {
     switch (locale.languageCode) {
-      case 'ar': // Arabic
-      case 'he': // Hebrew
-      case 'fa': // Persian
-      case 'ur': // Urdu
+      case 'ar':
+      case 'he':
+      case 'fa':
+      case 'ur':
         return true;
       default:
         return false;
@@ -132,36 +196,18 @@ class MCalLocalizations {
   }
 
   /// Gets the list of supported locales.
-  ///
-  /// Returns a list of [Locale] objects that are supported by the package.
   List<Locale> getSupportedLocales() {
     return List.unmodifiable(supportedLocales);
   }
 
   /// Formats a multi-day event span label for screen readers.
-  ///
-  /// Returns a localized string like "3-day event, day 2 of 3" that
-  /// describes the total span length and the current day position
-  /// within that span.
-  ///
-  /// [spanLength] is the total number of days the event spans.
-  /// [dayPosition] is the 1-based position of the current day within the span.
-  /// [locale] is the locale to use for localization.
-  ///
-  /// Example:
-  /// ```dart
-  /// final label = MCalLocalizations().formatMultiDaySpanLabel(3, 2, const Locale('en'));
-  /// // Returns: "3-day event, day 2 of 3"
-  /// ```
-  String formatMultiDaySpanLabel(
-      int spanLength, int dayPosition, Locale locale) {
+  String formatMultiDaySpanLabel(int spanLength, int dayPosition, Locale locale) {
     final template = getLocalizedString('multiDaySpanLabel', locale);
     return template
         .replaceAll('{days}', spanLength.toString())
         .replaceAll('{position}', dayPosition.toString());
   }
 
-  /// Gets the effective locale, falling back to default if not supported.
   Locale _getEffectiveLocale(Locale locale) {
     for (final supported in supportedLocales) {
       if (supported.languageCode == locale.languageCode) {
@@ -174,7 +220,6 @@ class MCalLocalizations {
     return defaultLocale;
   }
 
-  /// Converts a Locale to a string format for intl package.
   String _localeToString(Locale locale) {
     if (locale.countryCode != null) {
       return '${locale.languageCode}_${locale.countryCode}';
@@ -182,114 +227,11 @@ class MCalLocalizations {
     return locale.languageCode;
   }
 
-  /// Gets localized strings for a locale.
-  ///
-  /// This is a simple implementation. In production, this would use
-  /// generated code from ARB files via flutter gen-l10n.
-  Map<String, String> _getLocalizedStrings(Locale locale) {
-    if (locale.languageCode == 'es') {
-      return _spanishStrings;
+  l10n.MCalLocalizations _lookup(Locale locale) {
+    try {
+      return l10n.lookupMCalLocalizations(_getEffectiveLocale(locale));
+    } catch (_) {
+      return l10n.lookupMCalLocalizations(defaultLocale);
     }
-    return _englishStrings;
   }
-
-  static const Map<String, String> _englishStrings = {
-    'daySunday': 'Sunday',
-    'dayMonday': 'Monday',
-    'dayTuesday': 'Tuesday',
-    'dayWednesday': 'Wednesday',
-    'dayThursday': 'Thursday',
-    'dayFriday': 'Friday',
-    'daySaturday': 'Saturday',
-    'daySundayShort': 'Sun',
-    'dayMondayShort': 'Mon',
-    'dayTuesdayShort': 'Tue',
-    'dayWednesdayShort': 'Wed',
-    'dayThursdayShort': 'Thu',
-    'dayFridayShort': 'Fri',
-    'daySaturdayShort': 'Sat',
-    'monthJanuary': 'January',
-    'monthFebruary': 'February',
-    'monthMarch': 'March',
-    'monthApril': 'April',
-    'monthMay': 'May',
-    'monthJune': 'June',
-    'monthJuly': 'July',
-    'monthAugust': 'August',
-    'monthSeptember': 'September',
-    'monthOctober': 'October',
-    'monthNovember': 'November',
-    'monthDecember': 'December',
-    'today': 'Today',
-    'week': 'Week',
-    'month': 'Month',
-    'day': 'Day',
-    'year': 'Year',
-    // Accessibility strings
-    'focused': 'focused',
-    'selected': 'selected',
-    'event': 'event',
-    'events': 'events',
-    'previousMonth': 'previous month',
-    'nextMonth': 'next month',
-    'doubleTapToSelect': 'Double tap to select',
-    'calendar': 'Calendar',
-    // Drop target semantics (single announcement for whole overlay)
-    'dropTargetPrefix': 'Drop target',
-    'dropTargetDateRangeTo': 'to',
-    'dropTargetValid': 'valid',
-    'dropTargetInvalid': 'invalid',
-    // Multi-day span labels
-    'multiDaySpanLabel': '{days}-day event, day {position} of {days}',
-  };
-
-  static const Map<String, String> _spanishStrings = {
-    'daySunday': 'Domingo',
-    'dayMonday': 'Lunes',
-    'dayTuesday': 'Martes',
-    'dayWednesday': 'Miércoles',
-    'dayThursday': 'Jueves',
-    'dayFriday': 'Viernes',
-    'daySaturday': 'Sábado',
-    'daySundayShort': 'Dom',
-    'dayMondayShort': 'Lun',
-    'dayTuesdayShort': 'Mar',
-    'dayWednesdayShort': 'Mié',
-    'dayThursdayShort': 'Jue',
-    'dayFridayShort': 'Vie',
-    'daySaturdayShort': 'Sáb',
-    'monthJanuary': 'Enero',
-    'monthFebruary': 'Febrero',
-    'monthMarch': 'Marzo',
-    'monthApril': 'Abril',
-    'monthMay': 'Mayo',
-    'monthJune': 'Junio',
-    'monthJuly': 'Julio',
-    'monthAugust': 'Agosto',
-    'monthSeptember': 'Septiembre',
-    'monthOctober': 'Octubre',
-    'monthNovember': 'Noviembre',
-    'monthDecember': 'Diciembre',
-    'today': 'Hoy',
-    'week': 'Semana',
-    'month': 'Mes',
-    'day': 'Día',
-    'year': 'Año',
-    // Accessibility strings
-    'focused': 'enfocado',
-    'selected': 'seleccionado',
-    'event': 'evento',
-    'events': 'eventos',
-    'previousMonth': 'mes anterior',
-    'nextMonth': 'mes siguiente',
-    'doubleTapToSelect': 'Toca dos veces para seleccionar',
-    'calendar': 'Calendario',
-    // Drop target semantics (single announcement for whole overlay)
-    'dropTargetPrefix': 'Zona de soltar',
-    'dropTargetDateRangeTo': 'a',
-    'dropTargetValid': 'válido',
-    'dropTargetInvalid': 'no válido',
-    // Multi-day span labels
-    'multiDaySpanLabel': 'evento de {days} días, día {position} de {days}',
-  };
 }

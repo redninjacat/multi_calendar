@@ -1370,9 +1370,10 @@ void main() {
       controller.setMockEvents([event]);
 
       // Use the theme property which the MCalMonthView internally wraps with MCalTheme
-      const customTheme = MCalThemeData(
+      final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.purple,
         eventTileBackgroundColor: Colors.orange,
+        monthTheme: MCalMonthThemeData(cellBackgroundColor: Colors.purple),
       );
 
       bool dayCellBuilderCalled = false;
@@ -1436,11 +1437,15 @@ void main() {
 
       // Test that MCalTheme can be accessed via the provided theme parameter
       // This tests the theme property being applied to the widget
-      const customTheme = MCalThemeData(
+      final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.lightBlue,
-        todayBackgroundColor: Colors.amber,
-        weekdayHeaderBackgroundColor: Colors.teal,
         navigatorBackgroundColor: Colors.indigo,
+        monthTheme: MCalMonthThemeData(
+          cellBackgroundColor: Colors.lightBlue,
+          todayBackgroundColor: Colors.amber,
+          weekdayHeaderBackgroundColor: Colors.teal,
+          navigatorBackgroundColor: Colors.indigo,
+        ),
       );
 
       await tester.pumpWidget(
@@ -1467,8 +1472,8 @@ void main() {
 
       // Verify theme properties are set correctly
       expect(customTheme.cellBackgroundColor, equals(Colors.lightBlue));
-      expect(customTheme.todayBackgroundColor, equals(Colors.amber));
-      expect(customTheme.weekdayHeaderBackgroundColor, equals(Colors.teal));
+      expect(customTheme.monthTheme?.todayBackgroundColor, equals(Colors.amber));
+      expect(customTheme.monthTheme?.weekdayHeaderBackgroundColor, equals(Colors.teal));
       expect(customTheme.navigatorBackgroundColor, equals(Colors.indigo));
     });
 
@@ -1486,9 +1491,12 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: MCalTheme(
-              data: const MCalThemeData(
+              data: MCalThemeData(
                 cellBackgroundColor: Colors.red,
-                todayBackgroundColor: Colors.green,
+                monthTheme: MCalMonthThemeData(
+                  cellBackgroundColor: Colors.red,
+                  todayBackgroundColor: Colors.green,
+                ),
               ),
               child: Column(
                 children: [
@@ -1503,9 +1511,11 @@ void main() {
                   ),
                   Expanded(
                     child: MCalTheme(
-                      data: const MCalThemeData(
+                      data: MCalThemeData(
                         cellBackgroundColor: Colors.blue,
-                        // todayBackgroundColor not overridden, should still work
+                        monthTheme: MCalMonthThemeData(
+                          cellBackgroundColor: Colors.blue,
+                        ),
                       ),
                       child: Builder(builder: (context) {
                         innerTheme = MCalTheme.of(context);
@@ -1527,12 +1537,12 @@ void main() {
 
       // Verify outer theme
       expect(outerTheme, isNotNull);
-      expect(outerTheme!.cellBackgroundColor, equals(Colors.red));
-      expect(outerTheme!.todayBackgroundColor, equals(Colors.green));
+      expect(outerTheme!.cellBackgroundColor ?? outerTheme!.monthTheme?.cellBackgroundColor, equals(Colors.red));
+      expect(outerTheme!.monthTheme?.todayBackgroundColor, equals(Colors.green));
 
       // Verify inner theme overrides
       expect(innerTheme, isNotNull);
-      expect(innerTheme!.cellBackgroundColor, equals(Colors.blue));
+      expect(innerTheme!.cellBackgroundColor ?? innerTheme!.monthTheme?.cellBackgroundColor, equals(Colors.blue));
     });
 
     testWidgets('MCalTheme.maybeOf returns null when no MCalTheme ancestor', (tester) async {
@@ -1566,10 +1576,11 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData(
-            extensions: const [
+            extensions: [
               MCalThemeData(
                 cellBackgroundColor: Colors.cyan,
                 eventTileBackgroundColor: Colors.pink,
+                monthTheme: MCalMonthThemeData(cellBackgroundColor: Colors.cyan),
               ),
             ],
           ),

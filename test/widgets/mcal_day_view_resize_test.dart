@@ -130,7 +130,7 @@ void main() {
         );
         controller.setMockEvents([event]);
 
-        final theme = MCalThemeData(minResizeDurationMinutes: 60);
+        final theme = MCalThemeData(dayTheme: MCalDayThemeData(minResizeDurationMinutes: 60));
 
         await tester.pumpWidget(
           buildDayView(
@@ -157,7 +157,7 @@ void main() {
       );
       controller.setMockEvents([event]);
 
-      final theme = MCalThemeData(minResizeDurationMinutes: 30);
+      final theme = MCalThemeData(dayTheme: MCalDayThemeData(minResizeDurationMinutes: 30));
 
       await tester.pumpWidget(buildDayView(ctrl: controller, theme: theme));
       await tester.pumpAndSettle();
@@ -257,7 +257,7 @@ void main() {
         );
         controller.setMockEvents([event]);
 
-        final theme = MCalThemeData(minResizeDurationMinutes: 15);
+        final theme = MCalThemeData(dayTheme: MCalDayThemeData(minResizeDurationMinutes: 15));
 
         await tester.pumpWidget(
           buildDayView(

@@ -141,26 +141,28 @@ class _StressTestDayStyleState extends State<StressTestDayStyle> {
               children: [
                 MCalTheme(
                   data: MCalThemeData(
-                    hourGridlineColor: colorScheme.outline.withValues(alpha: 0.2),
-                    hourGridlineWidth: 1.0,
-                    majorGridlineColor:
-                        colorScheme.outline.withValues(alpha: 0.1),
-                    majorGridlineWidth: 1.0,
-                    minorGridlineColor:
-                        colorScheme.outline.withValues(alpha: 0.05),
-                    minorGridlineWidth: 0.5,
-                    currentTimeIndicatorColor: colorScheme.primary,
-                    currentTimeIndicatorWidth: 2.0,
-                    timeLegendBackgroundColor:
-                        colorScheme.surfaceContainerHighest,
-                    timeLegendTextStyle: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    timedEventMinHeight: 20.0,
-                    timedEventPadding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 2,
+                    dayTheme: MCalDayThemeData(
+                      hourGridlineColor: colorScheme.outline.withValues(alpha: 0.2),
+                      hourGridlineWidth: 1.0,
+                      majorGridlineColor:
+                          colorScheme.outline.withValues(alpha: 0.1),
+                      majorGridlineWidth: 1.0,
+                      minorGridlineColor:
+                          colorScheme.outline.withValues(alpha: 0.05),
+                      minorGridlineWidth: 0.5,
+                      currentTimeIndicatorColor: colorScheme.primary,
+                      currentTimeIndicatorWidth: 2.0,
+                      timeLegendBackgroundColor:
+                          colorScheme.surfaceContainerHighest,
+                      timeLegendTextStyle: TextStyle(
+                        fontSize: 12,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      timedEventMinHeight: 20.0,
+                      timedEventPadding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
                     ),
                   ),
                   child: MCalDayView(

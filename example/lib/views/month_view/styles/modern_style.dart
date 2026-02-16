@@ -35,18 +35,20 @@ class ModernMonthStyle extends StatelessWidget {
         Expanded(
           child: MCalTheme(
             data: MCalThemeData(
-              cellBackgroundColor: colorScheme.surface,
-              cellBorderColor: Colors.transparent,
-              todayBackgroundColor: colorScheme.primary,
-              todayTextStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              weekdayHeaderBackgroundColor: colorScheme.surfaceContainerHighest,
-              weekdayHeaderTextStyle: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurfaceVariant,
+              monthTheme: MCalMonthThemeData(
+                cellBackgroundColor: colorScheme.surface,
+                cellBorderColor: Colors.transparent,
+                todayBackgroundColor: colorScheme.primary,
+                todayTextStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                weekdayHeaderBackgroundColor: colorScheme.surfaceContainerHighest,
+                weekdayHeaderTextStyle: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
             child: MCalMonthView(

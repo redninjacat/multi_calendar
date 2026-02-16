@@ -46,21 +46,23 @@ class ColorfulMonthStyle extends StatelessWidget {
             ),
             child: MCalTheme(
               data: MCalThemeData(
-                cellBackgroundColor: Colors.transparent,
-                cellBorderColor: Colors.transparent,
-                dateLabelHeight: 24.0,
-                todayBackgroundColor: Colors.transparent,
-                weekdayHeaderBackgroundColor: Colors.transparent,
-                weekdayHeaderTextStyle: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: isDarkMode ? Colors.white70 : gradientStart,
-                ),
-                // Thin pills for elongated event display
-                eventTileHeight: 6.0,
-                eventTileVerticalSpacing: 3.0,
-                eventTileHorizontalSpacing: 6.0,
                 eventTileCornerRadius: 4,
+                eventTileHorizontalSpacing: 6.0,
+                monthTheme: MCalMonthThemeData(
+                  cellBackgroundColor: Colors.transparent,
+                  cellBorderColor: Colors.transparent,
+                  dateLabelHeight: 24.0,
+                  todayBackgroundColor: Colors.transparent,
+                  weekdayHeaderBackgroundColor: Colors.transparent,
+                  weekdayHeaderTextStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: isDarkMode ? Colors.white70 : gradientStart,
+                  ),
+                  eventTileHeight: 6.0,
+                  eventTileVerticalSpacing: 3.0,
+                  eventTileCornerRadius: 4,
+                ),
               ),
               child: MCalMonthView(
                 controller: eventController,
@@ -91,8 +93,8 @@ class ColorfulMonthStyle extends StatelessWidget {
                 },
                 draggedTileBuilder: (context, details) {
                   final theme = MCalTheme.of(context);
-                  final cornerRadius = theme.eventTileCornerRadius ?? 4.0;
-                  final tileHeight = theme.eventTileHeight ?? 6.0;
+                  final cornerRadius = theme.eventTileCornerRadius ?? theme.monthTheme?.eventTileCornerRadius ?? 4.0;
+                  final tileHeight = theme.monthTheme?.eventTileHeight ?? 6.0;
                   final isAllDay = details.event.isAllDay;
                   final color =
                       details.event.color ??
@@ -357,7 +359,7 @@ class ColorfulMonthStyle extends StatelessWidget {
     final segment = tileContext.segment;
     final isAllDay = tileContext.event.isAllDay;
     final MCalThemeData theme = MCalTheme.of(context);
-    final cornerRadius = theme.eventTileCornerRadius ?? 4.0;
+    final cornerRadius = theme.eventTileCornerRadius ?? theme.monthTheme?.eventTileCornerRadius ?? 4.0;
     final color =
         tileContext.event.color ?? Theme.of(context).colorScheme.primary;
 
@@ -420,7 +422,7 @@ class ColorfulMonthStyle extends StatelessWidget {
     final isAllDay = tileContext.event.isAllDay;
     final valid = tileContext.dropValid ?? true;
     final MCalThemeData theme = MCalTheme.of(context);
-    final cornerRadius = theme.eventTileCornerRadius ?? 4.0;
+    final cornerRadius = theme.eventTileCornerRadius ?? theme.monthTheme?.eventTileCornerRadius ?? 4.0;
 
     final leftRadius = segment?.isFirstSegment == true
         ? Radius.circular(cornerRadius)

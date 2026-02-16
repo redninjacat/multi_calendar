@@ -88,22 +88,39 @@ class DayViewThemeSettings {
     final colorScheme = baseTheme.colorScheme;
     final base = MCalThemeData.fromTheme(baseTheme);
     return base.copyWith(
-      hourGridlineColor:
-          hourGridlineColor ?? colorScheme.outline.withValues(alpha: 0.2),
-      hourGridlineWidth: hourGridlineWidth,
-      majorGridlineColor:
-          majorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.15),
-      majorGridlineWidth: majorGridlineWidth,
-      minorGridlineColor:
-          minorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.08),
-      minorGridlineWidth: minorGridlineWidth,
-      allDaySectionMaxRows: allDaySectionMaxRows,
-      timedEventBorderRadius: timedEventBorderRadius,
-      timedEventMinHeight: timedEventMinHeight,
-      timedEventPadding: timedEventPadding,
-      resizeHandleSize: resizeHandleSize,
       eventTileBackgroundColor:
           eventTileBackgroundColor ?? colorScheme.primaryContainer,
+      dayTheme: base.dayTheme?.copyWith(
+        hourGridlineColor:
+            hourGridlineColor ?? colorScheme.outline.withValues(alpha: 0.2),
+        hourGridlineWidth: hourGridlineWidth,
+        majorGridlineColor:
+            majorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.15),
+        majorGridlineWidth: majorGridlineWidth,
+        minorGridlineColor:
+            minorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.08),
+        minorGridlineWidth: minorGridlineWidth,
+        allDaySectionMaxRows: allDaySectionMaxRows,
+        timedEventBorderRadius: timedEventBorderRadius,
+        timedEventMinHeight: timedEventMinHeight,
+        timedEventPadding: timedEventPadding,
+        resizeHandleSize: resizeHandleSize,
+      ) ?? MCalDayThemeData(
+        hourGridlineColor:
+            hourGridlineColor ?? colorScheme.outline.withValues(alpha: 0.2),
+        hourGridlineWidth: hourGridlineWidth,
+        majorGridlineColor:
+            majorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.15),
+        majorGridlineWidth: majorGridlineWidth,
+        minorGridlineColor:
+            minorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.08),
+        minorGridlineWidth: minorGridlineWidth,
+        allDaySectionMaxRows: allDaySectionMaxRows,
+        timedEventBorderRadius: timedEventBorderRadius,
+        timedEventMinHeight: timedEventMinHeight,
+        timedEventPadding: timedEventPadding,
+        resizeHandleSize: resizeHandleSize,
+      ),
     );
   }
 

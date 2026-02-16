@@ -41,7 +41,7 @@ void main() {
       test('falls back to English for unsupported locale', () {
         final result = localizations.getLocalizedString(
           'dayMonday',
-          const Locale('fr'), // French not supported
+          const Locale('zh'), // Chinese not supported
         );
         expect(result, 'Monday'); // Falls back to English
       });
@@ -92,7 +92,7 @@ void main() {
 
       test('falls back to English for unsupported locale', () async {
         final date = DateTime(2024, 1, 15);
-        final result = localizations.formatDate(date, const Locale('fr'));
+        final result = localizations.formatDate(date, const Locale('zh'));
         expect(result, isNotEmpty);
       });
     });
@@ -112,7 +112,7 @@ void main() {
 
       test('falls back to English for unsupported locale', () async {
         final time = DateTime(2024, 1, 15, 14, 30);
-        final result = localizations.formatTime(time, const Locale('fr'));
+        final result = localizations.formatTime(time, const Locale('zh'));
         expect(result, isNotEmpty);
       });
     });
@@ -139,9 +139,11 @@ void main() {
       test('returns list of supported locales', () {
         final locales = localizations.getSupportedLocales();
         expect(locales, isNotEmpty);
-        expect(locales.length, 2);
+        expect(locales.length, greaterThanOrEqualTo(5));
         expect(locales, contains(const Locale('en')));
+        expect(locales, contains(const Locale('es')));
         expect(locales, contains(const Locale('es', 'MX')));
+        expect(locales, contains(const Locale('fr')));
       });
 
       test('returns unmodifiable list', () {

@@ -40,20 +40,6 @@ class ClassicMonthStyle extends StatelessWidget {
         Expanded(
           child: MCalTheme(
             data: MCalThemeData(
-              cellBackgroundColor: colorScheme.surface,
-              cellBorderColor: colorScheme.outlineVariant,
-              todayBackgroundColor: colorScheme.primaryContainer,
-              todayTextStyle: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.primary,
-              ),
-              weekdayHeaderBackgroundColor: colorScheme.surfaceContainerHighest,
-              weekdayHeaderTextStyle: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface,
-              ),
-              // Classic style: uniform tile colors, square corners, subtle border
               eventTileBackgroundColor: colorScheme.primaryContainer,
               eventTileTextStyle: TextStyle(
                 fontSize: 10,
@@ -61,8 +47,23 @@ class ClassicMonthStyle extends StatelessWidget {
               ),
               eventTileCornerRadius: 0.0, // Square corners
               ignoreEventColors: true, // Use uniform colors from theme
-              eventTileBorderColor: colorScheme.onPrimaryContainer,
-              eventTileBorderWidth: 0.5,
+              monthTheme: MCalMonthThemeData(
+                cellBackgroundColor: colorScheme.surface,
+                cellBorderColor: colorScheme.outlineVariant,
+                todayBackgroundColor: colorScheme.primaryContainer,
+                todayTextStyle: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.primary,
+                ),
+                weekdayHeaderBackgroundColor: colorScheme.surfaceContainerHighest,
+                weekdayHeaderTextStyle: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+                eventTileBorderColor: colorScheme.onPrimaryContainer,
+                eventTileBorderWidth: 0.5,
+              ),
             ),
             child: MCalMonthView(
               controller: eventController,

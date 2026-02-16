@@ -91,7 +91,10 @@ void main() {
       );
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.blue,
-        todayBackgroundColor: Colors.red,
+        monthTheme: MCalMonthThemeData(
+          cellBackgroundColor: Colors.blue,
+          todayBackgroundColor: Colors.red,
+        ),
       );
 
       await tester.pumpWidget(
@@ -182,7 +185,10 @@ void main() {
     testWidgets('applies theme from widget parameter', (tester) async {
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.blue,
-        todayBackgroundColor: Colors.red,
+        monthTheme: MCalMonthThemeData(
+          cellBackgroundColor: Colors.blue,
+          todayBackgroundColor: Colors.red,
+        ),
       );
 
       await tester.pumpWidget(
@@ -200,7 +206,10 @@ void main() {
     });
 
     testWidgets('applies theme from ThemeData extension', (tester) async {
-      final customTheme = MCalThemeData(cellBackgroundColor: Colors.green);
+      final customTheme = MCalThemeData(
+        cellBackgroundColor: Colors.green,
+        monthTheme: MCalMonthThemeData(cellBackgroundColor: Colors.green),
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1191,7 +1200,10 @@ void main() {
 
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.purple,
-        todayBackgroundColor: Colors.orange,
+        monthTheme: MCalMonthThemeData(
+          cellBackgroundColor: Colors.purple,
+          todayBackgroundColor: Colors.orange,
+        ),
       );
 
       await tester.pumpWidget(
@@ -1208,7 +1220,8 @@ void main() {
                     // Access theme via MCalTheme.of(context)
                     capturedTheme = MCalTheme.of(context);
                     return Container(
-                      color: MCalTheme.of(context).cellBackgroundColor,
+                      color: MCalTheme.of(context).cellBackgroundColor ??
+                          MCalTheme.of(context).monthTheme?.cellBackgroundColor,
                       child: defaultCell,
                     );
                   },
@@ -1223,8 +1236,8 @@ void main() {
       // Verify MCalTheme.of() works and returns the correct theme
       expect(capturedContext, isNotNull);
       expect(capturedTheme, isNotNull);
-      expect(capturedTheme!.cellBackgroundColor, equals(Colors.purple));
-      expect(capturedTheme!.todayBackgroundColor, equals(Colors.orange));
+      expect(capturedTheme!.cellBackgroundColor ?? capturedTheme!.monthTheme?.cellBackgroundColor, equals(Colors.purple));
+      expect(capturedTheme!.monthTheme?.todayBackgroundColor, equals(Colors.orange));
     });
 
     testWidgets('MCalTheme.of(context) works within eventTileBuilder', (
@@ -1348,7 +1361,10 @@ void main() {
       'MCalTheme.maybeOf(context) returns theme when ancestor exists',
       (tester) async {
         MCalThemeData? themeResult;
-        final customTheme = MCalThemeData(cellBackgroundColor: Colors.cyan);
+        final customTheme = MCalThemeData(
+          cellBackgroundColor: Colors.cyan,
+          monthTheme: MCalMonthThemeData(cellBackgroundColor: Colors.cyan),
+        );
 
         await tester.pumpWidget(
           MaterialApp(
@@ -1366,7 +1382,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(themeResult, isNotNull);
-        expect(themeResult!.cellBackgroundColor, equals(Colors.cyan));
+        expect(themeResult!.cellBackgroundColor ?? themeResult!.monthTheme?.cellBackgroundColor, equals(Colors.cyan));
       },
     );
 

@@ -69,25 +69,6 @@ class _ColorfulDayStyleState extends State<ColorfulDayStyle>
             ),
             child: MCalTheme(
               data: MCalThemeData(
-                hourGridlineColor: (widget.isDarkMode ? Colors.white : ColorfulDayStyle.gradientStart)
-                    .withValues(alpha: 0.2),
-                hourGridlineWidth: 1.0,
-                majorGridlineColor: (widget.isDarkMode ? Colors.white : ColorfulDayStyle.gradientStart)
-                    .withValues(alpha: 0.12),
-                majorGridlineWidth: 1.0,
-                minorGridlineColor: (widget.isDarkMode ? Colors.white : ColorfulDayStyle.gradientStart)
-                    .withValues(alpha: 0.06),
-                minorGridlineWidth: 0.5,
-                currentTimeIndicatorColor: ColorfulDayStyle.gradientEnd,
-                currentTimeIndicatorWidth: 3.0,
-                currentTimeIndicatorDotRadius: 8.0,
-                timeLegendBackgroundColor: (widget.isDarkMode ? Colors.white : ColorfulDayStyle.gradientStart)
-                    .withValues(alpha: 0.1),
-                timeLegendTextStyle: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: widget.isDarkMode ? Colors.white70 : ColorfulDayStyle.gradientStart,
-                ),
                 allDayEventBackgroundColor: ColorfulDayStyle.gradientStart,
                 allDayEventTextStyle: const TextStyle(
                   fontSize: 12,
@@ -96,25 +77,46 @@ class _ColorfulDayStyleState extends State<ColorfulDayStyle>
                 ),
                 allDayEventBorderColor: ColorfulDayStyle.gradientEnd.withValues(alpha: 0.5),
                 allDayEventBorderWidth: 1.0,
-                timedEventBorderRadius: 12.0,
-                timedEventPadding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                timedEventMinHeight: 32.0,
                 ignoreEventColors: false,
-                dayHeaderDayOfWeekStyle: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: widget.isDarkMode ? Colors.white70 : ColorfulDayStyle.gradientStart,
-                ),
-                dayHeaderDateStyle: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  foreground: Paint()
-                    ..shader = const LinearGradient(
-                      colors: [ColorfulDayStyle.gradientStart, ColorfulDayStyle.gradientEnd],
-                    ).createShader(const Rect.fromLTWH(0, 0, 100, 50)),
+                dayTheme: MCalDayThemeData(
+                  hourGridlineColor: (widget.isDarkMode ? Colors.white : ColorfulDayStyle.gradientStart)
+                      .withValues(alpha: 0.2),
+                  hourGridlineWidth: 1.0,
+                  majorGridlineColor: (widget.isDarkMode ? Colors.white : ColorfulDayStyle.gradientStart)
+                      .withValues(alpha: 0.12),
+                  majorGridlineWidth: 1.0,
+                  minorGridlineColor: (widget.isDarkMode ? Colors.white : ColorfulDayStyle.gradientStart)
+                      .withValues(alpha: 0.06),
+                  minorGridlineWidth: 0.5,
+                  currentTimeIndicatorColor: ColorfulDayStyle.gradientEnd,
+                  currentTimeIndicatorWidth: 3.0,
+                  currentTimeIndicatorDotRadius: 8.0,
+                  timeLegendBackgroundColor: (widget.isDarkMode ? Colors.white : ColorfulDayStyle.gradientStart)
+                      .withValues(alpha: 0.1),
+                  timeLegendTextStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: widget.isDarkMode ? Colors.white70 : ColorfulDayStyle.gradientStart,
+                  ),
+                  timedEventBorderRadius: 12.0,
+                  timedEventPadding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  timedEventMinHeight: 32.0,
+                  dayHeaderDayOfWeekStyle: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: widget.isDarkMode ? Colors.white70 : ColorfulDayStyle.gradientStart,
+                  ),
+                  dayHeaderDateStyle: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    foreground: Paint()
+                      ..shader = const LinearGradient(
+                        colors: [ColorfulDayStyle.gradientStart, ColorfulDayStyle.gradientEnd],
+                      ).createShader(const Rect.fromLTWH(0, 0, 100, 50)),
+                  ),
                 ),
               ),
               child: MCalDayView(

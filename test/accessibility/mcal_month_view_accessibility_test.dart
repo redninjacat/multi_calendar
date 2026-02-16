@@ -644,10 +644,12 @@ void main() {
                 height: 600,
                 child: MCalTheme(
                   data: MCalThemeData(
-                    focusedDateBackgroundColor: Colors.blue.shade100,
-                    focusedDateTextStyle: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                    monthTheme: MCalMonthThemeData(
+                      focusedDateBackgroundColor: Colors.blue.shade100,
+                      focusedDateTextStyle: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
                     ),
                   ),
                   child: MCalMonthView(

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:multi_calendar/src/styles/mcal_theme.dart';
+import 'package:multi_calendar/multi_calendar.dart';
 
 void main() {
   group('MCalTheme InheritedWidget', () {
     testWidgets('of() with MCalTheme ancestor returns the theme data from the ancestor', (tester) async {
-      const testThemeData = MCalThemeData(
+      final testThemeData = MCalThemeData(
         cellBackgroundColor: Colors.red,
-        todayBackgroundColor: Colors.blue,
+        monthTheme: MCalMonthThemeData(
+          cellBackgroundColor: Colors.red,
+          todayBackgroundColor: Colors.blue,
+        ),
       );
 
       MCalThemeData? capturedTheme;
@@ -28,13 +31,16 @@ void main() {
 
       expect(capturedTheme, isNotNull);
       expect(capturedTheme!.cellBackgroundColor, Colors.red);
-      expect(capturedTheme!.todayBackgroundColor, Colors.blue);
+      expect(capturedTheme!.monthTheme?.todayBackgroundColor, Colors.blue);
     });
 
     testWidgets('of() fallback to ThemeExtension when no MCalTheme ancestor', (tester) async {
-      const extensionThemeData = MCalThemeData(
+      final extensionThemeData = MCalThemeData(
         cellBackgroundColor: Colors.green,
-        todayBackgroundColor: Colors.orange,
+        monthTheme: MCalMonthThemeData(
+          cellBackgroundColor: Colors.green,
+          todayBackgroundColor: Colors.orange,
+        ),
       );
 
       MCalThemeData? capturedTheme;
@@ -43,7 +49,7 @@ void main() {
         MaterialApp(
           theme: ThemeData(
             useMaterial3: true,
-            extensions: const [extensionThemeData],
+            extensions: [extensionThemeData],
           ),
           home: Builder(
             builder: (context) {
@@ -56,7 +62,7 @@ void main() {
 
       expect(capturedTheme, isNotNull);
       expect(capturedTheme!.cellBackgroundColor, Colors.green);
-      expect(capturedTheme!.todayBackgroundColor, Colors.orange);
+      expect(capturedTheme!.monthTheme?.todayBackgroundColor, Colors.orange);
     });
 
     testWidgets('of() fallback to fromTheme() when neither MCalTheme nor extension exists', (tester) async {
@@ -80,8 +86,8 @@ void main() {
       // fromTheme() should provide non-null defaults
       expect(capturedTheme, isNotNull);
       expect(capturedTheme!.cellBackgroundColor, isNotNull);
-      expect(capturedTheme!.todayBackgroundColor, isNotNull);
-      expect(capturedTheme!.cellTextStyle, isNotNull);
+      expect(capturedTheme!.monthTheme?.todayBackgroundColor, isNotNull);
+      expect(capturedTheme!.monthTheme?.cellTextStyle, isNotNull);
       expect(capturedTheme!.eventTileBackgroundColor, isNotNull);
     });
 
@@ -100,7 +106,7 @@ void main() {
         MaterialApp(
           theme: ThemeData(
             useMaterial3: true,
-            extensions: const [extensionThemeData],
+            extensions: [extensionThemeData],
           ),
           home: MCalTheme(
             data: inheritedThemeData,
@@ -147,9 +153,12 @@ void main() {
     });
 
     testWidgets('maybeOf() returns theme when MCalTheme ancestor exists', (tester) async {
-      const testThemeData = MCalThemeData(
+      final testThemeData = MCalThemeData(
         cellBackgroundColor: Colors.purple,
-        todayBackgroundColor: Colors.cyan,
+        monthTheme: MCalMonthThemeData(
+          cellBackgroundColor: Colors.purple,
+          todayBackgroundColor: Colors.cyan,
+        ),
       );
 
       MCalThemeData? capturedTheme;
@@ -170,7 +179,7 @@ void main() {
 
       expect(capturedTheme, isNotNull);
       expect(capturedTheme!.cellBackgroundColor, Colors.purple);
-      expect(capturedTheme!.todayBackgroundColor, Colors.cyan);
+      expect(capturedTheme!.monthTheme?.todayBackgroundColor, Colors.cyan);
     });
 
     testWidgets('updateShouldNotify returns true when data changes', (tester) async {
@@ -308,24 +317,27 @@ void main() {
     test('copyWith creates new instance with updated values', () {
       final original = MCalThemeData(
         cellBackgroundColor: Colors.white,
-        todayBackgroundColor: Colors.blue,
         eventTileBackgroundColor: Colors.green,
+        monthTheme: MCalMonthThemeData(
+          cellBackgroundColor: Colors.white,
+          todayBackgroundColor: Colors.blue,
+        ),
       );
 
       final updated = original.copyWith(
         cellBackgroundColor: Colors.grey,
-        todayBackgroundColor: Colors.red,
+        monthTheme: original.monthTheme?.copyWith(todayBackgroundColor: Colors.red),
       );
 
       // Updated values should be changed
       expect(updated.cellBackgroundColor, Colors.grey);
-      expect(updated.todayBackgroundColor, Colors.red);
+      expect(updated.monthTheme?.todayBackgroundColor, Colors.red);
       // Unchanged values should remain the same
       expect(updated.eventTileBackgroundColor, Colors.green);
 
       // Original should be unchanged
       expect(original.cellBackgroundColor, Colors.white);
-      expect(original.todayBackgroundColor, Colors.blue);
+      expect(original.monthTheme?.todayBackgroundColor, Colors.blue);
       expect(original.eventTileBackgroundColor, Colors.green);
     });
 
@@ -335,18 +347,21 @@ void main() {
       );
 
       final updated = original.copyWith(
-        todayBackgroundColor: Colors.blue,
+        monthTheme: MCalMonthThemeData(todayBackgroundColor: Colors.blue),
       );
 
       expect(updated.cellBackgroundColor, Colors.white);
-      expect(updated.todayBackgroundColor, Colors.blue);
+      expect(updated.monthTheme?.todayBackgroundColor, Colors.blue);
       expect(updated.cellBorderColor, isNull);
     });
 
     test('copyWith preserves existing values when null is passed', () {
       final original = MCalThemeData(
         cellBackgroundColor: Colors.white,
-        todayBackgroundColor: Colors.blue,
+        monthTheme: MCalMonthThemeData(
+          cellBackgroundColor: Colors.white,
+          todayBackgroundColor: Colors.blue,
+        ),
       );
 
       // copyWith uses ?? operator, so passing null preserves existing value
@@ -355,85 +370,89 @@ void main() {
       );
 
       expect(updated.cellBackgroundColor, Colors.white);
-      expect(updated.todayBackgroundColor, Colors.blue);
+      expect(updated.monthTheme?.todayBackgroundColor, Colors.blue);
     });
 
     test('dropTargetCell and dropTargetTile theme properties are supported', () {
-      const theme = MCalThemeData(
-        dropTargetCellValidColor: Color(0xFF00FF00),
-        dropTargetCellInvalidColor: Color(0xFFFF0000),
-        dropTargetCellBorderRadius: 8.0,
-        dropTargetTileBackgroundColor: Color(0xFF0000FF),
-        dropTargetTileInvalidBackgroundColor: Color(0xFFFF00FF),
-        dropTargetTileCornerRadius: 4.0,
+      final theme = MCalThemeData(
+        monthTheme: MCalMonthThemeData(
+          dropTargetCellValidColor: Color(0xFF00FF00),
+          dropTargetCellInvalidColor: Color(0xFFFF0000),
+          dropTargetCellBorderRadius: 8.0,
+          dropTargetTileBackgroundColor: Color(0xFF0000FF),
+          dropTargetTileInvalidBackgroundColor: Color(0xFFFF00FF),
+          dropTargetTileCornerRadius: 4.0,
+        ),
       );
-      expect(theme.dropTargetCellValidColor?.toARGB32(), 0xFF00FF00);
-      expect(theme.dropTargetCellInvalidColor?.toARGB32(), 0xFFFF0000);
-      expect(theme.dropTargetCellBorderRadius, 8.0);
-      expect(theme.dropTargetTileBackgroundColor?.toARGB32(), 0xFF0000FF);
-      expect(theme.dropTargetTileInvalidBackgroundColor?.toARGB32(), 0xFFFF00FF);
-      expect(theme.dropTargetTileCornerRadius, 4.0);
+      expect(theme.monthTheme?.dropTargetCellValidColor?.toARGB32(), 0xFF00FF00);
+      expect(theme.monthTheme?.dropTargetCellInvalidColor?.toARGB32(), 0xFFFF0000);
+      expect(theme.monthTheme?.dropTargetCellBorderRadius, 8.0);
+      expect(theme.monthTheme?.dropTargetTileBackgroundColor?.toARGB32(), 0xFF0000FF);
+      expect(theme.monthTheme?.dropTargetTileInvalidBackgroundColor?.toARGB32(), 0xFFFF00FF);
+      expect(theme.monthTheme?.dropTargetTileCornerRadius, 4.0);
 
       final updated = theme.copyWith(
-        dropTargetTileBorderColor: Colors.amber,
-        dropTargetTileBorderWidth: 2.0,
+        monthTheme: theme.monthTheme?.copyWith(
+          dropTargetTileBorderColor: Colors.amber,
+          dropTargetTileBorderWidth: 2.0,
+        ),
       );
-      expect(updated.dropTargetTileBorderColor, Colors.amber);
-      expect(updated.dropTargetTileBorderWidth, 2.0);
+      expect(updated.monthTheme?.dropTargetTileBorderColor, Colors.amber);
+      expect(updated.monthTheme?.dropTargetTileBorderWidth, 2.0);
     });
 
     test('lerp interpolates between themes correctly (t = 0.0)', () {
       final theme1 = MCalThemeData(
         cellBackgroundColor: Colors.white,
-        todayBackgroundColor: Colors.blue,
+        monthTheme: MCalMonthThemeData(todayBackgroundColor: Colors.blue),
       );
 
       final theme2 = MCalThemeData(
         cellBackgroundColor: Colors.black,
-        todayBackgroundColor: Colors.red,
+        monthTheme: MCalMonthThemeData(todayBackgroundColor: Colors.red),
       );
 
       final interpolated = theme1.lerp(theme2, 0.0);
 
       // At t=0.0, should return theme1 (or very close to it)
       expect(interpolated.cellBackgroundColor?.toARGB32(), Colors.white.toARGB32());
-      expect(interpolated.todayBackgroundColor?.toARGB32(), Colors.blue.toARGB32());
+      expect(interpolated.monthTheme?.todayBackgroundColor?.toARGB32(), Colors.blue.toARGB32());
     });
 
     test('lerp interpolates between themes correctly (t = 1.0)', () {
       final theme1 = MCalThemeData(
         cellBackgroundColor: Colors.white,
-        todayBackgroundColor: Colors.blue,
+        monthTheme: MCalMonthThemeData(todayBackgroundColor: Colors.blue),
       );
 
       final theme2 = MCalThemeData(
         cellBackgroundColor: Colors.black,
-        todayBackgroundColor: Colors.red,
+        monthTheme: MCalMonthThemeData(todayBackgroundColor: Colors.red),
       );
 
       final interpolated = theme1.lerp(theme2, 1.0);
 
       // At t=1.0, should return theme2 (or very close to it)
       expect(interpolated.cellBackgroundColor?.toARGB32(), Colors.black.toARGB32());
-      expect(interpolated.todayBackgroundColor?.toARGB32(), Colors.red.toARGB32());
+      expect(interpolated.monthTheme?.todayBackgroundColor?.toARGB32(), Colors.red.toARGB32());
     });
 
     test('lerp interpolates between themes correctly (t = 0.5)', () {
       final theme1 = MCalThemeData(
         cellBackgroundColor: Colors.white,
-        todayBackgroundColor: Colors.blue,
+        monthTheme: MCalMonthThemeData(todayBackgroundColor: Colors.blue),
       );
 
       final theme2 = MCalThemeData(
         cellBackgroundColor: Colors.black,
-        todayBackgroundColor: Colors.red,
+        monthTheme: MCalMonthThemeData(todayBackgroundColor: Colors.red),
       );
 
       final interpolated = theme1.lerp(theme2, 0.5);
 
       // At t=0.5, should interpolate between colors
       expect(interpolated.cellBackgroundColor, isNotNull);
-      expect(interpolated.todayBackgroundColor, isNotNull);
+      expect(interpolated.monthTheme?.todayBackgroundColor, isNotNull);
       // Colors should be between white and black, blue and red
       expect(interpolated.cellBackgroundColor, isNot(Colors.white));
       expect(interpolated.cellBackgroundColor, isNot(Colors.black));
@@ -460,10 +479,10 @@ void main() {
       // Verify defaults are set
       expect(calendarTheme.cellBackgroundColor, isNotNull);
       expect(calendarTheme.cellBorderColor, isNotNull);
-      expect(calendarTheme.cellTextStyle, isNotNull);
-      expect(calendarTheme.todayBackgroundColor, isNotNull);
-      expect(calendarTheme.todayTextStyle, isNotNull);
-      expect(calendarTheme.weekdayHeaderTextStyle, isNotNull);
+      expect(calendarTheme.monthTheme?.cellTextStyle, isNotNull);
+      expect(calendarTheme.monthTheme?.todayBackgroundColor, isNotNull);
+      expect(calendarTheme.monthTheme?.todayTextStyle, isNotNull);
+      expect(calendarTheme.monthTheme?.weekdayHeaderTextStyle, isNotNull);
       expect(calendarTheme.eventTileBackgroundColor, isNotNull);
       expect(calendarTheme.eventTileTextStyle, isNotNull);
       expect(calendarTheme.navigatorTextStyle, isNotNull);
@@ -483,10 +502,10 @@ void main() {
       // Verify defaults are set for dark theme
       expect(calendarTheme.cellBackgroundColor, isNotNull);
       expect(calendarTheme.cellBorderColor, isNotNull);
-      expect(calendarTheme.cellTextStyle, isNotNull);
-      expect(calendarTheme.todayBackgroundColor, isNotNull);
-      expect(calendarTheme.todayTextStyle, isNotNull);
-      expect(calendarTheme.weekdayHeaderTextStyle, isNotNull);
+      expect(calendarTheme.monthTheme?.cellTextStyle, isNotNull);
+      expect(calendarTheme.monthTheme?.todayBackgroundColor, isNotNull);
+      expect(calendarTheme.monthTheme?.todayTextStyle, isNotNull);
+      expect(calendarTheme.monthTheme?.weekdayHeaderTextStyle, isNotNull);
       expect(calendarTheme.eventTileBackgroundColor, isNotNull);
       expect(calendarTheme.eventTileTextStyle, isNotNull);
       expect(calendarTheme.navigatorTextStyle, isNotNull);
@@ -507,9 +526,9 @@ void main() {
 
       // Verify theme uses colorScheme colors
       expect(calendarTheme.cellBackgroundColor, themeData.colorScheme.surface);
-      expect(calendarTheme.todayBackgroundColor, isNotNull);
+      expect(calendarTheme.monthTheme?.todayBackgroundColor, isNotNull);
       // Verify text styles are derived from textTheme
-      expect(calendarTheme.cellTextStyle, isNotNull);
+      expect(calendarTheme.monthTheme?.cellTextStyle, isNotNull);
     });
 
     test('light and dark themes work correctly', () {
@@ -548,30 +567,31 @@ void main() {
 
       expect(emptyTheme.cellBackgroundColor, isNull);
       expect(emptyTheme.cellBorderColor, isNull);
-      expect(emptyTheme.cellTextStyle, isNull);
-      expect(emptyTheme.todayBackgroundColor, isNull);
-      expect(emptyTheme.todayTextStyle, isNull);
-      expect(emptyTheme.leadingDatesTextStyle, isNull);
-      expect(emptyTheme.trailingDatesTextStyle, isNull);
-      expect(emptyTheme.leadingDatesBackgroundColor, isNull);
-      expect(emptyTheme.trailingDatesBackgroundColor, isNull);
-      expect(emptyTheme.weekdayHeaderTextStyle, isNull);
-      expect(emptyTheme.weekdayHeaderBackgroundColor, isNull);
+      expect(emptyTheme.monthTheme?.cellTextStyle, isNull);
+      expect(emptyTheme.monthTheme?.todayBackgroundColor, isNull);
+      expect(emptyTheme.monthTheme?.todayTextStyle, isNull);
+      expect(emptyTheme.monthTheme?.leadingDatesTextStyle, isNull);
+      expect(emptyTheme.monthTheme?.trailingDatesTextStyle, isNull);
+      expect(emptyTheme.monthTheme?.leadingDatesBackgroundColor, isNull);
+      expect(emptyTheme.monthTheme?.trailingDatesBackgroundColor, isNull);
+      expect(emptyTheme.monthTheme?.weekdayHeaderTextStyle, isNull);
+      expect(emptyTheme.monthTheme?.weekdayHeaderBackgroundColor, isNull);
       expect(emptyTheme.eventTileBackgroundColor, isNull);
       expect(emptyTheme.eventTileTextStyle, isNull);
       expect(emptyTheme.navigatorTextStyle, isNull);
       expect(emptyTheme.navigatorBackgroundColor, isNull);
-      // New properties
-      expect(emptyTheme.focusedDateBackgroundColor, isNull);
-      expect(emptyTheme.focusedDateTextStyle, isNull);
+      // New properties - shared
       expect(emptyTheme.allDayEventBackgroundColor, isNull);
       expect(emptyTheme.allDayEventTextStyle, isNull);
       expect(emptyTheme.allDayEventBorderColor, isNull);
       expect(emptyTheme.allDayEventBorderWidth, isNull);
       expect(emptyTheme.weekNumberTextStyle, isNull);
       expect(emptyTheme.weekNumberBackgroundColor, isNull);
-      expect(emptyTheme.hoverCellBackgroundColor, isNull);
-      expect(emptyTheme.hoverEventBackgroundColor, isNull);
+      // Month-specific
+      expect(emptyTheme.monthTheme?.focusedDateBackgroundColor, isNull);
+      expect(emptyTheme.monthTheme?.focusedDateTextStyle, isNull);
+      expect(emptyTheme.monthTheme?.hoverCellBackgroundColor, isNull);
+      expect(emptyTheme.monthTheme?.hoverEventBackgroundColor, isNull);
     });
 
     test('lerp handles null values correctly', () {
@@ -596,20 +616,24 @@ void main() {
     group('copyWith for new properties', () {
       test('copyWith overrides focusedDate properties', () {
         final original = MCalThemeData(
-          focusedDateBackgroundColor: Colors.blue,
-          focusedDateTextStyle: const TextStyle(color: Colors.blue),
+          monthTheme: MCalMonthThemeData(
+            focusedDateBackgroundColor: Colors.blue,
+            focusedDateTextStyle: const TextStyle(color: Colors.blue),
+          ),
         );
 
         final updated = original.copyWith(
-          focusedDateBackgroundColor: Colors.green,
-          focusedDateTextStyle: const TextStyle(color: Colors.green),
+          monthTheme: original.monthTheme?.copyWith(
+            focusedDateBackgroundColor: Colors.green,
+            focusedDateTextStyle: const TextStyle(color: Colors.green),
+          ),
         );
 
-        expect(updated.focusedDateBackgroundColor, Colors.green);
-        expect(updated.focusedDateTextStyle?.color, Colors.green);
+        expect(updated.monthTheme?.focusedDateBackgroundColor, Colors.green);
+        expect(updated.monthTheme?.focusedDateTextStyle?.color, Colors.green);
         // Original should be unchanged
-        expect(original.focusedDateBackgroundColor, Colors.blue);
-        expect(original.focusedDateTextStyle?.color, Colors.blue);
+        expect(original.monthTheme?.focusedDateBackgroundColor, Colors.blue);
+        expect(original.monthTheme?.focusedDateTextStyle?.color, Colors.blue);
       });
 
       test('copyWith overrides allDayEvent properties', () {
@@ -656,38 +680,44 @@ void main() {
 
       test('copyWith overrides hover properties', () {
         final original = MCalThemeData(
-          hoverCellBackgroundColor: Colors.blue,
-          hoverEventBackgroundColor: Colors.green,
+          monthTheme: MCalMonthThemeData(
+            hoverCellBackgroundColor: Colors.blue,
+            hoverEventBackgroundColor: Colors.green,
+          ),
         );
 
         final updated = original.copyWith(
-          hoverCellBackgroundColor: Colors.red,
-          hoverEventBackgroundColor: Colors.orange,
+          monthTheme: original.monthTheme?.copyWith(
+            hoverCellBackgroundColor: Colors.red,
+            hoverEventBackgroundColor: Colors.orange,
+          ),
         );
 
-        expect(updated.hoverCellBackgroundColor, Colors.red);
-        expect(updated.hoverEventBackgroundColor, Colors.orange);
+        expect(updated.monthTheme?.hoverCellBackgroundColor, Colors.red);
+        expect(updated.monthTheme?.hoverEventBackgroundColor, Colors.orange);
         // Original should be unchanged
-        expect(original.hoverCellBackgroundColor, Colors.blue);
-        expect(original.hoverEventBackgroundColor, Colors.green);
+        expect(original.monthTheme?.hoverCellBackgroundColor, Colors.blue);
+        expect(original.monthTheme?.hoverEventBackgroundColor, Colors.green);
       });
 
       test('copyWith preserves new properties when not specified', () {
         final original = MCalThemeData(
-          focusedDateBackgroundColor: Colors.blue,
           allDayEventBorderWidth: 2.0,
           weekNumberBackgroundColor: Colors.grey,
-          hoverCellBackgroundColor: Colors.yellow,
+          monthTheme: MCalMonthThemeData(
+            focusedDateBackgroundColor: Colors.blue,
+            hoverCellBackgroundColor: Colors.yellow,
+          ),
         );
 
         final updated = original.copyWith(
           cellBackgroundColor: Colors.white,
         );
 
-        expect(updated.focusedDateBackgroundColor, Colors.blue);
+        expect(updated.monthTheme?.focusedDateBackgroundColor, Colors.blue);
         expect(updated.allDayEventBorderWidth, 2.0);
         expect(updated.weekNumberBackgroundColor, Colors.grey);
-        expect(updated.hoverCellBackgroundColor, Colors.yellow);
+        expect(updated.monthTheme?.hoverCellBackgroundColor, Colors.yellow);
         expect(updated.cellBackgroundColor, Colors.white);
       });
     });
@@ -695,53 +725,57 @@ void main() {
     group('lerp for new properties', () {
       test('lerp interpolates focusedDate Color properties correctly', () {
         final theme1 = MCalThemeData(
-          focusedDateBackgroundColor: Colors.white,
+          monthTheme: MCalMonthThemeData(focusedDateBackgroundColor: Colors.white),
         );
 
         final theme2 = MCalThemeData(
-          focusedDateBackgroundColor: Colors.black,
+          monthTheme: MCalMonthThemeData(focusedDateBackgroundColor: Colors.black),
         );
 
         // At t=0.0
         final atStart = theme1.lerp(theme2, 0.0);
         expect(
-          atStart.focusedDateBackgroundColor?.toARGB32(),
+          atStart.monthTheme?.focusedDateBackgroundColor?.toARGB32(),
           Colors.white.toARGB32(),
         );
 
         // At t=1.0
         final atEnd = theme1.lerp(theme2, 1.0);
         expect(
-          atEnd.focusedDateBackgroundColor?.toARGB32(),
+          atEnd.monthTheme?.focusedDateBackgroundColor?.toARGB32(),
           Colors.black.toARGB32(),
         );
 
         // At t=0.5
         final atMiddle = theme1.lerp(theme2, 0.5);
-        expect(atMiddle.focusedDateBackgroundColor, isNotNull);
-        expect(atMiddle.focusedDateBackgroundColor, isNot(Colors.white));
-        expect(atMiddle.focusedDateBackgroundColor, isNot(Colors.black));
+        expect(atMiddle.monthTheme?.focusedDateBackgroundColor, isNotNull);
+        expect(atMiddle.monthTheme?.focusedDateBackgroundColor, isNot(Colors.white));
+        expect(atMiddle.monthTheme?.focusedDateBackgroundColor, isNot(Colors.black));
       });
 
       test('lerp interpolates focusedDate TextStyle correctly', () {
         final theme1 = MCalThemeData(
-          focusedDateTextStyle: const TextStyle(
-            fontSize: 12,
-            color: Colors.white,
+          monthTheme: MCalMonthThemeData(
+            focusedDateTextStyle: const TextStyle(
+              fontSize: 12,
+              color: Colors.white,
+            ),
           ),
         );
 
         final theme2 = MCalThemeData(
-          focusedDateTextStyle: const TextStyle(
-            fontSize: 24,
-            color: Colors.black,
+          monthTheme: MCalMonthThemeData(
+            focusedDateTextStyle: const TextStyle(
+              fontSize: 24,
+              color: Colors.black,
+            ),
           ),
         );
 
         final atMiddle = theme1.lerp(theme2, 0.5);
 
-        expect(atMiddle.focusedDateTextStyle, isNotNull);
-        expect(atMiddle.focusedDateTextStyle!.fontSize, 18.0);
+        expect(atMiddle.monthTheme?.focusedDateTextStyle, isNotNull);
+        expect(atMiddle.monthTheme?.focusedDateTextStyle!.fontSize, 18.0);
       });
 
       test('lerp interpolates allDayEvent Color properties correctly', () {
@@ -860,55 +894,59 @@ void main() {
 
       test('lerp interpolates hover Color properties correctly', () {
         final theme1 = MCalThemeData(
-          hoverCellBackgroundColor: Colors.white,
-          hoverEventBackgroundColor: Colors.blue,
+          monthTheme: MCalMonthThemeData(
+            hoverCellBackgroundColor: Colors.white,
+            hoverEventBackgroundColor: Colors.blue,
+          ),
         );
 
         final theme2 = MCalThemeData(
-          hoverCellBackgroundColor: Colors.black,
-          hoverEventBackgroundColor: Colors.red,
+          monthTheme: MCalMonthThemeData(
+            hoverCellBackgroundColor: Colors.black,
+            hoverEventBackgroundColor: Colors.red,
+          ),
         );
 
         // At t=0.0
         final atStart = theme1.lerp(theme2, 0.0);
         expect(
-          atStart.hoverCellBackgroundColor?.toARGB32(),
+          atStart.monthTheme?.hoverCellBackgroundColor?.toARGB32(),
           Colors.white.toARGB32(),
         );
         expect(
-          atStart.hoverEventBackgroundColor?.toARGB32(),
+          atStart.monthTheme?.hoverEventBackgroundColor?.toARGB32(),
           Colors.blue.toARGB32(),
         );
 
         // At t=1.0
         final atEnd = theme1.lerp(theme2, 1.0);
         expect(
-          atEnd.hoverCellBackgroundColor?.toARGB32(),
+          atEnd.monthTheme?.hoverCellBackgroundColor?.toARGB32(),
           Colors.black.toARGB32(),
         );
         expect(
-          atEnd.hoverEventBackgroundColor?.toARGB32(),
+          atEnd.monthTheme?.hoverEventBackgroundColor?.toARGB32(),
           Colors.red.toARGB32(),
         );
 
         // At t=0.5
         final atMiddle = theme1.lerp(theme2, 0.5);
-        expect(atMiddle.hoverCellBackgroundColor, isNotNull);
-        expect(atMiddle.hoverCellBackgroundColor, isNot(Colors.white));
-        expect(atMiddle.hoverCellBackgroundColor, isNot(Colors.black));
+        expect(atMiddle.monthTheme?.hoverCellBackgroundColor, isNotNull);
+        expect(atMiddle.monthTheme?.hoverCellBackgroundColor, isNot(Colors.white));
+        expect(atMiddle.monthTheme?.hoverCellBackgroundColor, isNot(Colors.black));
       });
 
       test('lerp handles null values for new properties', () {
         final theme1 = MCalThemeData(
-          focusedDateBackgroundColor: Colors.blue,
           allDayEventBorderWidth: null,
           weekNumberBackgroundColor: null,
+          monthTheme: MCalMonthThemeData(focusedDateBackgroundColor: Colors.blue),
         );
 
         final theme2 = MCalThemeData(
-          focusedDateBackgroundColor: null,
           allDayEventBorderWidth: 2.0,
           weekNumberBackgroundColor: Colors.grey,
+          monthTheme: MCalMonthThemeData(focusedDateBackgroundColor: null),
         );
 
         final interpolated = theme1.lerp(theme2, 0.5);
@@ -941,8 +979,8 @@ void main() {
 
         final calendarTheme = MCalThemeData.fromTheme(themeData);
 
-        expect(calendarTheme.focusedDateBackgroundColor, isNotNull);
-        expect(calendarTheme.focusedDateTextStyle, isNotNull);
+        expect(calendarTheme.monthTheme?.focusedDateBackgroundColor, isNotNull);
+        expect(calendarTheme.monthTheme?.focusedDateTextStyle, isNotNull);
       });
 
       test('fromTheme provides non-null allDayEvent defaults', () {
@@ -980,11 +1018,11 @@ void main() {
 
         final calendarTheme = MCalThemeData.fromTheme(themeData);
 
-        expect(calendarTheme.hoverCellBackgroundColor, isNotNull);
-        expect(calendarTheme.hoverEventBackgroundColor, isNotNull);
+        expect(calendarTheme.monthTheme?.hoverCellBackgroundColor, isNotNull);
+        expect(calendarTheme.monthTheme?.hoverEventBackgroundColor, isNotNull);
       });
 
-      test('fromTheme new properties differ between light and dark', () {
+      test('fromTheme month properties differ between light and dark', () {
         final lightTheme = ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
@@ -1006,8 +1044,8 @@ void main() {
 
         // Colors should differ between light and dark themes
         expect(
-          lightCalendarTheme.focusedDateBackgroundColor,
-          isNot(darkCalendarTheme.focusedDateBackgroundColor),
+          lightCalendarTheme.monthTheme?.focusedDateBackgroundColor,
+          isNot(darkCalendarTheme.monthTheme?.focusedDateBackgroundColor),
         );
         expect(
           lightCalendarTheme.allDayEventBackgroundColor,
@@ -1018,8 +1056,8 @@ void main() {
           isNot(darkCalendarTheme.weekNumberBackgroundColor),
         );
         expect(
-          lightCalendarTheme.hoverCellBackgroundColor,
-          isNot(darkCalendarTheme.hoverCellBackgroundColor),
+          lightCalendarTheme.monthTheme?.hoverCellBackgroundColor,
+          isNot(darkCalendarTheme.monthTheme?.hoverCellBackgroundColor),
         );
       });
 
@@ -1033,11 +1071,11 @@ void main() {
         final calendarTheme = MCalThemeData.fromTheme(themeData);
 
         // Verify that fromTheme uses values from the theme
-        expect(calendarTheme.focusedDateBackgroundColor, isNotNull);
+        expect(calendarTheme.monthTheme?.focusedDateBackgroundColor, isNotNull);
         expect(calendarTheme.allDayEventBackgroundColor, isNotNull);
         expect(calendarTheme.weekNumberBackgroundColor, isNotNull);
-        expect(calendarTheme.hoverCellBackgroundColor, isNotNull);
-        expect(calendarTheme.hoverEventBackgroundColor, isNotNull);
+        expect(calendarTheme.monthTheme?.hoverCellBackgroundColor, isNotNull);
+        expect(calendarTheme.monthTheme?.hoverEventBackgroundColor, isNotNull);
       });
     });
   });

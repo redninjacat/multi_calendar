@@ -60,6 +60,81 @@ class MCalEventTapDetails {
   const MCalEventTapDetails({required this.event, required this.displayDate});
 }
 
+/// Details object for cell double-tap callbacks.
+///
+/// Provides all necessary data about a double-tap event on a day cell in the
+/// month view calendar grid, including tap position for creating events.
+///
+/// Example:
+/// ```dart
+/// onCellDoubleTap: (context, details) {
+///   print('Double-tapped on ${details.date} at ${details.localPosition}');
+///   createEventAt(details.date, details.localPosition);
+/// }
+/// ```
+class MCalCellDoubleTapDetails {
+  /// The date of the double-tapped cell.
+  final DateTime date;
+
+  /// List of events occurring on this date.
+  final List<MCalCalendarEvent> events;
+
+  /// Whether this cell belongs to the currently displayed month.
+  final bool isCurrentMonth;
+
+  /// Tap position in local coordinates (relative to the cell).
+  final Offset localPosition;
+
+  /// Tap position in global coordinates (relative to the screen).
+  final Offset globalPosition;
+
+  /// Creates a new [MCalCellDoubleTapDetails] instance.
+  const MCalCellDoubleTapDetails({
+    required this.date,
+    required this.events,
+    required this.isCurrentMonth,
+    required this.localPosition,
+    required this.globalPosition,
+  });
+}
+
+/// Details object for event double-tap callbacks.
+///
+/// Provides all necessary data about a double-tap event on an event tile in the
+/// month view calendar, including tap position.
+///
+/// Example:
+/// ```dart
+/// onEventDoubleTap: (context, details) {
+///   print('Double-tapped event: ${details.event.title} at ${details.localPosition}');
+///   openEventEditor(details.event);
+/// }
+/// ```
+class MCalEventDoubleTapDetails {
+  /// The calendar event that was double-tapped.
+  final MCalCalendarEvent event;
+
+  /// The date context for this event tile.
+  ///
+  /// This may differ from [event.start] for multi-day events where the
+  /// event tile is displayed on a different date than its start date.
+  final DateTime displayDate;
+
+  /// Tap position in local coordinates (relative to the event tile).
+  final Offset localPosition;
+
+  /// Tap position in global coordinates (relative to the screen).
+  final Offset globalPosition;
+
+  /// Creates a new [MCalEventDoubleTapDetails] instance.
+  const MCalEventDoubleTapDetails({
+    required this.event,
+    required this.displayDate,
+    required this.localPosition,
+    required this.globalPosition,
+  });
+}
+
 /// Details object for swipe navigation callbacks.
 ///
 /// Provides information about month navigation triggered by swipe gestures.

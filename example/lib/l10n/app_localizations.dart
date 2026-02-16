@@ -9,6 +9,7 @@ import 'app_localizations_ar.dart';
 import 'app_localizations_en.dart';
 import 'app_localizations_es.dart';
 import 'app_localizations_fr.dart';
+import 'app_localizations_he.dart';
 
 // ignore_for_file: type=lint
 
@@ -100,6 +101,7 @@ abstract class AppLocalizations {
     Locale('en'),
     Locale('es'),
     Locale('fr'),
+    Locale('he'),
   ];
 
   /// No description provided for @appTitle.
@@ -143,6 +145,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Arabic (RTL)'**
   String get languageArabic;
+
+  /// No description provided for @languageHebrew.
+  ///
+  /// In en, this message translates to:
+  /// **'Hebrew (RTL)'**
+  String get languageHebrew;
 
   /// No description provided for @monthView.
   ///
@@ -213,7 +221,7 @@ abstract class AppLocalizations {
   /// No description provided for @styleFeaturesDemo.
   ///
   /// In en, this message translates to:
-  /// **'Features Demo'**
+  /// **'Features'**
   String get styleFeaturesDemo;
 
   /// No description provided for @styleFeaturesDemoDescription.
@@ -582,7 +590,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['ar', 'en', 'es', 'fr'].contains(locale.languageCode);
+      <String>['ar', 'en', 'es', 'fr', 'he'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -599,6 +607,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsEs();
     case 'fr':
       return AppLocalizationsFr();
+    case 'he':
+      return AppLocalizationsHe();
   }
 
   throw FlutterError(

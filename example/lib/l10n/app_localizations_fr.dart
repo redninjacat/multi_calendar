@@ -30,6 +30,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get languageArabic => 'Arabe (RTL)';
 
   @override
+  String get languageHebrew => 'Hébreu (RTL)';
+
+  @override
   String get monthView => 'Vue Mensuelle';
 
   @override
@@ -66,11 +69,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Bare bones, text-only design. Maximum whitespace, minimal gridlines, subtle colors. Clean and spacious.';
 
   @override
-  String get styleFeaturesDemo => 'Features Demo';
+  String get styleFeaturesDemo => 'Fonctionnalités';
 
   @override
   String get styleFeaturesDemoDescription =>
-      'Comprehensive showcase: special time regions (lunch, after-hours), blocked slots, drag-drop, resize, keyboard nav, snap-to-time. Try dropping events into blocked zones.';
+      'Démonstration complète: régions horaires spéciales (déjeuner, après-heures), créneaux bloqués, glisser-déposer, redimensionner, navigation au clavier, alignement temporel. Essayez de déposer des événements dans les zones bloquées.';
 
   @override
   String get styleDefaultDescription =>

@@ -28,6 +28,7 @@ class MCalBuilderWrapper {
     required Widget Function(BuildContext, MCalEventTileContext) defaultBuilder,
     void Function(BuildContext, MCalEventTapDetails)? onEventTap,
     void Function(BuildContext, MCalEventTapDetails)? onEventLongPress,
+    void Function(BuildContext, MCalEventDoubleTapDetails)? onEventDoubleTap,
     ValueChanged<MCalEventTileContext?>? onHoverEvent,
     MCalEventController? controller,
     bool enableDragToMove = false,
@@ -44,6 +45,10 @@ class MCalBuilderWrapper {
     double horizontalSpacing = 2.0,
     Duration dragLongPressDelay = const Duration(milliseconds: 200),
   }) {
+    // Store position from onDoubleTapDown for use in onDoubleTap (which doesn't receive position)
+    Offset? lastDoubleTapLocal;
+    Offset? lastDoubleTapGlobal;
+
     return (BuildContext context, MCalEventTileContext tileContext) {
       // Get the default visual widget
       final defaultWidget = defaultBuilder(context, tileContext);
@@ -82,6 +87,29 @@ class MCalBuilderWrapper {
                     displayDate: tileContext.displayDate,
                   ),
                 )
+              : null,
+          onDoubleTapDown: onEventDoubleTap != null
+              ? (details) {
+                  lastDoubleTapLocal = details.localPosition;
+                  lastDoubleTapGlobal = details.globalPosition;
+                }
+              : null,
+          onDoubleTap: onEventDoubleTap != null
+              ? () {
+                  final local = lastDoubleTapLocal;
+                  final global = lastDoubleTapGlobal;
+                  if (local != null && global != null) {
+                    onEventDoubleTap(
+                      context,
+                      MCalEventDoubleTapDetails(
+                        event: tileContext.event,
+                        displayDate: tileContext.displayDate,
+                        localPosition: local,
+                        globalPosition: global,
+                      ),
+                    );
+                  }
+                }
               : null,
           // Note: onLongPress is NOT added here when drag is enabled
           // because the long-press initiates the drag
@@ -146,7 +174,7 @@ class MCalBuilderWrapper {
         );
       }
 
-      // Drag is disabled - wrap with gesture detector for tap/long-press
+      // Drag is disabled - wrap with gesture detector for tap/long-press/double-tap
       return wrapWithHover(
         GestureDetector(
           onTap: onEventTap != null
@@ -166,6 +194,29 @@ class MCalBuilderWrapper {
                     displayDate: tileContext.displayDate,
                   ),
                 )
+              : null,
+          onDoubleTapDown: onEventDoubleTap != null
+              ? (details) {
+                  lastDoubleTapLocal = details.localPosition;
+                  lastDoubleTapGlobal = details.globalPosition;
+                }
+              : null,
+          onDoubleTap: onEventDoubleTap != null
+              ? () {
+                  final local = lastDoubleTapLocal;
+                  final global = lastDoubleTapGlobal;
+                  if (local != null && global != null) {
+                    onEventDoubleTap(
+                      context,
+                      MCalEventDoubleTapDetails(
+                        event: tileContext.event,
+                        displayDate: tileContext.displayDate,
+                        localPosition: local,
+                        globalPosition: global,
+                      ),
+                    );
+                  }
+                }
               : null,
           child: visualWidget,
         ),

@@ -285,8 +285,10 @@ void main() {
         initialDate: DateTime(2026, 2, 14),
       );
       final customTheme = MCalThemeData(
-        timeLegendTextStyle: const TextStyle(fontSize: 14, color: Colors.blue),
-        hourGridlineColor: Colors.grey,
+        dayTheme: MCalDayThemeData(
+          timeLegendTextStyle: const TextStyle(fontSize: 14, color: Colors.blue),
+          hourGridlineColor: Colors.grey,
+        ),
       );
 
       await tester.pumpWidget(

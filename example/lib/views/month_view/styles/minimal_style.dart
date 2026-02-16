@@ -36,30 +36,29 @@ class MinimalMonthStyle extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: MCalTheme(
               data: MCalThemeData(
-                cellBackgroundColor: Colors.transparent,
-                cellBorderColor: Colors.transparent,
-                // Today styling - used by default date label builder
-                todayBackgroundColor: Colors.transparent,
-                todayTextStyle: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: colorScheme.primary,
-                  fontSize: 18,
+                monthTheme: MCalMonthThemeData(
+                  cellBackgroundColor: Colors.transparent,
+                  cellBorderColor: Colors.transparent,
+                  todayBackgroundColor: Colors.transparent,
+                  todayTextStyle: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: colorScheme.primary,
+                    fontSize: 18,
+                  ),
+                  cellTextStyle: TextStyle(
+                    fontWeight: FontWeight.w400,
+                    color: colorScheme.onSurface,
+                    fontSize: 14,
+                  ),
+                  weekdayHeaderBackgroundColor: Colors.transparent,
+                  weekdayHeaderTextStyle: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                    color: colorScheme.onSurface.withAlpha(120),
+                    letterSpacing: 1.2,
+                  ),
+                  dateLabelPosition: DateLabelPosition.topCenter,
                 ),
-                // Non-today date styling
-                cellTextStyle: TextStyle(
-                  fontWeight: FontWeight.w400,
-                  color: colorScheme.onSurface,
-                  fontSize: 14,
-                ),
-                weekdayHeaderBackgroundColor: Colors.transparent,
-                weekdayHeaderTextStyle: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w400,
-                  color: colorScheme.onSurface.withAlpha(120),
-                  letterSpacing: 1.2,
-                ),
-                // Center date labels for minimal style
-                dateLabelPosition: DateLabelPosition.topCenter,
               ),
               child: MCalMonthView(
                 controller: eventController,
@@ -194,13 +193,13 @@ class MinimalMonthStyle extends StatelessWidget {
     // Get text style from theme
     final theme = MCalTheme.of(context);
     final textStyle = labelContext.isToday
-        ? (theme.todayTextStyle ??
+        ? (theme.monthTheme?.todayTextStyle ??
               TextStyle(
                 fontWeight: FontWeight.w800,
                 color: colorScheme.primary,
                 fontSize: 18,
               ))
-        : (theme.cellTextStyle ??
+        : (theme.monthTheme?.cellTextStyle ??
               TextStyle(
                 fontWeight: FontWeight.w400,
                 color: labelContext.isCurrentMonth

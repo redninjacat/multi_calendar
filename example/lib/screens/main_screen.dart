@@ -47,22 +47,22 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   List<ViewTypeInfo> _buildViewTypes(AppLocalizations l10n) => [
-        ViewTypeInfo(
-          name: l10n.monthView,
-          icon: _viewTypeIcons[0],
-          description: l10n.monthViewDescription,
-        ),
-        ViewTypeInfo(
-          name: l10n.dayView,
-          icon: _viewTypeIcons[1],
-          description: l10n.dayViewDescription,
-        ),
-        ViewTypeInfo(
-          name: l10n.comparisonView,
-          icon: _viewTypeIcons[2],
-          description: l10n.comparisonViewDescription,
-        ),
-      ];
+    ViewTypeInfo(
+      name: l10n.monthView,
+      icon: _viewTypeIcons[0],
+      description: l10n.monthViewDescription,
+    ),
+    ViewTypeInfo(
+      name: l10n.dayView,
+      icon: _viewTypeIcons[1],
+      description: l10n.dayViewDescription,
+    ),
+    ViewTypeInfo(
+      name: l10n.comparisonView,
+      icon: _viewTypeIcons[2],
+      description: l10n.comparisonViewDescription,
+    ),
+  ];
 
   PopupMenuItem<Locale> _buildLocaleMenuItem(
     Locale locale,
@@ -136,6 +136,11 @@ class _MainScreenState extends State<MainScreen> {
                 l10n.languageArabic,
                 colorScheme,
               ),
+              _buildLocaleMenuItem(
+                const Locale('he'),
+                l10n.languageHebrew,
+                colorScheme,
+              ),
             ],
           ),
         ],
@@ -161,9 +166,7 @@ class _MainScreenState extends State<MainScreen> {
                     .toList(),
               ),
             // Main content area
-            Expanded(
-              child: _buildViewTypeContent(),
-            ),
+            Expanded(child: _buildViewTypeContent()),
           ],
         ),
       ),
@@ -188,9 +191,7 @@ class _MainScreenState extends State<MainScreen> {
           isDarkMode: widget.isDarkMode,
         );
       default:
-        return Center(
-          child: Text(AppLocalizations.of(context)!.comingSoon),
-        );
+        return Center(child: Text(AppLocalizations.of(context)!.comingSoon));
     }
   }
 }

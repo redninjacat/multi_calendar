@@ -7,6 +7,13 @@
   "dayThursday": "Thursday",
   "dayFriday": "Friday",
   "daySaturday": "Saturday",
+  "daySundayShort": "Sun",
+  "dayMondayShort": "Mon",
+  "dayTuesdayShort": "Tue",
+  "dayWednesdayShort": "Wed",
+  "dayThursdayShort": "Thu",
+  "dayFridayShort": "Fri",
+  "daySaturdayShort": "Sat",
   "monthJanuary": "January",
   "monthFebruary": "February",
   "monthMarch": "March",
@@ -23,5 +30,41 @@
   "week": "Week",
   "month": "Month",
   "day": "Day",
-  "year": "Year"
+  "year": "Year",
+  "previousDay": "Previous day",
+  "nextDay": "Next day",
+  "previousMonth": "previous month",
+  "nextMonth": "next month",
+  "currentTime": "Current time: {time}",
+  "@currentTime": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "focused": "focused",
+  "selected": "selected",
+  "event": "event",
+  "events": "events",
+  "doubleTapToSelect": "Double tap to select",
+  "calendar": "Calendar",
+  "dropTargetPrefix": "Drop target",
+  "dropTargetDateRangeTo": "to",
+  "dropTargetValid": "valid",
+  "dropTargetInvalid": "invalid",
+  "multiDaySpanLabel": "{days}-day event, day {position} of {days}",
+  "@multiDaySpanLabel": {
+    "placeholders": {
+      "days": {},
+      "position": {}
+    }
+  },
+  "scheduleFor": "Schedule for {date}",
+  "@scheduleFor": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "timeGrid": "Time grid",
+  "doubleTapToCreateEvent": "Double tap to create event",
+  "allDay": "All day"
 }

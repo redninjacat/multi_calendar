@@ -55,43 +55,45 @@ class _ModernDayStyleState extends State<ModernDayStyle>
         Expanded(
           child: MCalTheme(
             data: MCalThemeData(
-              hourGridlineColor: colorScheme.outline.withValues(alpha: 0.15),
-              hourGridlineWidth: 1.0,
-              majorGridlineColor: colorScheme.outline.withValues(alpha: 0.1),
-              majorGridlineWidth: 1.0,
-              minorGridlineColor: colorScheme.outline.withValues(alpha: 0.05),
-              minorGridlineWidth: 0.5,
-              currentTimeIndicatorColor: colorScheme.primary,
-              currentTimeIndicatorWidth: 3.0,
-              currentTimeIndicatorDotRadius: 8.0,
-              timeLegendBackgroundColor: colorScheme.surface,
-              timeLegendTextStyle: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: colorScheme.onSurfaceVariant,
-              ),
               allDayEventBackgroundColor: colorScheme.primaryContainer,
               allDayEventTextStyle: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: colorScheme.onPrimaryContainer,
               ),
-              timedEventBorderRadius: 8.0,
-              timedEventPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 4,
-              ),
-              timedEventMinHeight: 28.0,
               ignoreEventColors: false,
-              dayHeaderDayOfWeekStyle: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              dayHeaderDateStyle: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
+              dayTheme: MCalDayThemeData(
+                hourGridlineColor: colorScheme.outline.withValues(alpha: 0.15),
+                hourGridlineWidth: 1.0,
+                majorGridlineColor: colorScheme.outline.withValues(alpha: 0.1),
+                majorGridlineWidth: 1.0,
+                minorGridlineColor: colorScheme.outline.withValues(alpha: 0.05),
+                minorGridlineWidth: 0.5,
+                currentTimeIndicatorColor: colorScheme.primary,
+                currentTimeIndicatorWidth: 3.0,
+                currentTimeIndicatorDotRadius: 8.0,
+                timeLegendBackgroundColor: colorScheme.surface,
+                timeLegendTextStyle: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                timedEventBorderRadius: 8.0,
+                timedEventPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                timedEventMinHeight: 28.0,
+                dayHeaderDayOfWeekStyle: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                dayHeaderDateStyle: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
               ),
             ),
             child: MCalDayView(

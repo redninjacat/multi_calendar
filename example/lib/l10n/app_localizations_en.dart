@@ -30,6 +30,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageArabic => 'Arabic (RTL)';
 
   @override
+  String get languageHebrew => 'Hebrew (RTL)';
+
+  @override
   String get monthView => 'Month View';
 
   @override
@@ -66,7 +69,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Bare bones, text-only design. Maximum whitespace, minimal gridlines, subtle colors. Clean and spacious.';
 
   @override
-  String get styleFeaturesDemo => 'Features Demo';
+  String get styleFeaturesDemo => 'Features';
 
   @override
   String get styleFeaturesDemoDescription =>

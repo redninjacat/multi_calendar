@@ -30,6 +30,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get languageArabic => 'العربية (من اليمين لليسار)';
 
   @override
+  String get languageHebrew => 'עברית (מימין לשמאל)';
+
+  @override
   String get monthView => 'عرض الشهر';
 
   @override
@@ -65,11 +68,11 @@ class AppLocalizationsAr extends AppLocalizations {
       'Bare bones, text-only design. Maximum whitespace, minimal gridlines, subtle colors. Clean and spacious.';
 
   @override
-  String get styleFeaturesDemo => 'Features Demo';
+  String get styleFeaturesDemo => 'الميزات';
 
   @override
   String get styleFeaturesDemoDescription =>
-      'Comprehensive showcase: special time regions (lunch, after-hours), blocked slots, drag-drop, resize, keyboard nav, snap-to-time. Try dropping events into blocked zones.';
+      'عرض شامل: مناطق زمنية خاصة (الغداء، بعد ساعات العمل)، فترات محظورة، السحب والإفلات، تغيير الحجم، التنقل بلوحة المفاتيح، المحاذاة مع الوقت. جرب إسقاط الأحداث في المناطق المحظورة.';
 
   @override
   String get styleDefaultDescription =>

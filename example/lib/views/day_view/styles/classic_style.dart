@@ -55,20 +55,6 @@ class _ClassicDayStyleState extends State<ClassicDayStyle>
         Expanded(
           child: MCalTheme(
             data: MCalThemeData(
-              hourGridlineColor: colorScheme.outline,
-              hourGridlineWidth: 1.0,
-              majorGridlineColor: colorScheme.outline.withValues(alpha: 0.5),
-              majorGridlineWidth: 1.0,
-              minorGridlineColor: colorScheme.outline.withValues(alpha: 0.25),
-              minorGridlineWidth: 0.5,
-              currentTimeIndicatorColor: colorScheme.primary,
-              currentTimeIndicatorWidth: 2.0,
-              timeLegendBackgroundColor: colorScheme.surfaceContainerHighest,
-              timeLegendTextStyle: TextStyle(
-                fontSize: 12,
-                fontFamily: 'serif',
-                color: colorScheme.onSurfaceVariant,
-              ),
               allDayEventBackgroundColor: colorScheme.primaryContainer,
               allDayEventTextStyle: TextStyle(
                 fontSize: 11,
@@ -77,12 +63,6 @@ class _ClassicDayStyleState extends State<ClassicDayStyle>
               ),
               allDayEventBorderColor: colorScheme.outlineVariant,
               allDayEventBorderWidth: 0.5,
-              timedEventBorderRadius: 0.0,
-              timedEventPadding: const EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 2,
-              ),
-              timedEventMinHeight: 24.0,
               ignoreEventColors: true,
               eventTileBackgroundColor: colorScheme.primaryContainer,
               eventTileTextStyle: TextStyle(
@@ -91,19 +71,39 @@ class _ClassicDayStyleState extends State<ClassicDayStyle>
                 color: colorScheme.onPrimaryContainer,
               ),
               eventTileCornerRadius: 0.0,
-              eventTileBorderColor: colorScheme.onPrimaryContainer,
-              eventTileBorderWidth: 0.5,
-              dayHeaderDayOfWeekStyle: TextStyle(
-                fontSize: 14,
-                fontFamily: 'serif',
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              dayHeaderDateStyle: TextStyle(
-                fontSize: 24,
-                fontFamily: 'serif',
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
+              dayTheme: MCalDayThemeData(
+                hourGridlineColor: colorScheme.outline,
+                hourGridlineWidth: 1.0,
+                majorGridlineColor: colorScheme.outline.withValues(alpha: 0.5),
+                majorGridlineWidth: 1.0,
+                minorGridlineColor: colorScheme.outline.withValues(alpha: 0.25),
+                minorGridlineWidth: 0.5,
+                currentTimeIndicatorColor: colorScheme.primary,
+                currentTimeIndicatorWidth: 2.0,
+                timeLegendBackgroundColor: colorScheme.surfaceContainerHighest,
+                timeLegendTextStyle: TextStyle(
+                  fontSize: 12,
+                  fontFamily: 'serif',
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                timedEventBorderRadius: 0.0,
+                timedEventPadding: const EdgeInsets.symmetric(
+                  horizontal: 4,
+                  vertical: 2,
+                ),
+                timedEventMinHeight: 24.0,
+                dayHeaderDayOfWeekStyle: TextStyle(
+                  fontSize: 14,
+                  fontFamily: 'serif',
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                dayHeaderDateStyle: TextStyle(
+                  fontSize: 24,
+                  fontFamily: 'serif',
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
               ),
             ),
             child: MCalDayView(

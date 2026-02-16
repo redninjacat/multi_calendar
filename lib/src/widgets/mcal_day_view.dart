@@ -3232,6 +3232,7 @@ class MCalDayViewState extends State<MCalDayView> {
               gridlineInterval: widget.gridlineInterval,
               displayDate: _displayDate,
               theme: _resolveTheme(context),
+              locale: locale,
               gridlineBuilder: widget.gridlineBuilder,
             ),
           )
@@ -3242,6 +3243,7 @@ class MCalDayViewState extends State<MCalDayView> {
             gridlineInterval: widget.gridlineInterval,
             displayDate: _displayDate,
             theme: _resolveTheme(context),
+            locale: locale,
             gridlineBuilder: widget.gridlineBuilder,
           );
     final mainContent = Stack(
@@ -3341,6 +3343,10 @@ class MCalDayViewState extends State<MCalDayView> {
     final dateStr = DateFormat.yMMMMEEEEd(
       locale.toString(),
     ).format(_displayDate);
+    final localizations = MCalLocalizations();
+    final scheduleLabel = localizations.getLocalizedString('scheduleFor', locale)
+        .replaceAll('{date}', dateStr);
+    final doubleTapHint = localizations.getLocalizedString('doubleTapToCreateEvent', locale);
     final gestureChild = hasEmptySlotCallbacks
         ? GestureDetector(
             key: const ValueKey('day_view_schedule'),
@@ -3355,8 +3361,8 @@ class MCalDayViewState extends State<MCalDayView> {
                 _lastDoubleTapDownPosition = details.localPosition,
             onDoubleTap: () => _handleTimeSlotDoubleTap(hourHeight),
             child: Semantics(
-              label: 'Schedule for $dateStr',
-              hint: 'Double tap to create event',
+              label: scheduleLabel,
+              hint: doubleTapHint,
               child: ColoredBox(
                 color: Colors.transparent,
                 child: stack,
@@ -3364,7 +3370,7 @@ class MCalDayViewState extends State<MCalDayView> {
             ),
           )
         : Semantics(
-            label: 'Schedule for $dateStr',
+            label: scheduleLabel,
             container: true,
             child: stack,
           );
@@ -3914,13 +3920,13 @@ class _DayNavigator extends StatelessWidget {
     return [
       // Previous day button
       Semantics(
-        label: 'Previous day',
+        label: localizations.getLocalizedString('previousDay', locale),
         button: true,
         enabled: canGoPrevious,
         child: IconButton(
           icon: const Icon(Icons.chevron_left),
           onPressed: canGoPrevious ? onPrevious : null,
-          tooltip: 'Previous day',
+          tooltip: localizations.getLocalizedString('previousDay', locale),
         ),
       ),
 
@@ -3956,13 +3962,13 @@ class _DayNavigator extends StatelessWidget {
 
       // Next day button
       Semantics(
-        label: 'Next day',
+        label: localizations.getLocalizedString('nextDay', locale),
         button: true,
         enabled: canGoNext,
         child: IconButton(
           icon: const Icon(Icons.chevron_right),
           onPressed: canGoNext ? onNext : null,
-          tooltip: 'Next day',
+          tooltip: localizations.getLocalizedString('nextDay', locale),
         ),
       ),
     ];
@@ -3978,13 +3984,13 @@ class _DayNavigator extends StatelessWidget {
     return [
       // Next day button (on left in RTL)
       Semantics(
-        label: 'Next day',
+        label: localizations.getLocalizedString('nextDay', locale),
         button: true,
         enabled: canGoNext,
         child: IconButton(
           icon: const Icon(Icons.chevron_left), // Left arrow for next in RTL
           onPressed: canGoNext ? onNext : null,
-          tooltip: 'Next day',
+          tooltip: localizations.getLocalizedString('nextDay', locale),
         ),
       ),
 
@@ -4020,7 +4026,7 @@ class _DayNavigator extends StatelessWidget {
 
       // Previous day button (on right in RTL)
       Semantics(
-        label: 'Previous day',
+        label: localizations.getLocalizedString('previousDay', locale),
         button: true,
         enabled: canGoPrevious,
         child: IconButton(
@@ -4028,7 +4034,7 @@ class _DayNavigator extends StatelessWidget {
             Icons.chevron_right,
           ), // Right arrow for previous in RTL
           onPressed: canGoPrevious ? onPrevious : null,
-          tooltip: 'Previous day',
+          tooltip: localizations.getLocalizedString('previousDay', locale),
         ),
       ),
     ];
@@ -4145,7 +4151,7 @@ class _DayHeader extends StatelessWidget {
             TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: theme.weekNumberTextColor ?? Colors.black54,
+              color: theme.dayTheme?.weekNumberTextColor ?? Colors.black54,
             ),
       ),
     );
@@ -4162,7 +4168,7 @@ class _DayHeader extends StatelessWidget {
         Text(
           dayOfWeek.toUpperCase(),
           style:
-              theme.dayHeaderDayOfWeekStyle ??
+              theme.dayTheme?.dayHeaderDayOfWeekStyle ??
               TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -4172,7 +4178,7 @@ class _DayHeader extends StatelessWidget {
         Text(
           dateNum.toString(),
           style:
-              theme.dayHeaderDateStyle ??
+              theme.dayTheme?.dayHeaderDateStyle ??
               TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -4263,13 +4269,38 @@ class _TimeLegendColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     final totalHours = endHour - startHour + 1;
     final columnHeight = hourHeight * totalHours;
+    final legendWidth = theme.dayTheme?.timeLegendWidth ?? 60.0;
+
+    // Check RTL for tick positioning
+    final localizations = MCalLocalizations();
+    final isRTL = localizations.isRTL(locale);
+
+    // Check if ticks should be shown
+    final showTicks = theme.dayTheme?.showTimeLegendTicks ?? true;
 
     return Container(
-      width: theme.timeLegendWidth ?? 60.0,
+      width: legendWidth,
       height: columnHeight,
-      color: theme.timeLegendBackgroundColor,
+      color: theme.dayTheme?.timeLegendBackgroundColor,
       child: Stack(
         children: [
+          // Tick marks layer (behind labels)
+          if (showTicks)
+            CustomPaint(
+              size: Size(legendWidth, columnHeight),
+              painter: _TimeLegendTickPainter(
+                startHour: startHour,
+                endHour: endHour,
+                hourHeight: hourHeight,
+                tickColor: theme.dayTheme?.timeLegendTickColor ??
+                    Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                tickWidth: theme.dayTheme?.timeLegendTickWidth ?? 1.0,
+                tickLength: theme.dayTheme?.timeLegendTickLength ?? 8.0,
+                isRTL: isRTL,
+                displayDate: displayDate,
+              ),
+            ),
+          // Hour labels layer
           for (int hour = startHour; hour <= endHour; hour++)
             Positioned(
               top: timeToOffset(
@@ -4335,7 +4366,7 @@ class _TimeLegendColumn extends StatelessWidget {
         child: Text(
           formattedTime,
           style:
-              theme.timeLegendTextStyle ??
+              theme.dayTheme?.timeLegendTextStyle ??
               TextStyle(fontSize: 12, color: Colors.grey[600]),
         ),
       );
@@ -4360,6 +4391,85 @@ class _TimeLegendColumn extends StatelessWidget {
   /// Check if the locale is English-speaking (uses 12-hour format).
   bool _isEnglishLocale(Locale locale) {
     return locale.languageCode == 'en';
+  }
+}
+
+/// Custom painter for drawing tick marks on the time legend.
+///
+/// Draws small horizontal lines at each hour boundary, extending from the
+/// appropriate edge of the legend column (right edge for LTR, left edge for RTL).
+class _TimeLegendTickPainter extends CustomPainter {
+  const _TimeLegendTickPainter({
+    required this.startHour,
+    required this.endHour,
+    required this.hourHeight,
+    required this.tickColor,
+    required this.tickWidth,
+    required this.tickLength,
+    required this.isRTL,
+    required this.displayDate,
+  });
+
+  final int startHour;
+  final int endHour;
+  final double hourHeight;
+  final Color tickColor;
+  final double tickWidth;
+  final double tickLength;
+  final bool isRTL;
+  final DateTime displayDate;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = tickColor
+      ..strokeWidth = tickWidth
+      ..style = PaintingStyle.stroke;
+
+    // Draw tick mark at each hour
+    for (int hour = startHour; hour <= endHour; hour++) {
+      final time = DateTime(
+        displayDate.year,
+        displayDate.month,
+        displayDate.day,
+        hour,
+        0,
+      );
+
+      final yOffset = timeToOffset(
+        time: time,
+        startHour: startHour,
+        hourHeight: hourHeight,
+      );
+
+      // Draw tick extending from the appropriate edge
+      if (isRTL) {
+        // RTL: tick extends from left edge
+        canvas.drawLine(
+          Offset(0, yOffset),
+          Offset(tickLength, yOffset),
+          paint,
+        );
+      } else {
+        // LTR: tick extends from right edge
+        canvas.drawLine(
+          Offset(size.width - tickLength, yOffset),
+          Offset(size.width, yOffset),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TimeLegendTickPainter oldDelegate) {
+    return startHour != oldDelegate.startHour ||
+        endHour != oldDelegate.endHour ||
+        hourHeight != oldDelegate.hourHeight ||
+        tickColor != oldDelegate.tickColor ||
+        tickWidth != oldDelegate.tickWidth ||
+        tickLength != oldDelegate.tickLength ||
+        isRTL != oldDelegate.isRTL;
   }
 }
 
@@ -4451,7 +4561,8 @@ class _CurrentTimeIndicatorState extends State<_CurrentTimeIndicator> {
     // Format time for semantic label
     final timeFormat = DateFormat('h:mm a', widget.locale.toString());
     final formattedTime = timeFormat.format(_currentTime);
-    final semanticLabel = 'Current time: $formattedTime';
+    final semanticLabel = localizations.getLocalizedString('currentTime', widget.locale)
+        .replaceAll('{time}', formattedTime);
 
     // Use custom builder if provided
     if (widget.builder != null) {
@@ -4468,9 +4579,9 @@ class _CurrentTimeIndicatorState extends State<_CurrentTimeIndicator> {
     }
 
     // Default indicator: horizontal line with leading dot
-    final indicatorColor = widget.theme.currentTimeIndicatorColor ?? Colors.red;
-    final indicatorWidth = widget.theme.currentTimeIndicatorWidth ?? 2.0;
-    final dotRadius = widget.theme.currentTimeIndicatorDotRadius ?? 6.0;
+    final indicatorColor = widget.theme.dayTheme?.currentTimeIndicatorColor ?? Colors.red;
+    final indicatorWidth = widget.theme.dayTheme?.currentTimeIndicatorWidth ?? 2.0;
+    final dotRadius = widget.theme.dayTheme?.currentTimeIndicatorDotRadius ?? 6.0;
 
     return Positioned(
       top: offset,
@@ -4685,18 +4796,18 @@ class _TimeRegionsLayer extends StatelessWidget {
           color:
               region.color ??
               (region.blockInteraction
-                  ? theme.blockedTimeRegionColor
-                  : theme.specialTimeRegionColor),
+                  ? theme.dayTheme?.blockedTimeRegionColor
+                  : theme.dayTheme?.specialTimeRegionColor),
           border: Border(
             top: BorderSide(
               color:
-                  theme.timeRegionBorderColor ??
+                  theme.dayTheme?.timeRegionBorderColor ??
                   Colors.grey.withValues(alpha: 0.3),
               width: 1,
             ),
             bottom: BorderSide(
               color:
-                  theme.timeRegionBorderColor ??
+                  theme.dayTheme?.timeRegionBorderColor ??
                   Colors.grey.withValues(alpha: 0.3),
               width: 1,
             ),
@@ -4711,7 +4822,7 @@ class _TimeRegionsLayer extends StatelessWidget {
                       Icon(
                         region.icon,
                         size: 16,
-                        color: theme.timeRegionTextColor ?? Colors.black54,
+                        color: theme.dayTheme?.timeRegionTextColor ?? Colors.black54,
                       ),
                       if (region.text != null) const SizedBox(width: 4),
                     ],
@@ -4719,11 +4830,11 @@ class _TimeRegionsLayer extends StatelessWidget {
                       Text(
                         region.text!,
                         style:
-                            theme.timeRegionTextStyle ??
+                            theme.dayTheme?.timeRegionTextStyle ??
                             TextStyle(
                               fontSize: 12,
                               color:
-                                  theme.timeRegionTextColor ?? Colors.black54,
+                                  theme.dayTheme?.timeRegionTextColor ?? Colors.black54,
                             ),
                       ),
                   ],
@@ -4767,6 +4878,7 @@ class _GridlinesLayer extends StatelessWidget {
     required this.gridlineInterval,
     required this.displayDate,
     required this.theme,
+    required this.locale,
     this.gridlineBuilder,
   });
 
@@ -4776,6 +4888,7 @@ class _GridlinesLayer extends StatelessWidget {
   final Duration gridlineInterval;
   final DateTime displayDate;
   final MCalThemeData theme;
+  final Locale locale;
   final Widget Function(BuildContext, MCalGridlineContext)? gridlineBuilder;
 
   @override
@@ -4787,9 +4900,11 @@ class _GridlinesLayer extends StatelessWidget {
 
     // Default: Use CustomPainter for performance
     // Wrap in Semantics for accessibility (optional, design: can be noisy if per-line)
+    final localizations = MCalLocalizations();
+    final timeGridLabel = localizations.getLocalizedString('timeGrid', locale);
     return Semantics(
       container: true,
-      label: 'Time grid',
+      label: timeGridLabel,
       child: CustomPaint(
         painter: _GridlinesPainter(
           startHour: startHour,
@@ -4798,14 +4913,14 @@ class _GridlinesLayer extends StatelessWidget {
           gridlineInterval: gridlineInterval,
           displayDate: displayDate,
           hourGridlineColor:
-              theme.hourGridlineColor ?? Colors.grey.withValues(alpha: 0.2),
-          hourGridlineWidth: theme.hourGridlineWidth ?? 1.0,
+              theme.dayTheme?.hourGridlineColor ?? Colors.grey.withValues(alpha: 0.2),
+          hourGridlineWidth: theme.dayTheme?.hourGridlineWidth ?? 1.0,
           majorGridlineColor:
-              theme.majorGridlineColor ?? Colors.grey.withValues(alpha: 0.15),
-          majorGridlineWidth: theme.majorGridlineWidth ?? 1.0,
+              theme.dayTheme?.majorGridlineColor ?? Colors.grey.withValues(alpha: 0.15),
+          majorGridlineWidth: theme.dayTheme?.majorGridlineWidth ?? 1.0,
           minorGridlineColor:
-              theme.minorGridlineColor ?? Colors.grey.withValues(alpha: 0.08),
-          minorGridlineWidth: theme.minorGridlineWidth ?? 0.5,
+              theme.dayTheme?.minorGridlineColor ?? Colors.grey.withValues(alpha: 0.08),
+          minorGridlineWidth: theme.dayTheme?.minorGridlineWidth ?? 0.5,
         ),
         child:
             const SizedBox.expand(), // Fill available space so painter receives correct size
@@ -4962,11 +5077,11 @@ class _AllDayEventsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Calculate how many events can be shown (similar to Month View overflow pattern)
-    final effectiveMaxRows = theme.allDaySectionMaxRows ?? maxRows;
+    final effectiveMaxRows = theme.dayTheme?.allDaySectionMaxRows ?? maxRows;
 
     // Estimate how many events fit per row
     final screenWidth = MediaQuery.of(context).size.width;
-    final timeLegendWidth = theme.timeLegendWidth ?? 60.0;
+    final timeLegendWidth = theme.dayTheme?.timeLegendWidth ?? 60.0;
     final availableWidth = screenWidth - timeLegendWidth;
     final estimatedTilesPerRow = (availableWidth / 120).floor().clamp(1, 99);
     final maxVisibleEvents = effectiveMaxRows * estimatedTilesPerRow;
@@ -5002,7 +5117,7 @@ class _AllDayEventsSection extends StatelessWidget {
                 child: Text(
                   'All-day',
                   style:
-                      theme.timeLegendTextStyle ??
+                      theme.dayTheme?.timeLegendTextStyle ??
                       TextStyle(
                         fontSize: 11,
                         color: Colors.grey[600],
@@ -5472,7 +5587,7 @@ class _TimedEventsLayer extends StatelessWidget {
     );
 
     // Apply minimum height from theme
-    final minHeight = theme.timedEventMinHeight ?? 20.0;
+    final minHeight = theme.dayTheme?.timedEventMinHeight ?? 20.0;
     final height = rawHeight < minHeight ? minHeight : rawHeight;
 
     // Calculate horizontal position and width
@@ -5577,7 +5692,7 @@ class _TimedEventsLayer extends StatelessWidget {
   /// Returns true if the event duration meets the minimum for showing resize handles.
   bool _shouldShowResizeHandles(MCalCalendarEvent event) {
     final duration = event.end.difference(event.start);
-    final minMinutes = theme.minResizeDurationMinutes ?? 15;
+    final minMinutes = theme.dayTheme?.minResizeDurationMinutes ?? 15;
     return duration.inMinutes >= minMinutes;
   }
 
@@ -5589,7 +5704,7 @@ class _TimedEventsLayer extends StatelessWidget {
     double width,
     double height,
   ) {
-    final handleSize = theme.resizeHandleSize ?? 8.0;
+    final handleSize = theme.dayTheme?.resizeHandleSize ?? 8.0;
     final children = <Widget>[Positioned.fill(child: tile)];
 
     children.add(
@@ -5674,7 +5789,7 @@ class _TimedEventsLayer extends StatelessWidget {
         decoration: BoxDecoration(
           color: tileColor.withValues(alpha: 0.85),
           borderRadius: BorderRadius.circular(
-            theme.eventTileCornerRadius ?? 4.0,
+            theme.dayTheme?.timedEventBorderRadius ?? theme.eventTileCornerRadius ?? 4.0,
           ),
           border: Border.all(color: tileColor, width: 1.0),
         ),
