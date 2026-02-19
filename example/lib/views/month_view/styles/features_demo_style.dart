@@ -437,7 +437,11 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   // ── Add Recurring Event ────────────────────────────────────────────────
 
   Future<void> _onAddRecurringEvent(BuildContext context) async {
-    final rule = await RecurrenceEditorDialog.show(context);
+    final controllerDay = _sharedController.resolvedFirstDayOfWeek;
+    final rule = await RecurrenceEditorDialog.show(
+      context,
+      defaultWeekStart: controllerDay == 0 ? DateTime.sunday : controllerDay,
+    );
     if (rule == null || !mounted) return;
 
     final now = DateTime.now();
@@ -880,10 +884,13 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
                                   child: OutlinedButton.icon(
                                     onPressed: () async {
                                       final newRule =
-                                          await RecurrenceEditorDialog.show(
-                                            ctx,
-                                            existing: currentRule,
-                                          );
+                          await RecurrenceEditorDialog.show(
+                            ctx,
+                            existing: currentRule,
+                            defaultWeekStart: _sharedController.resolvedFirstDayOfWeek == 0
+                                ? DateTime.sunday
+                                : _sharedController.resolvedFirstDayOfWeek,
+                          );
                                       if (newRule != null) {
                                         setDialogState(
                                           () => currentRule = newRule,

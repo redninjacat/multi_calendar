@@ -17,21 +17,39 @@ import '../../l10n/app_localizations.dart';
 /// if (rule != null) { /* use the rule */ }
 /// ```
 class RecurrenceEditorDialog extends StatefulWidget {
-  const RecurrenceEditorDialog({super.key, this.existing});
+  const RecurrenceEditorDialog({
+    super.key,
+    this.existing,
+    this.defaultWeekStart = DateTime.monday,
+  });
 
   /// An existing rule to edit. When `null`, the editor starts with defaults
   /// for creating a new rule.
   final MCalRecurrenceRule? existing;
+
+  /// The default first day of the week to use when no existing rule is being
+  /// edited, or when an existing rule has no explicit [MCalRecurrenceRule.weekStart].
+  ///
+  /// Should be sourced from [MCalEventController.resolvedFirstDayOfWeek]
+  /// (converted to the [DateTime.monday]–[DateTime.sunday] 1–7 range via
+  /// `controller.resolvedFirstDayOfWeek == 0 ? DateTime.sunday : controller.resolvedFirstDayOfWeek`).
+  ///
+  /// Defaults to [DateTime.monday] when not provided.
+  final int defaultWeekStart;
 
   /// Shows the dialog and returns the user's configured [MCalRecurrenceRule],
   /// or `null` if cancelled.
   static Future<MCalRecurrenceRule?> show(
     BuildContext context, {
     MCalRecurrenceRule? existing,
+    int defaultWeekStart = DateTime.monday,
   }) {
     return showDialog<MCalRecurrenceRule>(
       context: context,
-      builder: (_) => RecurrenceEditorDialog(existing: existing),
+      builder: (_) => RecurrenceEditorDialog(
+        existing: existing,
+        defaultWeekStart: defaultWeekStart,
+      ),
     );
   }
 
@@ -46,7 +64,7 @@ class _RecurrenceEditorDialogState extends State<RecurrenceEditorDialog> {
   // ── Core fields ──────────────────────────────────────────────────────────
   MCalFrequency _frequency = MCalFrequency.weekly;
   late TextEditingController _intervalController;
-  int _weekStart = DateTime.monday;
+  late int _weekStart;
 
   // ── Day-of-week (weekly) ─────────────────────────────────────────────────
   final Set<int> _selectedWeekDays = {};
@@ -71,13 +89,14 @@ class _RecurrenceEditorDialogState extends State<RecurrenceEditorDialog> {
   @override
   void initState() {
     super.initState();
+    _weekStart = widget.defaultWeekStart;
     final rule = widget.existing;
 
     if (rule != null) {
       _frequency = rule.frequency;
       _intervalController =
           TextEditingController(text: rule.interval.toString());
-      _weekStart = rule.weekStart;
+      _weekStart = rule.weekStart ?? widget.defaultWeekStart;
 
       // Week days
       if (rule.byWeekDays != null) {

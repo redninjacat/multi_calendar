@@ -173,10 +173,19 @@ class MCalRecurrenceRule {
   /// Only valid with [MCalFrequency.yearly] per RFC 5545.
   final List<int>? byWeekNumbers;
 
-  /// The day that starts the week. Defaults to [DateTime.monday].
+  /// The day that starts the week.
+  ///
+  /// When `null` (the default), the enclosing controller's
+  /// [MCalEventController.firstDayOfWeek] is used as the fallback during
+  /// recurrence expansion, keeping the visual layout and the recurrence week
+  /// boundary consistent without any extra configuration.
+  ///
+  /// When set explicitly, this value overrides the controller's setting for
+  /// this rule only, which is useful when importing events from external
+  /// sources (e.g. CalDAV feeds) that carry their own `WKST` parameter.
   ///
   /// Uses [DateTime.monday] (1) through [DateTime.sunday] (7).
-  final int weekStart;
+  final int? weekStart;
 
   /// Creates a new [MCalRecurrenceRule].
   ///
@@ -193,7 +202,7 @@ class MCalRecurrenceRule {
     this.bySetPositions,
     this.byYearDays,
     this.byWeekNumbers,
-    this.weekStart = DateTime.monday,
+    this.weekStart,
   }) {
     if (count != null && until != null) {
       throw ArgumentError(
@@ -311,8 +320,9 @@ class MCalRecurrenceRule {
     required DateTime start,
     required DateTime after,
     required DateTime before,
+    int fallbackWeekStart = DateTime.monday,
   }) {
-    final tenoRule = _toTenoRrule(start);
+    final tenoRule = _toTenoRrule(start, fallbackWeekStart);
     return tenoRule.between(after, before);
   }
 
@@ -327,7 +337,10 @@ class MCalRecurrenceRule {
   /// * **YEARLY** — when [byMonths], [byMonthDays], and [byWeekDays] are null,
   ///   defaults to DTSTART's month and day so that yearly events land on the
   ///   same date.
-  teno_rrule.RecurrenceRule _toTenoRrule(DateTime dtStart) {
+  teno_rrule.RecurrenceRule _toTenoRrule(
+    DateTime dtStart, [
+    int fallbackWeekStart = DateTime.monday,
+  ]) {
     // RFC 5545 §3.3.10: When BYMONTHDAY is absent for MONTHLY, default to
     // DTSTART's day-of-month — but only when BYDAY is also absent. When
     // BYDAY is set (e.g. "first Friday"), the weekday rule defines which
@@ -370,7 +383,7 @@ class MCalRecurrenceRule {
       bySetPositions: bySetPositions?.toSet(),
       byYearDays: byYearDays?.toSet(),
       byWeeks: byWeekNumbers?.toSet(),
-      weekStart: weekStart,
+      weekStart: weekStart ?? fallbackWeekStart,
     );
   }
 
@@ -389,7 +402,7 @@ class MCalRecurrenceRule {
       bySetPositions: rule.bySetPositions?.toList(),
       byYearDays: rule.byYearDays?.toList(),
       byWeekNumbers: rule.byWeeks?.toList(),
-      weekStart: rule.weekStart ?? DateTime.monday,
+      weekStart: rule.weekStart,
     );
   }
 

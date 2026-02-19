@@ -155,10 +155,12 @@ class MCalEventController extends ChangeNotifier {
   /// - 5 = Friday
   /// - 6 = Saturday
   ///
-  /// **Important:** This parameter is for visual layout only (determining which
-  /// day appears in the leftmost column of week rows). It does NOT affect
-  /// recurrence expansion — recurring rules use their own per-rule `weekStart`
-  /// parameter (defined in [MCalRecurrenceRule]) for RFC 5545 compliance.
+  /// This parameter affects both visual layout (which day appears in the
+  /// leftmost column of week rows) and recurrence expansion: it is used as the
+  /// fallback `WKST` when expanding any [MCalRecurrenceRule] whose
+  /// [MCalRecurrenceRule.weekStart] is `null`. A rule that carries an explicit
+  /// `weekStart` (e.g. imported from a CalDAV feed with a `WKST` component)
+  /// will use that value instead.
   ///
   /// When null, defaults to [DateTime.monday] (ISO 8601 standard).
   final int? firstDayOfWeek;
@@ -168,9 +170,10 @@ class MCalEventController extends ChangeNotifier {
   /// [initialDate] sets the initially displayed date. Defaults to today if not provided.
   /// The view will display the month containing this date.
   ///
-  /// [firstDayOfWeek] sets the first day of the week for visual layout (0=Sunday..6=Saturday).
-  /// Defaults to Monday (ISO 8601) if not provided. This does NOT affect recurrence
-  /// expansion — recurring rules use their own `weekStart` parameter.
+  /// [firstDayOfWeek] sets the first day of the week (0=Sunday..6=Saturday).
+  /// Defaults to Monday (ISO 8601) if not provided. Affects both visual layout
+  /// and recurrence expansion: used as the fallback `WKST` when a rule's own
+  /// [MCalRecurrenceRule.weekStart] is null.
   MCalEventController({DateTime? initialDate, this.firstDayOfWeek})
     : _displayDate = initialDate ?? DateTime.now();
 
@@ -219,14 +222,27 @@ class MCalEventController extends ChangeNotifier {
   /// future recurrence mutation methods.
   MCalEventChangeInfo? get lastChange => _lastChange;
 
-  /// The resolved first day of the week for visual calendar layout.
+  /// The resolved first day of the week for visual calendar layout and
+  /// recurrence expansion.
   ///
   /// Returns [firstDayOfWeek] if set, otherwise defaults to [DateTime.monday] (1).
   ///
-  /// This value determines which day appears in the leftmost column of calendar
-  /// week rows. It does NOT affect recurrence expansion — recurring rules use
-  /// their own per-rule `weekStart` parameter for RFC 5545 compliance.
+  /// This value:
+  /// - Determines which day appears in the leftmost column of calendar week rows.
+  /// - Acts as the fallback `WKST` when expanding recurrence rules whose
+  ///   [MCalRecurrenceRule.weekStart] is `null` (i.e. no explicit `WKST` was
+  ///   set on the rule). When a rule has an explicit `weekStart`, that value
+  ///   takes precedence over this one.
   int get resolvedFirstDayOfWeek => firstDayOfWeek ?? DateTime.monday;
+
+  /// Converts the controller's [firstDayOfWeek] convention (0 = Sunday … 6 = Saturday)
+  /// to the [MCalRecurrenceRule.weekStart] convention ([DateTime.monday] = 1 …
+  /// [DateTime.sunday] = 7).
+  ///
+  /// The only difference is Sunday: the controller stores it as 0, while
+  /// [DateTime.sunday] is 7.
+  static int _toRuleWeekStart(int controllerDay) =>
+      controllerDay == 0 ? DateTime.sunday : controllerDay;
 
   // ============================================================
   // Task 1: Display and Focus Date Methods
@@ -738,6 +754,7 @@ class MCalEventController extends ChangeNotifier {
       start: optimizedStart,
       after: paddedAfter,
       before: range.end,
+      fallbackWeekStart: _toRuleWeekStart(resolvedFirstDayOfWeek),
     );
 
     final exceptions = _exceptionsBySeriesId[master.id] ?? {};

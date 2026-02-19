@@ -137,7 +137,7 @@ void main() {
       expect(rule.byMonthDays, isNull);
       expect(rule.byMonths, isNull);
       expect(rule.bySetPositions, isNull);
-      expect(rule.weekStart, DateTime.monday);
+      expect(rule.weekStart, isNull);
     });
 
     test('construction with all fields', () {
