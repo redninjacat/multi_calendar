@@ -446,6 +446,18 @@ abstract class AppLocalizations {
   /// **'Show Week Number'**
   String get settingShowWeekNumber;
 
+  /// No description provided for @settingShowSubHourLabels.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Sub-Hour Labels'**
+  String get settingShowSubHourLabels;
+
+  /// No description provided for @settingSubHourLabelInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-Hour Label Interval'**
+  String get settingSubHourLabelInterval;
+
   /// No description provided for @settingMaxVisibleEventsPerDay.
   ///
   /// In en, this message translates to:
@@ -967,6 +979,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Stress Test'**
   String get styleStressTest;
+
+  /// No description provided for @featureSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Feature Settings'**
+  String get featureSettings;
+
+  /// No description provided for @testSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Test Settings'**
+  String get testSettings;
+
+  /// No description provided for @accessibilitySettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Accessibility Settings'**
+  String get accessibilitySettings;
 
   /// No description provided for @styleAccessibility.
   ///
@@ -1555,6 +1585,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Month View Keyboard Shortcuts'**
   String get accessibilityMonthKeyboardShortcuts;
+
+  /// No description provided for @accessibilityMonthKeyboardNavInstructionsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Tab or click to focus the calendar, then use arrow keys to navigate between cells. Press Enter or Space to select a cell. Tab to cycle through events within a cell. With an event focused, press Enter to enter move mode and use arrow keys to move it to a target cell, then Enter to confirm or Escape to cancel. Press R to enter resize mode, S/E to choose the start or end edge, then arrow keys to resize.'**
+  String get accessibilityMonthKeyboardNavInstructionsDetail;
 
   /// No description provided for @accessibilityMonthShortcutArrows.
   ///

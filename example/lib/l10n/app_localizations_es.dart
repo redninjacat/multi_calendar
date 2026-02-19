@@ -183,6 +183,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingShowWeekNumber => 'Mostrar Número de Semana';
 
   @override
+  String get settingShowSubHourLabels => 'Mostrar Etiquetas de Sub-Hora';
+
+  @override
+  String get settingSubHourLabelInterval =>
+      'Intervalo de Etiquetas de Sub-Hora';
+
+  @override
   String get settingMaxVisibleEventsPerDay =>
       'Máximo de Eventos Visibles por Día';
 
@@ -477,6 +484,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get styleStressTest => 'Prueba de Estrés';
+
+  @override
+  String get featureSettings => 'Configuración de Características';
+
+  @override
+  String get testSettings => 'Configuración de Prueba';
+
+  @override
+  String get accessibilitySettings => 'Configuración de Accesibilidad';
 
   @override
   String get styleAccessibility => 'Accesibilidad';
@@ -810,6 +826,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get accessibilityMonthKeyboardShortcuts =>
       'Atajos de Teclado de Vista Mensual';
+
+  @override
+  String get accessibilityMonthKeyboardNavInstructionsDetail =>
+      'Tab o clic para enfocar el calendario, luego use las teclas de flecha para navegar entre celdas. Presione Entrar o Espacio para seleccionar una celda. Tab para recorrer eventos en una celda. Con un evento enfocado, presione Entrar para entrar al modo de mover y use las flechas para moverlo, luego Entrar para confirmar o Escape para cancelar. Presione R para el modo de redimensionar, S/E para elegir el borde inicial o final, luego las teclas de flecha para redimensionar.';
 
   @override
   String get accessibilityMonthShortcutArrows =>

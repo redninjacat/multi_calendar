@@ -1,6 +1,82 @@
 import '../models/mcal_calendar_event.dart';
 import '../models/mcal_time_region.dart';
 
+/// Position of time labels relative to hour gridlines in Day View.
+///
+/// Defines the 8 possible positions for time labels, combining:
+/// - **Horizontal alignment** (leading/trailing):
+///   - "Leading" = left edge in LTR layouts, right edge in RTL layouts
+///   - "Trailing" = right edge in LTR layouts, left edge in RTL layouts
+/// - **Vertical reference** (top/bottom):
+///   - "Top" = positioned relative to the hour start gridline
+///   - "Bottom" = positioned relative to the hour end gridline
+/// - **Vertical alignment** (above/centered/below):
+///   - "Above" = label bottom edge aligns with gridline
+///   - "Centered" = label center aligns with gridline
+///   - "Below" = label top edge aligns with gridline
+///
+/// The default position is [topTrailingBelow], which places labels in the
+/// top-right corner of each hour slot in LTR layouts (top-left in RTL).
+///
+/// Example:
+/// ```dart
+/// MCalDayView(
+///   theme: MCalDayThemeData(
+///     timeLabelPosition: MCalTimeLabelPosition.topLeadingCentered,
+///   ),
+///   // Labels will appear on the left (LTR) / right (RTL), centered on hour lines
+/// )
+/// ```
+enum MCalTimeLabelPosition {
+  /// Label at hour start gridline, leading edge, bottom aligns with gridline.
+  ///
+  /// In LTR: top-left corner, label hangs above the hour start line.
+  /// In RTL: top-right corner, label hangs above the hour start line.
+  topLeadingAbove,
+
+  /// Label at hour start gridline, leading edge, center aligns with gridline.
+  ///
+  /// In LTR: left edge, label center on the hour start line.
+  /// In RTL: right edge, label center on the hour start line.
+  topLeadingCentered,
+
+  /// Label at hour start gridline, leading edge, top aligns with gridline.
+  ///
+  /// In LTR: top-left corner, label starts at the hour start line.
+  /// In RTL: top-right corner, label starts at the hour start line.
+  topLeadingBelow,
+
+  /// Label at hour start gridline, trailing edge, bottom aligns with gridline.
+  ///
+  /// In LTR: top-right corner, label hangs above the hour start line.
+  /// In RTL: top-left corner, label hangs above the hour start line.
+  topTrailingAbove,
+
+  /// Label at hour start gridline, trailing edge, center aligns with gridline.
+  ///
+  /// In LTR: right edge, label center on the hour start line.
+  /// In RTL: left edge, label center on the hour start line.
+  topTrailingCentered,
+
+  /// Label at hour start gridline, trailing edge, top aligns with gridline.
+  ///
+  /// In LTR: top-right corner, label starts at the hour start line (default).
+  /// In RTL: top-left corner, label starts at the hour start line (default).
+  topTrailingBelow,
+
+  /// Label at hour end gridline, leading edge, bottom aligns with gridline.
+  ///
+  /// In LTR: bottom-left corner, label ends at the hour end line.
+  /// In RTL: bottom-right corner, label ends at the hour end line.
+  bottomLeadingAbove,
+
+  /// Label at hour end gridline, trailing edge, bottom aligns with gridline.
+  ///
+  /// In LTR: bottom-right corner, label ends at the hour end line.
+  /// In RTL: bottom-left corner, label ends at the hour end line.
+  bottomTrailingAbove,
+}
+
 /// Type of gridline being rendered in Day View.
 ///
 /// Used by [MCalGridlineContext] to distinguish between hour boundaries,
@@ -59,7 +135,7 @@ class MCalDayHeaderContext {
   /// The ISO 8601 week number (1-53) for this date.
   ///
   /// This field is optional and may be null if week numbers are not
-  /// being displayed (`showWeekNumber: false`).
+  /// being displayed (`showWeekNumbers: false`).
   final int? weekNumber;
 
   /// Creates a new [MCalDayHeaderContext] instance.

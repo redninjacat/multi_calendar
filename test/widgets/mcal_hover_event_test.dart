@@ -39,8 +39,8 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                onHoverEvent: (ctx) {
-                  hoverContext = ctx;
+                onHoverEvent: (context, tileContext) {
+                  hoverContext = tileContext;
                 },
               ),
             ),
@@ -74,8 +74,8 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                onHoverEvent: (ctx) {
-                  hoverContext = ctx;
+                onHoverEvent: (context, tileContext) {
+                  hoverContext = tileContext;
                 },
               ),
             ),
@@ -128,8 +128,8 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                onHoverEvent: (ctx) {
-                  hoverValues.add(ctx);
+                onHoverEvent: (context, tileContext) {
+                  hoverValues.add(tileContext);
                 },
               ),
             ),
@@ -185,8 +185,8 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                onHoverEvent: (ctx) {
-                  hoverContext = ctx;
+                onHoverEvent: (context, tileContext) {
+                  hoverContext = tileContext;
                 },
               ),
             ),
@@ -233,8 +233,8 @@ void main() {
               child: MCalMonthView(
                 controller: controller,
                 enableDragToMove: true,
-                onHoverEvent: (ctx) {
-                  hoverContext = ctx;
+                onHoverEvent: (context, tileContext) {
+                  hoverContext = tileContext;
                 },
               ),
             ),
@@ -325,8 +325,8 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                onHoverEvent: (ctx) {
-                  hoverContext = ctx;
+                onHoverEvent: (context, tileContext) {
+                  hoverContext = tileContext;
                 },
               ),
             ),
@@ -387,8 +387,8 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                onHoverEvent: (ctx) {
-                  hoverIds.add(ctx?.event.id);
+                onHoverEvent: (context, tileContext) {
+                  hoverIds.add(tileContext?.event.id);
                 },
               ),
             ),
@@ -434,8 +434,8 @@ void main() {
         defaultBuilder: (context, tileContext) {
           return const SizedBox(width: 100, height: 20, key: Key('tile'));
         },
-        onHoverEvent: (ctx) {
-          receivedContext = ctx;
+        onHoverEvent: (context, tileContext) {
+          receivedContext = tileContext;
         },
         dayWidth: 100,
       );
@@ -546,8 +546,8 @@ void main() {
         defaultBuilder: (context, tileContext) {
           return const SizedBox(width: 100, height: 20, key: Key('exit-tile'));
         },
-        onHoverEvent: (ctx) {
-          hoverValues.add(ctx);
+        onHoverEvent: (context, tileContext) {
+          hoverValues.add(tileContext);
         },
         dayWidth: 100,
       );
@@ -611,8 +611,8 @@ void main() {
             key: Key('drag-hover-tile'),
           );
         },
-        onHoverEvent: (ctx) {
-          hoverContext = ctx;
+        onHoverEvent: (context, tileContext) {
+          hoverContext = tileContext;
         },
         enableDragToMove: true,
         dayWidth: 100,
@@ -691,8 +691,8 @@ void main() {
         defaultBuilder: (context, tileContext) {
           return const SizedBox(width: 100, height: 20, key: Key('rec-tile'));
         },
-        onHoverEvent: (ctx) {
-          hoverContext = ctx;
+        onHoverEvent: (context, tileContext) {
+          hoverContext = tileContext;
         },
         controller: testController,
         dayWidth: 100,
@@ -752,8 +752,8 @@ void main() {
             key: Key('nonrec-tile'),
           );
         },
-        onHoverEvent: (ctx) {
-          hoverContext = ctx;
+        onHoverEvent: (context, tileContext) {
+          hoverContext = tileContext;
         },
         dayWidth: 100,
       );

@@ -32,9 +32,9 @@ void main() {
     Widget buildDayView({
       required MockMCalEventController ctrl,
       bool enableDragToMove = true,
-      void Function(MCalEventDroppedDetails)? onEventDropped,
+      bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped,
       bool Function(MCalEventDroppedDetails)? onDragWillAccept,
-      bool showDropTargetPreview = true,
+      bool showDropTargetTiles = true,
       bool showDropTargetOverlay = true,
     }) {
       return MaterialApp(
@@ -46,7 +46,7 @@ void main() {
               enableDragToMove: enableDragToMove,
               onEventDropped: onEventDropped,
               onDragWillAccept: onDragWillAccept,
-              showDropTargetPreview: showDropTargetPreview,
+              showDropTargetTiles: showDropTargetTiles,
               showDropTargetOverlay: showDropTargetOverlay,
               dragLongPressDelay: const Duration(milliseconds: 150),
               showCurrentTimeIndicator: false,
@@ -137,7 +137,10 @@ void main() {
       await tester.pumpWidget(
         buildDayView(
           ctrl: controller,
-          onEventDropped: (d) => capturedDetails = d,
+          onEventDropped: (_, d) {
+            capturedDetails = d;
+            return true;
+          },
         ),
       );
       await tester.pumpAndSettle();
@@ -181,7 +184,10 @@ void main() {
       await tester.pumpWidget(
         buildDayView(
           ctrl: controller,
-          onEventDropped: (d) => capturedDetails = d,
+          onEventDropped: (_, d) {
+            capturedDetails = d;
+            return true;
+          },
         ),
       );
       await tester.pumpAndSettle();
@@ -221,7 +227,10 @@ void main() {
       await tester.pumpWidget(
         buildDayView(
           ctrl: controller,
-          onEventDropped: (_) => dropCalled = true,
+          onEventDropped: (_, __) {
+            dropCalled = true;
+            return true;
+          },
         ),
       );
       await tester.pumpAndSettle();
@@ -275,7 +284,10 @@ void main() {
       await tester.pumpWidget(
         buildDayView(
           ctrl: controller,
-          onEventDropped: (d) => capturedDetails = d,
+          onEventDropped: (_, d) {
+            capturedDetails = d;
+            return true;
+          },
         ),
       );
       await tester.pumpAndSettle();
@@ -317,7 +329,10 @@ void main() {
       await tester.pumpWidget(
         buildDayView(
           ctrl: controller,
-          onEventDropped: (d) => capturedDetails = d,
+          onEventDropped: (_, d) {
+            capturedDetails = d;
+            return true;
+          },
         ),
       );
       await tester.pumpAndSettle();
@@ -358,7 +373,10 @@ void main() {
       await tester.pumpWidget(
         buildDayView(
           ctrl: controller,
-          onEventDropped: (_) => dropCalled = true,
+          onEventDropped: (_, __) {
+            dropCalled = true;
+            return true;
+          },
           onDragWillAccept: (_) => false,
         ),
       );
@@ -388,7 +406,10 @@ void main() {
       await tester.pumpWidget(
         buildDayView(
           ctrl: controller,
-          onEventDropped: (d) => capturedDetails = d,
+          onEventDropped: (_, d) {
+            capturedDetails = d;
+            return true;
+          },
           onDragWillAccept: (_) => true,
         ),
       );
@@ -421,7 +442,7 @@ void main() {
       controller.setMockEvents([event]);
 
       await tester.pumpWidget(
-        buildDayView(ctrl: controller, showDropTargetPreview: true),
+        buildDayView(ctrl: controller, showDropTargetTiles: true),
       );
       await tester.pumpAndSettle();
 
@@ -497,7 +518,10 @@ void main() {
       await tester.pumpWidget(
         buildDayView(
           ctrl: controller,
-          onEventDropped: (d) => capturedDetails = d,
+          onEventDropped: (_, d) {
+            capturedDetails = d;
+            return true;
+          },
         ),
       );
       await tester.pumpAndSettle();

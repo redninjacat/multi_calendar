@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/event_detail_dialog.dart';
 import '../../../shared/widgets/event_form_dialog.dart' show showEventCreateDialog, showEventEditDialog;
+import '../../../shared/widgets/responsive_control_panel.dart';
 import '../../../shared/widgets/snackbar_helper.dart';
 
 /// Accessibility demo for Day View.
@@ -156,13 +158,100 @@ class _DayAccessibilityTabState extends State<DayAccessibilityTab> {
   /// MCalDayView supports both Cmd (macOS) and Ctrl (Windows/Linux).
   String get _modifierKey => 'Cmd/Ctrl';
 
-  @override
-  Widget build(BuildContext context) {
+  /// True on platforms that have a hardware keyboard (desktop + web).
+  static bool get _supportsKeyboard =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.linux;
+
+  Widget _buildDocPanel(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     final l10n = AppLocalizations.of(context)!;
     final modifier = _modifierKey;
+    final supportsKeyboard = _supportsKeyboard;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Keyboard shortcuts — hidden on platforms without a hardware keyboard
+        if (supportsKeyboard) ...[
+          _SectionHeader(icon: Icons.keyboard, title: l10n.accessibilityKeyboardShortcuts),
+          const SizedBox(height: 8),
+          _ShortcutRow(keys: l10n.accessibilityShortcutArrows, action: l10n.accessibilityShortcutNavigateDays),
+          _ShortcutRow(keys: l10n.accessibilityShortcutTab, action: l10n.accessibilityShortcutCycleEvents),
+          _ShortcutRow(keys: l10n.accessibilityShortcutEnter, action: l10n.accessibilityShortcutActivate),
+          _ShortcutRow(keys: '$modifier+N', action: l10n.accessibilityShortcutCreate),
+          _ShortcutRow(keys: 'E', action: l10n.accessibilityShortcutEdit),
+          _ShortcutRow(keys: l10n.accessibilityShortcutDeleteKeys, action: l10n.accessibilityShortcutDelete),
+          _ShortcutRow(keys: l10n.accessibilityShortcutDrag, action: l10n.accessibilityShortcutDragMove),
+          _ShortcutRow(keys: l10n.accessibilityShortcutResize, action: l10n.accessibilityShortcutResizeEvent),
+          const SizedBox(height: 20),
+        ],
+
+        // Screen reader guide
+        _SectionHeader(icon: Icons.record_voice_over, title: l10n.accessibilityScreenReaderGuide),
+        const SizedBox(height: 8),
+        Text(
+          l10n.accessibilityScreenReaderInstructions,
+          style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant, height: 1.5),
+        ),
+        const SizedBox(height: 20),
+
+        // High contrast toggle
+        _SectionHeader(icon: Icons.contrast, title: l10n.accessibilityHighContrast),
+        const SizedBox(height: 8),
+        Semantics(
+          label: l10n.accessibilityHighContrastDescription,
+          child: SwitchListTile(
+            value: _highContrastMode,
+            onChanged: (v) => setState(() => _highContrastMode = v),
+            title: Text(l10n.accessibilityHighContrastDescription, style: textTheme.bodySmall),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Accessibility checklist
+        _SectionHeader(icon: Icons.checklist, title: l10n.accessibilityChecklist),
+        const SizedBox(height: 8),
+        _ChecklistItem(text: l10n.accessibilityChecklistItem1),
+        _ChecklistItem(text: l10n.accessibilityChecklistItem2),
+        _ChecklistItem(text: l10n.accessibilityChecklistItem3),
+        _ChecklistItem(text: l10n.accessibilityChecklistItem4),
+        _ChecklistItem(text: l10n.accessibilityChecklistItem5),
+        _ChecklistItem(text: l10n.accessibilityChecklistItem6),
+        const SizedBox(height: 20),
+
+        // Keyboard navigation flow — hidden on platforms without a hardware keyboard
+        if (supportsKeyboard) ...[
+          _SectionHeader(icon: Icons.keyboard_double_arrow_down, title: l10n.accessibilityKeyboardNavFlow),
+          const SizedBox(height: 8),
+          _FlowStep(1, l10n.accessibilityKeyboardNavStep1),
+          _FlowStep(2, l10n.accessibilityKeyboardNavStep2),
+          _FlowStep(3, l10n.accessibilityKeyboardNavStep3),
+          _FlowStep(4, l10n.accessibilityKeyboardNavStep4),
+          const SizedBox(height: 20),
+
+          // Keyboard navigation instructions
+          _SectionHeader(icon: Icons.tips_and_updates, title: l10n.accessibilityKeyboardNavInstructions),
+          const SizedBox(height: 8),
+          Text(
+            l10n.accessibilityKeyboardNavInstructionsDetail,
+            style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant, height: 1.5),
+          ),
+        ],
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     // High contrast theme when enabled
     final effectiveTheme = _highContrastMode
@@ -179,211 +268,71 @@ class _DayAccessibilityTabState extends State<DayAccessibilityTab> {
           )
         : theme;
 
-    return Theme(
+    final calendar = Theme(
       data: effectiveTheme,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Left: Day View
-          Expanded(
-            flex: 3,
-            child: MCalDayView(
-              controller: _eventController,
-              enableDragToMove: true,
-              enableDragToResize: true,
-              enableKeyboardNavigation: true,
-              snapToTimeSlots: true,
-              timeSlotDuration: const Duration(minutes: 15),
-              startHour: 8,
-              endHour: 20,
-              showNavigator: true,
-              showCurrentTimeIndicator: true,
-              locale: widget.locale,
-              onEventTap: (context, details) {
-                showEventDetailDialog(
-                  context,
-                  details.event,
-                  widget.locale,
-                  onEdit: () {
-                    Navigator.of(context).pop();
-                    _handleEditEvent(details.event);
-                  },
-                  onDelete: () {
-                    Navigator.of(context).pop();
-                    _handleDeleteEvent(details.event);
-                  },
-                );
-              },
-              onEventDropped: (details) {
-                if (mounted) {
-                  final t = details.newStartDate;
-                  final timeStr =
-                      '${t.hour}:${t.minute.toString().padLeft(2, '0')}';
-                  SnackBarHelper.show(
-                    context,
-                    l10n.snackbarEventDropped(details.event.title, timeStr),
-                  );
-                }
-              },
-              onEventResized: (details) {
-                if (mounted) {
-                  final minutes = details.newEndDate
-                      .difference(details.newStartDate)
-                      .inMinutes;
-                  SnackBarHelper.show(
-                    context,
-                    l10n.snackbarEventResized(details.event.title, minutes.toString()),
-                  );
-                }
-              },
-              onEmptySpaceDoubleTap: (time) => _handleCreateEvent(time),
-              onCreateEventRequested: _handleCreateEventAtDefaultTime,
-              onEditEventRequested: (event) => _handleEditEvent(event),
-              onDeleteEventRequested: (event) => _handleDeleteEvent(event),
-            ),
-          ),
-          // Right: Accessibility documentation panel
-          Container(
-            width: 360,
-            constraints: const BoxConstraints(minWidth: 320),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerLow,
-              border: Border(
-                left: BorderSide(color: colorScheme.outlineVariant),
-              ),
-            ),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Title
-                Text(
-                  l10n.accessibilityTitle,
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Keyboard shortcuts
-                _SectionHeader(
-                  icon: Icons.keyboard,
-                  title: l10n.accessibilityKeyboardShortcuts,
-                ),
-                const SizedBox(height: 8),
-                _ShortcutRow(
-                  keys: l10n.accessibilityShortcutArrows,
-                  action: l10n.accessibilityShortcutNavigateDays,
-                ),
-                _ShortcutRow(
-                  keys: l10n.accessibilityShortcutTab,
-                  action: l10n.accessibilityShortcutCycleEvents,
-                ),
-                _ShortcutRow(
-                  keys: l10n.accessibilityShortcutEnter,
-                  action: l10n.accessibilityShortcutActivate,
-                ),
-                _ShortcutRow(
-                  keys: '$modifier+N',
-                  action: l10n.accessibilityShortcutCreate,
-                ),
-                _ShortcutRow(
-                  keys: 'E',
-                  action: l10n.accessibilityShortcutEdit,
-                ),
-                _ShortcutRow(
-                  keys: l10n.accessibilityShortcutDeleteKeys,
-                  action: l10n.accessibilityShortcutDelete,
-                ),
-                _ShortcutRow(
-                  keys: l10n.accessibilityShortcutDrag,
-                  action: l10n.accessibilityShortcutDragMove,
-                ),
-                _ShortcutRow(
-                  keys: l10n.accessibilityShortcutResize,
-                  action: l10n.accessibilityShortcutResizeEvent,
-                ),
-                const SizedBox(height: 20),
-
-                // Screen reader guide
-                _SectionHeader(
-                  icon: Icons.record_voice_over,
-                  title: l10n.accessibilityScreenReaderGuide,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.accessibilityScreenReaderInstructions,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // High contrast toggle
-                _SectionHeader(
-                  icon: Icons.contrast,
-                  title: l10n.accessibilityHighContrast,
-                ),
-                const SizedBox(height: 8),
-                Semantics(
-                  label: l10n.accessibilityHighContrastDescription,
-                  child: SwitchListTile(
-                    value: _highContrastMode,
-                    onChanged: (v) => setState(() => _highContrastMode = v),
-                    title: Text(
-                      l10n.accessibilityHighContrastDescription,
-                      style: textTheme.bodySmall,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Accessibility checklist
-                _SectionHeader(
-                  icon: Icons.checklist,
-                  title: l10n.accessibilityChecklist,
-                ),
-                const SizedBox(height: 8),
-                _ChecklistItem(text: l10n.accessibilityChecklistItem1),
-                _ChecklistItem(text: l10n.accessibilityChecklistItem2),
-                _ChecklistItem(text: l10n.accessibilityChecklistItem3),
-                _ChecklistItem(text: l10n.accessibilityChecklistItem4),
-                _ChecklistItem(text: l10n.accessibilityChecklistItem5),
-                _ChecklistItem(text: l10n.accessibilityChecklistItem6),
-                const SizedBox(height: 20),
-
-                // Keyboard navigation flow
-                _SectionHeader(
-                  icon: Icons.keyboard_double_arrow_down,
-                  title: l10n.accessibilityKeyboardNavFlow,
-                ),
-                const SizedBox(height: 8),
-                _FlowStep(1, l10n.accessibilityKeyboardNavStep1),
-                _FlowStep(2, l10n.accessibilityKeyboardNavStep2),
-                _FlowStep(3, l10n.accessibilityKeyboardNavStep3),
-                _FlowStep(4, l10n.accessibilityKeyboardNavStep4),
-                const SizedBox(height: 20),
-
-                // Keyboard navigation instructions
-                _SectionHeader(
-                  icon: Icons.tips_and_updates,
-                  title: l10n.accessibilityKeyboardNavInstructions,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.accessibilityKeyboardNavInstructionsDetail,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      child: MCalDayView(
+        controller: _eventController,
+        enableDragToMove: true,
+        enableDragToResize: true,
+        enableKeyboardNavigation: true,
+        snapToTimeSlots: true,
+        timeSlotDuration: const Duration(minutes: 15),
+        startHour: 8,
+        endHour: 20,
+        showNavigator: true,
+        showCurrentTimeIndicator: true,
+        locale: widget.locale,
+        onEventTap: (ctx, details) {
+          showEventDetailDialog(
+            context,
+            details.event,
+            widget.locale,
+            onEdit: () {
+              Navigator.of(ctx).pop();
+              _handleEditEvent(details.event);
+            },
+            onDelete: () {
+              Navigator.of(ctx).pop();
+              _handleDeleteEvent(details.event);
+            },
+          );
+        },
+        onEventDropped: (ctx, details) {
+          if (mounted) {
+            final t = details.newStartDate;
+            final timeStr = '${t.hour}:${t.minute.toString().padLeft(2, '0')}';
+            SnackBarHelper.show(ctx, l10n.snackbarEventDropped(details.event.title, timeStr));
+          }
+          return true;
+        },
+        onEventResized: (ctx, details) {
+          if (mounted) {
+            final minutes = details.newEndDate.difference(details.newStartDate).inMinutes;
+            SnackBarHelper.show(ctx, l10n.snackbarEventResized(details.event.title, minutes.toString()));
+          }
+          return true;
+        },
+        onTimeSlotDoubleTap: (ctx, slotContext) {
+          if (!slotContext.isAllDayArea) {
+            _handleCreateEvent(DateTime(
+              slotContext.displayDate.year,
+              slotContext.displayDate.month,
+              slotContext.displayDate.day,
+              slotContext.hour ?? 0,
+              slotContext.minute ?? 0,
+            ));
+          }
+        },
+        onCreateEventRequested: _handleCreateEventAtDefaultTime,
+        onEditEventRequested: (event) => _handleEditEvent(event),
+        onDeleteEventRequested: (event) => _handleDeleteEvent(event),
       ),
+    );
+
+    return ResponsiveControlPanel(
+      controlPanelTitle: l10n.accessibilitySettings,
+      controlPanel: _buildDocPanel(context),
+      child: calendar,
     );
   }
 }

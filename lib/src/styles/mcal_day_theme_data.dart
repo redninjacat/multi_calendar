@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/mcal_day_view_contexts.dart';
 
 /// Theme data for Day View specific styling.
 ///
@@ -116,6 +117,51 @@ class MCalDayThemeData {
   /// Minimum event duration (in minutes) required to show resize handles.
   final int? minResizeDurationMinutes;
 
+  /// Position for time labels in the Day View time legend.
+  ///
+  /// This determines where time labels (e.g., "9:00 AM", "10:00 AM") are
+  /// positioned relative to the hour gridlines. The position consists of three
+  /// components:
+  ///
+  /// - **Horizontal alignment**: "Leading" (left in LTR, right in RTL) or
+  ///   "Trailing" (right in LTR, left in RTL)
+  /// - **Vertical reference**: "Top" (hour start gridline) or "Bottom"
+  ///   (hour end gridline)
+  /// - **Vertical alignment**: "Above" (label bottom aligns with gridline),
+  ///   "Centered" (label center aligns with gridline), or "Below"
+  ///   (label top aligns with gridline)
+  ///
+  /// Available positions:
+  /// - [MCalTimeLabelPosition.topLeadingAbove]
+  /// - [MCalTimeLabelPosition.topLeadingCentered]
+  /// - [MCalTimeLabelPosition.topLeadingBelow]
+  /// - [MCalTimeLabelPosition.topTrailingAbove]
+  /// - [MCalTimeLabelPosition.topTrailingCentered]
+  /// - [MCalTimeLabelPosition.topTrailingBelow] (default)
+  /// - [MCalTimeLabelPosition.bottomLeadingAbove]
+  /// - [MCalTimeLabelPosition.bottomTrailingAbove]
+  ///
+  /// Defaults to [MCalTimeLabelPosition.topTrailingBelow] when null.
+  final MCalTimeLabelPosition? timeLabelPosition;
+
+  /// Background color when hovering over time slots on hover-capable platforms.
+  ///
+  /// This color is applied to time slot areas (empty spaces in the day grid)
+  /// when the user hovers over them with a pointer device (mouse, trackpad).
+  /// Only applies on platforms that support hover events (desktop, web).
+  ///
+  /// When null, no hover background is applied to time slots.
+  final Color? hoverTimeSlotBackgroundColor;
+
+  /// Background color when hovering over event tiles.
+  ///
+  /// This color is applied to event tiles when the user hovers over them
+  /// with a pointer device (mouse, trackpad). Only applies on platforms
+  /// that support hover events (desktop, web).
+  ///
+  /// When null, no hover background is applied to event tiles.
+  final Color? hoverEventBackgroundColor;
+
   /// Creates a new [MCalDayThemeData] instance.
   const MCalDayThemeData({
     this.dayHeaderDayOfWeekStyle,
@@ -148,6 +194,9 @@ class MCalDayThemeData {
     this.timeRegionTextStyle,
     this.resizeHandleSize,
     this.minResizeDurationMinutes,
+    this.timeLabelPosition,
+    this.hoverTimeSlotBackgroundColor,
+    this.hoverEventBackgroundColor,
   });
 
   /// Creates a [MCalDayThemeData] instance with default values derived
@@ -233,6 +282,9 @@ class MCalDayThemeData {
     TextStyle? timeRegionTextStyle,
     double? resizeHandleSize,
     int? minResizeDurationMinutes,
+    MCalTimeLabelPosition? timeLabelPosition,
+    Color? hoverTimeSlotBackgroundColor,
+    Color? hoverEventBackgroundColor,
   }) {
     return MCalDayThemeData(
       dayHeaderDayOfWeekStyle:
@@ -275,6 +327,11 @@ class MCalDayThemeData {
       resizeHandleSize: resizeHandleSize ?? this.resizeHandleSize,
       minResizeDurationMinutes:
           minResizeDurationMinutes ?? this.minResizeDurationMinutes,
+      timeLabelPosition: timeLabelPosition ?? this.timeLabelPosition,
+      hoverTimeSlotBackgroundColor:
+          hoverTimeSlotBackgroundColor ?? this.hoverTimeSlotBackgroundColor,
+      hoverEventBackgroundColor:
+          hoverEventBackgroundColor ?? this.hoverEventBackgroundColor,
     );
   }
 
@@ -418,6 +475,17 @@ class MCalDayThemeData {
       ),
       minResizeDurationMinutes:
           t < 0.5 ? minResizeDurationMinutes : other.minResizeDurationMinutes,
+      timeLabelPosition: t < 0.5 ? timeLabelPosition : other.timeLabelPosition,
+      hoverTimeSlotBackgroundColor: Color.lerp(
+        hoverTimeSlotBackgroundColor,
+        other.hoverTimeSlotBackgroundColor,
+        t,
+      ),
+      hoverEventBackgroundColor: Color.lerp(
+        hoverEventBackgroundColor,
+        other.hoverEventBackgroundColor,
+        t,
+      ),
     );
   }
 
@@ -462,7 +530,10 @@ class MCalDayThemeData {
           timeRegionTextColor == other.timeRegionTextColor &&
           timeRegionTextStyle == other.timeRegionTextStyle &&
           resizeHandleSize == other.resizeHandleSize &&
-          minResizeDurationMinutes == other.minResizeDurationMinutes;
+          minResizeDurationMinutes == other.minResizeDurationMinutes &&
+          timeLabelPosition == other.timeLabelPosition &&
+          hoverTimeSlotBackgroundColor == other.hoverTimeSlotBackgroundColor &&
+          hoverEventBackgroundColor == other.hoverEventBackgroundColor;
 
   @override
   int get hashCode => Object.hashAll([
@@ -496,5 +567,8 @@ class MCalDayThemeData {
         timeRegionTextStyle,
         resizeHandleSize,
         minResizeDurationMinutes,
+        timeLabelPosition,
+        hoverTimeSlotBackgroundColor,
+        hoverEventBackgroundColor,
       ]);
 }

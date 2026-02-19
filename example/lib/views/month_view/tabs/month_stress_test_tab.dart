@@ -5,6 +5,8 @@ import 'package:multi_calendar/multi_calendar.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/utils/sample_events.dart';
 import '../../../shared/utils/stress_test_events.dart';
+import '../../../shared/widgets/control_panel_section.dart';
+import '../../../shared/widgets/control_widgets.dart';
 import '../../../shared/widgets/day_events_bottom_sheet.dart';
 import '../../../shared/widgets/event_detail_dialog.dart';
 import '../../../shared/widgets/responsive_control_panel.dart';
@@ -115,7 +117,7 @@ class _MonthStressTestTabState extends State<MonthStressTestTab> {
     final locale = Localizations.localeOf(context);
 
     return ResponsiveControlPanel(
-      controlPanelTitle: l10n.styleStressTest,
+      controlPanelTitle: l10n.testSettings,
       controlPanel: _buildControlPanel(l10n),
       child: RepaintBoundary(
         child: Stack(
@@ -164,93 +166,75 @@ class _MonthStressTestTabState extends State<MonthStressTestTab> {
   }
 
   Widget _buildControlPanel(AppLocalizations l10n) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return SingleChildScrollView(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Stress Test Controls Section
+        ControlPanelSection(
+          showTopDivider: false,
+          title: l10n.stressTestControls,
           children: [
-            // Toggle row
-            Row(
-              children: [
-                Text(
-                  'Stress Test Mode',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Switch(
-                  value: _stressTestEnabled,
-                  onChanged: _toggleStressTest,
-                ),
-              ],
+            ControlWidgets.toggle(
+              label: l10n.stressTestMode,
+              value: _stressTestEnabled,
+              onChanged: _toggleStressTest,
             ),
-            const SizedBox(height: 16),
-            // Event count selector
             if (_stressTestEnabled) ...[
-              Text(
-                'Event Count:',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: colorScheme.onSurface,
-                ),
-              ),
               const SizedBox(height: 8),
-              SegmentedButton<int>(
-                segments: _stressTestCounts
-                    .map((c) => ButtonSegment<int>(
-                          value: c,
-                          label: Text('$c'),
-                        ))
-                    .toList(),
-                selected: {_eventCount},
-                onSelectionChanged: (s) => _setEventCount(s.first),
-              ),
-              const SizedBox(height: 16),
-            ],
-            // Performance overlay checkbox
-            Row(
-              children: [
-                Checkbox(
-                  value: _showPerformanceOverlay,
-                  onChanged: (v) =>
-                      setState(() => _showPerformanceOverlay = v ?? false),
-                  tristate: false,
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(
-                        () => _showPerformanceOverlay = !_showPerformanceOverlay),
-                    child: Text(
-                      'Show frame overlay (green=OK, red=jank)',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurfaceVariant,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.stressTestEventCount,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: SegmentedButton<int>(
+                        segments: _stressTestCounts
+                            .map((c) => ButtonSegment<int>(
+                                  value: c,
+                                  label: Text('$c'),
+                                ))
+                            .toList(),
+                        selected: {_eventCount},
+                        onSelectionChanged: (s) => _setEventCount(s.first),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+            ],
+            const SizedBox(height: 8),
+            ControlWidgets.toggle(
+              label: l10n.stressTestShowOverlay,
+              value: _showPerformanceOverlay,
+              onChanged: (v) => setState(() => _showPerformanceOverlay = v),
             ),
-            // Performance metrics
-            if (_stressTestEnabled) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 16),
+          ],
+        ),
+
+        // Performance Metrics Section
+        if (_stressTestEnabled) ...[
+          const SizedBox(height: 8),
+          ControlPanelSection(
+            title: l10n.stressTestMetrics,
+            children: [
               _PerformanceMetrics(
                 eventCount: _eventController.allEvents.length,
                 avgFrameMs: _avgFrameMs,
                 fps: _fps,
               ),
             ],
-          ],
-        ),
-      ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -270,15 +254,11 @@ class _PerformanceMetrics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final isSmooth = fps >= 55 || avgFrameMs <= 18;
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
+    return Padding(
+      padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -291,72 +271,42 @@ class _PerformanceMetrics extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'Performance Metrics',
+                isSmooth
+                    ? l10n.stressTestPerformanceGood
+                    : l10n.stressTestPerformancePoor,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
+                  color: isSmooth ? colorScheme.primary : colorScheme.error,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          _MetricRow(
-            label: 'Events',
-            value: '$eventCount',
-            colorScheme: colorScheme,
-          ),
           const SizedBox(height: 8),
-          _MetricRow(
-            label: 'Avg Frame Time',
-            value: '${avgFrameMs.toStringAsFixed(1)} ms',
-            colorScheme: colorScheme,
+          Text(
+            l10n.stressTestEventCountLabel(eventCount.toString()),
+            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
           ),
-          const SizedBox(height: 8),
-          _MetricRow(
-            label: 'FPS Estimate',
-            value: '${fps.toStringAsFixed(0)} FPS',
-            colorScheme: colorScheme,
+          const SizedBox(height: 4),
+          Text(
+            l10n.stressTestAvgFrameTime(avgFrameMs.toStringAsFixed(1)),
+            style: TextStyle(
+              fontSize: 12,
+              fontFamily: 'monospace',
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.stressTestFps(fps.toStringAsFixed(0)),
+            style: TextStyle(
+              fontSize: 12,
+              fontFamily: 'monospace',
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _MetricRow extends StatelessWidget {
-  const _MetricRow({
-    required this.label,
-    required this.value,
-    required this.colorScheme,
-  });
-
-  final String label;
-  final String value;
-  final ColorScheme colorScheme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 12,
-            fontFamily: 'monospace',
-            fontWeight: FontWeight.w600,
-            color: colorScheme.onSurface,
-          ),
-        ),
-      ],
     );
   }
 }

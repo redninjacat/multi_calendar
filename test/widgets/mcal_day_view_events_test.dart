@@ -122,6 +122,7 @@ void main() {
       BuildContext context,
       MCalCalendarEvent event,
       MCalTimedEventTileContext ctx,
+      Widget defaultWidget,
     ) {
       return Container(
         padding: const EdgeInsets.all(2),
@@ -145,12 +146,14 @@ void main() {
         BuildContext,
         MCalCalendarEvent,
         MCalAllDayEventTileContext,
+        Widget,
       )?
       allDayEventTileBuilder,
       Widget Function(
         BuildContext,
         MCalCalendarEvent,
         MCalTimedEventTileContext,
+        Widget,
       )?
       timedEventTileBuilder,
     }) {
@@ -359,7 +362,7 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             events: events,
-            allDayEventTileBuilder: (context, event, ctx) {
+            allDayEventTileBuilder: (context, event, ctx, defaultWidget) {
               builderCalled = true;
               expect(ctx.event.title, 'Custom All-day');
               expect(ctx.displayDate, testDate);
@@ -394,7 +397,7 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             events: events,
-            timedEventTileBuilder: (context, event, ctx) {
+            timedEventTileBuilder: (context, event, ctx, defaultWidget) {
               builderCalled = true;
               expect(ctx.event.title, 'Custom Timed');
               expect(ctx.columnIndex, 0);
@@ -457,7 +460,7 @@ void main() {
           await tester.pumpWidget(
             buildDayView(
               events: events,
-              timedEventTileBuilder: (context, event, ctx) {
+              timedEventTileBuilder: (context, event, ctx, defaultWidget) {
                 columnIndices[event.id] = ctx.columnIndex;
                 totalColumns[event.id] = ctx.totalColumns;
                 return Container(

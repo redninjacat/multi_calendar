@@ -182,6 +182,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingShowWeekNumber => 'Show Week Number';
 
   @override
+  String get settingShowSubHourLabels => 'Show Sub-Hour Labels';
+
+  @override
+  String get settingSubHourLabelInterval => 'Sub-Hour Label Interval';
+
+  @override
   String get settingMaxVisibleEventsPerDay => 'Max Visible Events Per Day';
 
   @override
@@ -446,6 +452,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get styleStressTest => 'Stress Test';
+
+  @override
+  String get featureSettings => 'Feature Settings';
+
+  @override
+  String get testSettings => 'Test Settings';
+
+  @override
+  String get accessibilitySettings => 'Accessibility Settings';
 
   @override
   String get styleAccessibility => 'Accessibility';
@@ -777,6 +792,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get accessibilityMonthKeyboardShortcuts =>
       'Month View Keyboard Shortcuts';
+
+  @override
+  String get accessibilityMonthKeyboardNavInstructionsDetail =>
+      'Tab or click to focus the calendar, then use arrow keys to navigate between cells. Press Enter or Space to select a cell. Tab to cycle through events within a cell. With an event focused, press Enter to enter move mode and use arrow keys to move it to a target cell, then Enter to confirm or Escape to cancel. Press R to enter resize mode, S/E to choose the start or end edge, then arrow keys to resize.';
 
   @override
   String get accessibilityMonthShortcutArrows => 'Arrow keys: Navigate cells';

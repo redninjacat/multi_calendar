@@ -183,6 +183,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingShowWeekNumber => 'Afficher le Numéro de Semaine';
 
   @override
+  String get settingShowSubHourLabels => 'Afficher les Étiquettes Sub-Heure';
+
+  @override
+  String get settingSubHourLabelInterval =>
+      'Intervalle des Étiquettes Sub-Heure';
+
+  @override
   String get settingMaxVisibleEventsPerDay =>
       'Maximum d\'Événements Visibles par Jour';
 
@@ -482,6 +489,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get styleStressTest => 'Test de Stress';
+
+  @override
+  String get featureSettings => 'Paramètres des Fonctionnalités';
+
+  @override
+  String get testSettings => 'Paramètres de Test';
+
+  @override
+  String get accessibilitySettings => 'Paramètres d\'Accessibilité';
 
   @override
   String get styleAccessibility => 'Accessibilité';
@@ -818,6 +834,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get accessibilityMonthKeyboardShortcuts =>
       'Raccourcis Clavier de Vue Mensuelle';
+
+  @override
+  String get accessibilityMonthKeyboardNavInstructionsDetail =>
+      'Tabulation ou clic pour mettre le calendrier en focus, puis utilisez les touches fléchées pour naviguer entre les cellules. Appuyez sur Entrée ou Espace pour sélectionner une cellule. Tab pour parcourir les événements dans une cellule. Avec un événement en focus, appuyez sur Entrée pour entrer en mode déplacement et utilisez les flèches, puis Entrée pour confirmer ou Échap pour annuler. Appuyez sur R pour le mode redimensionnement, S/E pour choisir le bord début ou fin, puis les touches fléchées pour redimensionner.';
 
   @override
   String get accessibilityMonthShortcutArrows =>

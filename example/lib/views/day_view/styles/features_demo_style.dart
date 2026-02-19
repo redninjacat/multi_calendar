@@ -682,7 +682,7 @@ class _FeaturesDemoDayStyleState extends State<FeaturesDemoDayStyle>
             showCurrentTimeIndicator: _showCurrentTimeIndicator,
             enableKeyboardNavigation: true,
             specialTimeRegions: regions,
-            timeRegionBuilder: (context, ctx) => _buildTimeRegion(ctx),
+            timeRegionBuilder: (context, ctx, defaultWidget) => _buildTimeRegion(ctx),
             locale: widget.locale,
             onEventTap: (context, details) {
               showEventDetailDialog(
@@ -693,7 +693,7 @@ class _FeaturesDemoDayStyleState extends State<FeaturesDemoDayStyle>
                 onDelete: () => handleDeleteEvent(details.event),
               );
             },
-            onEventDropped: (details) {
+            onEventDropped: (context, details) {
               if (mounted) {
                 final t = details.newStartDate;
                 showCrudSnackBar(
@@ -701,16 +701,22 @@ class _FeaturesDemoDayStyleState extends State<FeaturesDemoDayStyle>
                   '${t.hour}:${t.minute.toString().padLeft(2, '0')}',
                 );
               }
+              return true;
             },
-            onEventResized: (details) {
+            onEventResized: (context, details) {
               if (mounted) {
                 showCrudSnackBar(
                   'Resized: ${details.event.title} to '
                   '${details.newEndDate.difference(details.newStartDate).inMinutes} min',
                 );
               }
+              return true;
             },
-            onEmptySpaceDoubleTap: (time) => handleCreateEvent(time),
+            onTimeSlotDoubleTap: (context, slotContext) {
+              if (!slotContext.isAllDayArea) {
+                handleCreateEvent(DateTime(slotContext.displayDate.year, slotContext.displayDate.month, slotContext.displayDate.day, slotContext.hour ?? 0, slotContext.minute ?? 0));
+              }
+            },
             onCreateEventRequested: handleCreateEventAtDefaultTime,
             onEditEventRequested: (event) => handleEditEvent(event),
             onDeleteEventRequested: (event) => handleDeleteEvent(event),

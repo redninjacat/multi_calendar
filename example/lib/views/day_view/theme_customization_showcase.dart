@@ -89,7 +89,7 @@ class _ThemeCustomizationShowcaseState extends State<ThemeCustomizationShowcase>
                         showEventDetailDialog(
                             context, details.event, widget.currentLocale);
                       },
-                      onEventDropped: (details) {
+                      onEventDropped: (context, details) {
                         if (context.mounted) {
                           final t = details.newStartDate;
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -102,8 +102,9 @@ class _ThemeCustomizationShowcaseState extends State<ThemeCustomizationShowcase>
                             ),
                           );
                         }
+                        return true;
                       },
-                      onEventResized: (details) {
+                      onEventResized: (context, details) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -115,13 +116,16 @@ class _ThemeCustomizationShowcaseState extends State<ThemeCustomizationShowcase>
                             ),
                           );
                         }
+                        return true;
                       },
-                      onEmptySpaceDoubleTap: (time) {
-                        if (context.mounted) {
+                      onTimeSlotDoubleTap: (context, slotContext) {
+                        if (!slotContext.isAllDayArea && context.mounted) {
+                          final h = slotContext.hour ?? 0;
+                          final m = slotContext.minute ?? 0;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Double-tap at ${time.hour}:${time.minute.toString().padLeft(2, '0')} - Create event',
+                                'Double-tap at $h:${m.toString().padLeft(2, '0')} - Create event',
                               ),
                               duration: const Duration(seconds: 2),
                             ),

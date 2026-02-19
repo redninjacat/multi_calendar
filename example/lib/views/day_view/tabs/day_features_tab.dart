@@ -51,7 +51,9 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   // Display Settings
   // ============================================================
   bool _showCurrentTimeIndicator = true;
-  bool _showWeekNumber = false;
+  bool _showWeekNumbers = false;
+  bool _showSubHourLabels = false;
+  Duration? _subHourLabelInterval = const Duration(minutes: 30);
   int _allDaySectionMaxRows = 3;
   Duration _allDayToTimedDuration = const Duration(hours: 1);
 
@@ -59,7 +61,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   // Drag & Drop Settings
   // ============================================================
   bool _enableDragToMove = true;
-  bool _showDropTargetPreview = true;
+  bool _showDropTargetTiles = true;
   bool _showDropTargetOverlay = true;
   bool _dropTargetTilesAboveOverlay = false;
   bool _dragEdgeNavigationEnabled = true;
@@ -84,6 +86,13 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   // ============================================================
   bool? _enableAnimations = true;
   Duration _animationDuration = const Duration(milliseconds: 300);
+
+  // ============================================================
+  // Swipe Navigation Settings
+  // ============================================================
+  bool _enableSwipeNavigation = true;
+  MCalSwipeNavigationDirection _swipeNavigationDirection =
+      MCalSwipeNavigationDirection.horizontal;
 
   // ============================================================
   // Keyboard Settings
@@ -214,7 +223,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
     final l10n = AppLocalizations.of(context)!;
 
     return ResponsiveControlPanel(
-      controlPanelTitle: l10n.sectionSettings,
+      controlPanelTitle: l10n.featureSettings,
       controlPanel: _buildControlPanel(l10n),
       child: _buildDayView(l10n),
     );
@@ -224,6 +233,218 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // ── Shared sections (same order as Month View) ──────────────────────
+
+        // Navigation Section
+        ControlPanelSection(
+          showTopDivider: false,
+          title: l10n.sectionNavigation,
+          children: [
+            ControlWidgets.toggle(
+              label: l10n.settingShowNavigator,
+              value: _showNavigator,
+              onChanged: (v) => setState(() => _showNavigator = v),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingAutoScrollToCurrentTime,
+              value: _autoScrollToCurrentTime,
+              onChanged: (v) => setState(() => _autoScrollToCurrentTime = v),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingEnableSwipeNavigation,
+              value: _enableSwipeNavigation,
+              onChanged: (v) => setState(() => _enableSwipeNavigation = v),
+            ),
+            ControlWidgets.dropdown<MCalSwipeNavigationDirection>(
+              label: l10n.settingSwipeDirection,
+              value: _swipeNavigationDirection,
+              items: [
+                DropdownMenuItem(
+                  value: MCalSwipeNavigationDirection.horizontal,
+                  child: const Text('Horizontal'),
+                ),
+                DropdownMenuItem(
+                  value: MCalSwipeNavigationDirection.vertical,
+                  child: const Text('Vertical'),
+                ),
+              ],
+              onChanged: (v) {
+                if (v != null) {
+                  setState(() => _swipeNavigationDirection = v);
+                }
+              },
+            ),
+          ],
+        ),
+
+        // Display Section
+        ControlPanelSection(
+          title: l10n.sectionDisplay,
+          children: [
+            ControlWidgets.toggle(
+              label: l10n.settingShowCurrentTimeIndicator,
+              value: _showCurrentTimeIndicator,
+              onChanged: (v) => setState(() => _showCurrentTimeIndicator = v),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingShowWeekNumbers,
+              value: _showWeekNumbers,
+              onChanged: (v) => setState(() => _showWeekNumbers = v),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingShowSubHourLabels,
+              value: _showSubHourLabels,
+              onChanged: (v) => setState(() => _showSubHourLabels = v),
+            ),
+            ControlWidgets.dropdown<int>(
+              label: l10n.settingSubHourLabelInterval,
+              value: _subHourLabelInterval?.inMinutes ?? 30,
+              items: [15, 20, 30]
+                  .map((m) => DropdownMenuItem(
+                        value: m,
+                        child: Text(l10n.valueMinutes(m)),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) {
+                  setState(() => _subHourLabelInterval = Duration(minutes: v));
+                }
+              },
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingAllDaySectionMaxRows,
+              value: _allDaySectionMaxRows.toDouble(),
+              min: 1,
+              max: 5,
+              divisions: 4,
+              onChanged: (v) =>
+                  setState(() => _allDaySectionMaxRows = v.toInt()),
+            ),
+            ControlWidgets.dropdown<int>(
+              label: l10n.settingAllDayToTimedDuration,
+              value: _allDayToTimedDuration.inMinutes,
+              items: [30, 60, 90, 120]
+                  .map((minutes) => DropdownMenuItem(
+                        value: minutes,
+                        child: Text(l10n.valueMinutes(minutes)),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) {
+                  setState(
+                      () => _allDayToTimedDuration = Duration(minutes: v));
+                }
+              },
+            ),
+          ],
+        ),
+
+        // Drag & Drop Section
+        ControlPanelSection(
+          title: l10n.sectionDragDrop,
+          children: [
+            ControlWidgets.toggle(
+              label: l10n.settingEnableDragToMove,
+              value: _enableDragToMove,
+              onChanged: (v) => setState(() => _enableDragToMove = v),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingShowDropTargetTiles,
+              value: _showDropTargetTiles,
+              onChanged: (v) => setState(() => _showDropTargetTiles = v),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingShowDropTargetOverlay,
+              value: _showDropTargetOverlay,
+              onChanged: (v) => setState(() => _showDropTargetOverlay = v),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingDropTargetTilesAboveOverlay,
+              value: _dropTargetTilesAboveOverlay,
+              onChanged: (v) =>
+                  setState(() => _dropTargetTilesAboveOverlay = v),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingDragEdgeNavigationEnabled,
+              value: _dragEdgeNavigationEnabled,
+              onChanged: (v) => setState(() => _dragEdgeNavigationEnabled = v),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingDragEdgeNavigationDelay,
+              value: _dragEdgeNavigationDelay.inMilliseconds.toDouble(),
+              min: 100,
+              max: 1000,
+              divisions: 9,
+              onChanged: (v) => setState(() =>
+                  _dragEdgeNavigationDelay = Duration(milliseconds: v.toInt())),
+              valueLabel: '${_dragEdgeNavigationDelay.inMilliseconds}ms',
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingDragLongPressDelay,
+              value: _dragLongPressDelay.inMilliseconds.toDouble(),
+              min: 100,
+              max: 500,
+              divisions: 8,
+              onChanged: (v) => setState(() =>
+                  _dragLongPressDelay = Duration(milliseconds: v.toInt())),
+              valueLabel: '${_dragLongPressDelay.inMilliseconds}ms',
+            ),
+          ],
+        ),
+
+        // Resize Section
+        ControlPanelSection(
+          title: l10n.sectionResize,
+          children: [
+            ControlWidgets.triStateToggle(
+              label: l10n.settingEnableDragToResize,
+              value: _enableDragToResize,
+              onChanged: (v) => setState(() => _enableDragToResize = v),
+            ),
+          ],
+        ),
+
+        // Animation Section
+        ControlPanelSection(
+          title: l10n.sectionAnimation,
+          children: [
+            ControlWidgets.triStateToggle(
+              label: l10n.settingEnableAnimations,
+              value: _enableAnimations,
+              onChanged: (v) => setState(() => _enableAnimations = v),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingAnimationDuration,
+              value: _animationDuration.inMilliseconds.toDouble(),
+              min: 100,
+              max: 800,
+              divisions: 14,
+              onChanged: (v) => setState(() =>
+                  _animationDuration = Duration(milliseconds: v.toInt())),
+              valueLabel: '${_animationDuration.inMilliseconds}ms',
+            ),
+          ],
+        ),
+
+        // Keyboard Section
+        ControlPanelSection(
+          title: l10n.sectionKeyboard,
+          children: [
+            ControlWidgets.toggle(
+              label: l10n.settingEnableKeyboardNavigation,
+              value: _enableKeyboardNavigation,
+              onChanged: (v) => setState(() => _enableKeyboardNavigation = v),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingAutoFocusOnEventTap,
+              value: _autoFocusOnEventTap,
+              onChanged: (v) => setState(() => _autoFocusOnEventTap = v),
+            ),
+          ],
+        ),
+
+        // ── Day View-only sections ───────────────────────────────────────────
+
         // Time Range Section
         ControlPanelSection(
           title: l10n.sectionTimeRange,
@@ -288,130 +509,6 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
           ],
         ),
 
-        // Navigation Section
-        ControlPanelSection(
-          title: l10n.sectionNavigation,
-          children: [
-            ControlWidgets.toggle(
-              label: l10n.settingShowNavigator,
-              value: _showNavigator,
-              onChanged: (v) => setState(() => _showNavigator = v),
-            ),
-            ControlWidgets.toggle(
-              label: l10n.settingAutoScrollToCurrentTime,
-              value: _autoScrollToCurrentTime,
-              onChanged: (v) => setState(() => _autoScrollToCurrentTime = v),
-            ),
-          ],
-        ),
-
-        // Display Section
-        ControlPanelSection(
-          title: l10n.sectionDisplay,
-          children: [
-            ControlWidgets.toggle(
-              label: l10n.settingShowCurrentTimeIndicator,
-              value: _showCurrentTimeIndicator,
-              onChanged: (v) => setState(() => _showCurrentTimeIndicator = v),
-            ),
-            ControlWidgets.toggle(
-              label: l10n.settingShowWeekNumber,
-              value: _showWeekNumber,
-              onChanged: (v) => setState(() => _showWeekNumber = v),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingAllDaySectionMaxRows,
-              value: _allDaySectionMaxRows.toDouble(),
-              min: 1,
-              max: 5,
-              divisions: 4,
-              onChanged: (v) =>
-                  setState(() => _allDaySectionMaxRows = v.toInt()),
-            ),
-            ControlWidgets.dropdown<int>(
-              label: l10n.settingAllDayToTimedDuration,
-              value: _allDayToTimedDuration.inMinutes,
-              items: [30, 60, 90, 120]
-                  .map((minutes) => DropdownMenuItem(
-                        value: minutes,
-                        child: Text(l10n.valueMinutes(minutes)),
-                      ))
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) {
-                  setState(
-                      () => _allDayToTimedDuration = Duration(minutes: v));
-                }
-              },
-            ),
-          ],
-        ),
-
-        // Drag & Drop Section
-        ControlPanelSection(
-          title: l10n.sectionDragDrop,
-          children: [
-            ControlWidgets.toggle(
-              label: l10n.settingEnableDragToMove,
-              value: _enableDragToMove,
-              onChanged: (v) => setState(() => _enableDragToMove = v),
-            ),
-            ControlWidgets.toggle(
-              label: l10n.settingShowDropTargetPreview,
-              value: _showDropTargetPreview,
-              onChanged: (v) => setState(() => _showDropTargetPreview = v),
-            ),
-            ControlWidgets.toggle(
-              label: l10n.settingShowDropTargetOverlay,
-              value: _showDropTargetOverlay,
-              onChanged: (v) => setState(() => _showDropTargetOverlay = v),
-            ),
-            ControlWidgets.toggle(
-              label: l10n.settingDropTargetTilesAboveOverlay,
-              value: _dropTargetTilesAboveOverlay,
-              onChanged: (v) =>
-                  setState(() => _dropTargetTilesAboveOverlay = v),
-            ),
-            ControlWidgets.toggle(
-              label: l10n.settingDragEdgeNavigationEnabled,
-              value: _dragEdgeNavigationEnabled,
-              onChanged: (v) => setState(() => _dragEdgeNavigationEnabled = v),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingDragEdgeNavigationDelay,
-              value: _dragEdgeNavigationDelay.inMilliseconds.toDouble(),
-              min: 100,
-              max: 1000,
-              divisions: 9,
-              onChanged: (v) => setState(() =>
-                  _dragEdgeNavigationDelay = Duration(milliseconds: v.toInt())),
-              valueLabel: '${_dragEdgeNavigationDelay.inMilliseconds}ms',
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingDragLongPressDelay,
-              value: _dragLongPressDelay.inMilliseconds.toDouble(),
-              min: 100,
-              max: 500,
-              divisions: 8,
-              onChanged: (v) => setState(() =>
-                  _dragLongPressDelay = Duration(milliseconds: v.toInt())),
-              valueLabel: '${_dragLongPressDelay.inMilliseconds}ms',
-            ),
-          ],
-        ),
-
-        // Resize Section
-        ControlPanelSection(
-          title: l10n.sectionResize,
-          children: [
-            ControlWidgets.triStateToggle(
-              label: l10n.settingEnableDragToResize,
-              value: _enableDragToResize,
-              onChanged: (v) => setState(() => _enableDragToResize = v),
-            ),
-          ],
-        ),
-
         // Snapping Section
         ControlPanelSection(
           title: l10n.sectionSnapping,
@@ -440,45 +537,6 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               onChanged: (v) =>
                   setState(() => _snapRange = Duration(minutes: v.toInt())),
               valueLabel: l10n.valueMinutes(_snapRange.inMinutes),
-            ),
-          ],
-        ),
-
-        // Animation Section
-        ControlPanelSection(
-          title: l10n.sectionAnimation,
-          children: [
-            ControlWidgets.triStateToggle(
-              label: l10n.settingEnableAnimations,
-              value: _enableAnimations,
-              onChanged: (v) => setState(() => _enableAnimations = v),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingAnimationDuration,
-              value: _animationDuration.inMilliseconds.toDouble(),
-              min: 100,
-              max: 800,
-              divisions: 14,
-              onChanged: (v) => setState(() =>
-                  _animationDuration = Duration(milliseconds: v.toInt())),
-              valueLabel: '${_animationDuration.inMilliseconds}ms',
-            ),
-          ],
-        ),
-
-        // Keyboard Section
-        ControlPanelSection(
-          title: l10n.sectionKeyboard,
-          children: [
-            ControlWidgets.toggle(
-              label: l10n.settingEnableKeyboardNavigation,
-              value: _enableKeyboardNavigation,
-              onChanged: (v) => setState(() => _enableKeyboardNavigation = v),
-            ),
-            ControlWidgets.toggle(
-              label: l10n.settingAutoFocusOnEventTap,
-              value: _autoFocusOnEventTap,
-              onChanged: (v) => setState(() => _autoFocusOnEventTap = v),
             ),
           ],
         ),
@@ -517,11 +575,13 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
           showNavigator: _showNavigator,
           autoScrollToCurrentTime: _autoScrollToCurrentTime,
           showCurrentTimeIndicator: _showCurrentTimeIndicator,
-          showWeekNumber: _showWeekNumber,
+          showWeekNumbers: _showWeekNumbers,
+          showSubHourLabels: _showSubHourLabels,
+          subHourLabelInterval: _showSubHourLabels ? _subHourLabelInterval : null,
           allDaySectionMaxRows: _allDaySectionMaxRows,
           allDayToTimedDuration: _allDayToTimedDuration,
           enableDragToMove: _enableDragToMove,
-          showDropTargetPreview: _showDropTargetPreview,
+          showDropTargetTiles: _showDropTargetTiles,
           showDropTargetOverlay: _showDropTargetOverlay,
           dropTargetTilesAboveOverlay: _dropTargetTilesAboveOverlay,
           dragEdgeNavigationEnabled: _dragEdgeNavigationEnabled,
@@ -536,45 +596,55 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
           animationDuration: _animationDuration,
           enableKeyboardNavigation: _enableKeyboardNavigation,
           autoFocusOnEventTap: _autoFocusOnEventTap,
+          enableSwipeNavigation: _enableSwipeNavigation,
+          swipeNavigationDirection: _swipeNavigationDirection,
           specialTimeRegions: _buildTimeRegions(),
           locale: widget.locale,
           // Gesture Handlers - All wired to SnackBars
-          onDayHeaderTap: (date) {
+          onDayHeaderTap: (context, date) {
             SnackBarHelper.show(
               context,
               l10n.snackbarDayHeaderTap(date.toString().split(' ')[0]),
             );
           },
-          onDayHeaderLongPress: (date) {
+          onDayHeaderLongPress: (context, date) {
             SnackBarHelper.show(
               context,
               l10n.snackbarDayHeaderLongPress(date.toString().split(' ')[0]),
             );
           },
-          onTimeLabelTap: (time) {
+          onTimeLabelTap: (context, labelContext) {
+            final t = labelContext.time;
             SnackBarHelper.show(
               context,
-              l10n.snackbarTimeLabelTap('${time.hour}:${time.minute.toString().padLeft(2, '0')}'),
+              l10n.snackbarTimeLabelTap('${t.hour}:${t.minute.toString().padLeft(2, '0')}'),
             );
           },
-          onTimeSlotTap: (time) {
+          onTimeSlotTap: (context, slotContext) {
+            final hour = slotContext.hour ?? 0;
+            final minute = slotContext.minute ?? 0;
             SnackBarHelper.show(
               context,
-              l10n.snackbarTimeSlotTap('${time.hour}:${time.minute.toString().padLeft(2, '0')}'),
+              l10n.snackbarTimeSlotTap('$hour:${minute.toString().padLeft(2, '0')}'),
             );
           },
-          onTimeSlotLongPress: (time) {
+          onTimeSlotLongPress: (context, slotContext) {
+            final hour = slotContext.hour ?? 0;
+            final minute = slotContext.minute ?? 0;
             SnackBarHelper.show(
               context,
-              l10n.snackbarTimeSlotLongPress('${time.hour}:${time.minute.toString().padLeft(2, '0')}'),
+              l10n.snackbarTimeSlotLongPress('$hour:${minute.toString().padLeft(2, '0')}'),
             );
           },
-          onEmptySpaceDoubleTap: (time) {
-            SnackBarHelper.show(
-              context,
-              l10n.snackbarEmptySpaceDoubleTap('${time.hour}:${time.minute.toString().padLeft(2, '0')}'),
-            );
-            _handleCreateEvent(time);
+          onTimeSlotDoubleTap: (context, slotContext) {
+            if (!slotContext.isAllDayArea) {
+              final time = DateTime(slotContext.displayDate.year, slotContext.displayDate.month, slotContext.displayDate.day, slotContext.hour ?? 0, slotContext.minute ?? 0);
+              SnackBarHelper.show(
+                context,
+                l10n.snackbarEmptySpaceDoubleTap('${time.hour}:${time.minute.toString().padLeft(2, '0')}'),
+              );
+              _handleCreateEvent(time);
+            }
           },
           onEventTap: (context, details) => _handleEventTap(context, details),
           onEventLongPress: (context, details) {
@@ -583,21 +653,31 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               l10n.snackbarEventLongPress(details.event.title),
             );
           },
-          onHoverEvent: (event) {
+          onEventDoubleTap: (context, details) {
             SnackBarHelper.show(
               context,
-              l10n.snackbarHoverEvent(event.title),
+              l10n.snackbarEventDoubleTap(details.event.title),
             );
           },
-          onHoverTimeSlot: (slotContext) {
-            final hour = slotContext.hour ?? 0;
-            final minute = slotContext.minute ?? 0;
-            SnackBarHelper.show(
-              context,
-              l10n.snackbarHoverTimeSlot('$hour:${minute.toString().padLeft(2, '0')}'),
-            );
+          onHoverEvent: (context, event) {
+            if (event != null) {
+              SnackBarHelper.show(
+                context,
+                l10n.snackbarHoverEvent(event.title),
+              );
+            }
           },
-          onOverflowTap: (events, date) {
+          onHoverTimeSlot: (context, slotContext) {
+            if (slotContext != null) {
+              final hour = slotContext.hour ?? 0;
+              final minute = slotContext.minute ?? 0;
+              SnackBarHelper.show(
+                context,
+                l10n.snackbarHoverTimeSlot('$hour:${minute.toString().padLeft(2, '0')}'),
+              );
+            }
+          },
+          onOverflowTap: (context, events, date) {
             SnackBarHelper.show(
               context,
               l10n.snackbarOverflowTap(events.length),
@@ -614,7 +694,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             );
             return true;
           },
-          onEventDropped: (details) {
+          onEventDropped: (context, details) {
             final time = details.newStartDate;
             SnackBarHelper.show(
               context,
@@ -623,6 +703,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
                 '${time.hour}:${time.minute.toString().padLeft(2, '0')}',
               ),
             );
+            return true;
           },
           onResizeWillAccept: (details) {
             final duration = details.newEndDate.difference(details.newStartDate);
@@ -635,7 +716,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             );
             return true;
           },
-          onEventResized: (details) {
+          onEventResized: (context, details) {
             final duration = details.newEndDate.difference(details.newStartDate);
             SnackBarHelper.show(
               context,
@@ -643,6 +724,13 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
                 details.event.title,
                 duration.inMinutes.toString(),
               ),
+            );
+            return true;
+          },
+          onSwipeNavigation: (context, details) {
+            SnackBarHelper.show(
+              context,
+              l10n.snackbarSwipeNavigation(details.direction.name),
             );
           },
           // Keyboard CRUD Handlers

@@ -108,6 +108,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('es'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,
@@ -135,6 +137,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('es'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,
@@ -163,6 +167,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('es'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,
@@ -193,6 +199,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('fr'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,
@@ -220,6 +228,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('fr'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,
@@ -251,6 +261,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('ar'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: Directionality(
               textDirection: TextDirection.rtl,
@@ -281,6 +293,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('ar'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: Directionality(
               textDirection: TextDirection.rtl,
@@ -316,6 +330,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('he'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: Directionality(
               textDirection: TextDirection.rtl,
@@ -346,6 +362,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('he'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: Directionality(
               textDirection: TextDirection.rtl,
@@ -410,6 +428,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('es'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,
@@ -594,6 +614,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en', 'US'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,
@@ -614,6 +636,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('es'),
+          localizationsDelegates: MCalLocalizations.localizationsDelegates,
+          supportedLocales: MCalLocalizations.supportedLocales,
           home: Scaffold(
             body: SizedBox(
               height: 600,

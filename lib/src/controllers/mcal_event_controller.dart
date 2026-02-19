@@ -144,11 +144,34 @@ class MCalEventController extends ChangeNotifier {
   /// view rebuilds.
   MCalEventChangeInfo? _lastChange;
 
+  /// The first day of the week for visual calendar layout.
+  ///
+  /// Uses the same convention as [DateTime.weekday]:
+  /// - 0 = Sunday
+  /// - 1 = Monday
+  /// - 2 = Tuesday
+  /// - 3 = Wednesday
+  /// - 4 = Thursday
+  /// - 5 = Friday
+  /// - 6 = Saturday
+  ///
+  /// **Important:** This parameter is for visual layout only (determining which
+  /// day appears in the leftmost column of week rows). It does NOT affect
+  /// recurrence expansion — recurring rules use their own per-rule `weekStart`
+  /// parameter (defined in [MCalRecurrenceRule]) for RFC 5545 compliance.
+  ///
+  /// When null, defaults to [DateTime.monday] (ISO 8601 standard).
+  final int? firstDayOfWeek;
+
   /// Creates a new [MCalEventController] instance.
   ///
   /// [initialDate] sets the initially displayed date. Defaults to today if not provided.
   /// The view will display the month containing this date.
-  MCalEventController({DateTime? initialDate})
+  ///
+  /// [firstDayOfWeek] sets the first day of the week for visual layout (0=Sunday..6=Saturday).
+  /// Defaults to Monday (ISO 8601) if not provided. This does NOT affect recurrence
+  /// expansion — recurring rules use their own `weekStart` parameter.
+  MCalEventController({DateTime? initialDate, this.firstDayOfWeek})
     : _displayDate = initialDate ?? DateTime.now();
 
   // ============================================================
@@ -195,6 +218,15 @@ class MCalEventController extends ChangeNotifier {
   /// [notifyListeners] by methods like [addEvents], [clearEvents], and
   /// future recurrence mutation methods.
   MCalEventChangeInfo? get lastChange => _lastChange;
+
+  /// The resolved first day of the week for visual calendar layout.
+  ///
+  /// Returns [firstDayOfWeek] if set, otherwise defaults to [DateTime.monday] (1).
+  ///
+  /// This value determines which day appears in the leftmost column of calendar
+  /// week rows. It does NOT affect recurrence expansion — recurring rules use
+  /// their own per-rule `weekStart` parameter for RFC 5545 compliance.
+  int get resolvedFirstDayOfWeek => firstDayOfWeek ?? DateTime.monday;
 
   // ============================================================
   // Task 1: Display and Focus Date Methods

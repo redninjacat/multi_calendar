@@ -129,7 +129,7 @@ class _DefaultDayStyleState extends State<DefaultDayStyle> {
                 onDelete: () => _handleDeleteEvent(details.event),
               );
             },
-            onEventDropped: (details) {
+            onEventDropped: (context, details) {
               if (mounted) {
                 final t = details.newStartDate;
                 final timeStr =
@@ -140,8 +140,9 @@ class _DefaultDayStyleState extends State<DefaultDayStyle> {
                   )!.eventMoved(details.event.title, timeStr),
                 );
               }
+              return true;
             },
-            onEventResized: (details) {
+            onEventResized: (context, details) {
               if (mounted) {
                 final minutes = details.newEndDate
                     .difference(details.newStartDate)
@@ -152,8 +153,13 @@ class _DefaultDayStyleState extends State<DefaultDayStyle> {
                   )!.eventResized(details.event.title, minutes.toString()),
                 );
               }
+              return true;
             },
-            onEmptySpaceDoubleTap: (time) => _handleCreateEvent(time),
+            onTimeSlotDoubleTap: (context, slotContext) {
+              if (!slotContext.isAllDayArea) {
+                _handleCreateEvent(DateTime(slotContext.displayDate.year, slotContext.displayDate.month, slotContext.displayDate.day, slotContext.hour ?? 0, slotContext.minute ?? 0));
+              }
+            },
             onCreateEventRequested: _handleCreateEventAtDefaultTime,
             onEditEventRequested: (event) => _handleEditEvent(event),
             onDeleteEventRequested: (event) => _handleDeleteEvent(event),

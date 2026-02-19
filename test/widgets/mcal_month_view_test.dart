@@ -6,7 +6,7 @@ import 'package:multi_calendar/multi_calendar.dart';
 
 /// Mock MCalEventController that implements event loading for testing
 class MockMCalEventController extends MCalEventController {
-  MockMCalEventController({super.initialDate});
+  MockMCalEventController({super.initialDate, super.firstDayOfWeek});
 
   void addEventsForRange(
     DateTime start,
@@ -88,6 +88,7 @@ void main() {
     testWidgets('accepts all optional parameters', (tester) async {
       final testController = MockMCalEventController(
         initialDate: DateTime(2024, 6, 15),
+        firstDayOfWeek: 1,
       );
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.blue,
@@ -106,7 +107,6 @@ void main() {
                 controller: testController,
                 minDate: DateTime(2024, 1, 1),
                 maxDate: DateTime(2024, 12, 31),
-                firstDayOfWeek: 1,
                 showNavigator: true,
                 enableSwipeNavigation: true,
                 swipeNavigationDirection:
@@ -500,12 +500,12 @@ void main() {
     });
 
     testWidgets('respects firstDayOfWeek parameter', (tester) async {
+      final testController = MockMCalEventController(firstDayOfWeek: 1); // Monday
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: MCalMonthView(
-              controller: controller,
-              firstDayOfWeek: 1, // Monday
+              controller: testController,
             ),
           ),
         ),
@@ -734,6 +734,7 @@ void main() {
       (tester) async {
         final testController = MockMCalEventController(
           initialDate: DateTime(2025, 2, 1),
+          firstDayOfWeek: 0, // Sunday
         );
 
         MCalCellTapDetails? capturedDetails;
@@ -745,7 +746,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: testController,
-                  firstDayOfWeek: 0, // Sunday
                   onCellTap: (context, details) {
                     capturedDetails = details;
                   },
@@ -1588,14 +1588,26 @@ void main() {
       controller.dispose();
     });
 
-    /// Helper function to focus the calendar widget and send a key event
+    /// Helper function to focus the calendar widget and send a key event.
+    /// Accepts an optional [controller] so that the focused date can be
+    /// preserved across the tap (tapping a cell changes focusedDate as a
+    /// side-effect).
     Future<void> focusAndSendKeyEvent(
       WidgetTester tester,
-      LogicalKeyboardKey key,
-    ) async {
+      LogicalKeyboardKey key, {
+      MCalEventController? controller,
+    }) async {
+      final savedFocusedDate = controller?.focusedDate;
+
       // Tap to request focus
       await tester.tap(find.byType(MCalMonthView));
       await tester.pumpAndSettle();
+
+      // Restore focused date if a controller was provided
+      if (controller != null) {
+        controller.setFocusedDate(savedFocusedDate);
+        await tester.pumpAndSettle();
+      }
 
       // Send key event
       await tester.sendKeyEvent(key);
@@ -1625,7 +1637,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Focus the widget and send arrow right
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowRight);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowRight, controller: testController);
 
       // Verify focused date moved to next day
       expect(testController.focusedDate, equals(DateTime(2025, 1, 16)));
@@ -1652,7 +1664,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowLeft);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowLeft, controller: testController);
 
       expect(testController.focusedDate, equals(DateTime(2025, 1, 14)));
     });
@@ -1678,7 +1690,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowUp);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowUp, controller: testController);
 
       // 15 - 7 = 8
       expect(testController.focusedDate, equals(DateTime(2025, 1, 8)));
@@ -1705,7 +1717,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowDown);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowDown, controller: testController);
 
       // 15 + 7 = 22
       expect(testController.focusedDate, equals(DateTime(2025, 1, 22)));
@@ -1732,7 +1744,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.home);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.home, controller: testController);
 
       expect(testController.focusedDate, equals(DateTime(2025, 1, 1)));
     });
@@ -1758,7 +1770,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.end);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.end, controller: testController);
 
       // January has 31 days
       expect(testController.focusedDate, equals(DateTime(2025, 1, 31)));
@@ -1785,7 +1797,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.pageUp);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.pageUp, controller: testController);
 
       // Should move to December 2024, same day (15th)
       expect(testController.focusedDate, equals(DateTime(2024, 12, 15)));
@@ -1814,7 +1826,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.pageDown);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.pageDown, controller: testController);
 
       // Should move to February 2025, same day (15th)
       expect(testController.focusedDate, equals(DateTime(2025, 2, 15)));
@@ -1848,7 +1860,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.pageUp);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.pageUp, controller: testController);
 
       // February 2025 has 28 days, so should move to Feb 28
       expect(testController.focusedDate, equals(DateTime(2025, 2, 28)));
@@ -1882,7 +1894,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.enter);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.enter, controller: testController);
 
       expect(tappedDate, equals(DateTime(2025, 1, 15)));
       expect(isCurrent, isTrue);
@@ -1916,7 +1928,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.space);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.space, controller: testController);
 
       expect(tappedDate, equals(DateTime(2025, 1, 20)));
     });
@@ -1949,7 +1961,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Try to go before minDate
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowLeft);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowLeft, controller: testController);
 
       // Should not move before minDate
       expect(testController.focusedDate, equals(DateTime(2025, 1, 10)));
@@ -1983,7 +1995,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Try to go after maxDate
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowRight);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowRight, controller: testController);
 
       // Should not move after maxDate
       expect(testController.focusedDate, equals(DateTime(2025, 1, 25)));
@@ -2012,8 +2024,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap but it won't request focus since keyboard nav is disabled
+      // Tap — the tap may change focusedDate as a side-effect, so restore it
       await tester.tap(find.byType(MCalMonthView));
+      await tester.pumpAndSettle();
+      testController.setFocusedDate(DateTime(2025, 1, 15));
       await tester.pumpAndSettle();
 
       // Try to navigate with arrow keys
@@ -2051,7 +2065,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Go to previous day (December 31, 2024)
-        await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowLeft);
+        await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowLeft, controller: testController);
 
         // Focus should move to December 31
         expect(testController.focusedDate, equals(DateTime(2024, 12, 31)));
@@ -2088,7 +2102,7 @@ void main() {
         expect(testController.focusedDate, isNull);
 
         // Focus and send key event - this should initialize focusedDate
-        await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowRight);
+        await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowRight, controller: testController);
 
         // Focus should be set (displayDate + 1 day since we pressed right)
         expect(testController.focusedDate, isNotNull);
@@ -2122,7 +2136,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.numpadEnter);
+      await focusAndSendKeyEvent(tester, LogicalKeyboardKey.numpadEnter, controller: testController);
 
       expect(tappedDate, equals(DateTime(2025, 1, 15)));
     });
@@ -3229,6 +3243,7 @@ void main() {
       (tester) async {
         final testController = MockMCalEventController(
           initialDate: DateTime(2025, 1, 1),
+          firstDayOfWeek: 0, // Sunday
         );
 
         // Event from Friday to Tuesday (crosses week boundary with Sunday as first day)
@@ -3250,7 +3265,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: testController,
-                  firstDayOfWeek: 0, // Sunday
                   eventTileBuilder: (context, ctx, defaultTile) {
                     capturedContexts.add(ctx);
                     final segment = ctx.segment;
@@ -3398,6 +3412,7 @@ void main() {
       (tester) async {
         final testController = MockMCalEventController(
           initialDate: DateTime(2025, 1, 1),
+          firstDayOfWeek: 0, // Sunday
         );
 
         final event = MCalCalendarEvent(
@@ -3418,7 +3433,6 @@ void main() {
                 height: 600,
                 child: MCalMonthView(
                   controller: testController,
-                  firstDayOfWeek: 0, // Sunday
                   eventTileBuilder: (context, ctx, defaultTile) {
                     capturedContexts.add(ctx);
                     final segment = ctx.segment;
@@ -3891,7 +3905,7 @@ void main() {
               child: MCalMonthView(
                 controller: testController,
                 enableDragToMove: true,
-                draggedTileBuilder: (context, details) {
+                draggedTileBuilder: (context, details, defaultWidget) {
                   builderCalled = true;
                   capturedDetails = details;
                   return Container(
@@ -3961,7 +3975,7 @@ void main() {
               child: MCalMonthView(
                 controller: testController,
                 enableDragToMove: true,
-                dragSourceTileBuilder: (context, details) {
+                dragSourceTileBuilder: (context, details, defaultWidget) {
                   builderCalled = true;
                   capturedDetails = details;
                   return Container(

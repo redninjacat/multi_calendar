@@ -174,6 +174,7 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
         data: _buildThemeData(),
         child: MCalMonthView(
           controller: _controller,
+          showNavigator: true,
         ),
       ),
       controlPanel: Column(
@@ -190,31 +191,8 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
           ),
           const SizedBox(height: 16),
           
-          // Cells section
-          ControlPanelSection(
-            title: l10n.sectionCells,
-            children: [
-              ControlWidgets.colorPicker(
-                label: l10n.settingCellBackgroundColor,
-                value: _cellBackgroundColor,
-                onChanged: (c) => setState(() => _cellBackgroundColor = c),
-                cancelLabel: l10n.cancel,
-              ),
-              ControlWidgets.colorPicker(
-                label: l10n.settingCellBorderColor,
-                value: _cellBorderColor,
-                onChanged: (c) => setState(() => _cellBorderColor = c),
-                cancelLabel: l10n.cancel,
-              ),
-              ControlWidgets.colorPicker(
-                label: l10n.settingTodayBackgroundColor,
-                value: _todayBackgroundColor,
-                onChanged: (c) => setState(() => _todayBackgroundColor = c),
-                cancelLabel: l10n.cancel,
-              ),
-            ],
-          ),
-          
+          // ── Shared sections (same position as Day View's Events) ────────────
+
           // Event Tiles section
           ControlPanelSection(
             title: l10n.sectionEventTiles,
@@ -272,7 +250,34 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
             ],
           ),
-          
+
+          // ── Month View-only sections ─────────────────────────────────────────
+
+          // Cells section
+          ControlPanelSection(
+            title: l10n.sectionCells,
+            children: [
+              ControlWidgets.colorPicker(
+                label: l10n.settingCellBackgroundColor,
+                value: _cellBackgroundColor,
+                onChanged: (c) => setState(() => _cellBackgroundColor = c),
+                cancelLabel: l10n.cancel,
+              ),
+              ControlWidgets.colorPicker(
+                label: l10n.settingCellBorderColor,
+                value: _cellBorderColor,
+                onChanged: (c) => setState(() => _cellBorderColor = c),
+                cancelLabel: l10n.cancel,
+              ),
+              ControlWidgets.colorPicker(
+                label: l10n.settingTodayBackgroundColor,
+                value: _todayBackgroundColor,
+                onChanged: (c) => setState(() => _todayBackgroundColor = c),
+                cancelLabel: l10n.cancel,
+              ),
+            ],
+          ),
+
           // Headers section
           ControlPanelSection(
             title: l10n.sectionHeaders,
@@ -285,7 +290,7 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
             ],
           ),
-          
+
           // Date Labels section
           ControlPanelSection(
             title: l10n.sectionDateLabels,
@@ -315,7 +320,7 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
             ],
           ),
-          
+
           // Overflow section
           ControlPanelSection(
             title: l10n.sectionOverflow,
@@ -330,7 +335,7 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
             ],
           ),
-          
+
           // Navigator section
           ControlPanelSection(
             title: l10n.sectionNavigator,
@@ -343,7 +348,7 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
             ],
           ),
-          
+
           // Drag & Drop section
           ControlPanelSection(
             title: l10n.sectionDragAndDrop,
@@ -378,7 +383,7 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
             ],
           ),
-          
+
           // Hover section
           ControlPanelSection(
             title: l10n.sectionHover,
@@ -397,7 +402,7 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
             ],
           ),
-          
+
           // Week Numbers section
           ControlPanelSection(
             title: l10n.sectionWeekNumbers,

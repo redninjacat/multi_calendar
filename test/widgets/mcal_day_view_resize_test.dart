@@ -46,7 +46,7 @@ void main() {
       required MockMCalEventController ctrl,
       bool enableDragToMove = true,
       bool enableDragToResize = true,
-      void Function(MCalEventResizedDetails)? onEventResized,
+      bool Function(BuildContext, MCalEventResizedDetails)? onEventResized,
       bool Function(MCalEventResizedDetails)? onResizeWillAccept,
       MCalThemeData? theme,
       double hourHeight = 80,
@@ -210,7 +210,7 @@ void main() {
           buildDayView(
             ctrl: controller,
             enableDragToMove: false,
-            onEventResized: (_) {},
+            onEventResized: (_, __) => true,
             onResizeWillAccept: (_) => true,
           ),
         );
@@ -358,7 +358,7 @@ void main() {
           buildDayView(
             ctrl: controller,
             enableDragToMove: false,
-            onEventResized: (_) {},
+            onEventResized: (_, __) => true,
           ),
         );
         await tester.pumpAndSettle();

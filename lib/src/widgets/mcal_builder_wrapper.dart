@@ -29,13 +29,13 @@ class MCalBuilderWrapper {
     void Function(BuildContext, MCalEventTapDetails)? onEventTap,
     void Function(BuildContext, MCalEventTapDetails)? onEventLongPress,
     void Function(BuildContext, MCalEventDoubleTapDetails)? onEventDoubleTap,
-    ValueChanged<MCalEventTileContext?>? onHoverEvent,
+    void Function(BuildContext, MCalEventTileContext?)? onHoverEvent,
     MCalEventController? controller,
     bool enableDragToMove = false,
     MCalDragHandler? dragHandler,
     // Drag-related parameters
-    Widget Function(BuildContext, MCalDraggedTileDetails)? draggedTileBuilder,
-    Widget Function(BuildContext, MCalDragSourceDetails)? dragSourceTileBuilder,
+    Widget Function(BuildContext, MCalDraggedTileDetails, Widget)? draggedTileBuilder,
+    Widget Function(BuildContext, MCalDragSourceDetails, Widget)? dragSourceTileBuilder,
     void Function(MCalCalendarEvent, DateTime)? onDragStartedCallback,
     void Function(bool)? onDragEndedCallback,
     VoidCallback? onDragCanceledCallback,
@@ -67,9 +67,9 @@ class MCalBuilderWrapper {
               tileContext,
               controller,
             );
-            onHoverEvent(hoverContext);
+            onHoverEvent(context, hoverContext);
           },
-          onExit: (_) => onHoverEvent(null),
+          onExit: (_) => onHoverEvent(context, null),
           child: child,
         );
       }
@@ -285,18 +285,22 @@ class MCalBuilderWrapper {
     );
   }
 
-  /// Wraps a date label builder with optional tap/long-press handlers.
+  /// Wraps a date label builder with optional tap/long-press/hover handlers.
   ///
   /// If [onDateLabelTap] or [onDateLabelLongPress] is provided, the label
   /// is wrapped in a [GestureDetector] with the respective handlers.
-  /// Otherwise, the label is wrapped in [IgnorePointer] so that taps
-  /// pass through to Layer 1's cells, allowing [onCellTap] to be triggered.
+  /// If [onHoverDateLabel] is provided, the label is wrapped in a [MouseRegion]
+  /// for hover support.
+  /// If no gesture handlers are provided, the label is wrapped in [IgnorePointer]
+  /// so that taps pass through to Layer 1's cells, allowing [onCellTap] to be triggered.
   static MCalDateLabelBuilder wrapDateLabelBuilder({
     required Widget Function(BuildContext, MCalDateLabelContext, String)?
     developerBuilder,
     required Widget Function(BuildContext, MCalDateLabelContext) defaultBuilder,
     void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelTap,
     void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelLongPress,
+    void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelDoubleTap,
+    void Function(BuildContext, MCalDateLabelContext?)? onHoverDateLabel,
   }) {
     return (BuildContext context, MCalDateLabelContext labelContext) {
       final defaultWidget = defaultBuilder(context, labelContext);
@@ -309,9 +313,11 @@ class MCalBuilderWrapper {
             )
           : defaultWidget;
 
-      // If any handlers are provided, wrap in GestureDetector
-      if (onDateLabelTap != null || onDateLabelLongPress != null) {
-        return GestureDetector(
+      Widget result = visualWidget;
+
+      // If any gesture handlers are provided, wrap in GestureDetector
+      if (onDateLabelTap != null || onDateLabelLongPress != null || onDateLabelDoubleTap != null) {
+        result = GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onDateLabelTap != null
               ? () => onDateLabelTap(
@@ -333,16 +339,37 @@ class MCalBuilderWrapper {
                   ),
                 )
               : null,
-          child: visualWidget,
+          onDoubleTap: onDateLabelDoubleTap != null
+              ? () => onDateLabelDoubleTap(
+                  context,
+                  MCalDateLabelTapDetails(
+                    date: labelContext.date,
+                    isToday: labelContext.isToday,
+                    isCurrentMonth: labelContext.isCurrentMonth,
+                  ),
+                )
+              : null,
+          child: result,
+        );
+      } else {
+        // No gesture handlers - wrap in IgnorePointer so taps pass through to Layer 1's cells
+        result = IgnorePointer(child: result);
+      }
+
+      // Wrap in MouseRegion for hover support (only if callback provided)
+      if (onHoverDateLabel != null) {
+        result = MouseRegion(
+          onEnter: (_) => onHoverDateLabel(context, labelContext),
+          onExit: (_) => onHoverDateLabel(context, null),
+          child: result,
         );
       }
 
-      // No handlers - wrap in IgnorePointer so taps pass through to Layer 1's cells
-      return IgnorePointer(child: visualWidget);
+      return result;
     };
   }
 
-  /// Wraps an overflow indicator builder with tap and long-press handlers.
+  /// Wraps an overflow indicator builder with tap, long-press, and double-tap handlers.
   static MCalOverflowIndicatorBuilder wrapOverflowIndicatorBuilder({
     required Widget Function(
       BuildContext,
@@ -354,6 +381,7 @@ class MCalBuilderWrapper {
     defaultBuilder,
     void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap,
     void Function(BuildContext, MCalOverflowTapDetails)? onOverflowLongPress,
+    void Function(BuildContext, MCalOverflowTapDetails)? onOverflowDoubleTap,
   }) {
     return (
       BuildContext context,
@@ -365,7 +393,7 @@ class MCalBuilderWrapper {
           ? developerBuilder(context, overflowContext, defaultWidget)
           : defaultWidget;
 
-      // Wrap with gesture detector for tap and long-press
+      // Wrap with gesture detector for tap, long-press, and double-tap
       return GestureDetector(
         onTap: onOverflowTap != null
             ? () => onOverflowTap(
@@ -379,6 +407,16 @@ class MCalBuilderWrapper {
             : null,
         onLongPress: onOverflowLongPress != null
             ? () => onOverflowLongPress(
+                context,
+                MCalOverflowTapDetails(
+                  date: overflowContext.date,
+                  hiddenEvents: overflowContext.hiddenEvents,
+                  visibleEvents: overflowContext.visibleEvents,
+                ),
+              )
+            : null,
+        onDoubleTap: onOverflowDoubleTap != null
+            ? () => onOverflowDoubleTap(
                 context,
                 MCalOverflowTapDetails(
                   date: overflowContext.date,

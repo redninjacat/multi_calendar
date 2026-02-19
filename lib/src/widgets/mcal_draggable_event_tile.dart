@@ -93,7 +93,7 @@ class MCalDraggableEventTile extends StatefulWidget {
   ///
   /// If not provided, the default feedback is the child widget wrapped
   /// in a [Material] with elevation from the theme.
-  final Widget Function(BuildContext, MCalDraggedTileDetails)?
+  final Widget Function(BuildContext, MCalDraggedTileDetails, Widget)?
   draggedTileBuilder;
 
   /// Custom builder for the source placeholder widget.
@@ -108,7 +108,7 @@ class MCalDraggableEventTile extends StatefulWidget {
   ///
   /// If not provided, the default placeholder is the child widget
   /// with 50% opacity (ghost effect).
-  final Widget Function(BuildContext, MCalDragSourceDetails)?
+  final Widget Function(BuildContext, MCalDragSourceDetails, Widget)?
   dragSourceTileBuilder;
 
   /// Callback invoked when a drag operation starts.
@@ -290,7 +290,6 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
 
     Widget feedbackContent;
 
-    // If custom builder is provided, use it
     if (widget.draggedTileBuilder != null) {
       feedbackContent = Builder(
         builder: (innerContext) {
@@ -302,11 +301,27 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
             horizontalSpacing: widget.horizontalSpacing,
             eventDurationDays: eventDurationDays,
           );
-          return widget.draggedTileBuilder!(innerContext, details);
+          final defaultFeedback = widget.defaultFeedbackBuilder != null
+              ? Material(
+                  elevation: _defaultDraggedTileElevation,
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(
+                    capturedTheme?.eventTileCornerRadius ?? 4.0,
+                  ),
+                  child: widget.defaultFeedbackBuilder!(tileWidth),
+                )
+              : Material(
+                  elevation: _defaultDraggedTileElevation,
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(
+                    capturedTheme?.eventTileCornerRadius ?? 4.0,
+                  ),
+                  child: widget.child,
+                );
+          return widget.draggedTileBuilder!(innerContext, details, defaultFeedback);
         },
       );
 
-      // Wrap with MCalTheme if we captured theme data from the original context
       if (capturedTheme != null) {
         feedbackContent = MCalTheme(
           data: capturedTheme,
@@ -356,17 +371,17 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
 
   /// Builds the placeholder widget shown at the source position while dragging.
   Widget _buildChildWhenDragging(BuildContext context) {
-    // If custom builder is provided, use it
+    final defaultSource = Opacity(opacity: _defaultSourceOpacity, child: widget.child);
+
     if (widget.dragSourceTileBuilder != null) {
       final details = MCalDragSourceDetails(
         event: widget.event,
         sourceDate: widget.sourceDate,
       );
-      return widget.dragSourceTileBuilder!(context, details);
+      return widget.dragSourceTileBuilder!(context, details, defaultSource);
     }
 
-    // Build default: child with 50% opacity (ghost effect)
-    return Opacity(opacity: _defaultSourceOpacity, child: widget.child);
+    return defaultSource;
   }
 
   /// Handles the drag start event.

@@ -395,8 +395,8 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            locale: const Locale('ar'),
-            home: Directionality(
+          locale: const Locale('ar'),
+          home: Directionality(
               textDirection: TextDirection.rtl,
               child: Scaffold(
                 body: SizedBox(

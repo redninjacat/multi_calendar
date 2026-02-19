@@ -97,6 +97,7 @@ export 'src/widgets/mcal_day_view_contexts.dart'
         MCalGridlineContext,
         MCalGridlineType,
         MCalTimeLabelContext,
+        MCalTimeLabelPosition,
         MCalTimeRegionContext,
         MCalTimeSlotContext,
         MCalTimedEventTileContext;

@@ -180,7 +180,7 @@ class _StressTestDayStyleState extends State<StressTestDayStyle> {
                       showEventDetailDialog(
                           context, details.event, widget.locale);
                     },
-                    onEventDropped: (details) {
+                    onEventDropped: (context, details) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -191,8 +191,9 @@ class _StressTestDayStyleState extends State<StressTestDayStyle> {
                           ),
                         );
                       }
+                      return true;
                     },
-                    onEventResized: (details) {
+                    onEventResized: (context, details) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -203,6 +204,7 @@ class _StressTestDayStyleState extends State<StressTestDayStyle> {
                           ),
                         );
                       }
+                      return true;
                     },
                   ),
                 ),

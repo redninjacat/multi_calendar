@@ -153,7 +153,7 @@ class _DayStressTestTabState extends State<DayStressTestTab> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ResponsiveControlPanel(
-      controlPanelTitle: l10n.stressTestSettings,
+      controlPanelTitle: l10n.testSettings,
       controlPanel: _buildControlPanel(l10n, colorScheme),
       child: _buildDayView(colorScheme),
     );
@@ -165,6 +165,7 @@ class _DayStressTestTabState extends State<DayStressTestTab> {
       children: [
         // Stress Test Controls Section
         ControlPanelSection(
+          showTopDivider: false,
           title: l10n.stressTestControls,
           children: [
             ControlWidgets.toggle(
@@ -280,7 +281,7 @@ class _DayStressTestTabState extends State<DayStressTestTab> {
                   widget.locale,
                 );
               },
-              onEventDropped: (details) {
+              onEventDropped: (context, details) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).clearSnackBars();
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -295,8 +296,9 @@ class _DayStressTestTabState extends State<DayStressTestTab> {
                     ),
                   );
                 }
+                return true;
               },
-              onEventResized: (details) {
+              onEventResized: (context, details) {
                 if (mounted) {
                   final minutes = details.newEndDate
                       .difference(details.newStartDate)
@@ -314,6 +316,7 @@ class _DayStressTestTabState extends State<DayStressTestTab> {
                     ),
                   );
                 }
+                return true;
               },
             ),
           ),

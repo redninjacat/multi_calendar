@@ -514,10 +514,17 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Focus the first view and use keyboard navigation
+      // Focus the first view and use keyboard navigation.
+      // We tap on a non-cell area (the month header at the top) to focus the
+      // widget without changing the focused date. Then we explicitly set the
+      // focused date before pressing the key.
       final view1Finder = find.byKey(const Key('view1'));
-      await tester.tap(view1Finder);
+      await tester.tap(view1Finder, warnIfMissed: false);
       await tester.pumpAndSettle();
+
+      // Reset focused date in case the tap changed it (depends on firstDayOfWeek layout)
+      sharedController.setFocusedDate(DateTime(2025, 1, 15));
+      await tester.pump();
 
       // Send arrow right key to move focus to next day
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
@@ -1087,7 +1094,7 @@ void main() {
               child: MCalMonthView(
                 controller: controller,
                 enableDragToMove: true,
-                draggedTileBuilder: (context, details) {
+                draggedTileBuilder: (context, details, defaultWidget) {
                   return Container(
                     color: Colors.blue.withValues(alpha: 0.8),
                     child: Text(details.event.title),

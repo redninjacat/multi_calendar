@@ -550,9 +550,13 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // Focus the widget
-        await tester.tap(find.byType(MCalMonthView));
+        // Focus the widget by tapping (may change focused date based on layout)
+        await tester.tap(find.byType(MCalMonthView), warnIfMissed: false);
         await tester.pumpAndSettle();
+
+        // Reset focused date to the known starting point regardless of tap result
+        controller.setFocusedDate(DateTime(2025, 1, 15));
+        await tester.pump();
 
         // Move right
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
@@ -694,8 +698,13 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byType(MCalMonthView));
+        // Focus the widget by tapping (may change focused date based on layout)
+        await tester.tap(find.byType(MCalMonthView), warnIfMissed: false);
         await tester.pumpAndSettle();
+
+        // Reset focused date to the known starting point regardless of tap result
+        controller.setFocusedDate(DateTime(2025, 1, 15));
+        await tester.pump();
 
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await tester.pumpAndSettle();
@@ -875,8 +884,13 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byType(MCalMonthView));
+        // Focus the widget by tapping (may change focused date based on layout)
+        await tester.tap(find.byType(MCalMonthView), warnIfMissed: false);
         await tester.pumpAndSettle();
+
+        // Reset focused date to the known starting point regardless of tap result
+        controller.setFocusedDate(DateTime(2025, 1, 15));
+        await tester.pump();
 
         // Navigate
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
@@ -885,7 +899,7 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
         await tester.pumpAndSettle();
 
-        // Should have recorded focus changes
+        // Should have recorded focus changes (Jan 16 from right, Jan 23 from down)
         expect(focusChanges, isNotEmpty);
         expect(focusChanges, contains(DateTime(2025, 1, 16)));
         expect(focusChanges, contains(DateTime(2025, 1, 23)));
@@ -1154,14 +1168,19 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byType(MCalMonthView));
+        // Focus the widget by tapping (may change focused date based on layout)
+        await tester.tap(find.byType(MCalMonthView), warnIfMissed: false);
         await tester.pumpAndSettle();
 
-        // Arrow right in RTL still moves to next day
+        // Reset focused date to the known starting point regardless of tap result
+        controller.setFocusedDate(DateTime(2025, 1, 15));
+        await tester.pump();
+
+        // In RTL mode, ArrowRight moves to the previous day (visual right = chronological backward)
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
         await tester.pumpAndSettle();
 
-        expect(controller.focusedDate, equals(DateTime(2025, 1, 16)));
+        expect(controller.focusedDate, equals(DateTime(2025, 1, 14)));
       });
     });
   });

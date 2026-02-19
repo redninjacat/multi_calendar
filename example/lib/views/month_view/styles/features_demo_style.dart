@@ -1152,7 +1152,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
   // ============================================================
   String _hoverStatus = 'Hover over cells, date labels, or events';
 
-  void _onHoverCell(MCalDayCellContext? ctx) {
+  void _onHoverCell(BuildContext context, MCalDayCellContext? ctx) {
     setState(() {
       if (ctx == null) {
         _hoverStatus = 'Hover over cells, date labels, or events';
@@ -1166,7 +1166,7 @@ class _FeaturesDemoStyleState extends State<FeaturesDemoStyle> {
     });
   }
 
-  void _onHoverEvent(MCalEventTileContext? ctx) {
+  void _onHoverEvent(BuildContext context, MCalEventTileContext? ctx) {
     setState(() {
       if (ctx == null) {
         _hoverStatus = 'Hover over cells, date labels, or events';

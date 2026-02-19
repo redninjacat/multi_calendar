@@ -10,13 +10,17 @@ import '../models/mcal_calendar_event.dart';
 import '../models/mcal_time_region.dart';
 import '../styles/mcal_theme.dart';
 import '../utils/mcal_date_format_utils.dart';
+import '../utils/mcal_scroll_behavior.dart';
 import '../../l10n/mcal_localizations.dart';
+import '../utils/mcal_l10n_helper.dart';
 import '../utils/day_view_overlap.dart';
 import '../utils/time_utils.dart';
 import 'mcal_callback_details.dart';
 import 'mcal_day_view_contexts.dart';
 import 'mcal_drag_handler.dart';
 import 'mcal_draggable_event_tile.dart';
+import 'mcal_month_view.dart' show MCalSwipeNavigationDirection;
+import 'mcal_month_view_contexts.dart' show MCalWeekNumberContext;
 
 // ============================================================================
 // Keyboard Shortcut Intents
@@ -125,8 +129,14 @@ class MCalDayViewKeyboardResizeIntent extends Intent {
 /// MCalDayView(
 ///   controller: controller,
 ///   onEventTap: (details) => print('Tapped ${details.event.title}'),
-///   onEventDropped: (details) => print('Dropped at ${details.newStartDate}'),
-///   onEventResized: (details) => print('Resized to ${details.newDuration}'),
+///   onEventDropped: (context, details) {
+///     print('Dropped at ${details.newStartDate}');
+///     return true; // Accept the change
+///   },
+///   onEventResized: (context, details) {
+///     print('Resized to ${details.newDuration}');
+///     return true; // Accept the change
+///   },
 /// )
 /// ```
 ///
@@ -164,15 +174,21 @@ class MCalDayView extends StatefulWidget {
     // Display
     this.showNavigator = false,
     this.showCurrentTimeIndicator = true,
-    this.showWeekNumber = false,
+    this.showWeekNumbers = false,
+    this.weekNumberBuilder,
     this.gridlineInterval = const Duration(minutes: 15),
     this.dateFormat,
     this.timeLabelFormat,
     this.locale,
+    this.showSubHourLabels = false,
+    this.subHourLabelInterval,
+    this.subHourLabelBuilder,
 
     // Scrolling
     this.autoScrollToCurrentTime = true,
     this.initialScrollTime,
+    this.initialScrollDuration = Duration.zero,
+    this.initialScrollCurve = Curves.easeInOut,
     this.scrollPhysics,
     this.scrollController,
 
@@ -186,7 +202,7 @@ class MCalDayView extends StatefulWidget {
     this.dragEdgeNavigationEnabled = true,
     this.dragLongPressDelay = const Duration(milliseconds: 200),
     this.dragEdgeNavigationDelay = const Duration(milliseconds: 1200),
-    this.showDropTargetPreview = true,
+    this.showDropTargetTiles = true,
     this.showDropTargetOverlay = true,
     this.dropTargetTilesAboveOverlay = false,
 
@@ -213,6 +229,11 @@ class MCalDayView extends StatefulWidget {
     this.minDate,
     this.maxDate,
 
+    // Swipe Navigation
+    this.enableSwipeNavigation = false,
+    this.swipeNavigationDirection,
+    this.onSwipeNavigation,
+
     // Builders
     this.dayHeaderBuilder,
     this.timeLabelBuilder,
@@ -227,28 +248,33 @@ class MCalDayView extends StatefulWidget {
     this.dropTargetTileBuilder,
     this.dropTargetOverlayBuilder,
     this.timeResizeHandleBuilder,
+    this.resizeHandleInset,
     this.loadingBuilder,
     this.errorBuilder,
     this.timeRegionBuilder,
-
-    // Navigation callbacks
-    this.onNavigatePrevious,
-    this.onNavigateNext,
-    this.onNavigateToday,
+    this.timeSlotInteractivityCallback,
 
     // Interaction callbacks
     this.onDayHeaderTap,
     this.onDayHeaderLongPress,
+    this.onDayHeaderDoubleTap,
     this.onTimeLabelTap,
+    this.onTimeLabelLongPress,
+    this.onTimeLabelDoubleTap,
     this.onTimeSlotTap,
     this.onTimeSlotLongPress,
-    this.onEmptySpaceDoubleTap,
+    this.onTimeSlotDoubleTap,
     this.onEventTap,
     this.onEventLongPress,
+    this.onEventDoubleTap,
     this.onHoverEvent,
     this.onHoverTimeSlot,
+    this.onHoverDayHeader,
+    this.onHoverTimeLabel,
+    this.onHoverOverflow,
     this.onOverflowTap,
     this.onOverflowLongPress,
+    this.onOverflowDoubleTap,
 
     // Keyboard shortcut callbacks
     this.onCreateEventRequested,
@@ -346,7 +372,40 @@ class MCalDayView extends StatefulWidget {
   /// When true, displays the week number (1-53) in the top-leading corner.
   ///
   /// Defaults to false.
-  final bool showWeekNumber;
+  final bool showWeekNumbers;
+
+  /// Builder callback for customizing week number display in the day header.
+  ///
+  /// Receives [BuildContext], [MCalWeekNumberContext] with week number data,
+  /// and the default week number widget as parameters.
+  ///
+  /// Return a custom widget to override the default week number badge, or
+  /// wrap/modify the default widget to preserve consistent styling while
+  /// adding customization.
+  ///
+  /// Only applies when [showWeekNumbers] is true.
+  ///
+  /// Example: Custom styling for week numbers
+  /// ```dart
+  /// weekNumberBuilder: (context, weekContext, defaultWidget) {
+  ///   return Container(
+  ///     decoration: BoxDecoration(
+  ///       color: Colors.blue,
+  ///       borderRadius: BorderRadius.circular(8),
+  ///     ),
+  ///     padding: EdgeInsets.all(8),
+  ///     child: Text(
+  ///       'Week ${weekContext.weekNumber}',
+  ///       style: TextStyle(color: Colors.white),
+  ///     ),
+  ///   );
+  /// }
+  /// ```
+  final Widget Function(
+    BuildContext context,
+    MCalWeekNumberContext weekContext,
+    Widget defaultWidget,
+  )? weekNumberBuilder;
 
   /// The interval between gridlines in the timed events area.
   ///
@@ -385,14 +444,49 @@ class MCalDayView extends StatefulWidget {
   /// If null, uses the system locale from [Localizations].
   final Locale? locale;
 
+  /// Whether to display sub-hour time labels in the time legend.
+  ///
+  /// When true and [subHourLabelInterval] is set, additional time labels are
+  /// rendered between each hour mark (e.g., at 30-minute intervals).
+  ///
+  /// Sub-hour labels use a smaller font size (80% of the hour label size) and
+  /// lighter color (50% opacity) by default. Customize via [subHourLabelBuilder].
+  ///
+  /// Defaults to false.
+  final bool showSubHourLabels;
+
+  /// The interval at which sub-hour labels appear.
+  ///
+  /// Only used when [showSubHourLabels] is true. Common values are
+  /// `Duration(minutes: 30)` or `Duration(minutes: 15)`.
+  ///
+  /// The interval must be less than 60 minutes. If null, no sub-hour labels
+  /// are rendered even if [showSubHourLabels] is true.
+  final Duration? subHourLabelInterval;
+
+  /// Builder for sub-hour time labels.
+  ///
+  /// When non-null, replaces the default sub-hour label rendering.
+  /// The default sub-hour label uses smaller, lighter text compared to hour labels.
+  ///
+  /// Receives [MCalTimeLabelContext] with the sub-hour time (hour and minute fields set).
+  /// The [Widget] parameter is the default sub-hour label widget.
+  final Widget Function(
+    BuildContext context,
+    MCalTimeLabelContext labelContext,
+    Widget defaultWidget,
+  )?
+  subHourLabelBuilder;
+
   // ============================================================================
   // Scrolling
   // ============================================================================
 
   /// Whether to automatically scroll to the current time on initial load.
   ///
-  /// When true, the view will scroll to position the current time in the center
-  /// of the viewport when first displayed.
+  /// When true, the view scrolls to position the current time in the center of
+  /// the viewport when first displayed. The scroll is instant by default;
+  /// set [initialScrollDuration] to a positive value for an animated scroll.
   ///
   /// Ignored when [initialScrollTime] is non-null.
   ///
@@ -407,6 +501,25 @@ class MCalDayView extends StatefulWidget {
   ///
   /// When null, [autoScrollToCurrentTime] controls initial scroll behavior.
   final TimeOfDay? initialScrollTime;
+
+  /// Duration for the initial auto-scroll animation.
+  ///
+  /// Controls how the view scrolls to the current time (or [initialScrollTime])
+  /// on first load when [autoScrollToCurrentTime] is true.
+  ///
+  /// - [Duration.zero] (default): instant jump with no animation.
+  /// - Any positive [Duration]: animated scroll using [initialScrollCurve].
+  ///
+  /// Defaults to [Duration.zero].
+  final Duration initialScrollDuration;
+
+  /// Animation curve for the initial auto-scroll when [initialScrollDuration]
+  /// is greater than [Duration.zero].
+  ///
+  /// Has no effect when [initialScrollDuration] is [Duration.zero].
+  ///
+  /// Defaults to [Curves.easeInOut].
+  final Curve initialScrollCurve;
 
   /// The scroll physics for the timed events area.
   ///
@@ -479,7 +592,7 @@ class MCalDayView extends StatefulWidget {
   /// The preview is a phantom event tile rendered at the proposed drop position.
   ///
   /// Defaults to true.
-  final bool showDropTargetPreview;
+  final bool showDropTargetTiles;
 
   /// Whether to show the drop target overlay (Layer 4).
   ///
@@ -626,6 +739,47 @@ class MCalDayView extends StatefulWidget {
   final DateTime? maxDate;
 
   // ============================================================================
+  // Swipe Navigation
+  // ============================================================================
+
+  /// Whether to enable swipe navigation between days.
+  ///
+  /// When true, the day view content is wrapped in a [PageView.builder]
+  /// allowing users to swipe horizontally (default) or vertically to navigate
+  /// between days. The swipe direction is controlled by [swipeNavigationDirection].
+  ///
+  /// When false (default), the view displays a single day and swipe gestures
+  /// do not change the displayed date.
+  ///
+  /// Defaults to false.
+  final bool enableSwipeNavigation;
+
+  /// The direction of swipe navigation.
+  ///
+  /// - [MCalSwipeNavigationDirection.horizontal]: Swipe left/right to navigate days
+  /// - [MCalSwipeNavigationDirection.vertical]: Swipe up/down to navigate days
+  ///
+  /// Only used when [enableSwipeNavigation] is true.
+  /// Defaults to [MCalSwipeNavigationDirection.horizontal] if null.
+  ///
+  /// For horizontal swipes, RTL layout automatically reverses the swipe direction
+  /// (swipe left = previous day in LTR, next day in RTL).
+  final MCalSwipeNavigationDirection? swipeNavigationDirection;
+
+  /// Called when the user navigates to a different day via swipe gesture.
+  ///
+  /// Receives [BuildContext] and [MCalSwipeNavigationDetails] containing the
+  /// previous and new display dates, and the swipe direction.
+  ///
+  /// Note: [onDisplayDateChanged] also fires when swipe navigation occurs.
+  /// Use [onSwipeNavigation] when you need to distinguish swipe navigation
+  /// from other navigation methods (keyboard, buttons, programmatic).
+  ///
+  /// Only fires when [enableSwipeNavigation] is true.
+  final void Function(BuildContext context, MCalSwipeNavigationDetails details)?
+      onSwipeNavigation;
+
+  // ============================================================================
   // Builder Callbacks
   // ============================================================================
 
@@ -637,6 +791,7 @@ class MCalDayView extends StatefulWidget {
   final Widget Function(
     BuildContext context,
     MCalDayHeaderContext headerContext,
+    Widget defaultWidget,
   )?
   dayHeaderBuilder;
 
@@ -648,6 +803,7 @@ class MCalDayView extends StatefulWidget {
   final Widget Function(
     BuildContext context,
     MCalTimeLabelContext labelContext,
+    Widget defaultWidget,
   )?
   timeLabelBuilder;
 
@@ -659,6 +815,7 @@ class MCalDayView extends StatefulWidget {
   final Widget Function(
     BuildContext context,
     MCalGridlineContext gridlineContext,
+    Widget defaultWidget,
   )?
   gridlineBuilder;
 
@@ -671,6 +828,7 @@ class MCalDayView extends StatefulWidget {
     BuildContext context,
     MCalCalendarEvent event,
     MCalAllDayEventTileContext tileContext,
+    Widget defaultWidget,
   )?
   allDayEventTileBuilder;
 
@@ -683,6 +841,7 @@ class MCalDayView extends StatefulWidget {
     BuildContext context,
     MCalCalendarEvent event,
     MCalTimedEventTileContext tileContext,
+    Widget defaultWidget,
   )?
   timedEventTileBuilder;
 
@@ -694,6 +853,7 @@ class MCalDayView extends StatefulWidget {
   final Widget Function(
     BuildContext context,
     MCalCurrentTimeContext timeContext,
+    Widget defaultWidget,
   )?
   currentTimeIndicatorBuilder;
 
@@ -702,7 +862,7 @@ class MCalDayView extends StatefulWidget {
   /// If null, uses default navigator rendering (prev/today/next buttons).
   ///
   /// Receives the current display date.
-  final Widget Function(BuildContext context, DateTime displayDate)?
+  final Widget Function(BuildContext context, DateTime displayDate, Widget defaultWidget)?
   navigatorBuilder;
 
   /// Builder for custom day layout (advanced).
@@ -714,6 +874,7 @@ class MCalDayView extends StatefulWidget {
   final Widget Function(
     BuildContext context,
     MCalDayLayoutContext layoutContext,
+    Widget defaultWidget,
   )?
   dayLayoutBuilder;
 
@@ -727,6 +888,7 @@ class MCalDayView extends StatefulWidget {
     BuildContext context,
     MCalCalendarEvent event,
     MCalDraggedTileDetails details,
+    Widget defaultWidget,
   )?
   draggedTileBuilder;
 
@@ -740,6 +902,7 @@ class MCalDayView extends StatefulWidget {
     BuildContext context,
     MCalCalendarEvent event,
     MCalDragSourceDetails details,
+    Widget defaultWidget,
   )?
   dragSourceTileBuilder;
 
@@ -753,6 +916,7 @@ class MCalDayView extends StatefulWidget {
     BuildContext context,
     MCalCalendarEvent event,
     MCalTimedEventTileContext tileContext,
+    Widget defaultWidget,
   )?
   dropTargetTileBuilder;
 
@@ -765,6 +929,7 @@ class MCalDayView extends StatefulWidget {
   final Widget Function(
     BuildContext context,
     MCalDayViewDropOverlayDetails details,
+    Widget defaultWidget,
   )?
   dropTargetOverlayBuilder;
 
@@ -777,22 +942,54 @@ class MCalDayView extends StatefulWidget {
     BuildContext context,
     MCalCalendarEvent event,
     MCalResizeEdge edge,
+    Widget defaultWidget,
   )?
   timeResizeHandleBuilder;
+
+  /// Optional callback returning horizontal inset for a resize handle.
+  ///
+  /// This callback receives the full [MCalTimedEventTileContext] and the
+  /// [MCalResizeEdge] indicating which edge is being positioned (start or end).
+  ///
+  /// Returns the horizontal offset in logical pixels to shift the resize handle
+  /// inward from the edge of the event tile. A value of `0.0` (or `null` callback)
+  /// positions the handle at the tile edge.
+  ///
+  /// Use this to ensure resize handles don't overlap with event content or to
+  /// create visual spacing between handles and tile borders.
+  ///
+  /// Only used when [enableDragToResize] is true and events have resize handles.
+  ///
+  /// Example: Add 4px inset to all resize handles
+  /// ```dart
+  /// resizeHandleInset: (tileContext, edge) => 4.0
+  /// ```
+  ///
+  /// Example: Different insets based on edge
+  /// ```dart
+  /// resizeHandleInset: (tileContext, edge) {
+  ///   return edge == MCalResizeEdge.start ? 6.0 : 4.0;
+  /// }
+  /// ```
+  final double Function(MCalTimedEventTileContext, MCalResizeEdge)? resizeHandleInset;
 
   /// Builder for loading state.
   ///
   /// Displayed while events are being loaded from the controller.
   /// If null, shows a centered [CircularProgressIndicator].
-  final Widget Function(BuildContext context)? loadingBuilder;
+  ///
+  /// The builder receives the default loading widget as the last parameter,
+  /// allowing you to wrap or replace it.
+  final Widget Function(BuildContext context, Widget defaultWidget)? loadingBuilder;
 
   /// Builder for error state.
   ///
   /// Displayed when event loading fails.
   /// If null, shows a centered error message.
   ///
-  /// Receives the error object.
-  final Widget Function(BuildContext context, Object error)? errorBuilder;
+  /// Receives the error object and the default error widget as the last parameter,
+  /// allowing you to wrap or replace it.
+  final Widget Function(BuildContext context, Object error, Widget defaultWidget)? errorBuilder;
 
   /// Builder for special time regions.
   ///
@@ -802,27 +999,42 @@ class MCalDayView extends StatefulWidget {
   final Widget Function(
     BuildContext context,
     MCalTimeRegionContext regionContext,
+    Widget defaultWidget,
   )?
   timeRegionBuilder;
 
-  // ============================================================================
-  // Navigation Callbacks
-  // ============================================================================
-
-  /// Called when the "Previous Day" button is pressed.
+  /// Callback to determine whether a specific time slot is interactive.
   ///
-  /// If null, the day is automatically navigated backward by 1 day.
-  final VoidCallback? onNavigatePrevious;
-
-  /// Called when the "Next Day" button is pressed.
+  /// Return `true` to allow interaction (taps, long-press, double-tap) with the time slot,
+  /// or `false` to disable interaction. When disabled, the slot is rendered with reduced
+  /// opacity (0.5) to provide visual feedback.
   ///
-  /// If null, the day is automatically navigated forward by 1 day.
-  final VoidCallback? onNavigateNext;
-
-  /// Called when the "Today" button is pressed.
+  /// This callback receives [MCalTimeSlotInteractivityDetails] containing:
+  /// - [date]: The date of the time slot
+  /// - [hour]: The hour component (0-23)
+  /// - [minute]: The minute component (0-59)
+  /// - [startTime]: Full start time of the slot
+  /// - [endTime]: Full end time of the slot (based on [timeSlotDuration])
   ///
-  /// If null, the day is automatically navigated to today.
-  final VoidCallback? onNavigateToday;
+  /// **Note:** This callback does NOT block drag-and-drop operations. Use
+  /// [onDragWillAccept] to control whether events can be dropped on specific time slots.
+  /// This matches the documented behavior of Month View's [cellInteractivityCallback].
+  ///
+  /// Example usage:
+  /// ```dart
+  /// timeSlotInteractivityCallback: (context, details) {
+  ///   // Disable past time slots
+  ///   if (details.startTime.isBefore(DateTime.now())) {
+  ///     return false;
+  ///   }
+  ///   // Only allow slots during working hours (9 AM - 5 PM)
+  ///   if (details.hour < 9 || details.hour >= 17) {
+  ///     return false;
+  ///   }
+  ///   return true;
+  /// }
+  /// ```
+  final bool Function(BuildContext, MCalTimeSlotInteractivityDetails)? timeSlotInteractivityCallback;
 
   // ============================================================================
   // Interaction Callbacks
@@ -830,41 +1042,56 @@ class MCalDayView extends StatefulWidget {
 
   /// Called when the day header is tapped.
   ///
-  /// Receives the display date.
-  final void Function(DateTime date)? onDayHeaderTap;
+  /// Receives [BuildContext] and the display date.
+  final void Function(BuildContext context, DateTime date)? onDayHeaderTap;
 
   /// Called when the day header is long-pressed.
   ///
-  /// Receives the display date.
-  final void Function(DateTime date)? onDayHeaderLongPress;
+  /// Receives [BuildContext] and the display date.
+  final void Function(BuildContext context, DateTime date)? onDayHeaderLongPress;
+
+  /// Called when the day header is double-tapped.
+  ///
+  /// Receives [BuildContext] and [MCalDayHeaderContext] with the display date.
+  final void Function(BuildContext context, MCalDayHeaderContext headerContext)? onDayHeaderDoubleTap;
 
   /// Called when a time label in the time legend is tapped.
   ///
-  /// Receives [MCalTimeLabelContext].
-  final void Function(MCalTimeLabelContext labelContext)? onTimeLabelTap;
+  /// Receives [BuildContext] and [MCalTimeLabelContext].
+  final void Function(BuildContext context, MCalTimeLabelContext labelContext)? onTimeLabelTap;
+
+  /// Called when a time label in the time legend is long-pressed.
+  ///
+  /// Receives [BuildContext] and [MCalTimeLabelContext].
+  final void Function(BuildContext context, MCalTimeLabelContext labelContext)? onTimeLabelLongPress;
+
+  /// Called when a time label in the time legend is double-tapped.
+  ///
+  /// Receives [BuildContext] and [MCalTimeLabelContext].
+  final void Function(BuildContext context, MCalTimeLabelContext labelContext)? onTimeLabelDoubleTap;
 
   /// Called when an empty time slot is tapped.
   ///
-  /// Receives [MCalTimeSlotContext] with the date and time of the tapped slot.
+  /// Receives [BuildContext] and [MCalTimeSlotContext] with the date and time of the tapped slot.
   ///
   /// Useful for creating new events at the tapped time.
-  final void Function(MCalTimeSlotContext slotContext)? onTimeSlotTap;
+  final void Function(BuildContext context, MCalTimeSlotContext slotContext)? onTimeSlotTap;
 
   /// Called when an empty time slot is long-pressed.
   ///
-  /// Receives [MCalTimeSlotContext] with the date and time of the pressed slot.
+  /// Receives [BuildContext] and [MCalTimeSlotContext] with the date and time of the pressed slot.
   ///
   /// Useful for creating new events at the pressed time.
-  final void Function(MCalTimeSlotContext slotContext)? onTimeSlotLongPress;
+  final void Function(BuildContext context, MCalTimeSlotContext slotContext)? onTimeSlotLongPress;
 
   /// Called when empty time slot space is double-tapped.
   ///
-  /// Receives the [DateTime] at the double-tap position (snapped to time slot).
+  /// Receives [BuildContext] and [MCalTimeSlotContext] at the double-tap position (snapped to time slot).
   /// Typical use case: Show create event dialog at the tapped time.
   ///
   /// Double-tap does not conflict with single tap; Flutter's gesture arena
   /// ensures only one gesture wins.
-  final void Function(DateTime time)? onEmptySpaceDoubleTap;
+  final void Function(BuildContext context, MCalTimeSlotContext slotContext)? onTimeSlotDoubleTap;
 
   /// Called when an event tile is tapped.
   ///
@@ -878,33 +1105,66 @@ class MCalDayView extends StatefulWidget {
   final void Function(BuildContext context, MCalEventTapDetails details)?
   onEventLongPress;
 
+  /// Called when an event tile is double-tapped.
+  ///
+  /// Receives [BuildContext] and [MCalEventTapDetails] with the event and display date.
+  final void Function(BuildContext context, MCalEventTapDetails details)?
+  onEventDoubleTap;
+
   /// Called when the pointer hovers over an event.
   ///
   /// Only fires on platforms with hover support (desktop/web).
   ///
-  /// Receives the event being hovered.
-  final void Function(MCalCalendarEvent event)? onHoverEvent;
+  /// Receives [BuildContext] and the event being hovered, or null when exiting.
+  final void Function(BuildContext, MCalCalendarEvent?)? onHoverEvent;
 
   /// Called when the pointer hovers over an empty time slot.
   ///
   /// Only fires on platforms with hover support (desktop/web).
   ///
-  /// Receives [MCalTimeSlotContext].
-  final void Function(MCalTimeSlotContext slotContext)? onHoverTimeSlot;
+  /// Receives [BuildContext] and [MCalTimeSlotContext], or null when exiting.
+  final void Function(BuildContext, MCalTimeSlotContext?)? onHoverTimeSlot;
+
+  /// Called when the pointer hovers over the day header.
+  ///
+  /// Only fires on platforms with hover support (desktop/web).
+  ///
+  /// Receives [BuildContext] and [MCalDayHeaderContext], or null when exiting.
+  final void Function(BuildContext, MCalDayHeaderContext?)? onHoverDayHeader;
+
+  /// Called when the pointer hovers over a time label.
+  ///
+  /// Only fires on platforms with hover support (desktop/web).
+  ///
+  /// Receives [BuildContext] and [MCalTimeLabelContext], or null when exiting.
+  final void Function(BuildContext, MCalTimeLabelContext?)? onHoverTimeLabel;
+
+  /// Called when the pointer hovers over the overflow indicator.
+  ///
+  /// Only fires on platforms with hover support (desktop/web).
+  ///
+  /// Receives [BuildContext] and [MCalOverflowTapDetails], or null when exiting.
+  final void Function(BuildContext, MCalOverflowTapDetails?)? onHoverOverflow;
 
   /// Called when the all-day section overflow indicator is tapped.
   ///
   /// The overflow indicator appears when there are more all-day events than [allDaySectionMaxRows].
   ///
-  /// Receives the list of overflowing events and the display date.
-  final void Function(List<MCalCalendarEvent> events, DateTime date)?
+  /// Receives [BuildContext], the list of overflowing events, and the display date.
+  final void Function(BuildContext context, List<MCalCalendarEvent> events, DateTime date)?
   onOverflowTap;
 
   /// Called when the all-day section overflow indicator is long-pressed.
   ///
-  /// Receives the list of overflowing events and the display date.
-  final void Function(List<MCalCalendarEvent> events, DateTime date)?
+  /// Receives [BuildContext], the list of overflowing events, and the display date.
+  final void Function(BuildContext context, List<MCalCalendarEvent> events, DateTime date)?
   onOverflowLongPress;
+
+  /// Called when the all-day section overflow indicator is double-tapped.
+  ///
+  /// Receives [BuildContext] and [MCalOverflowTapDetails] with overflow event data.
+  final void Function(BuildContext context, MCalOverflowTapDetails details)?
+  onOverflowDoubleTap;
 
   /// Called when the user requests to create a new event via keyboard shortcut (Cmd/Ctrl+N).
   ///
@@ -946,12 +1206,15 @@ class MCalDayView extends StatefulWidget {
 
   /// Called when an event is successfully dropped.
   ///
-  /// Receives [MCalEventDroppedDetails] with old and new dates.
+  /// Receives [BuildContext] and [MCalEventDroppedDetails] with old and new dates.
   /// The [typeConversion] field indicates if the event was converted between all-day and timed.
+  ///
+  /// Return `true` to accept the change, `false` to revert it.
+  /// If this callback is not provided, the change is accepted by default.
   ///
   /// You are responsible for updating the event in your data source.
   /// The controller will automatically update if you call its modification methods.
-  final void Function(MCalEventDroppedDetails details)? onEventDropped;
+  final bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped;
 
   /// Called to validate whether a resize should be accepted.
   ///
@@ -973,10 +1236,13 @@ class MCalDayView extends StatefulWidget {
 
   /// Called when an event is successfully resized.
   ///
-  /// Receives [MCalEventResizedDetails] with old and new times/durations.
+  /// Receives [BuildContext] and [MCalEventResizedDetails] with old and new times/durations.
+  ///
+  /// Return `true` to accept the change, `false` to revert it.
+  /// If this callback is not provided, the change is accepted by default.
   ///
   /// You are responsible for updating the event in your data source.
-  final void Function(MCalEventResizedDetails details)? onEventResized;
+  final bool Function(BuildContext, MCalEventResizedDetails)? onEventResized;
 
   // ============================================================================
   // State Change Callbacks
@@ -1137,6 +1403,25 @@ class MCalDayViewState extends State<MCalDayView> {
   Timer? _currentTimeTimer;
 
   // ============================================================================
+  // Swipe Navigation (Task 8)
+  // ============================================================================
+
+  /// PageController for swipe navigation between days.
+  /// Initialized with a large initial page (10000) to allow infinite scrolling
+  /// in both directions.
+  PageController? _swipePageController;
+
+  /// Flag to prevent recursive updates when programmatically changing pages.
+  bool _isProgrammaticPageChange = false;
+
+  /// The initial page index for the PageView (center of the "infinite" scroll range).
+  static const int _initialSwipePageIndex = 10000;
+
+  /// The reference date for page index calculations.
+  /// Set to the display date when swipe navigation is enabled.
+  DateTime? _swipeReferenceDate;
+
+  // ============================================================================
   // Keys for Layout Access
   // ============================================================================
 
@@ -1156,6 +1441,19 @@ class MCalDayViewState extends State<MCalDayView> {
     _displayDate = widget.controller.displayDate;
     _scrollController = widget.scrollController ?? ScrollController();
     _focusNode = FocusNode();
+    
+    // Initialize swipe navigation PageController if enabled (Task 8)
+    if (widget.enableSwipeNavigation) {
+      _swipeReferenceDate = DateTime(
+        _displayDate.year,
+        _displayDate.month,
+        _displayDate.day,
+      );
+      _swipePageController = PageController(
+        initialPage: _initialSwipePageIndex,
+      );
+    }
+    
     widget.controller.addListener(_onControllerChanged);
     _loadEvents();
     _startCurrentTimeTimer();
@@ -1170,6 +1468,7 @@ class MCalDayViewState extends State<MCalDayView> {
     if (widget.scrollController == null) {
       _scrollController?.dispose();
     }
+    _swipePageController?.dispose(); // Task 8: Dispose swipe navigation controller
     widget.controller.removeListener(_onControllerChanged);
     super.dispose();
   }
@@ -1192,6 +1491,26 @@ class MCalDayViewState extends State<MCalDayView> {
         _scrollController?.dispose();
       }
       _scrollController = widget.scrollController ?? ScrollController();
+    }
+
+    // Task 8: Handle swipe navigation parameter changes
+    if (widget.enableSwipeNavigation != oldWidget.enableSwipeNavigation) {
+      if (widget.enableSwipeNavigation) {
+        // Enable swipe navigation - create PageController
+        _swipeReferenceDate = DateTime(
+          _displayDate.year,
+          _displayDate.month,
+          _displayDate.day,
+        );
+        _swipePageController = PageController(
+          initialPage: _initialSwipePageIndex,
+        );
+      } else {
+        // Disable swipe navigation - dispose PageController
+        _swipePageController?.dispose();
+        _swipePageController = null;
+        _swipeReferenceDate = null;
+      }
     }
 
     // Reload events if display date changed
@@ -1237,6 +1556,76 @@ class MCalDayViewState extends State<MCalDayView> {
   }
 
   // ============================================================================
+  // Swipe Navigation Helper Methods (Task 8)
+  // ============================================================================
+
+  /// Converts a PageView page index to the corresponding day DateTime.
+  ///
+  /// The PageView uses a large initial page index (10000) to allow infinite
+  /// scrolling in both directions. This method calculates the offset from
+  /// the reference date based on the page index.
+  ///
+  /// Example:
+  /// - pageIndex = 10000 (initial) → reference date (no offset)
+  /// - pageIndex = 10001 → reference date + 1 day
+  /// - pageIndex = 9999 → reference date - 1 day
+  DateTime _pageIndexToDay(int pageIndex) {
+    if (_swipeReferenceDate == null) {
+      return _displayDate;
+    }
+    
+    final dayOffset = pageIndex - _initialSwipePageIndex;
+    return DateTime(
+      _swipeReferenceDate!.year,
+      _swipeReferenceDate!.month,
+      _swipeReferenceDate!.day + dayOffset,
+    );
+  }
+
+  /// Called when the user swipes to a different page in the PageView.
+  ///
+  /// This method:
+  /// 1. Computes the new day from the page index
+  /// 2. Updates the controller's display date (which triggers onDisplayDateChanged)
+  /// 3. Fires the onSwipeNavigation callback with direction details
+  void _onSwipePageChanged(int pageIndex) {
+    // Skip if this is a programmatic change to avoid recursive updates
+    if (_isProgrammaticPageChange) return;
+
+    final newDay = _pageIndexToDay(pageIndex);
+    final previousDay = _displayDate;
+
+    // Skip if same day (shouldn't happen but be safe)
+    if (newDay.year == previousDay.year &&
+        newDay.month == previousDay.month &&
+        newDay.day == previousDay.day) {
+      return;
+    }
+
+    // Determine swipe direction for callback
+    // AxisDirection.left = swiped left (navigating to next day)
+    // AxisDirection.right = swiped right (navigating to previous day)
+    final axisDirection = newDay.isAfter(previousDay)
+        ? AxisDirection.left
+        : AxisDirection.right;
+
+    // Update the controller's display date (this triggers _onControllerChanged)
+    widget.controller.setDisplayDate(newDay);
+
+    // Fire the swipe navigation callback
+    if (widget.onSwipeNavigation != null) {
+      widget.onSwipeNavigation!(
+        context,
+        MCalSwipeNavigationDetails(
+          previousMonth: previousDay,
+          newMonth: newDay,
+          direction: axisDirection,
+        ),
+      );
+    }
+  }
+
+  // ============================================================================
   // Private Methods (Placeholder implementations)
   // ============================================================================
 
@@ -1248,6 +1637,25 @@ class MCalDayViewState extends State<MCalDayView> {
         _displayDate = widget.controller.displayDate;
       });
       _loadEvents();
+      
+      // Task 8: Update PageController when display date changes programmatically
+      if (widget.enableSwipeNavigation && _swipePageController != null && _swipeReferenceDate != null) {
+        final newDate = DateTime(
+          _displayDate.year,
+          _displayDate.month,
+          _displayDate.day,
+        );
+        final dayOffset = newDate.difference(_swipeReferenceDate!).inDays;
+        final newPageIndex = _initialSwipePageIndex + dayOffset;
+        
+        if (_swipePageController!.hasClients) {
+          // Use flag to prevent _onSwipePageChanged from firing
+          _isProgrammaticPageChange = true;
+          _swipePageController!.jumpToPage(newPageIndex);
+          _isProgrammaticPageChange = false;
+        }
+      }
+      
       widget.onDisplayDateChanged?.call(_displayDate);
     }
   }
@@ -1370,8 +1778,8 @@ class MCalDayViewState extends State<MCalDayView> {
 
       scrollToTime(
         timeToScrollTo,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: widget.initialScrollDuration,
+        curve: widget.initialScrollCurve,
       );
     });
   }
@@ -2312,6 +2720,8 @@ class MCalDayViewState extends State<MCalDayView> {
       return;
     }
 
+    final updatedEvent = event.copyWith(start: newStart, end: newEnd);
+
     final details = MCalEventResizedDetails(
       event: event,
       oldStartDate: originalStart,
@@ -2322,7 +2732,35 @@ class MCalDayViewState extends State<MCalDayView> {
       isRecurring: event.recurrenceRule != null,
     );
 
-    widget.onEventResized?.call(details);
+    // Handle recurring vs non-recurring events (matching Month View pattern)
+    if (event.recurrenceRule != null) {
+      // Recurring event: call callback first, only modify if accepted
+      if (widget.onEventResized != null) {
+        final shouldKeep = widget.onEventResized!(context, details);
+        if (shouldKeep) {
+          widget.controller.modifyOccurrence(event.id, originalStart, updatedEvent);
+        }
+      } else {
+        // No callback provided — auto-accept and modify occurrence
+        widget.controller.modifyOccurrence(event.id, originalStart, updatedEvent);
+      }
+    } else {
+      // Non-recurring event: update controller first, then call callback
+      widget.controller.addEvents([updatedEvent]);
+
+      if (widget.onEventResized != null) {
+        final shouldKeep = widget.onEventResized!(context, details);
+        
+        // If callback returns false, revert the change
+        if (!shouldKeep) {
+          final revertedEvent = event.copyWith(
+            start: originalStart,
+            end: originalEnd,
+          );
+          widget.controller.addEvents([revertedEvent]);
+        }
+      }
+    }
 
     // Screen reader announcement for successful resize
     if (mounted) {
@@ -2339,13 +2777,6 @@ class MCalDayViewState extends State<MCalDayView> {
         context,
         'Resized ${event.title} to $startStr through $endStr, $durationStr',
       );
-    }
-
-    final updatedEvent = event.copyWith(start: newStart, end: newEnd);
-    if (event.recurrenceRule != null) {
-      widget.controller.modifyOccurrence(event.id, originalStart, updatedEvent);
-    } else {
-      widget.controller.addEvents([updatedEvent]);
     }
   }
 
@@ -2915,24 +3346,7 @@ class MCalDayViewState extends State<MCalDayView> {
       typeConversion = 'timedToAllDay';
     }
 
-    // Build drop details for callback
-    final dropDetails = MCalEventDroppedDetails(
-      event: event,
-      oldStartDate: event.start,
-      oldEndDate: event.end,
-      newStartDate: proposedStart,
-      newEndDate: proposedEnd,
-      isRecurring: event.recurrenceRule != null,
-      seriesId: event.recurrenceRule != null ? event.id : null,
-      typeConversion: typeConversion,
-    );
-
-    // Call user callback if provided (returns true to accept, false to reject)
-    if (widget.onEventDropped != null) {
-      widget.onEventDropped!(dropDetails);
-    }
-
-    // Update the controller with the new event
+    // Build the updated event
     final updatedEvent = MCalCalendarEvent(
       id: event.id,
       title: event.title,
@@ -2948,17 +3362,54 @@ class MCalDayViewState extends State<MCalDayView> {
       recurrenceRule: event.recurrenceRule,
     );
 
-    // Handle recurring events by creating an exception
+    // Build drop details for callback
+    final dropDetails = MCalEventDroppedDetails(
+      event: event,
+      oldStartDate: event.start,
+      oldEndDate: event.end,
+      newStartDate: proposedStart,
+      newEndDate: proposedEnd,
+      isRecurring: event.recurrenceRule != null,
+      seriesId: event.recurrenceRule != null ? event.id : null,
+      typeConversion: typeConversion,
+    );
+
+    // Handle recurring vs non-recurring events (matching Month View pattern)
     if (event.recurrenceRule != null) {
-      // For recurring events, modify this occurrence only
-      widget.controller.modifyOccurrence(
-        event.id,
-        event.start, // original date
-        updatedEvent,
-      );
+      // Recurring event: call callback first, only modify if accepted
+      if (widget.onEventDropped != null) {
+        final shouldKeep = widget.onEventDropped!(context, dropDetails);
+        if (shouldKeep) {
+          widget.controller.modifyOccurrence(
+            event.id,
+            event.start, // original date
+            updatedEvent,
+          );
+        }
+      } else {
+        // No callback provided — auto-accept and modify occurrence
+        widget.controller.modifyOccurrence(
+          event.id,
+          event.start, // original date
+          updatedEvent,
+        );
+      }
     } else {
-      // For non-recurring events, add/replace the event
+      // Non-recurring event: update controller first, then call callback
       widget.controller.addEvents([updatedEvent]);
+
+      if (widget.onEventDropped != null) {
+        final shouldKeep = widget.onEventDropped!(context, dropDetails);
+        
+        // If callback returns false, revert the change
+        if (!shouldKeep) {
+          final revertedEvent = event.copyWith(
+            start: event.start,
+            end: event.end,
+          );
+          widget.controller.addEvents([revertedEvent]);
+        }
+      }
     }
 
     // Mark drag as complete - this clears all drag state including isDragging.
@@ -2984,42 +3435,30 @@ class MCalDayViewState extends State<MCalDayView> {
   // ============================================================================
 
   void _handleNavigatePrevious() {
-    if (widget.onNavigatePrevious != null) {
-      widget.onNavigatePrevious!();
-    } else {
-      // Default: Navigate to previous day (DST-safe)
-      final previousDay = DateTime(
-        _displayDate.year,
-        _displayDate.month,
-        _displayDate.day - 1,
-      );
-      widget.controller.setDisplayDate(previousDay);
-    }
+    // Navigate to previous day (DST-safe)
+    final previousDay = DateTime(
+      _displayDate.year,
+      _displayDate.month,
+      _displayDate.day - 1,
+    );
+    widget.controller.setDisplayDate(previousDay);
   }
 
   void _handleNavigateNext() {
-    if (widget.onNavigateNext != null) {
-      widget.onNavigateNext!();
-    } else {
-      // Default: Navigate to next day (DST-safe)
-      final nextDay = DateTime(
-        _displayDate.year,
-        _displayDate.month,
-        _displayDate.day + 1,
-      );
-      widget.controller.setDisplayDate(nextDay);
-    }
+    // Navigate to next day (DST-safe)
+    final nextDay = DateTime(
+      _displayDate.year,
+      _displayDate.month,
+      _displayDate.day + 1,
+    );
+    widget.controller.setDisplayDate(nextDay);
   }
 
   void _handleNavigateToday() {
-    if (widget.onNavigateToday != null) {
-      widget.onNavigateToday!();
-    } else {
-      // Default: Navigate to today
-      final today = DateTime.now();
-      final todayDate = DateTime(today.year, today.month, today.day);
-      widget.controller.setDisplayDate(todayDate);
-    }
+    // Navigate to today
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    widget.controller.setDisplayDate(todayDate);
   }
 
   // ============================================================================
@@ -3080,33 +3519,29 @@ class MCalDayViewState extends State<MCalDayView> {
       dropValid: dragHandler.isProposedDropValid,
     );
 
-    // Build the tile
-    final Widget tile;
-    if (widget.dropTargetTileBuilder != null) {
-      // Use custom builder
-      tile = widget.dropTargetTileBuilder!(context, event, tileContext);
-    } else {
-      // Use default preview tile - semi-transparent with border
-      tile = Opacity(
-        opacity: 0.5,
-        child: Container(
-          decoration: BoxDecoration(
-            color: (event.color ?? Colors.blue).withValues(alpha: 0.3),
-            border: Border.all(
-              color: dragHandler.isProposedDropValid ? Colors.blue : Colors.red,
-              width: 2,
-            ),
-            borderRadius: BorderRadius.circular(8),
+    final defaultTile = Opacity(
+      opacity: 0.5,
+      child: Container(
+        decoration: BoxDecoration(
+          color: (event.color ?? Colors.blue).withValues(alpha: 0.3),
+          border: Border.all(
+            color: dragHandler.isProposedDropValid ? Colors.blue : Colors.red,
+            width: 2,
           ),
-          padding: const EdgeInsets.all(4),
-          child: Text(
-            event.title,
-            style: const TextStyle(fontSize: 12),
-            overflow: TextOverflow.ellipsis,
-          ),
+          borderRadius: BorderRadius.circular(8),
         ),
-      );
-    }
+        padding: const EdgeInsets.all(4),
+        child: Text(
+          event.title,
+          style: const TextStyle(fontSize: 12),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+
+    final tile = widget.dropTargetTileBuilder != null
+        ? widget.dropTargetTileBuilder!(context, event, tileContext, defaultTile)
+        : defaultTile;
 
     return Stack(
       children: [
@@ -3159,11 +3594,27 @@ class MCalDayViewState extends State<MCalDayView> {
           : (widget.hourHeight ?? 80.0),
     );
 
-    // Build overlay details for custom builder (requires drag data)
+    final defaultOverlay = Positioned(
+      top: topOffset,
+      left: 0,
+      right: 0,
+      height: height,
+      child: Container(
+        decoration: BoxDecoration(
+          color: (isValid ? Colors.blue : Colors.red).withValues(alpha: 0.2),
+          border: Border(
+            left: BorderSide(
+              color: isValid ? Colors.blue : Colors.red,
+              width: 3,
+            ),
+          ),
+        ),
+      ),
+    );
+
     final draggedEvent = dragHandler.draggedEvent;
     final sourceDate = dragHandler.sourceDate;
 
-    // Build the overlay
     final Widget overlay;
     if (widget.dropTargetOverlayBuilder != null &&
         draggedEvent != null &&
@@ -3183,27 +3634,9 @@ class MCalDayViewState extends State<MCalDayView> {
         isValid: isValid,
         sourceDate: sourceDate,
       );
-      // Use custom builder
-      overlay = widget.dropTargetOverlayBuilder!(context, overlayDetails);
+      overlay = widget.dropTargetOverlayBuilder!(context, overlayDetails, defaultOverlay);
     } else {
-      // Use default overlay - semi-transparent colored band
-      overlay = Positioned(
-        top: topOffset,
-        left: 0,
-        right: 0,
-        height: height,
-        child: Container(
-          decoration: BoxDecoration(
-            color: (isValid ? Colors.blue : Colors.red).withValues(alpha: 0.2),
-            border: Border(
-              left: BorderSide(
-                color: isValid ? Colors.blue : Colors.red,
-                width: 3,
-              ),
-            ),
-          ),
-        ),
-      );
+      overlay = defaultOverlay;
     }
 
     return Stack(children: [overlay]);
@@ -3213,7 +3646,7 @@ class MCalDayViewState extends State<MCalDayView> {
   ///
   /// Returns a Stack containing:
   /// - Layer 1+2: Main content (gridlines + regions + events + current time)
-  /// - Layer 3: Drop target preview (phantom tiles) when [showDropTargetPreview]
+  /// - Layer 3: Drop target preview (phantom tiles) when [showDropTargetTiles]
   /// - Layer 4: Drop target overlay (highlighted time slots) when [showDropTargetOverlay]
   ///
   /// When [enableDragToMove] is true, wraps in DragTarget for drag-and-drop support.
@@ -3228,7 +3661,7 @@ class MCalDayViewState extends State<MCalDayView> {
     final hasEmptySlotCallbacksForLayer =
         widget.onTimeSlotTap != null ||
         widget.onTimeSlotLongPress != null ||
-        widget.onEmptySpaceDoubleTap != null;
+        widget.onTimeSlotDoubleTap != null;
     final gridlinesLayer = hasEmptySlotCallbacksForLayer
         ? IgnorePointer(
             child: _GridlinesLayer(
@@ -3255,6 +3688,16 @@ class MCalDayViewState extends State<MCalDayView> {
     final mainContent = Stack(
       children: [
         gridlinesLayer,
+        // Disabled time slots overlay (rendered with 0.5 opacity)
+        if (widget.timeSlotInteractivityCallback != null)
+          _DisabledTimeSlotsLayer(
+            startHour: widget.startHour,
+            endHour: widget.endHour,
+            hourHeight: hourHeight,
+            timeSlotDuration: widget.timeSlotDuration,
+            displayDate: _displayDate,
+            interactivityCallback: widget.timeSlotInteractivityCallback!,
+          ),
         if (widget.specialTimeRegions.isNotEmpty)
           _TimeRegionsLayer(
             regions: widget.specialTimeRegions,
@@ -3277,6 +3720,7 @@ class MCalDayViewState extends State<MCalDayView> {
           dayLayoutBuilder: widget.dayLayoutBuilder,
           onEventTap: _handleEventTap,
           onEventLongPress: widget.onEventLongPress,
+          onEventDoubleTap: widget.onEventDoubleTap,
           keyboardFocusedEventId: _focusedEvent?.id,
           enableDragToMove: widget.enableDragToMove,
           enableDragToResize: _resolveDragToResize(),
@@ -3287,6 +3731,7 @@ class MCalDayViewState extends State<MCalDayView> {
           onDragEnded: _handleDragEnded,
           onDragCancelled: _handleDragCancelled,
           timeResizeHandleBuilder: widget.timeResizeHandleBuilder,
+          resizeHandleInset: widget.resizeHandleInset,
           onResizePointerDown: _handleResizePointerDownFromChild,
           onResizeStart: _handleResizeStart,
           onResizeUpdate: _handleResizeUpdate,
@@ -3324,7 +3769,7 @@ class MCalDayViewState extends State<MCalDayView> {
     }
 
     final tilesLayer = buildFeedbackLayer(
-      enabled: widget.showDropTargetPreview,
+      enabled: widget.showDropTargetTiles,
       layerBuilder: _buildDropTargetPreviewLayer,
     );
     final overlayLayer = buildFeedbackLayer(
@@ -3345,11 +3790,11 @@ class MCalDayViewState extends State<MCalDayView> {
     final hasEmptySlotCallbacks =
         widget.onTimeSlotTap != null ||
         widget.onTimeSlotLongPress != null ||
-        widget.onEmptySpaceDoubleTap != null;
+        widget.onTimeSlotDoubleTap != null;
     final dateStr = DateFormat.yMMMMEEEEd(
       locale.toString(),
     ).format(_displayDate);
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final scheduleLabel = l10n.scheduleFor(dateStr);
     final doubleTapHint = l10n.doubleTapToCreateEvent;
     final gestureChild = hasEmptySlotCallbacks
@@ -3417,7 +3862,7 @@ class MCalDayViewState extends State<MCalDayView> {
     if (!_isDragActive && !_isResizeActive) return null;
 
     final locale = widget.locale ?? Localizations.localeOf(context);
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final prefix = l10n.dropTargetPrefix;
     final validStr = dragHandler.isProposedDropValid 
         ? l10n.dropTargetValid 
@@ -3448,6 +3893,20 @@ class MCalDayViewState extends State<MCalDayView> {
       timeSlotDuration: widget.timeSlotDuration,
     );
 
+    // Check interactivity before processing tap
+    if (widget.timeSlotInteractivityCallback != null) {
+      final slotEndTime = tappedTime.add(widget.timeSlotDuration);
+      final interactivityDetails = MCalTimeSlotInteractivityDetails(
+        date: DateTime(_displayDate.year, _displayDate.month, _displayDate.day),
+        hour: tappedTime.hour,
+        minute: tappedTime.minute,
+        startTime: tappedTime,
+        endTime: slotEndTime,
+      );
+      final isInteractive = widget.timeSlotInteractivityCallback!(context, interactivityDetails);
+      if (!isInteractive) return; // Early return if slot is not interactive
+    }
+
     final slotContext = MCalTimeSlotContext(
       displayDate: _displayDate,
       hour: tappedTime.hour,
@@ -3456,7 +3915,7 @@ class MCalDayViewState extends State<MCalDayView> {
       isAllDayArea: false,
     );
 
-    widget.onTimeSlotTap!(slotContext);
+    widget.onTimeSlotTap!(context, slotContext);
   }
 
   /// Handles long-press on empty time slot area.
@@ -3476,6 +3935,20 @@ class MCalDayViewState extends State<MCalDayView> {
       timeSlotDuration: widget.timeSlotDuration,
     );
 
+    // Check interactivity before processing long-press
+    if (widget.timeSlotInteractivityCallback != null) {
+      final slotEndTime = tappedTime.add(widget.timeSlotDuration);
+      final interactivityDetails = MCalTimeSlotInteractivityDetails(
+        date: DateTime(_displayDate.year, _displayDate.month, _displayDate.day),
+        hour: tappedTime.hour,
+        minute: tappedTime.minute,
+        startTime: tappedTime,
+        endTime: slotEndTime,
+      );
+      final isInteractive = widget.timeSlotInteractivityCallback!(context, interactivityDetails);
+      if (!isInteractive) return; // Early return if slot is not interactive
+    }
+
     final slotContext = MCalTimeSlotContext(
       displayDate: _displayDate,
       hour: tappedTime.hour,
@@ -3484,7 +3957,7 @@ class MCalDayViewState extends State<MCalDayView> {
       isAllDayArea: false,
     );
 
-    widget.onTimeSlotLongPress!(slotContext);
+    widget.onTimeSlotLongPress!(context, slotContext);
   }
 
   /// Handles double-tap on empty time slot area.
@@ -3492,9 +3965,9 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Uses [_lastDoubleTapDownPosition] stored from [onDoubleTapDown] since
   /// [onDoubleTap] does not receive position. Converts position to DateTime
   /// using [offsetToTime], checks that the tap did not hit an event, and
-  /// fires [onEmptySpaceDoubleTap] callback.
+  /// fires [onTimeSlotDoubleTap] callback.
   void _handleTimeSlotDoubleTap(double hourHeight) {
-    if (widget.onEmptySpaceDoubleTap == null) return;
+    if (widget.onTimeSlotDoubleTap == null) return;
 
     final localPosition = _lastDoubleTapDownPosition;
     if (localPosition == null) return;
@@ -3510,7 +3983,30 @@ class MCalDayViewState extends State<MCalDayView> {
       timeSlotDuration: widget.timeSlotDuration,
     );
 
-    widget.onEmptySpaceDoubleTap!(tappedTime);
+    // Check interactivity before processing double-tap
+    if (widget.timeSlotInteractivityCallback != null) {
+      final slotEndTime = tappedTime.add(widget.timeSlotDuration);
+      final interactivityDetails = MCalTimeSlotInteractivityDetails(
+        date: DateTime(_displayDate.year, _displayDate.month, _displayDate.day),
+        hour: tappedTime.hour,
+        minute: tappedTime.minute,
+        startTime: tappedTime,
+        endTime: slotEndTime,
+      );
+      final isInteractive = widget.timeSlotInteractivityCallback!(context, interactivityDetails);
+      if (!isInteractive) return; // Early return if slot is not interactive
+    }
+
+    // Build full MCalTimeSlotContext
+    final slotContext = MCalTimeSlotContext(
+      displayDate: _displayDate,
+      hour: tappedTime.hour,
+      minute: tappedTime.minute,
+      offset: localPosition.dy,
+      isAllDayArea: false,
+    );
+
+    widget.onTimeSlotDoubleTap!(context, slotContext);
   }
 
   /// Checks if the tap position overlaps with any event tile.
@@ -3649,6 +4145,154 @@ class MCalDayViewState extends State<MCalDayView> {
   }
 
   // ============================================================================
+  // Default Builder Methods (Task 10)
+  // ============================================================================
+
+  /// Builds the default loading widget.
+  Widget _buildDefaultLoading(BuildContext context) {
+    return const Center(child: CircularProgressIndicator());
+  }
+
+  /// Builds the default error widget.
+  Widget _buildDefaultError(BuildContext context, Object error) {
+    return Center(child: Text('Error: $error'));
+  }
+
+  // ============================================================================
+  // Build Helper Methods (Task 8)
+  // ============================================================================
+
+  /// Builds the day view content for a specific date.
+  ///
+  /// This method is called either directly (when swipe navigation is disabled)
+  /// or by the PageView.builder (when swipe navigation is enabled).
+  ///
+  /// [date] - The date to display
+  /// [locale] - The locale for date/time formatting
+  Widget _buildDayContent(DateTime date, Locale locale) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Day Header
+        _DayHeader(
+          displayDate: date,
+          showWeekNumbers: widget.showWeekNumbers,
+          theme: _resolveTheme(context),
+          locale: locale,
+          textDirection: Directionality.of(context),
+          dayHeaderBuilder: widget.dayHeaderBuilder,
+          weekNumberBuilder: widget.weekNumberBuilder,
+          onTap: widget.onDayHeaderTap != null
+              ? () => widget.onDayHeaderTap!(context, date)
+              : null,
+          onLongPress: widget.onDayHeaderLongPress != null
+              ? () => widget.onDayHeaderLongPress!(context, date)
+              : null,
+          onDoubleTap: widget.onDayHeaderDoubleTap != null
+              ? () => widget.onDayHeaderDoubleTap!(
+                  context,
+                  MCalDayHeaderContext(
+                    date: date,
+                    weekNumber: widget.showWeekNumbers
+                        ? _calculateISOWeekNumber(date)
+                        : null,
+                  ),
+                )
+              : null,
+          onHover: widget.onHoverDayHeader,
+        ),
+
+        // All-Day Events Section
+        if (_allDayEvents.isNotEmpty)
+          _AllDayEventsSection(
+            events: _allDayEvents,
+            displayDate: date,
+            maxRows: widget.allDaySectionMaxRows,
+            theme: _resolveTheme(context),
+            locale: locale,
+            allDayEventTileBuilder: widget.allDayEventTileBuilder,
+            enableDragToMove: widget.enableDragToMove,
+            dragHandler: _dragHandler,
+            isDragActive: _isDragActive,
+            onEventTap: _handleEventTap,
+            onEventLongPress: widget.onEventLongPress,
+            onEventDoubleTap: widget.onEventDoubleTap,
+            keyboardFocusedEventId: _focusedEvent?.id,
+            onOverflowTap: widget.onOverflowTap,
+            onOverflowLongPress: widget.onOverflowLongPress,
+            onOverflowDoubleTap: widget.onOverflowDoubleTap,
+            onTimeSlotTap: widget.onTimeSlotTap,
+            onTimeSlotLongPress: widget.onTimeSlotLongPress,
+            onDragStarted: _handleDragStarted,
+            onDragEnded: _handleDragEnded,
+            onDragCancelled: _handleDragCancelled,
+            draggedTileBuilder: widget.draggedTileBuilder,
+            dragSourceTileBuilder: widget.dragSourceTileBuilder,
+            dragLongPressDelay: widget.dragLongPressDelay,
+          ),
+
+        // Main content area with Time Legend and Events
+        // Time legend and events scroll together (Row inside SingleChildScrollView)
+        Expanded(
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            physics: widget.scrollPhysics,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Time Legend (left in LTR, scrolls with events)
+                if (!_isRTL(context))
+                  _TimeLegendColumn(
+                    startHour: widget.startHour,
+                    endHour: widget.endHour,
+                    hourHeight: widget.hourHeight ?? 80.0,
+                    timeLabelFormat: widget.timeLabelFormat,
+                    timeLabelBuilder: widget.timeLabelBuilder,
+                    theme: _resolveTheme(context),
+                    locale: locale,
+                    onTimeLabelTap: widget.onTimeLabelTap,
+                    onTimeLabelLongPress: widget.onTimeLabelLongPress,
+                    onTimeLabelDoubleTap: widget.onTimeLabelDoubleTap,
+                    onHoverTimeLabel: widget.onHoverTimeLabel,
+                    displayDate: date,
+                    showSubHourLabels: widget.showSubHourLabels,
+                    subHourLabelInterval: widget.subHourLabelInterval,
+                    subHourLabelBuilder: widget.subHourLabelBuilder,
+                  ),
+
+                // Timed events area with gridlines
+                Expanded(
+                  child: _buildTimedEventsArea(context, locale),
+                ),
+
+                // Time Legend (right side for RTL, scrolls with events)
+                if (_isRTL(context))
+                  _TimeLegendColumn(
+                    startHour: widget.startHour,
+                    endHour: widget.endHour,
+                    hourHeight: widget.hourHeight ?? 80.0,
+                    timeLabelFormat: widget.timeLabelFormat,
+                    timeLabelBuilder: widget.timeLabelBuilder,
+                    theme: _resolveTheme(context),
+                    locale: locale,
+                    onTimeLabelTap: widget.onTimeLabelTap,
+                    onTimeLabelLongPress: widget.onTimeLabelLongPress,
+                    onTimeLabelDoubleTap: widget.onTimeLabelDoubleTap,
+                    onHoverTimeLabel: widget.onHoverTimeLabel,
+                    displayDate: date,
+                    showSubHourLabels: widget.showSubHourLabels,
+                    subHourLabelInterval: widget.subHourLabelInterval,
+                    subHourLabelBuilder: widget.subHourLabelBuilder,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================================
   // Build Method
   // ============================================================================
 
@@ -3659,6 +4303,57 @@ class MCalDayViewState extends State<MCalDayView> {
         widget.enableKeyboardNavigation || widget.enableDragToMove;
 
     final enableResize = _resolveDragToResize();
+    
+    // Build the main day view content (with or without PageView)
+    Widget dayViewContent;
+    
+    if (widget.enableSwipeNavigation && _swipePageController != null) {
+      // Task 8: Wrap in PageView.builder for swipe navigation
+      final isRTL = _isRTL(context);
+      final swipeDirection = widget.swipeNavigationDirection ??
+          MCalSwipeNavigationDirection.horizontal;
+      final isHorizontal = swipeDirection == MCalSwipeNavigationDirection.horizontal;
+      
+      dayViewContent = PageView.builder(
+        controller: _swipePageController!,
+        scrollDirection: isHorizontal ? Axis.horizontal : Axis.vertical,
+        reverse: isRTL && isHorizontal,
+        scrollBehavior: const MCalMultiDeviceScrollBehavior(),
+        onPageChanged: _onSwipePageChanged,
+        itemBuilder: (context, index) {
+          final pageDate = _pageIndexToDay(index);
+          if (_isLoading) {
+            final defaultWidget = _buildDefaultLoading(context);
+            return widget.loadingBuilder != null
+                ? widget.loadingBuilder!(context, defaultWidget)
+                : defaultWidget;
+          } else if (_error != null) {
+            final defaultWidget = _buildDefaultError(context, _error!);
+            return widget.errorBuilder != null
+                ? widget.errorBuilder!(context, _error!, defaultWidget)
+                : defaultWidget;
+          } else {
+            return _buildDayContent(pageDate, locale);
+          }
+        },
+      );
+    } else {
+      // Default behavior: single day without swipe navigation
+      if (_isLoading) {
+        final defaultWidget = _buildDefaultLoading(context);
+        dayViewContent = widget.loadingBuilder != null
+            ? widget.loadingBuilder!(context, defaultWidget)
+            : defaultWidget;
+      } else if (_error != null) {
+        final defaultWidget = _buildDefaultError(context, _error!);
+        dayViewContent = widget.errorBuilder != null
+            ? widget.errorBuilder!(context, _error!, defaultWidget)
+            : defaultWidget;
+      } else {
+        dayViewContent = _buildDayContent(_displayDate, locale);
+      }
+    }
+    
     final focusContent = Focus(
       focusNode: _focusNode,
       onKeyEvent: enableKeyEvents ? _handleKeyEvent : null,
@@ -3698,106 +4393,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
             // Expanded area for day view content
             Expanded(
-              child: _isLoading
-                  ? (widget.loadingBuilder?.call(context) ??
-                        const Center(child: CircularProgressIndicator()))
-                  : _error != null
-                  ? (widget.errorBuilder?.call(context, _error!) ??
-                        Center(child: Text('Error: $_error')))
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Day Header
-                        _DayHeader(
-                          displayDate: _displayDate,
-                          showWeekNumber: widget.showWeekNumber,
-                          theme: _resolveTheme(context),
-                          locale: locale,
-                          textDirection: Directionality.of(context),
-                          dayHeaderBuilder: widget.dayHeaderBuilder,
-                          onTap: widget.onDayHeaderTap != null
-                              ? () => widget.onDayHeaderTap!(_displayDate)
-                              : null,
-                          onLongPress: widget.onDayHeaderLongPress != null
-                              ? () => widget.onDayHeaderLongPress!(_displayDate)
-                              : null,
-                        ),
-
-                        // All-Day Events Section
-                        if (_allDayEvents.isNotEmpty)
-                          _AllDayEventsSection(
-                            events: _allDayEvents,
-                            displayDate: _displayDate,
-                            maxRows: widget.allDaySectionMaxRows,
-                            theme: _resolveTheme(context),
-                            locale: locale,
-                            allDayEventTileBuilder:
-                                widget.allDayEventTileBuilder,
-                            enableDragToMove: widget.enableDragToMove,
-                            dragHandler: _dragHandler,
-                            isDragActive: _isDragActive,
-                            onEventTap: _handleEventTap,
-                            onEventLongPress: widget.onEventLongPress,
-                            keyboardFocusedEventId: _focusedEvent?.id,
-                            onOverflowTap: widget.onOverflowTap,
-                            onOverflowLongPress: widget.onOverflowLongPress,
-                            onTimeSlotTap: widget.onTimeSlotTap,
-                            onTimeSlotLongPress: widget.onTimeSlotLongPress,
-                            onDragStarted: _handleDragStarted,
-                            onDragEnded: _handleDragEnded,
-                            onDragCancelled: _handleDragCancelled,
-                            draggedTileBuilder: widget.draggedTileBuilder,
-                            dragSourceTileBuilder: widget.dragSourceTileBuilder,
-                            dragLongPressDelay: widget.dragLongPressDelay,
-                          ),
-
-                        // Main content area with Time Legend and Events
-                        // Time legend and events scroll together (Row inside SingleChildScrollView)
-                        Expanded(
-                          child: SingleChildScrollView(
-                            controller: _scrollController,
-                            physics: widget.scrollPhysics,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Time Legend (left in LTR, scrolls with events)
-                                if (!_isRTL(context))
-                                  _TimeLegendColumn(
-                                    startHour: widget.startHour,
-                                    endHour: widget.endHour,
-                                    hourHeight: widget.hourHeight ?? 80.0,
-                                    timeLabelFormat: widget.timeLabelFormat,
-                                    timeLabelBuilder: widget.timeLabelBuilder,
-                                    theme: _resolveTheme(context),
-                                    locale: locale,
-                                    onTimeLabelTap: widget.onTimeLabelTap,
-                                    displayDate: _displayDate,
-                                  ),
-
-                                // Timed events area with gridlines
-                                Expanded(
-                                  child: _buildTimedEventsArea(context, locale),
-                                ),
-
-                                // Time Legend (right side for RTL, scrolls with events)
-                                if (_isRTL(context))
-                                  _TimeLegendColumn(
-                                    startHour: widget.startHour,
-                                    endHour: widget.endHour,
-                                    hourHeight: widget.hourHeight ?? 80.0,
-                                    timeLabelFormat: widget.timeLabelFormat,
-                                    timeLabelBuilder: widget.timeLabelBuilder,
-                                    theme: _resolveTheme(context),
-                                    locale: locale,
-                                    onTimeLabelTap: widget.onTimeLabelTap,
-                                    displayDate: _displayDate,
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+              child: dayViewContent,
             ),
           ],
         ),
@@ -3843,7 +4439,7 @@ class _DayNavigator extends StatelessWidget {
   final DateTime? minDate;
   final DateTime? maxDate;
   final MCalThemeData theme;
-  final Widget Function(BuildContext, DateTime)? navigatorBuilder;
+  final Widget Function(BuildContext, DateTime, Widget)? navigatorBuilder;
   final Locale locale;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
@@ -3875,7 +4471,7 @@ class _DayNavigator extends StatelessWidget {
   Widget build(BuildContext context) {
     final localizations = MCalDateFormatUtils();
     final isRTL = localizations.isRTL(locale);
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
 
     // Calculate if navigation is allowed
     final canGoPrevious = _canGoPrevious();
@@ -3909,7 +4505,7 @@ class _DayNavigator extends StatelessWidget {
 
     // Apply custom builder if provided
     if (navigatorBuilder != null) {
-      navigator = navigatorBuilder!(context, displayDate);
+      navigator = navigatorBuilder!(context, displayDate, navigator);
     }
 
     return navigator;
@@ -4057,23 +4653,29 @@ class _DayNavigator extends StatelessWidget {
 class _DayHeader extends StatelessWidget {
   const _DayHeader({
     required this.displayDate,
-    required this.showWeekNumber,
+    required this.showWeekNumbers,
     required this.theme,
     required this.locale,
     required this.textDirection,
     this.dayHeaderBuilder,
+    this.weekNumberBuilder,
     this.onTap,
     this.onLongPress,
+    this.onDoubleTap,
+    this.onHover,
   });
 
   final DateTime displayDate;
-  final bool showWeekNumber;
+  final bool showWeekNumbers;
   final MCalThemeData theme;
   final Locale locale;
   final TextDirection textDirection;
-  final Widget Function(BuildContext, MCalDayHeaderContext)? dayHeaderBuilder;
+  final Widget Function(BuildContext, MCalDayHeaderContext, Widget)? dayHeaderBuilder;
+  final Widget Function(BuildContext, MCalWeekNumberContext, Widget)? weekNumberBuilder;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final VoidCallback? onDoubleTap;
+  final void Function(BuildContext, MCalDayHeaderContext?)? onHover;
 
   @override
   Widget build(BuildContext context) {
@@ -4081,7 +4683,7 @@ class _DayHeader extends StatelessWidget {
 
     final headerContext = MCalDayHeaderContext(
       date: displayDate,
-      weekNumber: showWeekNumber ? weekNumber : null,
+      weekNumber: showWeekNumbers ? weekNumber : null,
     );
 
     // Build semantic label
@@ -4093,50 +4695,66 @@ class _DayHeader extends StatelessWidget {
       'MMMM d',
       locale.toString(),
     ).format(displayDate);
-    final semanticLabel = showWeekNumber
+    final semanticLabel = showWeekNumbers
         ? '$dayOfWeekFull, $monthDayYear, Week $weekNumber'
         : '$dayOfWeekFull, $monthDayYear';
 
-    // Custom builder takes precedence
-    if (dayHeaderBuilder != null) {
-      return Semantics(
-        label: semanticLabel,
-        header: true,
-        child: _wrapWithGestureDetector(
-          dayHeaderBuilder!(context, headerContext),
-        ),
-      );
+    // Build week number widget (custom or default)
+    Widget? resolvedWeekNumWidget;
+    if (showWeekNumbers) {
+      final defaultWeekNumWidget = _buildWeekNumber(weekNumber);
+      if (weekNumberBuilder != null) {
+        // Monday is always week-start for ISO week numbers
+        final weekStart = displayDate.subtract(
+          Duration(days: (displayDate.weekday - DateTime.monday) % 7),
+        );
+        resolvedWeekNumWidget = weekNumberBuilder!(
+          context,
+          MCalWeekNumberContext(
+            weekNumber: weekNumber,
+            firstDayOfWeek: weekStart,
+            defaultFormattedString: 'W$weekNumber',
+          ),
+          defaultWeekNumWidget,
+        );
+      } else {
+        resolvedWeekNumWidget = defaultWeekNumWidget;
+      }
     }
 
-    // Default header layout
+    // Build default header layout
+    final defaultWidget = Container(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Week number (optional, left for LTR, right for RTL)
+          if (showWeekNumbers && textDirection == TextDirection.ltr) ...[
+            resolvedWeekNumWidget!,
+            const SizedBox(width: 8),
+          ],
+
+          // Day of week and date
+          _buildDayAndDate(),
+
+          // Week number (optional, right for RTL)
+          if (showWeekNumbers && textDirection == TextDirection.rtl) ...[
+            const SizedBox(width: 8),
+            resolvedWeekNumWidget!,
+          ],
+        ],
+      ),
+    );
+
+    final headerWidget = dayHeaderBuilder != null
+        ? dayHeaderBuilder!(context, headerContext, defaultWidget)
+        : defaultWidget;
+
     return Semantics(
       label: semanticLabel,
       header: true,
-      child: _wrapWithGestureDetector(
-        Container(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Week number (optional, left for LTR, right for RTL)
-              if (showWeekNumber && textDirection == TextDirection.ltr) ...[
-                _buildWeekNumber(weekNumber),
-                const SizedBox(width: 8),
-              ],
-
-              // Day of week and date
-              _buildDayAndDate(),
-
-              // Week number (optional, right for RTL)
-              if (showWeekNumber && textDirection == TextDirection.rtl) ...[
-                const SizedBox(width: 8),
-                _buildWeekNumber(weekNumber),
-              ],
-            ],
-          ),
-        ),
-      ),
+      child: _wrapWithGestureDetector(headerWidget),
     );
   }
 
@@ -4195,13 +4813,39 @@ class _DayHeader extends StatelessWidget {
   }
 
   Widget _wrapWithGestureDetector(Widget child) {
-    if (onTap == null && onLongPress == null) return child;
+    Widget result = child;
 
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: child,
-    );
+    // Wrap with GestureDetector if any gesture callbacks are provided
+    if (onTap != null || onLongPress != null || onDoubleTap != null) {
+      result = GestureDetector(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        onDoubleTap: onDoubleTap,
+        child: result,
+      );
+    }
+
+    // Wrap with MouseRegion for hover support (only if callback provided)
+    if (onHover != null) {
+      result = Builder(
+        builder: (context) {
+          return MouseRegion(
+            onEnter: (_) {
+              final weekNumber = _calculateISOWeekNumber(displayDate);
+              final headerContext = MCalDayHeaderContext(
+                date: displayDate,
+                weekNumber: showWeekNumbers ? weekNumber : null,
+              );
+              onHover!(context, headerContext);
+            },
+            onExit: (_) => onHover!(context, null),
+            child: result,
+          );
+        },
+      );
+    }
+
+    return result;
   }
 }
 
@@ -4257,18 +4901,33 @@ class _TimeLegendColumn extends StatelessWidget {
     required this.theme,
     required this.locale,
     this.onTimeLabelTap,
+    this.onTimeLabelLongPress,
+    this.onTimeLabelDoubleTap,
+    this.onHoverTimeLabel,
     required this.displayDate,
+    this.showSubHourLabels = false,
+    this.subHourLabelInterval,
+    this.subHourLabelBuilder,
   });
 
   final int startHour;
   final int endHour;
   final double hourHeight;
   final DateFormat? timeLabelFormat;
-  final Widget Function(BuildContext, MCalTimeLabelContext)? timeLabelBuilder;
+  final Widget Function(BuildContext, MCalTimeLabelContext, Widget)? timeLabelBuilder;
   final MCalThemeData theme;
   final Locale locale;
-  final void Function(MCalTimeLabelContext)? onTimeLabelTap;
+  final void Function(BuildContext, MCalTimeLabelContext)? onTimeLabelTap;
+  final void Function(BuildContext, MCalTimeLabelContext)? onTimeLabelLongPress;
+  final void Function(BuildContext, MCalTimeLabelContext)? onTimeLabelDoubleTap;
+  final void Function(BuildContext, MCalTimeLabelContext?)? onHoverTimeLabel;
   final DateTime displayDate;
+  final bool showSubHourLabels;
+  final Duration? subHourLabelInterval;
+  final Widget Function(BuildContext, MCalTimeLabelContext, Widget)? subHourLabelBuilder;
+
+  /// Estimated height for a single-line time label (12px font + line height).
+  static const double _labelHeight = 20.0;
 
   @override
   Widget build(BuildContext context) {
@@ -4283,11 +4942,16 @@ class _TimeLegendColumn extends StatelessWidget {
     // Check if ticks should be shown
     final showTicks = theme.dayTheme?.showTimeLegendTicks ?? true;
 
+    // Resolved label position (default: topTrailingBelow)
+    final labelPosition =
+        theme.dayTheme?.timeLabelPosition ?? MCalTimeLabelPosition.topTrailingBelow;
+
     return Container(
       width: legendWidth,
       height: columnHeight,
       color: theme.dayTheme?.timeLegendBackgroundColor,
       child: Stack(
+        clipBehavior: Clip.hardEdge,
         children: [
           // Tick marks layer (behind labels)
           if (showTicks)
@@ -4307,28 +4971,91 @@ class _TimeLegendColumn extends StatelessWidget {
             ),
           // Hour labels layer
           for (int hour = startHour; hour <= endHour; hour++)
-            Positioned(
-              top: timeToOffset(
-                time: DateTime(
-                  displayDate.year,
-                  displayDate.month,
-                  displayDate.day,
-                  hour,
-                  0,
-                ),
-                startHour: startHour,
-                hourHeight: hourHeight,
-              ),
-              left: 0,
-              right: 0,
-              child: _buildHourLabel(context, hour),
+            _buildPositionedLabel(
+              context,
+              hour: hour,
+              minute: 0,
+              isSubHour: false,
+              labelPosition: labelPosition,
             ),
+          // Sub-hour labels layer
+          if (showSubHourLabels && subHourLabelInterval != null)
+            for (int hour = startHour; hour <= endHour; hour++)
+              for (int minute = subHourLabelInterval!.inMinutes;
+                  minute < 60;
+                  minute += subHourLabelInterval!.inMinutes)
+                _buildPositionedLabel(
+                  context,
+                  hour: hour,
+                  minute: minute,
+                  isSubHour: true,
+                  labelPosition: labelPosition,
+                ),
         ],
       ),
     );
   }
 
-  Widget _buildHourLabel(BuildContext context, int hour) {
+  /// Builds a [Positioned] label at the correct location based on [labelPosition].
+  Widget _buildPositionedLabel(
+    BuildContext context, {
+    required int hour,
+    required int minute,
+    required bool isSubHour,
+    required MCalTimeLabelPosition labelPosition,
+  }) {
+    // Reference gridline Y
+    final isBottomRef = labelPosition == MCalTimeLabelPosition.bottomLeadingAbove ||
+        labelPosition == MCalTimeLabelPosition.bottomTrailingAbove;
+
+    final refMinute = isBottomRef ? 60 : 0;
+    final refTime = DateTime(
+      displayDate.year,
+      displayDate.month,
+      displayDate.day,
+      hour,
+      minute + refMinute,
+    );
+    final gridlineY = timeToOffset(
+      time: refTime,
+      startHour: startHour,
+      hourHeight: hourHeight,
+    );
+
+    // Vertical top offset based on vertical positioning
+    final isAbove = labelPosition.name.endsWith('Above');
+    final isCentered = labelPosition.name.endsWith('Centered');
+    double top;
+    if (isAbove) {
+      top = gridlineY - _labelHeight;
+    } else if (isCentered) {
+      top = gridlineY - _labelHeight / 2;
+    } else {
+      // Below
+      top = gridlineY;
+    }
+
+    // Horizontal alignment based on leading/trailing
+    final isLeading = labelPosition.name.contains('Leading');
+    final alignment = isLeading
+        ? AlignmentDirectional.centerStart
+        : AlignmentDirectional.centerEnd;
+
+    return Positioned(
+      top: top,
+      left: 0,
+      right: 0,
+      height: _labelHeight,
+      child: Align(
+        alignment: alignment,
+        child: isSubHour
+            ? _buildSubHourLabel(context, hour: hour, minute: minute)
+            : _buildHourLabel(context, hour: hour),
+      ),
+    );
+  }
+
+  Widget _buildHourLabel(BuildContext context, {required int hour}) {
     // Create time for this hour on the display date
     final time = DateTime(
       displayDate.year,
@@ -4361,26 +5088,37 @@ class _TimeLegendColumn extends StatelessWidget {
     // Semantic label for accessibility
     final semanticLabel = DateFormat('h a', locale.toString()).format(time);
 
-    // Custom builder takes precedence
-    Widget label;
-    if (timeLabelBuilder != null) {
-      label = timeLabelBuilder!(context, labelContext);
-    } else {
-      // Default label
-      label = Center(
-        child: Text(
-          formattedTime,
-          style:
-              theme.dayTheme?.timeLegendTextStyle ??
-              TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
+    final baseStyle =
+        theme.dayTheme?.timeLegendTextStyle ?? TextStyle(fontSize: 12, color: Colors.grey[600]);
+
+    // Build default label
+    final defaultWidget = Text(formattedTime, style: baseStyle);
+
+    Widget label = timeLabelBuilder != null
+        ? timeLabelBuilder!(context, labelContext, defaultWidget)
+        : defaultWidget;
+
+    // Wrap with gesture detector if any callback provided
+    if (onTimeLabelTap != null || onTimeLabelLongPress != null || onTimeLabelDoubleTap != null) {
+      label = GestureDetector(
+        onTap: onTimeLabelTap != null
+            ? () => onTimeLabelTap!(context, labelContext)
+            : null,
+        onLongPress: onTimeLabelLongPress != null
+            ? () => onTimeLabelLongPress!(context, labelContext)
+            : null,
+        onDoubleTap: onTimeLabelDoubleTap != null
+            ? () => onTimeLabelDoubleTap!(context, labelContext)
+            : null,
+        child: label,
       );
     }
 
-    // Wrap with gesture detector if tap callback provided
-    if (onTimeLabelTap != null) {
-      label = GestureDetector(
-        onTap: () => onTimeLabelTap!(labelContext),
+    // Wrap with MouseRegion for hover support (only if callback provided)
+    if (onHoverTimeLabel != null) {
+      label = MouseRegion(
+        onEnter: (_) => onHoverTimeLabel!(context, labelContext),
+        onExit: (_) => onHoverTimeLabel!(context, null),
         child: label,
       );
     }
@@ -4388,9 +5126,48 @@ class _TimeLegendColumn extends StatelessWidget {
     // Wrap with semantic label
     return Semantics(
       label: semanticLabel,
-      button: onTimeLabelTap != null,
+      button: onTimeLabelTap != null || onTimeLabelLongPress != null || onTimeLabelDoubleTap != null,
       child: label,
     );
+  }
+
+  Widget _buildSubHourLabel(BuildContext context, {required int hour, required int minute}) {
+    final time = DateTime(
+      displayDate.year,
+      displayDate.month,
+      displayDate.day,
+      hour,
+      minute,
+    );
+
+    DateFormat format;
+    if (timeLabelFormat != null) {
+      format = timeLabelFormat!;
+    } else {
+      format = _isEnglishLocale(locale)
+          ? DateFormat('h:mm', locale.toString()) // "9:30"
+          : DateFormat('HH:mm', locale.toString()); // "09:30"
+    }
+
+    final formattedTime = format.format(time);
+    final labelContext = MCalTimeLabelContext(hour: hour, minute: minute, time: time);
+
+    final baseStyle = theme.dayTheme?.timeLegendTextStyle;
+    final baseFontSize = baseStyle?.fontSize ?? 12.0;
+    final baseColor = baseStyle?.color ?? Colors.grey[600]!;
+    final subHourStyle = (baseStyle ?? const TextStyle()).copyWith(
+      fontSize: baseFontSize * 0.8,
+      color: baseColor.withValues(alpha: 0.5),
+    );
+
+    final defaultWidget = Text(formattedTime, style: subHourStyle);
+
+    Widget label = subHourLabelBuilder != null
+        ? subHourLabelBuilder!(context, labelContext, defaultWidget)
+        : defaultWidget;
+
+    // Sub-hour labels do not get gesture callbacks (hour labels only)
+    return label;
   }
 
   /// Check if the locale is English-speaking (uses 12-hour format).
@@ -4503,7 +5280,7 @@ class _CurrentTimeIndicator extends StatefulWidget {
   final DateTime displayDate;
   final MCalThemeData theme;
   final Locale locale;
-  final Widget Function(BuildContext, MCalCurrentTimeContext)? builder;
+  final Widget Function(BuildContext, MCalCurrentTimeContext, Widget)? builder;
 
   @override
   State<_CurrentTimeIndicator> createState() => _CurrentTimeIndicatorState();
@@ -4566,27 +5343,32 @@ class _CurrentTimeIndicatorState extends State<_CurrentTimeIndicator> {
     // Format time for semantic label
     final timeFormat = DateFormat('h:mm a', widget.locale.toString());
     final formattedTime = timeFormat.format(_currentTime);
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final semanticLabel = l10n.currentTime(formattedTime);
-
-    // Use custom builder if provided
-    if (widget.builder != null) {
-      return Positioned(
-        top: offset,
-        left: 0,
-        right: 0,
-        child: Semantics(
-          label: semanticLabel,
-          readOnly: true,
-          child: widget.builder!(context, indicatorContext),
-        ),
-      );
-    }
 
     // Default indicator: horizontal line with leading dot
     final indicatorColor = widget.theme.dayTheme?.currentTimeIndicatorColor ?? Colors.red;
     final indicatorWidth = widget.theme.dayTheme?.currentTimeIndicatorWidth ?? 2.0;
     final dotRadius = widget.theme.dayTheme?.currentTimeIndicatorDotRadius ?? 6.0;
+
+    final defaultWidget = Row(
+      children: [
+        // Leading dot (left for LTR, right for RTL)
+        if (!isRTL) _buildDot(dotRadius, indicatorColor),
+
+        // Horizontal line
+        Expanded(
+          child: Container(height: indicatorWidth, color: indicatorColor),
+        ),
+
+        // Trailing dot (right for RTL)
+        if (isRTL) _buildDot(dotRadius, indicatorColor),
+      ],
+    );
+
+    final indicatorWidget = widget.builder != null
+        ? widget.builder!(context, indicatorContext, defaultWidget)
+        : defaultWidget;
 
     return Positioned(
       top: offset,
@@ -4595,20 +5377,7 @@ class _CurrentTimeIndicatorState extends State<_CurrentTimeIndicator> {
       child: Semantics(
         label: semanticLabel,
         readOnly: true,
-        child: Row(
-          children: [
-            // Leading dot (left for LTR, right for RTL)
-            if (!isRTL) _buildDot(dotRadius, indicatorColor),
-
-            // Horizontal line
-            Expanded(
-              child: Container(height: indicatorWidth, color: indicatorColor),
-            ),
-
-            // Trailing dot (right for RTL)
-            if (isRTL) _buildDot(dotRadius, indicatorColor),
-          ],
-        ),
+        child: indicatorWidget,
       ),
     );
   }
@@ -4647,7 +5416,7 @@ class _TimeRegionsLayer extends StatelessWidget {
   final int endHour;
   final double hourHeight;
   final MCalThemeData theme;
-  final Widget Function(BuildContext, MCalTimeRegionContext)? timeRegionBuilder;
+  final Widget Function(BuildContext, MCalTimeRegionContext, Widget)? timeRegionBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -4779,74 +5548,68 @@ class _TimeRegionsLayer extends StatelessWidget {
       height: height,
     );
 
-    // Custom builder takes precedence
-    if (timeRegionBuilder != null) {
-      return Positioned(
-        top: startOffset,
-        left: 0,
-        right: 0,
-        height: height,
-        child: timeRegionBuilder!(context, regionContext),
-      );
-    }
+    final defaultWidget = Container(
+      decoration: BoxDecoration(
+        color:
+            region.color ??
+            (region.blockInteraction
+                ? theme.dayTheme?.blockedTimeRegionColor
+                : theme.dayTheme?.specialTimeRegionColor),
+        border: Border(
+          top: BorderSide(
+            color:
+                theme.dayTheme?.timeRegionBorderColor ??
+                Colors.grey.withValues(alpha: 0.3),
+            width: 1,
+          ),
+          bottom: BorderSide(
+            color:
+                theme.dayTheme?.timeRegionBorderColor ??
+                Colors.grey.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+      ),
+      child: region.text != null || region.icon != null
+          ? Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (region.icon != null) ...[
+                    Icon(
+                      region.icon,
+                      size: 16,
+                      color: theme.dayTheme?.timeRegionTextColor ?? Colors.black54,
+                    ),
+                    if (region.text != null) const SizedBox(width: 4),
+                  ],
+                  if (region.text != null)
+                    Text(
+                      region.text!,
+                      style:
+                          theme.dayTheme?.timeRegionTextStyle ??
+                          TextStyle(
+                            fontSize: 12,
+                            color:
+                                theme.dayTheme?.timeRegionTextColor ?? Colors.black54,
+                          ),
+                    ),
+                ],
+              ),
+            )
+          : null,
+    );
 
-    // Default region appearance
+    final child = timeRegionBuilder != null
+        ? timeRegionBuilder!(context, regionContext, defaultWidget)
+        : defaultWidget;
+
     return Positioned(
       top: startOffset,
       left: 0,
       right: 0,
       height: height,
-      child: Container(
-        decoration: BoxDecoration(
-          color:
-              region.color ??
-              (region.blockInteraction
-                  ? theme.dayTheme?.blockedTimeRegionColor
-                  : theme.dayTheme?.specialTimeRegionColor),
-          border: Border(
-            top: BorderSide(
-              color:
-                  theme.dayTheme?.timeRegionBorderColor ??
-                  Colors.grey.withValues(alpha: 0.3),
-              width: 1,
-            ),
-            bottom: BorderSide(
-              color:
-                  theme.dayTheme?.timeRegionBorderColor ??
-                  Colors.grey.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-        ),
-        child: region.text != null || region.icon != null
-            ? Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (region.icon != null) ...[
-                      Icon(
-                        region.icon,
-                        size: 16,
-                        color: theme.dayTheme?.timeRegionTextColor ?? Colors.black54,
-                      ),
-                      if (region.text != null) const SizedBox(width: 4),
-                    ],
-                    if (region.text != null)
-                      Text(
-                        region.text!,
-                        style:
-                            theme.dayTheme?.timeRegionTextStyle ??
-                            TextStyle(
-                              fontSize: 12,
-                              color:
-                                  theme.dayTheme?.timeRegionTextColor ?? Colors.black54,
-                            ),
-                      ),
-                  ],
-                ),
-              )
-            : null,
-      ),
+      child: child,
     );
   }
 
@@ -4894,7 +5657,7 @@ class _GridlinesLayer extends StatelessWidget {
   final DateTime displayDate;
   final MCalThemeData theme;
   final Locale locale;
-  final Widget Function(BuildContext, MCalGridlineContext)? gridlineBuilder;
+  final Widget Function(BuildContext, MCalGridlineContext, Widget)? gridlineBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -4905,7 +5668,7 @@ class _GridlinesLayer extends StatelessWidget {
 
     // Default: Use CustomPainter for performance
     // Wrap in Semantics for accessibility (optional, design: can be noisy if per-line)
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final timeGridLabel = l10n.timeGrid;
     return Semantics(
       container: true,
@@ -4933,6 +5696,24 @@ class _GridlinesLayer extends StatelessWidget {
     );
   }
 
+  /// Builds a default gridline widget for the given context.
+  Widget _buildDefaultGridline(MCalGridlineContext gridline) {
+    Color color;
+    double width;
+    switch (gridline.type) {
+      case MCalGridlineType.hour:
+        color = theme.dayTheme?.hourGridlineColor ?? Colors.grey.withValues(alpha: 0.2);
+        width = theme.dayTheme?.hourGridlineWidth ?? 1.0;
+      case MCalGridlineType.major:
+        color = theme.dayTheme?.majorGridlineColor ?? Colors.grey.withValues(alpha: 0.15);
+        width = theme.dayTheme?.majorGridlineWidth ?? 1.0;
+      case MCalGridlineType.minor:
+        color = theme.dayTheme?.minorGridlineColor ?? Colors.grey.withValues(alpha: 0.08);
+        width = theme.dayTheme?.minorGridlineWidth ?? 0.5;
+    }
+    return Container(height: width, color: color);
+  }
+
   /// Builds gridlines using custom builder callback.
   Widget _buildCustomGridlines(BuildContext context) {
     final gridlines = _generateGridlines();
@@ -4944,7 +5725,11 @@ class _GridlinesLayer extends StatelessWidget {
             top: gridline.offset,
             left: 0,
             right: 0,
-            child: gridlineBuilder!(context, gridline),
+            child: gridlineBuilder!(
+              context,
+              gridline,
+              _buildDefaultGridline(gridline),
+            ),
           ),
       ],
     );
@@ -5032,9 +5817,11 @@ class _AllDayEventsSection extends StatelessWidget {
     required this.isDragActive,
     this.onEventTap,
     this.onEventLongPress,
+    this.onEventDoubleTap,
     this.keyboardFocusedEventId,
     this.onOverflowTap,
     this.onOverflowLongPress,
+    this.onOverflowDoubleTap,
     this.onTimeSlotTap,
     this.onTimeSlotLongPress,
     this.onDragStarted,
@@ -5054,6 +5841,7 @@ class _AllDayEventsSection extends StatelessWidget {
     BuildContext,
     MCalCalendarEvent,
     MCalAllDayEventTileContext,
+    Widget,
   )?
   allDayEventTileBuilder;
   final bool enableDragToMove;
@@ -5061,11 +5849,13 @@ class _AllDayEventsSection extends StatelessWidget {
   final bool isDragActive;
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
+  final void Function(BuildContext, MCalEventTapDetails)? onEventDoubleTap;
   final String? keyboardFocusedEventId;
-  final void Function(List<MCalCalendarEvent>, DateTime)? onOverflowTap;
-  final void Function(List<MCalCalendarEvent>, DateTime)? onOverflowLongPress;
-  final void Function(MCalTimeSlotContext)? onTimeSlotTap;
-  final void Function(MCalTimeSlotContext)? onTimeSlotLongPress;
+  final void Function(BuildContext, List<MCalCalendarEvent>, DateTime)? onOverflowTap;
+  final void Function(BuildContext, List<MCalCalendarEvent>, DateTime)? onOverflowLongPress;
+  final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowDoubleTap;
+  final void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotTap;
+  final void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotLongPress;
   final void Function(MCalCalendarEvent, DateTime)? onDragStarted;
   final void Function(bool)? onDragEnded;
   final VoidCallback? onDragCancelled;
@@ -5073,15 +5863,15 @@ class _AllDayEventsSection extends StatelessWidget {
     BuildContext,
     MCalCalendarEvent,
     MCalDraggedTileDetails,
+    Widget,
   )?
   draggedTileBuilder;
-  final Widget Function(BuildContext, MCalCalendarEvent, MCalDragSourceDetails)?
+  final Widget Function(BuildContext, MCalCalendarEvent, MCalDragSourceDetails, Widget)?
   dragSourceTileBuilder;
   final Duration dragLongPressDelay;
 
   @override
   Widget build(BuildContext context) {
-    // Calculate how many events can be shown (similar to Month View overflow pattern)
     final effectiveMaxRows = theme.dayTheme?.allDaySectionMaxRows ?? maxRows;
 
     // Estimate how many events fit per row
@@ -5160,12 +5950,10 @@ class _AllDayEventsSection extends StatelessWidget {
     );
 
     // Build the tile content
-    Widget tile;
-    if (allDayEventTileBuilder != null) {
-      tile = allDayEventTileBuilder!(context, event, tileContext);
-    } else {
-      tile = _buildDefaultTile(context, event);
-    }
+    final defaultWidget = _buildDefaultTile(context, event);
+    Widget tile = allDayEventTileBuilder != null
+        ? allDayEventTileBuilder!(context, event, tileContext, defaultWidget)
+        : defaultWidget;
 
     // Add visual focus indicator when this event has keyboard focus
     if (keyboardFocusedEventId == event.id) {
@@ -5199,18 +5987,20 @@ class _AllDayEventsSection extends StatelessWidget {
         enabled: true,
         dragLongPressDelay: dragLongPressDelay,
         draggedTileBuilder: draggedTileBuilder != null
-            ? (ctx, details) => draggedTileBuilder!(ctx, event, details)
+            ? (ctx, details, defaultWidget) =>
+                  draggedTileBuilder!(ctx, event, details, defaultWidget)
             : null,
         dragSourceTileBuilder: dragSourceTileBuilder != null
-            ? (ctx, details) => dragSourceTileBuilder!(ctx, event, details)
+            ? (ctx, details, defaultWidget) =>
+                  dragSourceTileBuilder!(ctx, event, details, defaultWidget)
             : null,
         onDragStarted: () => onDragStarted!(event, displayDate),
         onDragEnded: onDragEnded,
         onDragCanceled: onDragCancelled,
         child: tile,
       );
-    } else if (onEventTap != null || onEventLongPress != null) {
-      // Wrap with gesture detector for tap/long-press when drag is disabled
+    } else if (onEventTap != null || onEventLongPress != null || onEventDoubleTap != null) {
+      // Wrap with gesture detector for tap/long-press/double-tap when drag is disabled
       tile = GestureDetector(
         onTap: onEventTap != null
             ? () => onEventTap!(
@@ -5220,6 +6010,12 @@ class _AllDayEventsSection extends StatelessWidget {
             : null,
         onLongPress: onEventLongPress != null
             ? () => onEventLongPress!(
+                context,
+                MCalEventTapDetails(event: event, displayDate: displayDate),
+              )
+            : null,
+        onDoubleTap: onEventDoubleTap != null
+            ? () => onEventDoubleTap!(
                 context,
                 MCalEventTapDetails(event: event, displayDate: displayDate),
               )
@@ -5296,10 +6092,23 @@ class _AllDayEventsSection extends StatelessWidget {
       button: true,
       child: GestureDetector(
         onTap: onOverflowTap != null
-            ? () => onOverflowTap!(overflowEvents, displayDate)
+            ? () => onOverflowTap!(context, overflowEvents, displayDate)
             : null,
         onLongPress: onOverflowLongPress != null
-            ? () => onOverflowLongPress!(overflowEvents, displayDate)
+            ? () => onOverflowLongPress!(context, overflowEvents, displayDate)
+            : null,
+        onDoubleTap: onOverflowDoubleTap != null
+            ? () {
+                final visibleEvents = events.take(events.length - count).toList();
+                onOverflowDoubleTap!(
+                  context,
+                  MCalOverflowTapDetails(
+                    date: displayDate,
+                    hiddenEvents: overflowEvents,
+                    visibleEvents: visibleEvents,
+                  ),
+                );
+              }
             : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -5327,6 +6136,104 @@ class _AllDayEventsSection extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ============================================================================
+// Disabled Time Slots Overlay
+// ============================================================================
+
+/// Private widget for rendering disabled time slots with reduced opacity.
+///
+/// Displays a semi-transparent overlay (0.5 opacity) over time slots that
+/// return false from [timeSlotInteractivityCallback]. This provides visual
+/// feedback to users about which time slots are non-interactive.
+///
+/// The overlay is positioned between gridlines and events in the layer stack.
+class _DisabledTimeSlotsLayer extends StatelessWidget {
+  const _DisabledTimeSlotsLayer({
+    required this.startHour,
+    required this.endHour,
+    required this.hourHeight,
+    required this.timeSlotDuration,
+    required this.displayDate,
+    required this.interactivityCallback,
+  });
+
+  final int startHour;
+  final int endHour;
+  final double hourHeight;
+  final Duration timeSlotDuration;
+  final DateTime displayDate;
+  final bool Function(BuildContext, MCalTimeSlotInteractivityDetails) interactivityCallback;
+
+  @override
+  Widget build(BuildContext context) {
+    // Build list of disabled time slots
+    final disabledSlots = <Widget>[];
+    final slotMinutes = timeSlotDuration.inMinutes;
+    
+    // Iterate through all time slots
+    for (int hour = startHour; hour <= endHour; hour++) {
+      for (int minute = 0; minute < 60; minute += slotMinutes) {
+        // Skip slots that go beyond endHour
+        if (hour == endHour && minute > 0) break;
+        
+        final slotStartTime = DateTime(
+          displayDate.year,
+          displayDate.month,
+          displayDate.day,
+          hour,
+          minute,
+        );
+        final slotEndTime = slotStartTime.add(timeSlotDuration);
+        
+        // Check if this slot is interactive
+        final details = MCalTimeSlotInteractivityDetails(
+          date: DateTime(displayDate.year, displayDate.month, displayDate.day),
+          hour: hour,
+          minute: minute,
+          startTime: slotStartTime,
+          endTime: slotEndTime,
+        );
+        
+        final isInteractive = interactivityCallback(context, details);
+        
+        // If not interactive, add an overlay
+        if (!isInteractive) {
+          final topOffset = _timeToOffset(slotStartTime);
+          final slotHeight = (slotMinutes / 60.0) * hourHeight;
+          
+          disabledSlots.add(
+            Positioned(
+              top: topOffset,
+              left: 0,
+              right: 0,
+              height: slotHeight,
+              child: IgnorePointer(
+                child: Container(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+          );
+        }
+      }
+    }
+    
+    if (disabledSlots.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    return Stack(children: disabledSlots);
+  }
+
+  /// Converts a DateTime to a vertical offset in pixels.
+  double _timeToOffset(DateTime time) {
+    final hour = time.hour;
+    final minute = time.minute;
+    final totalMinutes = (hour - startHour) * 60 + minute;
+    return (totalMinutes / 60.0) * hourHeight;
   }
 }
 
@@ -5470,6 +6377,7 @@ class _TimedEventsLayer extends StatelessWidget {
     this.dayLayoutBuilder,
     this.onEventTap,
     this.onEventLongPress,
+    this.onEventDoubleTap,
     this.keyboardFocusedEventId,
     this.enableDragToMove = false,
     this.enableDragToResize = false,
@@ -5480,6 +6388,7 @@ class _TimedEventsLayer extends StatelessWidget {
     this.onDragEnded,
     this.onDragCancelled,
     this.timeResizeHandleBuilder,
+    this.resizeHandleInset,
     this.onResizePointerDown,
     this.onResizeStart,
     this.onResizeUpdate,
@@ -5497,11 +6406,13 @@ class _TimedEventsLayer extends StatelessWidget {
     BuildContext,
     MCalCalendarEvent,
     MCalTimedEventTileContext,
+    Widget,
   )?
   timedEventTileBuilder;
-  final Widget Function(BuildContext, MCalDayLayoutContext)? dayLayoutBuilder;
+  final Widget Function(BuildContext, MCalDayLayoutContext, Widget)? dayLayoutBuilder;
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
+  final void Function(BuildContext, MCalEventTapDetails)? onEventDoubleTap;
   final String? keyboardFocusedEventId;
   final bool enableDragToMove;
   final bool enableDragToResize;
@@ -5509,16 +6420,19 @@ class _TimedEventsLayer extends StatelessWidget {
     BuildContext,
     MCalCalendarEvent,
     MCalDraggedTileDetails,
+    Widget,
   )?
   draggedTileBuilder;
-  final Widget Function(BuildContext, MCalCalendarEvent, MCalDragSourceDetails)?
+  final Widget Function(BuildContext, MCalCalendarEvent, MCalDragSourceDetails, Widget)?
   dragSourceTileBuilder;
   final Duration dragLongPressDelay;
   final void Function(MCalCalendarEvent, DateTime)? onDragStarted;
   final void Function(bool)? onDragEnded;
   final void Function()? onDragCancelled;
-  final Widget Function(BuildContext, MCalCalendarEvent, MCalResizeEdge)?
+  final Widget Function(BuildContext, MCalCalendarEvent, MCalResizeEdge, Widget)?
   timeResizeHandleBuilder;
+  final double Function(MCalTimedEventTileContext, MCalResizeEdge)?
+  resizeHandleInset;
   final void Function(MCalCalendarEvent, MCalResizeEdge, int)?
   onResizePointerDown;
   final void Function(MCalCalendarEvent, MCalResizeEdge)? onResizeStart;
@@ -5527,34 +6441,13 @@ class _TimedEventsLayer extends StatelessWidget {
   final VoidCallback? onResizeEnd;
   final VoidCallback? onResizeCancel;
 
-  @override
-  Widget build(BuildContext context) {
-    // If custom layout builder is provided, use it
-    if (dayLayoutBuilder != null) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final layoutContext = MCalDayLayoutContext(
-            events: events,
-            displayDate: displayDate,
-            startHour: startHour,
-            endHour: endHour,
-            hourHeight: hourHeight,
-            areaWidth: constraints.maxWidth,
-          );
-          return dayLayoutBuilder!(context, layoutContext);
-        },
-      );
-    }
-
-    // Default layout: column-based overlap detection
+  Widget _buildDefaultLayout(BuildContext context) {
     if (events.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    // Run overlap detection to assign columns
     final eventsWithColumns = detectOverlapsAndAssignColumns(events);
 
-    // Build the event tiles in a Stack
     return LayoutBuilder(
       builder: (context, constraints) {
         final areaWidth = constraints.maxWidth;
@@ -5567,6 +6460,28 @@ class _TimedEventsLayer extends StatelessWidget {
         );
       },
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (dayLayoutBuilder != null) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final layoutContext = MCalDayLayoutContext(
+            events: events,
+            displayDate: displayDate,
+            startHour: startHour,
+            endHour: endHour,
+            hourHeight: hourHeight,
+            areaWidth: constraints.maxWidth,
+          );
+          final defaultWidget = _buildDefaultLayout(context);
+          return dayLayoutBuilder!(context, layoutContext, defaultWidget);
+        },
+      );
+    }
+
+    return _buildDefaultLayout(context);
   }
 
   /// Builds a positioned event tile with calculated layout.
@@ -5634,7 +6549,7 @@ class _TimedEventsLayer extends StatelessWidget {
         onResizeEnd != null &&
         onResizeCancel != null &&
         _shouldShowResizeHandles(event)) {
-      tile = _wrapWithResizeHandles(context, tile, event, width, height);
+      tile = _wrapWithResizeHandles(context, tile, event, tileContext, width, height);
     }
 
     // Wrap with drag-and-drop or gesture detector for interactions
@@ -5652,11 +6567,12 @@ class _TimedEventsLayer extends StatelessWidget {
         horizontalSpacing: hSpacing,
         enabled: enableDragToMove,
         draggedTileBuilder: draggedTileBuilder != null
-            ? (context, details) => draggedTileBuilder!(context, event, details)
+            ? (context, details, defaultWidget) =>
+                  draggedTileBuilder!(context, event, details, defaultWidget)
             : null,
         dragSourceTileBuilder: dragSourceTileBuilder != null
-            ? (context, details) =>
-                  dragSourceTileBuilder!(context, event, details)
+            ? (context, details, defaultWidget) =>
+                  dragSourceTileBuilder!(context, event, details, defaultWidget)
             : null,
         dragLongPressDelay: dragLongPressDelay,
         onDragStarted: onDragStarted != null
@@ -5666,8 +6582,7 @@ class _TimedEventsLayer extends StatelessWidget {
         onDragCanceled: onDragCancelled,
         child: tile,
       );
-    } else if (onEventTap != null || onEventLongPress != null) {
-      // When drag is disabled, use GestureDetector for taps
+    } else if (onEventTap != null || onEventLongPress != null || onEventDoubleTap != null) {
       tile = GestureDetector(
         onTap: onEventTap != null
             ? () => onEventTap!(
@@ -5677,6 +6592,12 @@ class _TimedEventsLayer extends StatelessWidget {
             : null,
         onLongPress: onEventLongPress != null
             ? () => onEventLongPress!(
+                context,
+                MCalEventTapDetails(event: event, displayDate: displayDate),
+              )
+            : null,
+        onDoubleTap: onEventDoubleTap != null
+            ? () => onEventDoubleTap!(
                 context,
                 MCalEventTapDetails(event: event, displayDate: displayDate),
               )
@@ -5706,10 +6627,13 @@ class _TimedEventsLayer extends StatelessWidget {
     BuildContext context,
     Widget tile,
     MCalCalendarEvent event,
+    MCalTimedEventTileContext tileContext,
     double width,
     double height,
   ) {
     final handleSize = theme.dayTheme?.resizeHandleSize ?? 8.0;
+    final startInset = resizeHandleInset?.call(tileContext, MCalResizeEdge.start) ?? 0.0;
+    final endInset = resizeHandleInset?.call(tileContext, MCalResizeEdge.end) ?? 0.0;
     final children = <Widget>[Positioned.fill(child: tile)];
 
     children.add(
@@ -5719,6 +6643,7 @@ class _TimedEventsLayer extends StatelessWidget {
         handleSize: handleSize,
         tileWidth: width,
         tileHeight: height,
+        inset: startInset,
         visualBuilder: timeResizeHandleBuilder,
         onPointerDown: (e, edge, pointer) =>
             onResizePointerDown?.call(e, edge, pointer),
@@ -5731,6 +6656,7 @@ class _TimedEventsLayer extends StatelessWidget {
         handleSize: handleSize,
         tileWidth: width,
         tileHeight: height,
+        inset: endInset,
         visualBuilder: timeResizeHandleBuilder,
         onPointerDown: (e, edge, pointer) =>
             onResizePointerDown?.call(e, edge, pointer),
@@ -5738,6 +6664,62 @@ class _TimedEventsLayer extends StatelessWidget {
     );
 
     return Stack(clipBehavior: Clip.none, children: children);
+  }
+
+  /// Builds the default timed event tile widget.
+  Widget _buildDefaultTimedEventTile(
+    MCalCalendarEvent event,
+    MCalTimedEventTileContext tileContext,
+    String timeRange,
+  ) {
+    final tileColor = theme.ignoreEventColors
+        ? (theme.eventTileBackgroundColor ?? Colors.blue)
+        : (event.color ?? theme.eventTileBackgroundColor ?? Colors.blue);
+
+    final contrastColor = _getContrastColor(tileColor);
+    final timeColor = contrastColor.withValues(alpha: 0.9);
+    final showTimeRange = tileContext.endTime
+            .difference(tileContext.startTime)
+            .inMinutes >=
+        30;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 1.0),
+      padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
+      decoration: BoxDecoration(
+        color: tileColor.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(
+          theme.dayTheme?.timedEventBorderRadius ?? theme.eventTileCornerRadius ?? 4.0,
+        ),
+        border: Border.all(color: tileColor, width: 1.0),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final tileHeight = constraints.maxHeight;
+          final isCompact = tileHeight < 40;
+
+          return ClipRect(
+            child: isCompact
+                ? _buildCompactTileContent(
+                    event: event,
+                    timeRange: timeRange,
+                    showTimeRange: showTimeRange,
+                    contrastColor: contrastColor,
+                    timeColor: timeColor,
+                    theme: theme,
+                  )
+                : _buildNormalTileContent(
+                    event: event,
+                    timeRange: timeRange,
+                    showTimeRange: showTimeRange,
+                    contrastColor: contrastColor,
+                    timeColor: timeColor,
+                    theme: theme,
+                  ),
+          );
+        },
+      ),
+    );
   }
 
   /// Builds the event tile (custom or default).
@@ -5764,67 +6746,17 @@ class _TimedEventsLayer extends StatelessWidget {
     final semanticLabel =
         '${event.title}, $startTimeStr to $endTimeStr, $durationStr';
 
-    // Use custom builder if provided
-    if (timedEventTileBuilder != null) {
-      return Semantics(
-        label: semanticLabel,
-        button: true,
-        child: timedEventTileBuilder!(context, event, tileContext),
-      );
-    }
+    // Build default tile
+    final defaultWidget = _buildDefaultTimedEventTile(event, tileContext, timeRange);
 
-    // Default tile
-    final tileColor = theme.ignoreEventColors
-        ? (theme.eventTileBackgroundColor ?? Colors.blue)
-        : (event.color ?? theme.eventTileBackgroundColor ?? Colors.blue);
-
-    final contrastColor = _getContrastColor(tileColor);
-    final timeColor = contrastColor.withValues(alpha: 0.9);
-    final showTimeRange = tileContext.endTime
-            .difference(tileContext.startTime)
-            .inMinutes >=
-        30;
+    final tileWidget = timedEventTileBuilder != null
+        ? timedEventTileBuilder!(context, event, tileContext, defaultWidget)
+        : defaultWidget;
 
     return Semantics(
       label: semanticLabel,
       button: true,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 1.0),
-        padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
-        decoration: BoxDecoration(
-          color: tileColor.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(
-            theme.dayTheme?.timedEventBorderRadius ?? theme.eventTileCornerRadius ?? 4.0,
-          ),
-          border: Border.all(color: tileColor, width: 1.0),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final tileHeight = constraints.maxHeight;
-            final isCompact = tileHeight < 40;
-
-            return ClipRect(
-              child: isCompact
-                  ? _buildCompactTileContent(
-                      event: event,
-                      timeRange: timeRange,
-                      showTimeRange: showTimeRange,
-                      contrastColor: contrastColor,
-                      timeColor: timeColor,
-                      theme: theme,
-                    )
-                  : _buildNormalTileContent(
-                      event: event,
-                      timeRange: timeRange,
-                      showTimeRange: showTimeRange,
-                      contrastColor: contrastColor,
-                      timeColor: timeColor,
-                      theme: theme,
-                    ),
-            );
-          },
-        ),
-      ),
+      child: tileWidget,
     );
   }
 
@@ -5934,6 +6866,7 @@ class _TimeResizeHandle extends StatelessWidget {
     required this.handleSize,
     required this.tileWidth,
     required this.tileHeight,
+    this.inset = 0.0,
     this.visualBuilder,
     this.onPointerDown,
   });
@@ -5943,24 +6876,26 @@ class _TimeResizeHandle extends StatelessWidget {
   final double handleSize;
   final double tileWidth;
   final double tileHeight;
-  final Widget Function(BuildContext, MCalCalendarEvent, MCalResizeEdge)?
+  final double inset;
+  final Widget Function(BuildContext, MCalCalendarEvent, MCalResizeEdge, Widget)?
   visualBuilder;
   final void Function(MCalCalendarEvent, MCalResizeEdge, int)? onPointerDown;
 
   @override
   Widget build(BuildContext context) {
-    // Build visual: custom builder or default horizontal line
+    final defaultVisual = Container(
+      width: tileWidth - 8,
+      height: 2,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(1),
+      ),
+    );
+
     final visual = visualBuilder != null
-        ? visualBuilder!(context, event, edge)
-        : Container(
-            width: tileWidth - 8,
-            height: 2,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(1),
-            ),
-          );
+        ? visualBuilder!(context, event, edge, defaultVisual)
+        : defaultVisual;
 
     final semanticLabel = edge == MCalResizeEdge.start
         ? 'Resize start time'
@@ -5990,8 +6925,8 @@ class _TimeResizeHandle extends StatelessWidget {
     return Positioned(
       top: edge == MCalResizeEdge.start ? 0 : null,
       bottom: edge == MCalResizeEdge.end ? 0 : null,
-      left: 0,
-      right: 0,
+      left: inset,
+      right: inset,
       height: handleSize,
       child: child,
     );

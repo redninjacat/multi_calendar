@@ -266,6 +266,57 @@ class MCalCellInteractivityDetails {
   });
 }
 
+/// Details object for time slot interactivity callbacks in Day View.
+///
+/// Provides information for determining whether a specific time slot should be
+/// interactive/selectable. Used by Day View's [timeSlotInteractivityCallback]
+/// to disable specific time slots (e.g., past times, non-working hours).
+///
+/// Example:
+/// ```dart
+/// timeSlotInteractivityCallback: (context, details) {
+///   // Disable past time slots
+///   if (details.startTime.isBefore(DateTime.now())) {
+///     return false;
+///   }
+///   // Only allow slots during working hours (9 AM - 5 PM)
+///   if (details.hour < 9 || details.hour >= 17) {
+///     return false;
+///   }
+///   return true;
+/// }
+/// ```
+class MCalTimeSlotInteractivityDetails {
+  /// The date of the time slot being evaluated.
+  final DateTime date;
+
+  /// The hour component of the time slot (0-23).
+  final int hour;
+
+  /// The minute component of the time slot (0-59).
+  final int minute;
+
+  /// The full start time of the time slot.
+  ///
+  /// This is a convenience field combining [date], [hour], and [minute].
+  final DateTime startTime;
+
+  /// The full end time of the time slot.
+  ///
+  /// This represents when the time slot ends, based on the configured
+  /// time slot duration in Day View.
+  final DateTime endTime;
+
+  /// Creates a new [MCalTimeSlotInteractivityDetails] instance.
+  const MCalTimeSlotInteractivityDetails({
+    required this.date,
+    required this.hour,
+    required this.minute,
+    required this.startTime,
+    required this.endTime,
+  });
+}
+
 /// Details object for error builder callbacks.
 ///
 /// Provides information about an error that occurred, along with an

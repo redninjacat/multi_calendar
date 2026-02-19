@@ -208,6 +208,79 @@ class _DayThemeTabState extends State<DayThemeTab> {
 
         const SizedBox(height: 16),
 
+        // ── Shared sections (same position as Month View's Event Tiles) ────────
+
+        // Events section
+        ControlPanelSection(
+          title: l10n.sectionEvents,
+          children: [
+            ControlWidgets.colorPicker(
+              label: l10n.settingEventTileBackgroundColor,
+              value: _eventTileBackgroundColor ?? colorScheme.primaryContainer,
+              onChanged: (value) => setState(() => _eventTileBackgroundColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingTimedEventBorderRadius,
+              value: _timedEventBorderRadius ?? 4.0,
+              min: 0,
+              max: 16,
+              divisions: 16,
+              onChanged: (value) => setState(() => _timedEventBorderRadius = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingTimedEventMinHeight,
+              value: _timedEventMinHeight ?? 20.0,
+              min: 12,
+              max: 48,
+              divisions: 36,
+              onChanged: (value) => setState(() => _timedEventMinHeight = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingTimedEventPadding,
+              value: (_timedEventPadding?.left ?? 4.0),
+              min: 0,
+              max: 12,
+              divisions: 12,
+              onChanged: (value) => setState(() => _timedEventPadding = EdgeInsets.all(value)),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingIgnoreEventColors,
+              value: _ignoreEventColors ?? false,
+              onChanged: (value) => setState(() => _ignoreEventColors = value),
+            ),
+          ],
+        ),
+
+        // ── Day View-only sections ───────────────────────────────────────────
+
+        // All-Day Events section
+        ControlPanelSection(
+          title: l10n.sectionAllDayEvents,
+          children: [
+            ControlWidgets.colorPicker(
+              label: l10n.settingAllDayEventBackgroundColor,
+              value: _allDayEventBackgroundColor ?? colorScheme.secondaryContainer,
+              onChanged: (value) => setState(() => _allDayEventBackgroundColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingAllDayEventBorderColor,
+              value: _allDayEventBorderColor ?? colorScheme.outline,
+              onChanged: (value) => setState(() => _allDayEventBorderColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingAllDayEventBorderWidth,
+              value: _allDayEventBorderWidth ?? 1.0,
+              min: 0,
+              max: 4,
+              divisions: 16,
+              onChanged: (value) => setState(() => _allDayEventBorderWidth = value),
+            ),
+          ],
+        ),
+
         // Time Legend section
         ControlPanelSection(
           title: l10n.sectionTimeLegend,
@@ -328,75 +401,6 @@ class _DayThemeTabState extends State<DayThemeTab> {
           ],
         ),
 
-        // Events section
-        ControlPanelSection(
-          title: l10n.sectionEvents,
-          children: [
-            ControlWidgets.colorPicker(
-              label: l10n.settingEventTileBackgroundColor,
-              value: _eventTileBackgroundColor ?? colorScheme.primaryContainer,
-              onChanged: (value) => setState(() => _eventTileBackgroundColor = value),
-              cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingTimedEventBorderRadius,
-              value: _timedEventBorderRadius ?? 4.0,
-              min: 0,
-              max: 16,
-              divisions: 16,
-              onChanged: (value) => setState(() => _timedEventBorderRadius = value),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingTimedEventMinHeight,
-              value: _timedEventMinHeight ?? 20.0,
-              min: 12,
-              max: 48,
-              divisions: 36,
-              onChanged: (value) => setState(() => _timedEventMinHeight = value),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingTimedEventPadding,
-              value: (_timedEventPadding?.left ?? 4.0),
-              min: 0,
-              max: 12,
-              divisions: 12,
-              onChanged: (value) => setState(() => _timedEventPadding = EdgeInsets.all(value)),
-            ),
-            ControlWidgets.toggle(
-              label: l10n.settingIgnoreEventColors,
-              value: _ignoreEventColors ?? false,
-              onChanged: (value) => setState(() => _ignoreEventColors = value),
-            ),
-          ],
-        ),
-
-        // All-Day Events section
-        ControlPanelSection(
-          title: l10n.sectionAllDayEvents,
-          children: [
-            ControlWidgets.colorPicker(
-              label: l10n.settingAllDayEventBackgroundColor,
-              value: _allDayEventBackgroundColor ?? colorScheme.secondaryContainer,
-              onChanged: (value) => setState(() => _allDayEventBackgroundColor = value),
-              cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.colorPicker(
-              label: l10n.settingAllDayEventBorderColor,
-              value: _allDayEventBorderColor ?? colorScheme.outline,
-              onChanged: (value) => setState(() => _allDayEventBorderColor = value),
-              cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingAllDayEventBorderWidth,
-              value: _allDayEventBorderWidth ?? 1.0,
-              min: 0,
-              max: 4,
-              divisions: 16,
-              onChanged: (value) => setState(() => _allDayEventBorderWidth = value),
-            ),
-          ],
-        ),
-
         // Time Regions section
         ControlPanelSection(
           title: l10n.sectionTimeRegions,
@@ -461,6 +465,7 @@ class _DayThemeTabState extends State<DayThemeTab> {
         startHour: 8,
         endHour: 18,
         showCurrentTimeIndicator: true,
+        showNavigator: true,
       ),
     );
 

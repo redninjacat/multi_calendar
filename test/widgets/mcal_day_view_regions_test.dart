@@ -34,7 +34,7 @@ void main() {
     Widget buildDayView({
       List<MCalCalendarEvent>? events,
       List<MCalTimeRegion> specialTimeRegions = const [],
-      Widget Function(BuildContext, MCalTimeRegionContext)? timeRegionBuilder,
+      Widget Function(BuildContext, MCalTimeRegionContext, Widget)? timeRegionBuilder,
     }) {
       if (events != null) {
         controller.setMockEvents(events);
@@ -180,7 +180,10 @@ void main() {
                   hourHeight: 80,
                   specialTimeRegions: [blockedRegion],
                   enableDragToMove: true,
-                  onEventDropped: (_) => dropCalled = true,
+                  onEventDropped: (_, __) {
+                    dropCalled = true;
+                    return true;
+                  },
                   showCurrentTimeIndicator: false,
                   autoScrollToCurrentTime: false,
                   initialScrollTime: const TimeOfDay(hour: 9, minute: 0),
@@ -239,7 +242,10 @@ void main() {
                   hourHeight: 80,
                   specialTimeRegions: [visualRegion],
                   enableDragToMove: true,
-                  onEventDropped: (d) => capturedDetails = d,
+                  onEventDropped: (_, d) {
+                    capturedDetails = d;
+                    return true;
+                  },
                   showCurrentTimeIndicator: false,
                   dragLongPressDelay: const Duration(milliseconds: 150),
                 ),
@@ -391,7 +397,7 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             specialTimeRegions: regions,
-            timeRegionBuilder: (context, ctx) {
+            timeRegionBuilder: (context, ctx, defaultWidget) {
               builderCalled = true;
               return Container(
                 color: Colors.purple,
@@ -423,7 +429,7 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             specialTimeRegions: regions,
-            timeRegionBuilder: (context, ctx) {
+            timeRegionBuilder: (context, ctx, defaultWidget) {
               capturedContext = ctx;
               return Text('Region: ${ctx.region.id}');
             },

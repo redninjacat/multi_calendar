@@ -34,9 +34,9 @@ void main() {
     bool enableDragToMove = false,
     void Function(BuildContext, MCalEventTapDetails)? onEventTap,
     void Function(BuildContext, MCalEventTapDetails)? onEventLongPress,
-    void Function(MCalTimeSlotContext)? onTimeSlotTap,
-    void Function(MCalTimeSlotContext)? onTimeSlotLongPress,
-    void Function(DateTime)? onEmptySpaceDoubleTap,
+    void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotTap,
+    void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotLongPress,
+    void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotDoubleTap,
   }) {
     return MaterialApp(
       locale: const Locale('en', 'US'),
@@ -53,7 +53,7 @@ void main() {
             onEventLongPress: onEventLongPress,
             onTimeSlotTap: onTimeSlotTap,
             onTimeSlotLongPress: onTimeSlotLongPress,
-            onEmptySpaceDoubleTap: onEmptySpaceDoubleTap,
+            onTimeSlotDoubleTap: onTimeSlotDoubleTap,
             showCurrentTimeIndicator: false,
             autoScrollToCurrentTime: false,
             initialScrollTime: const TimeOfDay(hour: 8, minute: 0),
@@ -196,7 +196,7 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             ctrl: controller,
-            onTimeSlotTap: (_) {},
+            onTimeSlotTap: (_, __) {},
           ),
         );
         await tester.pumpAndSettle();
@@ -217,7 +217,7 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             ctrl: controller,
-            onTimeSlotLongPress: (_) {},
+            onTimeSlotLongPress: (_, __) {},
           ),
         );
         await tester.pumpAndSettle();
@@ -231,14 +231,14 @@ void main() {
     );
 
     testWidgets(
-      'schedule GestureDetector has onDoubleTap when onEmptySpaceDoubleTap provided',
+      'schedule GestureDetector has onDoubleTap when onTimeSlotDoubleTap provided',
       (tester) async {
         controller.setMockEvents([]);
 
         await tester.pumpWidget(
           buildDayView(
             ctrl: controller,
-            onEmptySpaceDoubleTap: (_) {},
+            onTimeSlotDoubleTap: (_, __) {},
           ),
         );
         await tester.pumpAndSettle();
@@ -259,9 +259,9 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             ctrl: controller,
-            onTimeSlotTap: (_) {},
-            onTimeSlotLongPress: (_) {},
-            onEmptySpaceDoubleTap: (_) {},
+            onTimeSlotTap: (_, __) {},
+            onTimeSlotLongPress: (_, __) {},
+            onTimeSlotDoubleTap: (_, __) {},
           ),
         );
         await tester.pumpAndSettle();
@@ -304,7 +304,7 @@ void main() {
           buildDayView(
             ctrl: controller,
             onEventTap: (_, _) {},
-            onTimeSlotTap: (_) {},
+            onTimeSlotTap: (_, __) {},
           ),
         );
         await tester.pumpAndSettle();

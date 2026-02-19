@@ -38,7 +38,7 @@ void main() {
       bool snapToCurrentTime = true,
       Duration snapRange = const Duration(minutes: 5),
       Duration timeSlotDuration = const Duration(minutes: 15),
-      void Function(MCalEventDroppedDetails)? onEventDropped,
+      bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped,
     }) {
       return MaterialApp(
         home: Scaffold(
@@ -80,7 +80,10 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             ctrl: controller,
-            onEventDropped: (d) => capturedDetails = d,
+            onEventDropped: (_, d) {
+              capturedDetails = d;
+              return true;
+            },
           ),
         );
         await tester.pumpAndSettle();
@@ -116,7 +119,10 @@ void main() {
           buildDayView(
             ctrl: controller,
             timeSlotDuration: const Duration(minutes: 5),
-            onEventDropped: (d) => capturedDetails = d,
+            onEventDropped: (_, d) {
+              capturedDetails = d;
+              return true;
+            },
           ),
         );
         await tester.pumpAndSettle();
@@ -162,7 +168,10 @@ void main() {
           buildDayView(
             ctrl: controller,
             snapRange: const Duration(minutes: 10),
-            onEventDropped: (d) => capturedDetails = d,
+            onEventDropped: (_, d) {
+              capturedDetails = d;
+              return true;
+            },
           ),
         );
         await tester.pumpAndSettle();
@@ -203,7 +212,10 @@ void main() {
           buildDayView(
             ctrl: controller,
             snapRange: const Duration(minutes: 2),
-            onEventDropped: (d) => capturedDetails = d,
+            onEventDropped: (_, d) {
+              capturedDetails = d;
+              return true;
+            },
           ),
         );
         await tester.pumpAndSettle();
@@ -243,7 +255,10 @@ void main() {
             snapToTimeSlots: false,
             snapToOtherEvents: false,
             snapToCurrentTime: false,
-            onEventDropped: (d) => capturedDetails = d,
+            onEventDropped: (_, d) {
+              capturedDetails = d;
+              return true;
+            },
           ),
         );
         await tester.pumpAndSettle();
@@ -289,7 +304,10 @@ void main() {
           buildDayView(
             ctrl: controller,
             snapToOtherEvents: false,
-            onEventDropped: (d) => capturedDetails = d,
+            onEventDropped: (_, d) {
+              capturedDetails = d;
+              return true;
+            },
           ),
         );
         await tester.pumpAndSettle();
@@ -333,7 +351,7 @@ void main() {
                   endHour: 18,
                   hourHeight: 80,
                   enableDragToMove: true,
-                  showDropTargetPreview: true,
+                  showDropTargetTiles: true,
                   showDropTargetOverlay: true,
                   snapToTimeSlots: true,
                   showCurrentTimeIndicator: false,

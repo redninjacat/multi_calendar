@@ -91,7 +91,7 @@ class ColorfulMonthStyle extends StatelessWidget {
                 navigatorBuilder: (context, ctx, defaultNavigator) {
                   return _buildNavigator(context, ctx);
                 },
-                draggedTileBuilder: (context, details) {
+                draggedTileBuilder: (context, details, defaultWidget) {
                   final theme = MCalTheme.of(context);
                   final cornerRadius = theme.eventTileCornerRadius ?? theme.monthTheme?.eventTileCornerRadius ?? 4.0;
                   final tileHeight = theme.monthTheme?.eventTileHeight ?? 6.0;

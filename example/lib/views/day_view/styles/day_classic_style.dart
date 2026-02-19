@@ -134,7 +134,7 @@ class _DayClassicStyleState extends State<DayClassicStyle>
             onDelete: () => handleDeleteEvent(details.event),
           );
         },
-        onEventDropped: (details) {
+        onEventDropped: (context, details) {
           if (mounted) {
             final t = details.newStartDate;
             final l10n = AppLocalizations.of(context)!;
@@ -145,8 +145,9 @@ class _DayClassicStyleState extends State<DayClassicStyle>
               ),
             );
           }
+          return true;
         },
-        onEventResized: (details) {
+        onEventResized: (context, details) {
           if (mounted) {
             final l10n = AppLocalizations.of(context)!;
             showCrudSnackBar(
@@ -156,8 +157,13 @@ class _DayClassicStyleState extends State<DayClassicStyle>
               ),
             );
           }
+          return true;
         },
-        onEmptySpaceDoubleTap: (time) => handleCreateEvent(time),
+        onTimeSlotDoubleTap: (context, slotContext) {
+          if (!slotContext.isAllDayArea) {
+            handleCreateEvent(DateTime(slotContext.displayDate.year, slotContext.displayDate.month, slotContext.displayDate.day, slotContext.hour ?? 0, slotContext.minute ?? 0));
+          }
+        },
         onCreateEventRequested: handleCreateEventAtDefaultTime,
         onEditEventRequested: (event) => handleEditEvent(event),
         onDeleteEventRequested: (event) => handleDeleteEvent(event),

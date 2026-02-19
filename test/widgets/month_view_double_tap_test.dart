@@ -5,7 +5,7 @@ import 'package:multi_calendar/multi_calendar.dart';
 
 /// Mock MCalEventController for testing
 class MockMCalEventController extends MCalEventController {
-  MockMCalEventController({super.initialDate});
+  MockMCalEventController({super.initialDate, super.firstDayOfWeek});
 
   void addEventsForRange(
     DateTime start,
@@ -331,6 +331,7 @@ void main() {
     ) async {
       final controller = MockMCalEventController(
         initialDate: DateTime(2025, 2, 1),
+        firstDayOfWeek: 0,
       );
       controller.addEventsForRange(
         DateTime(2025, 1, 1),
@@ -347,7 +348,6 @@ void main() {
               height: 600,
               child: MCalMonthView(
                 controller: controller,
-                firstDayOfWeek: 0,
                 onCellDoubleTap: (context, details) {
                   capturedDetails = details;
                 },

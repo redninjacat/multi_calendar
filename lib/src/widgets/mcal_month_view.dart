@@ -15,7 +15,9 @@ import '../styles/mcal_theme.dart';
 import '../utils/color_utils.dart';
 import '../utils/date_utils.dart';
 import '../utils/mcal_date_format_utils.dart';
+import '../utils/mcal_scroll_behavior.dart';
 import '../../l10n/mcal_localizations.dart';
+import '../utils/mcal_l10n_helper.dart';
 import 'mcal_builder_wrapper.dart';
 import 'mcal_callback_details.dart';
 import 'mcal_month_default_week_layout.dart';
@@ -119,6 +121,45 @@ _getRecurrenceMetadata(
   );
 }
 
+// ============================================================================
+// Keyboard Shortcut Intents
+// ============================================================================
+
+/// Intent for the "create new event" keyboard shortcut (Cmd/Ctrl+N).
+///
+/// When [MCalMonthView.enableKeyboardNavigation] is true, pressing Cmd+N (Mac)
+/// or Ctrl+N (Windows/Linux) triggers [MCalMonthView.onCreateEventRequested].
+///
+/// Override via [MCalMonthView.keyboardShortcuts] to customize the activator.
+class MCalMonthViewCreateEventIntent extends Intent {
+  const MCalMonthViewCreateEventIntent();
+}
+
+/// Intent for the "delete event" keyboard shortcut (Cmd/Ctrl+D, Delete, Backspace).
+///
+/// When [MCalMonthView.enableKeyboardNavigation] is true and an event has focus,
+/// pressing Cmd+D, Delete, or Backspace triggers [MCalMonthView.onDeleteEventRequested].
+///
+/// Override via [MCalMonthView.keyboardShortcuts] to customize the activator.
+class MCalMonthViewDeleteEventIntent extends Intent {
+  const MCalMonthViewDeleteEventIntent();
+}
+
+/// Intent for the "edit event" keyboard shortcut (Cmd/Ctrl+E).
+///
+/// When [MCalMonthView.enableKeyboardNavigation] is true and an event has focus,
+/// pressing Cmd+E (Mac) or Ctrl+E (Windows/Linux) triggers
+/// [MCalMonthView.onEditEventRequested].
+///
+/// Override via [MCalMonthView.keyboardShortcuts] to customize the activator.
+class MCalMonthViewEditEventIntent extends Intent {
+  const MCalMonthViewEditEventIntent();
+}
+
+// ============================================================================
+// MCalMonthView Widget
+// ============================================================================
+
 /// A widget that displays a month calendar grid with events.
 ///
 /// MCalMonthView displays a traditional month calendar grid showing days of the
@@ -157,10 +198,6 @@ class MCalMonthView extends StatefulWidget {
   /// If provided, navigation to dates after this date will be disabled.
   final DateTime? maxDate;
 
-  /// The first day of the week (0 = Sunday, 1 = Monday, etc.).
-  ///
-  /// If not provided, the system locale's default is used.
-  final int? firstDayOfWeek;
 
   /// Whether to show the month navigator (month/year display and controls).
   ///
@@ -256,6 +293,13 @@ class MCalMonthView extends StatefulWidget {
   final void Function(BuildContext, MCalDateLabelTapDetails)?
   onDateLabelLongPress;
 
+  /// Callback invoked when a date label is double-tapped.
+  ///
+  /// When set, date labels respond to double-tap with this handler.
+  /// Receives [BuildContext] and [MCalDateLabelTapDetails] with the date information.
+  final void Function(BuildContext, MCalDateLabelTapDetails)?
+  onDateLabelDoubleTap;
+
   /// Callback invoked when an event tile is tapped.
   ///
   /// Receives the [BuildContext] and [MCalEventTapDetails] containing the
@@ -288,10 +332,10 @@ class MCalMonthView extends StatefulWidget {
   final void Function(BuildContext, MCalSwipeNavigationDetails)?
   onSwipeNavigation;
 
-  /// Custom date format string for date labels.
+  /// Custom date format for date labels.
   ///
   /// If not provided, default formatting is used based on locale.
-  final String? dateFormat;
+  final DateFormat? dateFormat;
 
   /// Locale for date formatting and localization.
   ///
@@ -302,17 +346,31 @@ class MCalMonthView extends StatefulWidget {
 
   /// Callback invoked when the mouse hovers over a day cell.
   ///
-  /// Receives the [MCalDayCellContext] for the hovered cell, or null when
-  /// the mouse exits the cell. Useful for showing preview information or
+  /// Receives the [BuildContext] and [MCalDayCellContext] for the hovered cell,
+  /// or null when the mouse exits the cell. Useful for showing preview information or
   /// highlighting related elements.
-  final ValueChanged<MCalDayCellContext?>? onHoverCell;
+  final void Function(BuildContext, MCalDayCellContext?)? onHoverCell;
 
   /// Callback invoked when the mouse hovers over an event tile.
   ///
-  /// Receives the [MCalEventTileContext] for the hovered event, or null when
-  /// the mouse exits the event tile. Useful for showing event details in a
+  /// Receives the [BuildContext] and [MCalEventTileContext] for the hovered event,
+  /// or null when the mouse exits the event tile. Useful for showing event details in a
   /// tooltip or preview panel.
-  final ValueChanged<MCalEventTileContext?>? onHoverEvent;
+  final void Function(BuildContext, MCalEventTileContext?)? onHoverEvent;
+
+  /// Callback invoked when the mouse hovers over a date label.
+  ///
+  /// Receives the [BuildContext] and [MCalDateLabelContext] for the hovered date label,
+  /// or null when the mouse exits the date label. Useful for showing preview information
+  /// or highlighting related elements.
+  final void Function(BuildContext, MCalDateLabelContext?)? onHoverDateLabel;
+
+  /// Callback invoked when the mouse hovers over an overflow indicator.
+  ///
+  /// Receives the [BuildContext] and [MCalOverflowTapDetails] for the hovered overflow,
+  /// or null when the mouse exits the overflow indicator. Useful for showing preview
+  /// of hidden events or tooltip information.
+  final void Function(BuildContext, MCalOverflowTapDetails?)? onHoverOverflow;
 
   // ============ Keyboard navigation ============
 
@@ -321,6 +379,46 @@ class MCalMonthView extends StatefulWidget {
   /// When true, users can navigate between cells using arrow keys, Enter to
   /// select, and other keyboard shortcuts. Defaults to true.
   final bool enableKeyboardNavigation;
+
+  /// Custom keyboard shortcuts for Month View CRUD operations.
+  ///
+  /// Override the default keyboard shortcuts by providing a map of
+  /// [ShortcutActivator] to [Intent]. The provided shortcuts are merged with
+  /// the defaults, allowing selective overrides.
+  ///
+  /// Default shortcuts:
+  /// - Cmd/Ctrl+N: Create new event ([MCalMonthViewCreateEventIntent])
+  /// - Cmd/Ctrl+D, Delete, Backspace: Delete focused event ([MCalMonthViewDeleteEventIntent])
+  /// - Cmd/Ctrl+E: Edit focused event ([MCalMonthViewEditEventIntent])
+  ///
+  /// Example: Override Cmd+N to use a different shortcut:
+  /// ```dart
+  /// keyboardShortcuts: {
+  ///   SingleActivator(LogicalKeyboardKey.keyN, meta: true): MCalMonthViewCreateEventIntent(),
+  /// }
+  /// ```
+  final Map<ShortcutActivator, Intent>? keyboardShortcuts;
+
+  // ============ Keyboard CRUD callbacks ============
+
+  /// Called when the user requests to create a new event via keyboard shortcut
+  /// (Cmd/Ctrl+N by default).
+  ///
+  /// Use the controller's [MCalEventController.displayDate] and the focused date
+  /// to determine the date for the new event.
+  final VoidCallback? onCreateEventRequested;
+
+  /// Called when the user requests to delete the focused event via keyboard shortcut
+  /// (Cmd/Ctrl+D, Delete, or Backspace by default).
+  ///
+  /// Receives the focused event. Only fires when an event has keyboard focus.
+  final void Function(MCalCalendarEvent event)? onDeleteEventRequested;
+
+  /// Called when the user requests to edit the focused event via keyboard shortcut
+  /// (Cmd/Ctrl+E by default).
+  ///
+  /// Receives the focused event. Only fires when an event has keyboard focus.
+  final void Function(MCalCalendarEvent event)? onEditEventRequested;
 
   // ============ Navigation callbacks ============
 
@@ -383,6 +481,17 @@ class MCalMonthView extends StatefulWidget {
   /// visible event tiles can be dragged.
   final void Function(BuildContext, MCalOverflowTapDetails)?
   onOverflowLongPress;
+
+  /// Callback invoked when the overflow indicator ("+N more") is double-tapped.
+  ///
+  /// Receives the [BuildContext] and [MCalOverflowTapDetails] containing the
+  /// date of the cell, the complete list of events for that date, and the
+  /// number of hidden events. Useful for alternative interaction patterns.
+  ///
+  /// **Note:** The overflow indicator does not support drag-and-drop. Only
+  /// visible event tiles can be dragged.
+  final void Function(BuildContext, MCalOverflowTapDetails)?
+  onOverflowDoubleTap;
 
   // ============ Animation ============
 
@@ -514,7 +623,7 @@ class MCalMonthView extends StatefulWidget {
   /// If not provided, the default feedback is the tile with elevation.
   ///
   /// Only used when [enableDragToMove] is true.
-  final Widget Function(BuildContext, MCalDraggedTileDetails)?
+  final Widget Function(BuildContext, MCalDraggedTileDetails, Widget)?
   draggedTileBuilder;
 
   /// Builder callback for customizing the drag source placeholder widget.
@@ -526,7 +635,7 @@ class MCalMonthView extends StatefulWidget {
   /// If not provided, the default placeholder is the tile with 50% opacity.
   ///
   /// Only used when [enableDragToMove] is true.
-  final Widget Function(BuildContext, MCalDragSourceDetails)?
+  final Widget Function(BuildContext, MCalDragSourceDetails, Widget)?
   dragSourceTileBuilder;
 
   /// Builder callback for customizing the drag target preview widget.
@@ -734,7 +843,6 @@ class MCalMonthView extends StatefulWidget {
     required this.controller,
     this.minDate,
     this.maxDate,
-    this.firstDayOfWeek,
     this.showNavigator = false,
     this.enableSwipeNavigation = false,
     this.swipeNavigationDirection = MCalSwipeNavigationDirection.horizontal,
@@ -748,6 +856,7 @@ class MCalMonthView extends StatefulWidget {
     this.onCellLongPress,
     this.onDateLabelTap,
     this.onDateLabelLongPress,
+    this.onDateLabelDoubleTap,
     this.onEventTap,
     this.onEventLongPress,
     this.onCellDoubleTap,
@@ -758,8 +867,15 @@ class MCalMonthView extends StatefulWidget {
     // Hover callbacks
     this.onHoverCell,
     this.onHoverEvent,
+    this.onHoverDateLabel,
+    this.onHoverOverflow,
     // Keyboard navigation
     this.enableKeyboardNavigation = true,
+    this.keyboardShortcuts,
+    // Keyboard CRUD callbacks
+    this.onCreateEventRequested,
+    this.onDeleteEventRequested,
+    this.onEditEventRequested,
     // Navigation callbacks
     this.onDisplayDateChanged,
     this.onViewableRangeChanged,
@@ -770,6 +886,7 @@ class MCalMonthView extends StatefulWidget {
     // Overflow handling
     this.onOverflowTap,
     this.onOverflowLongPress,
+    this.onOverflowDoubleTap,
     // Animation
     this.enableAnimations,
     this.animationDuration = const Duration(milliseconds: 300),
@@ -1420,20 +1537,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// This ensures events are correctly displayed on all visible cells, not just
   /// cells within the calendar month.
   List<MCalCalendarEvent> _getEventsForMonth(DateTime month) {
-    final firstDayOfWeek = widget.firstDayOfWeek ?? _getDefaultFirstDayOfWeek();
+    final firstDayOfWeek = widget.controller.resolvedFirstDayOfWeek;
     final gridRange = getVisibleGridRange(month, firstDayOfWeek);
     return widget.controller.getEventsForRange(gridRange);
-  }
-
-  /// Gets the default first day of week based on locale.
-  ///
-  /// Returns 0 for Sunday, 1 for Monday, etc.
-  /// Defaults to Sunday (0) if locale is not available.
-  int _getDefaultFirstDayOfWeek() {
-    // For now, default to Sunday (0)
-    // In a full implementation, this would use locale-specific defaults
-    // (e.g., Monday for most European locales)
-    return widget.firstDayOfWeek ?? 0;
   }
 
   /// Builds the month grid with PageView for swipe navigation.
@@ -1479,6 +1585,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     Widget pageView = PageView.builder(
       controller: _pageController,
       physics: physics,
+      scrollBehavior: const MCalMultiDeviceScrollBehavior(),
       onPageChanged: _onPageChanged,
       // Determine scroll direction based on swipe navigation direction setting
       scrollDirection:
@@ -1501,7 +1608,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           theme: resolvedTheme,
           locale: resolvedLocale,
           controller: widget.controller,
-          firstDayOfWeek: _getDefaultFirstDayOfWeek(),
           dayCellBuilder: widget.dayCellBuilder,
           eventTileBuilder: widget.eventTileBuilder,
           dateLabelBuilder: widget.dateLabelBuilder,
@@ -1517,9 +1623,13 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           onEventDoubleTap: widget.onEventDoubleTap,
           onHoverCell: widget.onHoverCell,
           onHoverEvent: widget.onHoverEvent,
+          onHoverDateLabel: widget.onHoverDateLabel,
+          onHoverOverflow: widget.onHoverOverflow,
           maxVisibleEventsPerDay: widget.maxVisibleEventsPerDay,
           onOverflowTap: widget.onOverflowTap,
           onOverflowLongPress: widget.onOverflowLongPress,
+          onOverflowDoubleTap: null, // Not used in PageView mode yet
+          onDateLabelDoubleTap: null, // Not used in PageView mode yet
           showWeekNumbers: widget.showWeekNumbers,
           weekNumberBuilder: widget.weekNumberBuilder,
           autoFocusOnCellTap: widget.autoFocusOnCellTap,
@@ -1582,13 +1692,89 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     return MCalTheme.of(context);
   }
 
+  // ============================================================================
+  // Keyboard Shortcut Helpers
+  // ============================================================================
+
+  /// Builds the default keyboard shortcuts for Month View CRUD operations.
+  Map<ShortcutActivator, Intent> _buildDefaultShortcuts() {
+    return <ShortcutActivator, Intent>{
+      // Cmd/Ctrl+N: Create new event
+      const SingleActivator(LogicalKeyboardKey.keyN, control: true):
+          const MCalMonthViewCreateEventIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyN, meta: true):
+          const MCalMonthViewCreateEventIntent(),
+      // Cmd/Ctrl+D: Delete focused event
+      const SingleActivator(LogicalKeyboardKey.keyD, control: true):
+          const MCalMonthViewDeleteEventIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyD, meta: true):
+          const MCalMonthViewDeleteEventIntent(),
+      // Cmd/Ctrl+E: Edit focused event
+      const SingleActivator(LogicalKeyboardKey.keyE, control: true):
+          const MCalMonthViewEditEventIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyE, meta: true):
+          const MCalMonthViewEditEventIntent(),
+      // Delete/Backspace: Delete focused event
+      const SingleActivator(LogicalKeyboardKey.delete):
+          const MCalMonthViewDeleteEventIntent(),
+      const SingleActivator(LogicalKeyboardKey.backspace):
+          const MCalMonthViewDeleteEventIntent(),
+    };
+  }
+
+  /// Builds the merged shortcuts map (defaults + user overrides).
+  Map<ShortcutActivator, Intent> _buildShortcutsMap() {
+    final shortcuts = Map<ShortcutActivator, Intent>.from(
+      _buildDefaultShortcuts(),
+    );
+    if (widget.keyboardShortcuts != null) {
+      shortcuts.addAll(widget.keyboardShortcuts!);
+    }
+    return shortcuts;
+  }
+
+  /// Builds the Actions map for keyboard shortcut intents.
+  Map<Type, Action<Intent>> _buildActionsMap() {
+    return <Type, Action<Intent>>{
+      MCalMonthViewCreateEventIntent:
+          CallbackAction<MCalMonthViewCreateEventIntent>(
+            onInvoke: (_) {
+              widget.onCreateEventRequested?.call();
+              return null;
+            },
+          ),
+      MCalMonthViewDeleteEventIntent:
+          CallbackAction<MCalMonthViewDeleteEventIntent>(
+            onInvoke: (_) {
+              // Get the focused event
+              final event = _keyboardMoveEvent;
+              if (event != null) {
+                widget.onDeleteEventRequested?.call(event);
+              }
+              return null;
+            },
+          ),
+      MCalMonthViewEditEventIntent:
+          CallbackAction<MCalMonthViewEditEventIntent>(
+            onInvoke: (_) {
+              // Get the focused event
+              final event = _keyboardMoveEvent;
+              if (event != null) {
+                widget.onEditEventRequested?.call(event);
+              }
+              return null;
+            },
+          ),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     // Resolve theme and locale ONCE at the top of build() and pass down
     // to avoid multiple resolutions in child widgets
     final theme = _resolveTheme(context);
     final locale = widget.locale ?? Localizations.localeOf(context);
-    final firstDayOfWeek = _getDefaultFirstDayOfWeek();
+    final firstDayOfWeek = widget.controller.resolvedFirstDayOfWeek;
 
     // Build the main calendar content (ClipRect prevents overflow errors)
     final calendarContent = ClipRect(
@@ -1653,8 +1839,17 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       children: [calendarContent, if (overlay != null) overlay],
     );
 
+    // Wrap content with Shortcuts and Actions for keyboard CRUD operations
+    final shortcutsContent = Shortcuts(
+      shortcuts: _buildShortcutsMap(),
+      child: Actions(
+        actions: _buildActionsMap(),
+        child: content,
+      ),
+    );
+
     // Generate default semantics label if not provided
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final localizations = MCalDateFormatUtils();
     final defaultSemanticsLabel =
         '${l10n.calendar}, ${localizations.formatMonthYear(_currentMonth, locale)}';
@@ -1718,7 +1913,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
                   // Clean up resize state when pointer is cancelled
                   _handleResizePointerCancelFromParent(event);
                 },
-                child: content,
+                child: shortcutsContent,
               );
             },
           ),
@@ -1739,7 +1934,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // Obtain localization for announcements
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
 
     // Handle Escape key — works even if keyboard navigation is disabled.
     // Priority: keyboard resize mode > keyboard move mode > keyboard selection mode > pointer drag.
@@ -2059,7 +2254,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       _selectKeyboardMoveEvent(events.first);
     } else {
       // Multiple events: enter cycling mode
-      final l10n = MCalLocalizations.of(context);
+      final l10n = mcalL10n(context);
       _isKeyboardEventSelectionMode = true;
       _keyboardMoveEventIndex = 0;
       setState(() {});
@@ -2079,7 +2274,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Sets up the move state with the event's original dates and the proposed
   /// date initialized to the event's normalized start date.
   void _selectKeyboardMoveEvent(MCalCalendarEvent event) {
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     _isKeyboardEventSelectionMode = false;
     _isKeyboardMoveMode = true;
     _keyboardMoveEvent = event;
@@ -2104,7 +2299,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Enter confirms the selection and enters move mode.
   /// Escape exits selection mode.
   KeyEventResult _handleKeyboardSelectionModeKey(KeyEvent event) {
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final key = event.logicalKey;
     final focusedDate =
         widget.controller.focusedDate ?? widget.controller.displayDate;
@@ -2165,7 +2360,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Enter confirms via [_handleKeyboardDrop], reusing the same drop logic
   /// as pointer-based drag-and-drop.
   KeyEventResult _handleKeyboardMoveModeKey(KeyEvent event) {
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final key = event.logicalKey;
     final moveEvent = _keyboardMoveEvent;
     if (moveEvent == null) return KeyEventResult.ignored;
@@ -2353,7 +2548,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     if (proposedStart == null ||
         proposedEnd == null ||
         !dragHandler.isProposedDropValid) {
-      final l10n = MCalLocalizations.of(context);
+      final l10n = mcalL10n(context);
       dragHandler.cancelDrag();
       _isDragActive = false;
       _exitKeyboardMoveMode();
@@ -2472,7 +2667,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // Announce success
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final dateStr = DateFormat.yMMMd().format(newStartDate);
     SemanticsService.sendAnnouncement(
       View.of(context),
@@ -2500,7 +2695,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// - Enter: confirm resize via [_handleKeyboardResizeEnd]
   /// - Escape: cancel resize, stay in move mode
   KeyEventResult _handleKeyboardResizeModeKey(KeyEvent event) {
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final key = event.logicalKey;
     final resizeEvent = _keyboardMoveEvent;
     if (resizeEvent == null) return KeyEventResult.ignored;
@@ -2733,7 +2928,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final result = dragHandler.completeResize();
     if (result == null) {
       // Invalid resize
-      final l10n = MCalLocalizations.of(context);
+      final l10n = mcalL10n(context);
       _exitKeyboardResizeMode();
       setState(() {});
       SemanticsService.sendAnnouncement(
@@ -2852,7 +3047,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // Announce success
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final startStr = DateFormat.yMMMd().format(newStartDate);
     final endStr = DateFormat.yMMMd().format(newEndDate);
     SemanticsService.sendAnnouncement(
@@ -3191,7 +3386,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // Get current month's dates
     final dates = generateMonthDates(
       _currentMonth,
-      _getDefaultFirstDayOfWeek(),
+      widget.controller.resolvedFirstDayOfWeek,
     );
     final weeks = <List<DateTime>>[];
     for (int i = 0; i < dates.length; i += 7) {
@@ -3750,9 +3945,6 @@ class _MonthPageWidget extends StatefulWidget {
   /// The controller for event management.
   final MCalEventController controller;
 
-  /// First day of week (0 = Sunday, 1 = Monday, etc.).
-  final int firstDayOfWeek;
-
   /// Builder callbacks
   final Widget Function(BuildContext, MCalDayCellContext, Widget)?
   dayCellBuilder;
@@ -3760,7 +3952,7 @@ class _MonthPageWidget extends StatefulWidget {
   eventTileBuilder;
   final Widget Function(BuildContext, MCalDateLabelContext, String)?
   dateLabelBuilder;
-  final String? dateFormat;
+  final DateFormat? dateFormat;
   final bool Function(BuildContext, MCalCellInteractivityDetails)?
   cellInteractivityCallback;
   final void Function(BuildContext, MCalCellTapDetails)? onCellTap;
@@ -3772,12 +3964,16 @@ class _MonthPageWidget extends StatefulWidget {
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final void Function(BuildContext, MCalCellDoubleTapDetails)? onCellDoubleTap;
   final void Function(BuildContext, MCalEventDoubleTapDetails)? onEventDoubleTap;
-  final ValueChanged<MCalDayCellContext?>? onHoverCell;
-  final ValueChanged<MCalEventTileContext?>? onHoverEvent;
+  final void Function(BuildContext, MCalDayCellContext?)? onHoverCell;
+  final void Function(BuildContext, MCalEventTileContext?)? onHoverEvent;
+  final void Function(BuildContext, MCalDateLabelContext?)? onHoverDateLabel;
+  final void Function(BuildContext, MCalOverflowTapDetails?)? onHoverOverflow;
   final int maxVisibleEventsPerDay;
   final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap;
   final void Function(BuildContext, MCalOverflowTapDetails)?
   onOverflowLongPress;
+  final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowDoubleTap;
+  final void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelDoubleTap;
   final bool showWeekNumbers;
   final Widget Function(BuildContext, MCalWeekNumberContext)? weekNumberBuilder;
   final bool autoFocusOnCellTap;
@@ -3797,9 +3993,9 @@ class _MonthPageWidget extends StatefulWidget {
   final bool showDropTargetTiles;
   final bool showDropTargetOverlay;
   final bool dropTargetTilesAboveOverlay;
-  final Widget Function(BuildContext, MCalDraggedTileDetails)?
+  final Widget Function(BuildContext, MCalDraggedTileDetails, Widget)?
   draggedTileBuilder;
-  final Widget Function(BuildContext, MCalDragSourceDetails)?
+  final Widget Function(BuildContext, MCalDragSourceDetails, Widget)?
   dragSourceTileBuilder;
   final MCalEventTileBuilder? dropTargetTileBuilder;
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
@@ -3860,7 +4056,6 @@ class _MonthPageWidget extends StatefulWidget {
     required this.theme,
     required this.locale,
     required this.controller,
-    required this.firstDayOfWeek,
     required this.getEventsForMonth,
     this.dayCellBuilder,
     this.eventTileBuilder,
@@ -3877,9 +4072,13 @@ class _MonthPageWidget extends StatefulWidget {
     this.onEventDoubleTap,
     this.onHoverCell,
     this.onHoverEvent,
+    this.onHoverDateLabel,
+    this.onHoverOverflow,
     this.maxVisibleEventsPerDay = 5,
     this.onOverflowTap,
     this.onOverflowLongPress,
+    this.onOverflowDoubleTap,
+    this.onDateLabelDoubleTap,
     this.showWeekNumbers = false,
     this.weekNumberBuilder,
     this.autoFocusOnCellTap = true,
@@ -3990,7 +4189,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   void didUpdateWidget(_MonthPageWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.month != widget.month ||
-        oldWidget.firstDayOfWeek != widget.firstDayOfWeek) {
+        oldWidget.controller.resolvedFirstDayOfWeek != widget.controller.resolvedFirstDayOfWeek) {
       _computeDates();
     }
     if (oldWidget.dragHandler != widget.dragHandler) {
@@ -4020,7 +4219,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
     final isValid = dragHandler.isProposedDropValid;
     final locale = widget.locale;
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final localizations = MCalDateFormatUtils();
     final prefix = l10n.dropTargetPrefix;
     final validStr = isValid ? l10n.dropTargetValid : l10n.dropTargetInvalid;
@@ -4069,7 +4268,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
   /// Compute the dates and weeks for this month.
   void _computeDates() {
-    _dates = generateMonthDates(widget.month, widget.firstDayOfWeek);
+    _dates = generateMonthDates(widget.month, widget.controller.resolvedFirstDayOfWeek);
     _weeks = <List<DateTime>>[];
     for (int i = 0; i < _dates.length; i += 7) {
       _weeks.add(_dates.sublist(i, i + 7));
@@ -4730,7 +4929,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     final proposedStart = dragHandler.proposedStartDate!;
     final proposedEnd = dragHandler.proposedEndDate!;
     final monthStart = DateTime(widget.month.year, widget.month.month, 1);
-    final firstDayOfWeek = widget.firstDayOfWeek;
+    final firstDayOfWeek = widget.controller.resolvedFirstDayOfWeek;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -4925,7 +5124,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
     final multiDayLayouts = MCalMultiDayRenderer.calculateLayouts(
       events: monthEvents,
       monthStart: widget.month,
-      firstDayOfWeek: widget.firstDayOfWeek,
+      firstDayOfWeek: widget.controller.resolvedFirstDayOfWeek,
     );
 
     // Build the week rows
@@ -4963,16 +5162,20 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             onCellLongPress: widget.onCellLongPress,
             onDateLabelTap: widget.onDateLabelTap,
             onDateLabelLongPress: widget.onDateLabelLongPress,
+            onDateLabelDoubleTap: widget.onDateLabelDoubleTap,
             onEventTap: widget.onEventTap,
             onEventLongPress: widget.onEventLongPress,
             onCellDoubleTap: widget.onCellDoubleTap,
             onEventDoubleTap: widget.onEventDoubleTap,
             onHoverCell: widget.onHoverCell,
             onHoverEvent: widget.onHoverEvent,
+            onHoverDateLabel: widget.onHoverDateLabel,
+            onHoverOverflow: widget.onHoverOverflow,
             locale: widget.locale,
             maxVisibleEventsPerDay: widget.maxVisibleEventsPerDay,
             onOverflowTap: widget.onOverflowTap,
             onOverflowLongPress: widget.onOverflowLongPress,
+            onOverflowDoubleTap: widget.onOverflowDoubleTap,
             showWeekNumbers: widget.showWeekNumbers,
             weekNumberBuilder: widget.weekNumberBuilder,
             weekLayoutBuilder: widget.weekLayoutBuilder,
@@ -5262,7 +5465,7 @@ class _WeekRowWidget extends StatefulWidget {
   eventTileBuilder;
   final Widget Function(BuildContext, MCalDateLabelContext, String)?
   dateLabelBuilder;
-  final String? dateFormat;
+  final DateFormat? dateFormat;
   final bool Function(BuildContext, MCalCellInteractivityDetails)?
   cellInteractivityCallback;
   final void Function(BuildContext, MCalCellTapDetails)? onCellTap;
@@ -5274,13 +5477,18 @@ class _WeekRowWidget extends StatefulWidget {
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final void Function(BuildContext, MCalCellDoubleTapDetails)? onCellDoubleTap;
   final void Function(BuildContext, MCalEventDoubleTapDetails)? onEventDoubleTap;
-  final ValueChanged<MCalDayCellContext?>? onHoverCell;
-  final ValueChanged<MCalEventTileContext?>? onHoverEvent;
+  final void Function(BuildContext, MCalDayCellContext?)? onHoverCell;
+  final void Function(BuildContext, MCalEventTileContext?)? onHoverEvent;
+  final void Function(BuildContext, MCalDateLabelContext?)? onHoverDateLabel;
+  final void Function(BuildContext, MCalOverflowTapDetails?)? onHoverOverflow;
+  final void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelDoubleTap;
   final Locale locale;
   final int maxVisibleEventsPerDay;
   final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap;
   final void Function(BuildContext, MCalOverflowTapDetails)?
   onOverflowLongPress;
+  final void Function(BuildContext, MCalOverflowTapDetails)?
+  onOverflowDoubleTap;
   final bool showWeekNumbers;
   final Widget Function(BuildContext, MCalWeekNumberContext)? weekNumberBuilder;
 
@@ -5299,9 +5507,9 @@ class _WeekRowWidget extends StatefulWidget {
 
   // Drag-and-drop parameters
   final bool enableDragToMove;
-  final Widget Function(BuildContext, MCalDraggedTileDetails)?
+  final Widget Function(BuildContext, MCalDraggedTileDetails, Widget)?
   draggedTileBuilder;
-  final Widget Function(BuildContext, MCalDragSourceDetails)?
+  final Widget Function(BuildContext, MCalDragSourceDetails, Widget)?
   dragSourceTileBuilder;
   final MCalEventTileBuilder? dropTargetTileBuilder;
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
@@ -5367,16 +5575,20 @@ class _WeekRowWidget extends StatefulWidget {
     this.onCellLongPress,
     this.onDateLabelTap,
     this.onDateLabelLongPress,
+    this.onDateLabelDoubleTap,
     this.onEventTap,
     this.onEventLongPress,
     this.onCellDoubleTap,
     this.onEventDoubleTap,
     this.onHoverCell,
     this.onHoverEvent,
+    this.onHoverDateLabel,
+    this.onHoverOverflow,
     required this.locale,
     this.maxVisibleEventsPerDay = 5,
     this.onOverflowTap,
     this.onOverflowLongPress,
+    this.onOverflowDoubleTap,
     this.showWeekNumbers = false,
     this.weekNumberBuilder,
     // Week layout customization
@@ -5532,12 +5744,15 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           onCellLongPress: widget.onCellLongPress,
           onDateLabelTap: widget.onDateLabelTap,
           onDateLabelLongPress: widget.onDateLabelLongPress,
+          onDateLabelDoubleTap: widget.onDateLabelDoubleTap,
           onEventTap: widget.onEventTap,
           onEventLongPress: widget.onEventLongPress,
           onCellDoubleTap: widget.onCellDoubleTap,
           onEventDoubleTap: widget.onEventDoubleTap,
           onHoverCell: widget.onHoverCell,
           onHoverEvent: widget.onHoverEvent,
+          onHoverDateLabel: widget.onHoverDateLabel,
+          onHoverOverflow: widget.onHoverOverflow,
           locale: widget.locale,
           maxVisibleEventsPerDay: widget.maxVisibleEventsPerDay,
           onOverflowTap: widget.onOverflowTap,
@@ -5628,6 +5843,8 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       defaultBuilder: _buildDefaultDateLabel,
       onDateLabelTap: widget.onDateLabelTap,
       onDateLabelLongPress: widget.onDateLabelLongPress,
+      onDateLabelDoubleTap: widget.onDateLabelDoubleTap,
+      onHoverDateLabel: widget.onHoverDateLabel,
     );
 
     final wrappedOverflowIndicatorBuilder =
@@ -5636,6 +5853,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           defaultBuilder: _buildDefaultOverflowIndicator,
           onOverflowTap: widget.onOverflowTap,
           onOverflowLongPress: widget.onOverflowLongPress,
+          onOverflowDoubleTap: widget.onOverflowDoubleTap,
         );
 
     // Optionally wrap event tile builder with resize handles for all events
@@ -6051,7 +6269,7 @@ class _DayCellWidget extends StatefulWidget {
   eventTileBuilder;
   final Widget Function(BuildContext, MCalDateLabelContext, String)?
   dateLabelBuilder;
-  final String? dateFormat;
+  final DateFormat? dateFormat;
   final bool Function(BuildContext, MCalCellInteractivityDetails)?
   cellInteractivityCallback;
   final void Function(BuildContext, MCalCellTapDetails)? onCellTap;
@@ -6059,12 +6277,16 @@ class _DayCellWidget extends StatefulWidget {
   final void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelTap;
   final void Function(BuildContext, MCalDateLabelTapDetails)?
   onDateLabelLongPress;
+  final void Function(BuildContext, MCalDateLabelTapDetails)?
+  onDateLabelDoubleTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final void Function(BuildContext, MCalCellDoubleTapDetails)? onCellDoubleTap;
   final void Function(BuildContext, MCalEventDoubleTapDetails)? onEventDoubleTap;
-  final ValueChanged<MCalDayCellContext?>? onHoverCell;
-  final ValueChanged<MCalEventTileContext?>? onHoverEvent;
+  final void Function(BuildContext, MCalDayCellContext?)? onHoverCell;
+  final void Function(BuildContext, MCalEventTileContext?)? onHoverEvent;
+  final void Function(BuildContext, MCalDateLabelContext?)? onHoverDateLabel;
+  final void Function(BuildContext, MCalOverflowTapDetails?)? onHoverOverflow;
   final Locale locale;
   final int maxVisibleEventsPerDay;
   final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap;
@@ -6073,9 +6295,9 @@ class _DayCellWidget extends StatefulWidget {
 
   // Drag-and-drop parameters
   final bool enableDragToMove;
-  final Widget Function(BuildContext, MCalDraggedTileDetails)?
+  final Widget Function(BuildContext, MCalDraggedTileDetails, Widget)?
   draggedTileBuilder;
-  final Widget Function(BuildContext, MCalDragSourceDetails)?
+  final Widget Function(BuildContext, MCalDragSourceDetails, Widget)?
   dragSourceTileBuilder;
   final Widget Function(BuildContext, MCalDropTargetCellDetails)?
   dropTargetCellBuilder;
@@ -6141,12 +6363,15 @@ class _DayCellWidget extends StatefulWidget {
     this.onCellLongPress,
     this.onDateLabelTap,
     this.onDateLabelLongPress,
+    this.onDateLabelDoubleTap,
     this.onEventTap,
     this.onEventLongPress,
     this.onCellDoubleTap,
     this.onEventDoubleTap,
     this.onHoverCell,
     this.onHoverEvent,
+    this.onHoverDateLabel,
+    this.onHoverOverflow,
     required this.locale,
     this.maxVisibleEventsPerDay = 5,
     this.onOverflowTap,
@@ -6208,6 +6433,8 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
       defaultBuilder: _buildDefaultDateLabelWidget,
       onDateLabelTap: widget.onDateLabelTap,
       onDateLabelLongPress: widget.onDateLabelLongPress,
+      onDateLabelDoubleTap: widget.onDateLabelDoubleTap,
+      onHoverDateLabel: widget.onHoverDateLabel,
     );
 
     // Build cell decoration (apply non-interactive styling if needed)
@@ -6321,7 +6548,7 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
     // This ensures drop targets are on top of events and always receive pointer events
 
     // Wrap in gesture detector for tap/long-press/double-tap (Day View pattern)
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final hasCellDoubleTap = isInteractive && widget.onCellDoubleTap != null;
     Widget result = GestureDetector(
       onDoubleTapDown: hasCellDoubleTap
@@ -6383,9 +6610,9 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
             events: widget.events,
             dateLabelBuilder: wrappedDateLabelBuilder,
           );
-          widget.onHoverCell!(contextObj);
+          widget.onHoverCell!(context, contextObj);
         },
-        onExit: (_) => widget.onHoverCell!(null),
+        onExit: (_) => widget.onHoverCell!(context, null),
         child: result,
       );
     }
@@ -6467,10 +6694,7 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
     if (widget.dateFormat != null) {
       // Use custom date format if provided
       try {
-        defaultFormattedString = DateFormat(
-          widget.dateFormat!,
-          widget.locale.toString(),
-        ).format(widget.date);
+        defaultFormattedString = widget.dateFormat!.format(widget.date);
       } catch (e) {
         // Fallback to day number if format is invalid
         defaultFormattedString = '${widget.date.day}';
@@ -6756,6 +6980,7 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
               locale: widget.locale,
               onOverflowTap: widget.onOverflowTap,
               onOverflowLongPress: widget.onOverflowLongPress,
+              onHoverOverflow: widget.onHoverOverflow,
             ),
           ),
         ),
@@ -6799,7 +7024,7 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
   /// - "previous month" or "next month" if outside the display month
   /// - Event count (e.g., "3 events")
   String _getSemanticLabel() {
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final localizations = MCalDateFormatUtils();
 
     // Full date with day name for better screen reader experience
@@ -6873,7 +7098,7 @@ class _EventTileWidget extends StatefulWidget {
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final void Function(BuildContext, MCalEventDoubleTapDetails)? onEventDoubleTap;
-  final ValueChanged<MCalEventTileContext?>? onHoverEvent;
+  final void Function(BuildContext, MCalEventTileContext?)? onHoverEvent;
   final Locale locale;
   final MCalEventController controller;
 
@@ -7102,9 +7327,9 @@ class _EventTileWidgetState extends State<_EventTileWidget> {
             masterEvent: meta.masterEvent,
             isException: meta.isException,
           );
-          widget.onHoverEvent!(contextObj);
+          widget.onHoverEvent!(context, contextObj);
         },
-        onExit: (_) => widget.onHoverEvent!(null),
+        onExit: (_) => widget.onHoverEvent!(context, null),
         child: result,
       );
     }
@@ -7134,7 +7359,7 @@ class _EventTileWidgetState extends State<_EventTileWidget> {
     var label = '${widget.event.title}, $timeStr';
 
     if (widget.spanLength > 1) {
-      final l10n = MCalLocalizations.of(context);
+      final l10n = mcalL10n(context);
       final eventStartDate = DateTime(
         widget.event.start.year,
         widget.event.start.month,
@@ -7315,6 +7540,9 @@ class _OverflowIndicatorWidget extends StatelessWidget {
   final void Function(BuildContext, MCalOverflowTapDetails)?
   onOverflowLongPress;
 
+  /// Callback when the mouse hovers over the overflow indicator.
+  final void Function(BuildContext, MCalOverflowTapDetails?)? onHoverOverflow;
+
   const _OverflowIndicatorWidget({
     required this.count,
     required this.date,
@@ -7323,6 +7551,7 @@ class _OverflowIndicatorWidget extends StatelessWidget {
     required this.locale,
     this.onOverflowTap,
     this.onOverflowLongPress,
+    this.onHoverOverflow,
   });
 
   @override
@@ -7347,7 +7576,7 @@ class _OverflowIndicatorWidget extends StatelessWidget {
     // Semantic label for accessibility
     final semanticLabel = '$count more events, tap to view all';
 
-    return Semantics(
+    Widget result = Semantics(
       label: semanticLabel,
       button: true,
       child: GestureDetector(
@@ -7373,6 +7602,32 @@ class _OverflowIndicatorWidget extends StatelessWidget {
         child: indicator,
       ),
     );
+
+    // Wrap in MouseRegion for hover support (only if callback provided)
+    if (onHoverOverflow != null) {
+      result = MouseRegion(
+        onEnter: (_) {
+          final visibleCount = allEvents.length - count;
+          onHoverOverflow!(
+            context,
+            MCalOverflowTapDetails(
+              date: date,
+              hiddenEvents: allEvents.sublist(
+                visibleCount.clamp(0, allEvents.length),
+              ),
+              visibleEvents: allEvents.sublist(
+                0,
+                visibleCount.clamp(0, allEvents.length),
+              ),
+            ),
+          );
+        },
+        onExit: (_) => onHoverOverflow!(context, null),
+        child: result,
+      );
+    }
+
+    return result;
   }
 
   /// Handles tap on the overflow indicator.
@@ -7480,7 +7735,7 @@ class _OverflowIndicatorWidget extends StatelessWidget {
 
   /// Builds a list item for an event in the bottom sheet.
   Widget _buildEventListItem(BuildContext context, MCalCalendarEvent event) {
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final localizations = MCalDateFormatUtils();
 
     // Format time string
@@ -7581,7 +7836,7 @@ class _WeekdayHeaderRowWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final isRTL = MCalDateFormatUtils().isRTL(locale);
 
     // Generate weekday names in the correct order based on firstDayOfWeek
@@ -7701,7 +7956,7 @@ class _NavigatorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = MCalLocalizations.of(context);
+    final l10n = mcalL10n(context);
     final isRTL = MCalDateFormatUtils().isRTL(locale);
 
     // Calculate if navigation is allowed

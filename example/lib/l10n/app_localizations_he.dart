@@ -181,6 +181,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get settingShowWeekNumber => 'הצג מספר שבוע';
 
   @override
+  String get settingShowSubHourLabels => 'הצג תוויות תת-שעה';
+
+  @override
+  String get settingSubHourLabelInterval => 'מרווח תוויות תת-שעה';
+
+  @override
   String get settingMaxVisibleEventsPerDay => 'מקסימום אירועים גלויים ליום';
 
   @override
@@ -442,6 +448,15 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get styleStressTest => 'בדיקת עומס';
+
+  @override
+  String get featureSettings => 'הגדרות תכונות';
+
+  @override
+  String get testSettings => 'הגדרות בדיקה';
+
+  @override
+  String get accessibilitySettings => 'הגדרות נגישות';
 
   @override
   String get styleAccessibility => 'נגישות';
@@ -767,6 +782,10 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get accessibilityMonthKeyboardShortcuts => 'קיצורי מקלדת תצוגת חודש';
+
+  @override
+  String get accessibilityMonthKeyboardNavInstructionsDetail =>
+      'לחץ Tab או לחץ כדי למקד את לוח השנה, ואז השתמש במקשי החצים לניווט בין תאים. לחץ Enter או רווח לבחירת תא. לחץ Tab כדי לעבור בין אירועים בתא. עם אירוע ממוקד, לחץ Enter להיכנס למצב העברה והשתמש בחצים, ואז Enter לאישור או Escape לביטול. לחץ R למצב שינוי גודל, S/E לבחירת קצה ההתחלה או הסוף, ואז מקשי החצים לשינוי הגודל.';
 
   @override
   String get accessibilityMonthShortcutArrows => 'מקשי חצים: נווט בין תאים';

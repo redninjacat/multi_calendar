@@ -65,11 +65,16 @@ void main() {
     }
 
     /// Helper: focuses the calendar and sends a key event.
+    /// Saves and restores [controller.focusedDate] across the tap to prevent
+    /// the tap's cell-focus side-effect from interfering with the test.
     Future<void> focusAndSendKey(
       WidgetTester tester,
       LogicalKeyboardKey key,
     ) async {
+      final savedFocusedDate = controller.focusedDate;
       await tester.tap(find.byType(MCalMonthView));
+      await tester.pumpAndSettle();
+      controller.setFocusedDate(savedFocusedDate);
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(key);
       await tester.pumpAndSettle();
@@ -207,8 +212,9 @@ void main() {
         await focusAndSendKey(tester, LogicalKeyboardKey.enter);
         statesById.clear();
 
-        // Tab to cycle to next event
-        await focusAndSendKey(tester, LogicalKeyboardKey.tab);
+        // Tab to cycle to next event (widget already has focus, no need to tap again)
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
 
         // Second event should now be highlighted
         final secondStates = statesById['cycle-2'] ?? [];
@@ -259,10 +265,12 @@ void main() {
 
         // Enter selection mode, Tab to second event, Enter to confirm
         await focusAndSendKey(tester, LogicalKeyboardKey.enter);
-        await focusAndSendKey(tester, LogicalKeyboardKey.tab);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
         statesById.clear();
 
-        await focusAndSendKey(tester, LogicalKeyboardKey.enter);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
 
         // Second event should now be selected (confirmed for move)
         final secondStates = statesById['confirm-2'] ?? [];
@@ -301,8 +309,9 @@ void main() {
         await focusAndSendKey(tester, LogicalKeyboardKey.enter);
         capturedStates.clear();
 
-        // Press Escape to cancel
-        await focusAndSendKey(tester, LogicalKeyboardKey.escape);
+        // Press Escape to cancel (widget already has focus, no need to tap again)
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
 
         // After Escape, all states should be none
         expect(

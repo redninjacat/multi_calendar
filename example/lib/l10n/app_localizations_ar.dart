@@ -181,6 +181,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingShowWeekNumber => 'إظهار رقم الأسبوع';
 
   @override
+  String get settingShowSubHourLabels => 'إظهار تسميات أجزاء الساعة';
+
+  @override
+  String get settingSubHourLabelInterval => 'فترة تسميات أجزاء الساعة';
+
+  @override
   String get settingMaxVisibleEventsPerDay =>
       'الحد الأقصى للأحداث المرئية في اليوم';
 
@@ -446,6 +452,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get styleStressTest => 'اختبار الإجهاد';
+
+  @override
+  String get featureSettings => 'إعدادات الميزات';
+
+  @override
+  String get testSettings => 'إعدادات الاختبار';
+
+  @override
+  String get accessibilitySettings => 'إعدادات إمكانية الوصول';
 
   @override
   String get styleAccessibility => 'إمكانية الوصول';
@@ -777,6 +792,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get accessibilityMonthKeyboardShortcuts =>
       'اختصارات لوحة مفاتيح عرض الشهر';
+
+  @override
+  String get accessibilityMonthKeyboardNavInstructionsDetail =>
+      'اضغط Tab أو انقر لتركيز التقويم، ثم استخدم مفاتيح الأسهم للتنقل بين الخلايا. اضغط Enter أو Space لتحديد خلية. اضغط Tab للتنقل بين الأحداث في الخلية. مع تركيز حدث، اضغط Enter للدخول إلى وضع النقل واستخدم الأسهم، ثم Enter للتأكيد أو Escape للإلغاء. اضغط R لوضع تغيير الحجم، S/E لاختيار الحافة البداية أو النهاية، ثم مفاتيح الأسهم لتغيير الحجم.';
 
   @override
   String get accessibilityMonthShortcutArrows =>

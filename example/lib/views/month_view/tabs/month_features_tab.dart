@@ -73,7 +73,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
   @override
   void initState() {
     super.initState();
-    _controller = MCalEventController();
+    _controller = MCalEventController(firstDayOfWeek: _firstDayOfWeek);
     _controller.addEvents(createSampleEvents());
     _blackoutDates = _computeBlackoutDates();
   }
@@ -118,7 +118,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
     final locale = Localizations.localeOf(context);
 
     return ResponsiveControlPanel(
-      controlPanelTitle: l10n.styleFeaturesDemo,
+      controlPanelTitle: l10n.featureSettings,
       controlPanel: _buildControlPanel(l10n),
       child: MCalMonthView(
         controller: _controller,
@@ -132,7 +132,6 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
         },
         enableSwipeNavigation: _enableSwipeNavigation,
         swipeNavigationDirection: _swipeNavigationDirection,
-        firstDayOfWeek: _firstDayOfWeek,
         // Display
         showWeekNumbers: _showWeekNumbers,
         maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
@@ -206,11 +205,11 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
             l10n.snackbarOverflowLongPress(_formatDate(details.date, locale), details.hiddenEventCount),
           );
         },
-        onHoverCell: (cellContext) {
+        onHoverCell: (context, cellContext) {
           // Note: Hover events can be very frequent, so we don't show a SnackBar
           // to avoid overwhelming the UI. In a real app, you might update a status bar.
         },
-        onHoverEvent: (eventContext) {
+        onHoverEvent: (context, eventContext) {
           // Note: Similar to hover cell, these are very frequent
         },
         onDragWillAccept: (ctx, details) {
@@ -254,22 +253,19 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
           }
         },
         onSwipeNavigation: (ctx, details) {
-          final directionStr = details.direction == MCalSwipeDirection.previous
-              ? l10n.valuePrevious
-              : l10n.valueNext;
-          SnackBarHelper.show(context, l10n.snackbarSwipeNavigation(directionStr));
+          SnackBarHelper.show(context, l10n.snackbarSwipeNavigation(details.direction.name));
         },
       ),
     );
   }
 
   Widget _buildControlPanel(AppLocalizations l10n) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
           // Navigation section
           ControlPanelSection(
+            showTopDivider: false,
             title: l10n.sectionNavigation,
             children: [
               ControlWidgets.toggle(
@@ -321,6 +317,10 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
                 ],
                 onChanged: (value) {
                   if (value != null) {
+                    final events = _controller.allEvents;
+                    _controller.dispose();
+                    _controller = MCalEventController(firstDayOfWeek: value);
+                    _controller.addEvents(events);
                     setState(() => _firstDayOfWeek = value);
                   }
                 },
@@ -525,8 +525,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
               ],
             ],
           ),
-        ],
-      ),
+      ],
     );
   }
 
