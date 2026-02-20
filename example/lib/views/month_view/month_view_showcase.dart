@@ -74,7 +74,7 @@ class _MonthViewShowcaseState extends State<MonthViewShowcase>
             controller: _tabController,
             children: [
               // Features tab
-              const MonthFeaturesTab(),
+              MonthFeaturesTab(locale: widget.currentLocale),
               // Theme tab
               const MonthThemeTab(),
               // Styles tab

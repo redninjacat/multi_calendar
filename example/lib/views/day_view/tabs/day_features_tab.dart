@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/utils/locale_utils.dart';
 import '../../../shared/utils/sample_events.dart';
 import '../../../shared/widgets/control_panel_section.dart';
 import '../../../shared/widgets/control_widgets.dart';
@@ -91,8 +92,11 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   // Swipe Navigation Settings
   // ============================================================
   bool _enableSwipeNavigation = true;
-  MCalSwipeNavigationDirection _swipeNavigationDirection =
-      MCalSwipeNavigationDirection.horizontal;
+
+  // ============================================================
+  // First Day of Week
+  // ============================================================
+  int _firstDayOfWeek = DateTime.sunday;
 
   // ============================================================
   // Keyboard Settings
@@ -110,8 +114,32 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _eventController = MCalEventController(initialDate: now);
+    _eventController = MCalEventController(
+      initialDate: now,
+      firstDayOfWeek: _firstDayOfWeek,
+    );
     _eventController.addEvents(createDayViewSampleEvents(now));
+    // Async-update the first day of week from the current locale.
+    _syncFirstDayOfWeekFromLocale(widget.locale);
+  }
+
+  @override
+  void didUpdateWidget(DayFeaturesTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.locale.languageCode != widget.locale.languageCode) {
+      _syncFirstDayOfWeekFromLocale(widget.locale);
+    }
+  }
+
+  /// Loads the first day of week from CLDR locale data and updates the
+  /// controller if the value differs from the current setting.
+  Future<void> _syncFirstDayOfWeekFromLocale(Locale locale) async {
+    final fdow = await firstDayOfWeekForLocale(locale);
+    if (!mounted || fdow == _firstDayOfWeek) return;
+    setState(() {
+      _firstDayOfWeek = fdow;
+      _eventController.firstDayOfWeek = fdow;
+    });
   }
 
   @override
@@ -255,22 +283,29 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               value: _enableSwipeNavigation,
               onChanged: (v) => setState(() => _enableSwipeNavigation = v),
             ),
-            ControlWidgets.dropdown<MCalSwipeNavigationDirection>(
-              label: l10n.settingSwipeDirection,
-              value: _swipeNavigationDirection,
+            ControlWidgets.dropdown<int>(
+              label: l10n.settingFirstDayOfWeek,
+              value: _firstDayOfWeek,
               items: [
                 DropdownMenuItem(
-                  value: MCalSwipeNavigationDirection.horizontal,
-                  child: const Text('Horizontal'),
+                  value: DateTime.monday,
+                  child: Text(l10n.dayMonday),
                 ),
                 DropdownMenuItem(
-                  value: MCalSwipeNavigationDirection.vertical,
-                  child: const Text('Vertical'),
+                  value: DateTime.sunday,
+                  child: Text(l10n.daySunday),
+                ),
+                DropdownMenuItem(
+                  value: DateTime.saturday,
+                  child: Text(l10n.daySaturday),
                 ),
               ],
-              onChanged: (v) {
-                if (v != null) {
-                  setState(() => _swipeNavigationDirection = v);
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _firstDayOfWeek = value;
+                    _eventController.firstDayOfWeek = value;
+                  });
                 }
               },
             ),
@@ -597,7 +632,6 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
           enableKeyboardNavigation: _enableKeyboardNavigation,
           autoFocusOnEventTap: _autoFocusOnEventTap,
           enableSwipeNavigation: _enableSwipeNavigation,
-          swipeNavigationDirection: _swipeNavigationDirection,
           specialTimeRegions: _buildTimeRegions(),
           locale: widget.locale,
           // Gesture Handlers - All wired to SnackBars

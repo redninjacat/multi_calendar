@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/utils/locale_utils.dart';
 import '../../../shared/utils/sample_events.dart';
 import '../../../shared/widgets/control_panel_section.dart';
 import '../../../shared/widgets/control_widgets.dart';
@@ -23,7 +24,9 @@ import '../../../shared/widgets/snackbar_helper.dart';
 ///
 /// All gesture handlers are wired with SnackBar messages for demonstration.
 class MonthFeaturesTab extends StatefulWidget {
-  const MonthFeaturesTab({super.key});
+  const MonthFeaturesTab({super.key, required this.locale});
+
+  final Locale locale;
 
   @override
   State<MonthFeaturesTab> createState() => _MonthFeaturesTabState();
@@ -76,6 +79,29 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
     _controller = MCalEventController(firstDayOfWeek: _firstDayOfWeek);
     _controller.addEvents(createSampleEvents());
     _blackoutDates = _computeBlackoutDates();
+    // Async-update the first day of week from the current locale. The
+    // controller starts with the default (Sunday) and is replaced once the
+    // locale data resolves.
+    _syncFirstDayOfWeekFromLocale(widget.locale);
+  }
+
+  @override
+  void didUpdateWidget(MonthFeaturesTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.locale.languageCode != widget.locale.languageCode) {
+      _syncFirstDayOfWeekFromLocale(widget.locale);
+    }
+  }
+
+  /// Loads the first day of week from CLDR locale data and updates the
+  /// controller if the value differs from the current setting.
+  Future<void> _syncFirstDayOfWeekFromLocale(Locale locale) async {
+    final fdow = await firstDayOfWeekForLocale(locale);
+    if (!mounted || fdow == _firstDayOfWeek) return;
+    setState(() {
+      _firstDayOfWeek = fdow;
+      _controller.firstDayOfWeek = fdow;
+    });
   }
 
   @override
@@ -339,11 +365,10 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
               ],
               onChanged: (value) {
                 if (value != null) {
-                  final events = _controller.allEvents;
-                  _controller.dispose();
-                  _controller = MCalEventController(firstDayOfWeek: value);
-                  _controller.addEvents(events);
-                  setState(() => _firstDayOfWeek = value);
+                  setState(() {
+                    _firstDayOfWeek = value;
+                    _controller.firstDayOfWeek = value;
+                  });
                 }
               },
             ),

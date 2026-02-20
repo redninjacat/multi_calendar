@@ -9,6 +9,7 @@ import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
 import '../models/mcal_time_region.dart';
 import '../styles/mcal_theme.dart';
+import '../utils/date_utils.dart';
 import '../utils/mcal_date_format_utils.dart';
 import '../utils/mcal_scroll_behavior.dart';
 import '../../l10n/mcal_localizations.dart';
@@ -19,7 +20,6 @@ import 'mcal_callback_details.dart';
 import 'mcal_day_view_contexts.dart';
 import 'mcal_drag_handler.dart';
 import 'mcal_draggable_event_tile.dart';
-import 'mcal_month_view.dart' show MCalSwipeNavigationDirection;
 import 'mcal_month_view_contexts.dart' show MCalWeekNumberContext;
 
 // ============================================================================
@@ -180,6 +180,7 @@ class MCalDayView extends StatefulWidget {
     this.dateFormat,
     this.timeLabelFormat,
     this.locale,
+    this.textDirection,
     this.showSubHourLabels = false,
     this.subHourLabelInterval,
     this.subHourLabelBuilder,
@@ -231,7 +232,6 @@ class MCalDayView extends StatefulWidget {
 
     // Swipe Navigation
     this.enableSwipeNavigation = false,
-    this.swipeNavigationDirection,
     this.onSwipeNavigation,
 
     // Builders
@@ -443,6 +443,21 @@ class MCalDayView extends StatefulWidget {
   ///
   /// If null, uses the system locale from [Localizations].
   final Locale? locale;
+
+  /// Controls the layout direction of the entire calendar widget — not just
+  /// text — including column ordering, button positions, and time-slot
+  /// sequencing.
+  ///
+  /// Resolution priority:
+  ///   1. This parameter (if provided).
+  ///   2. Ambient [Directionality] from the widget tree.
+  ///   3. [locale]-based detection via [MCalDateFormatUtils.isRTL] (if locale
+  ///      is available).
+  ///   4. [TextDirection.ltr] as a final fallback.
+  ///
+  /// Follows the same [TextDirection] convention used throughout Flutter (e.g.
+  /// [Directionality], [TextField], [Text]).
+  final TextDirection? textDirection;
 
   /// Whether to display sub-hour time labels in the time legend.
   ///
@@ -745,26 +760,16 @@ class MCalDayView extends StatefulWidget {
   /// Whether to enable swipe navigation between days.
   ///
   /// When true, the day view content is wrapped in a [PageView.builder]
-  /// allowing users to swipe horizontally (default) or vertically to navigate
-  /// between days. The swipe direction is controlled by [swipeNavigationDirection].
+  /// allowing users to swipe left/right to navigate between days.
+  ///
+  /// The day view always uses horizontal swiping for day navigation because
+  /// the view already scrolls vertically through the hours of the day.
   ///
   /// When false (default), the view displays a single day and swipe gestures
   /// do not change the displayed date.
   ///
   /// Defaults to false.
   final bool enableSwipeNavigation;
-
-  /// The direction of swipe navigation.
-  ///
-  /// - [MCalSwipeNavigationDirection.horizontal]: Swipe left/right to navigate days
-  /// - [MCalSwipeNavigationDirection.vertical]: Swipe up/down to navigate days
-  ///
-  /// Only used when [enableSwipeNavigation] is true.
-  /// Defaults to [MCalSwipeNavigationDirection.horizontal] if null.
-  ///
-  /// For horizontal swipes, RTL layout automatically reverses the swipe direction
-  /// (swipe left = previous day in LTR, next day in RTL).
-  final MCalSwipeNavigationDirection? swipeNavigationDirection;
 
   /// Called when the user navigates to a different day via swipe gesture.
   ///
@@ -1534,6 +1539,19 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Resolves the theme from widget.theme or context.
   MCalThemeData _resolveTheme(BuildContext context) {
     return widget.theme ?? MCalTheme.of(context);
+  }
+
+  /// Resolves the effective [TextDirection] for the calendar using the
+  /// priority chain documented on [MCalDayView.textDirection].
+  TextDirection _resolveTextDirection(BuildContext context) {
+    if (widget.textDirection != null) return widget.textDirection!;
+    final ambient = Directionality.maybeOf(context);
+    if (ambient != null) return ambient;
+    final locale = widget.locale;
+    if (locale != null && MCalDateFormatUtils().isRTL(locale)) {
+      return TextDirection.rtl;
+    }
+    return TextDirection.ltr;
   }
 
   /// Checks if the current layout direction is RTL.
@@ -3651,7 +3669,7 @@ class MCalDayViewState extends State<MCalDayView> {
   ///
   /// When [enableDragToMove] is true, wraps in DragTarget for drag-and-drop support.
   /// Layer order is controlled by [dropTargetTilesAboveOverlay].
-  Widget _buildTimedEventsArea(BuildContext context, Locale locale) {
+  Widget _buildTimedEventsArea(BuildContext context, Locale locale, DateTime date) {
     final hourHeight = widget.hourHeight ?? 80.0;
     final contentHeight = (widget.endHour - widget.startHour + 1) * hourHeight;
 
@@ -3709,7 +3727,14 @@ class MCalDayViewState extends State<MCalDayView> {
             timeRegionBuilder: widget.timeRegionBuilder,
           ),
         _TimedEventsLayer(
-          key: _timedEventsAreaKey,
+          // Only attach the GlobalKey to the active page. PageView pre-builds
+          // adjacent pages simultaneously; assigning the same GlobalKey to
+          // multiple widgets in the tree causes a duplicate-key assertion.
+          key: (date.year == _displayDate.year &&
+                  date.month == _displayDate.month &&
+                  date.day == _displayDate.day)
+              ? _timedEventsAreaKey
+              : null,
           events: _timedEvents,
           displayDate: _displayDate,
           startHour: widget.startHour,
@@ -4177,6 +4202,7 @@ class MCalDayViewState extends State<MCalDayView> {
         _DayHeader(
           displayDate: date,
           showWeekNumbers: widget.showWeekNumbers,
+          firstDayOfWeek: widget.controller.resolvedFirstDayOfWeek,
           theme: _resolveTheme(context),
           locale: locale,
           textDirection: Directionality.of(context),
@@ -4194,7 +4220,10 @@ class MCalDayViewState extends State<MCalDayView> {
                   MCalDayHeaderContext(
                     date: date,
                     weekNumber: widget.showWeekNumbers
-                        ? _calculateISOWeekNumber(date)
+                        ? getWeekNumber(
+                            date,
+                            widget.controller.resolvedFirstDayOfWeek,
+                          )
                         : null,
                   ),
                 )
@@ -4262,7 +4291,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
                 // Timed events area with gridlines
                 Expanded(
-                  child: _buildTimedEventsArea(context, locale),
+                  child: _buildTimedEventsArea(context, locale, date),
                 ),
 
                 // Time Legend (right side for RTL, scrolls with events)
@@ -4299,6 +4328,9 @@ class MCalDayViewState extends State<MCalDayView> {
   @override
   Widget build(BuildContext context) {
     final locale = widget.locale ?? Localizations.localeOf(context);
+    // Resolve layout direction via the documented priority chain:
+    // widget.textDirection → ambient Directionality → locale-based → LTR.
+    final textDirection = _resolveTextDirection(context);
     final enableKeyEvents =
         widget.enableKeyboardNavigation || widget.enableDragToMove;
 
@@ -4308,16 +4340,14 @@ class MCalDayViewState extends State<MCalDayView> {
     Widget dayViewContent;
     
     if (widget.enableSwipeNavigation && _swipePageController != null) {
-      // Task 8: Wrap in PageView.builder for swipe navigation
-      final isRTL = _isRTL(context);
-      final swipeDirection = widget.swipeNavigationDirection ??
-          MCalSwipeNavigationDirection.horizontal;
-      final isHorizontal = swipeDirection == MCalSwipeNavigationDirection.horizontal;
-      
+      // Day view always uses horizontal swipe: vertical is already used
+      // to scroll through hours of the day.
       dayViewContent = PageView.builder(
         controller: _swipePageController!,
-        scrollDirection: isHorizontal ? Axis.horizontal : Axis.vertical,
-        reverse: isRTL && isHorizontal,
+        scrollDirection: Axis.horizontal,
+        // Never reverse: standard calendar convention (swipe left = next day,
+        // swipe right = previous day) applies regardless of locale.
+        reverse: false,
         scrollBehavior: const MCalMultiDeviceScrollBehavior(),
         onPageChanged: _onSwipePageChanged,
         itemBuilder: (context, index) {
@@ -4405,11 +4435,14 @@ class MCalDayViewState extends State<MCalDayView> {
       child: Actions(actions: _buildActionsMap(), child: focusContent),
     );
 
-    return Semantics(
-      label:
-          widget.semanticsLabel ??
-          'Day view for ${DateFormat.yMMMMEEEEd(locale.toString()).format(_displayDate)}',
-      child: shortcutsContent,
+    return Directionality(
+      textDirection: textDirection,
+      child: Semantics(
+        label:
+            widget.semanticsLabel ??
+            'Day view for ${DateFormat.yMMMMEEEEd(locale.toString()).format(_displayDate)}',
+        child: shortcutsContent,
+      ),
     );
   }
 }
@@ -4469,9 +4502,11 @@ class _DayNavigator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = MCalDateFormatUtils();
-    final isRTL = localizations.isRTL(locale);
     final l10n = mcalL10n(context);
+    // Use ambient Directionality (set by the outer calendar wrapper) for RTL.
+    // Icons stay semantically consistent (← = previous, → = next); the Row
+    // in RTL context automatically places previous on the right and next on
+    // the left without any manual button-order swapping.
 
     // Calculate if navigation is allowed
     final canGoPrevious = _canGoPrevious();
@@ -4481,25 +4516,19 @@ class _DayNavigator extends StatelessWidget {
     final dateFormat = DateFormat.yMMMMEEEEd(locale.toString());
     final formattedDate = dateFormat.format(displayDate);
 
-    // Build default navigator
+    // Build default navigator — always use LTR button order and let the
+    // ambient Directionality handle visual reversal for RTL layouts.
     Widget navigator = Container(
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
       decoration: BoxDecoration(color: theme.navigatorBackgroundColor),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: isRTL
-            ? _buildRTLButtons(
-                canGoPrevious,
-                canGoNext,
-                formattedDate,
-                l10n,
-              )
-            : _buildLTRButtons(
-                canGoPrevious,
-                canGoNext,
-                formattedDate,
-                l10n,
-              ),
+        children: _buildLTRButtons(
+          canGoPrevious,
+          canGoNext,
+          formattedDate,
+          l10n,
+        ),
       ),
     );
 
@@ -4575,71 +4604,6 @@ class _DayNavigator extends StatelessWidget {
     ];
   }
 
-  /// Build buttons in RTL order: [Next] [Today] [Date] [Previous]
-  List<Widget> _buildRTLButtons(
-    bool canGoPrevious,
-    bool canGoNext,
-    String formattedDate,
-    MCalLocalizations localizations,
-  ) {
-    return [
-      // Next day button (on left in RTL)
-      Semantics(
-        label: localizations.nextDay,
-        button: true,
-        enabled: canGoNext,
-        child: IconButton(
-          icon: const Icon(Icons.chevron_left), // Left arrow for next in RTL
-          onPressed: canGoNext ? onNext : null,
-          tooltip: localizations.nextDay,
-        ),
-      ),
-
-      // Today button
-      Semantics(
-        label: localizations.today,
-        button: true,
-        child: IconButton(
-          icon: const Icon(Icons.today),
-          onPressed: onToday,
-          tooltip: localizations.today,
-        ),
-      ),
-
-      // Date label (centered, expandable)
-      Expanded(
-        child: Semantics(
-          label: formattedDate,
-          header: true,
-          child: GestureDetector(
-            onTap: () {
-              // Optional: Could trigger date picker or other action
-            },
-            child: Text(
-              formattedDate,
-              style: theme.navigatorTextStyle,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ),
-      ),
-
-      // Previous day button (on right in RTL)
-      Semantics(
-        label: localizations.previousDay,
-        button: true,
-        enabled: canGoPrevious,
-        child: IconButton(
-          icon: const Icon(
-            Icons.chevron_right,
-          ), // Right arrow for previous in RTL
-          onPressed: canGoPrevious ? onPrevious : null,
-          tooltip: localizations.previousDay,
-        ),
-      ),
-    ];
-  }
 }
 
 // ============================================================================
@@ -4648,12 +4612,13 @@ class _DayNavigator extends StatelessWidget {
 
 /// Private widget for the day header with optional week number.
 ///
-/// Displays day of week, date number, and optional ISO 8601 week number.
+/// Displays day of week, date number, and optional week number.
 /// Supports RTL layouts and custom builder callbacks.
 class _DayHeader extends StatelessWidget {
   const _DayHeader({
     required this.displayDate,
     required this.showWeekNumbers,
+    required this.firstDayOfWeek,
     required this.theme,
     required this.locale,
     required this.textDirection,
@@ -4667,6 +4632,10 @@ class _DayHeader extends StatelessWidget {
 
   final DateTime displayDate;
   final bool showWeekNumbers;
+  /// The first day of the week (0 = Sunday, 1 = Monday, … 6 = Saturday),
+  /// matching [MCalEventController.resolvedFirstDayOfWeek]. Used to compute
+  /// the week number consistently with the Month View.
+  final int firstDayOfWeek;
   final MCalThemeData theme;
   final Locale locale;
   final TextDirection textDirection;
@@ -4679,7 +4648,7 @@ class _DayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final weekNumber = _calculateISOWeekNumber(displayDate);
+    final weekNumber = getWeekNumber(displayDate, firstDayOfWeek);
 
     final headerContext = MCalDayHeaderContext(
       date: displayDate,
@@ -4704,10 +4673,10 @@ class _DayHeader extends StatelessWidget {
     if (showWeekNumbers) {
       final defaultWeekNumWidget = _buildWeekNumber(weekNumber);
       if (weekNumberBuilder != null) {
-        // Monday is always week-start for ISO week numbers
-        final weekStart = displayDate.subtract(
-          Duration(days: (displayDate.weekday - DateTime.monday) % 7),
-        );
+        // Compute the start of the week using the controller's firstDayOfWeek.
+        final fDow = firstDayOfWeek == 0 ? 7 : firstDayOfWeek;
+        final daysSince = (displayDate.weekday - fDow + 7) % 7;
+        final weekStart = displayDate.subtract(Duration(days: daysSince));
         resolvedWeekNumWidget = weekNumberBuilder!(
           context,
           MCalWeekNumberContext(
@@ -4831,7 +4800,7 @@ class _DayHeader extends StatelessWidget {
         builder: (context) {
           return MouseRegion(
             onEnter: (_) {
-              final weekNumber = _calculateISOWeekNumber(displayDate);
+              final weekNumber = getWeekNumber(displayDate, firstDayOfWeek);
               final headerContext = MCalDayHeaderContext(
                 date: displayDate,
                 weekNumber: showWeekNumbers ? weekNumber : null,
@@ -4847,39 +4816,6 @@ class _DayHeader extends StatelessWidget {
 
     return result;
   }
-}
-
-/// Calculates the ISO 8601 week number for a given date.
-///
-/// ISO 8601 standard:
-/// - Week 1 is the first week with Thursday in it (i.e., the week containing January 4th)
-/// - Weeks start on Monday and end on Sunday
-/// - The first and last week of a year may contain days from the previous/next year
-///
-/// Returns a week number between 1 and 53.
-///
-/// Examples:
-/// - January 1, 2026 (Thursday) → Week 1
-/// - December 28, 2026 (Monday) → Week 53
-/// - January 1, 2025 (Wednesday) → Week 1 (of 2025, as it contains Thursday Jan 2)
-int _calculateISOWeekNumber(DateTime date) {
-  // ISO 8601 week date calculation
-  // Week 1 is the week containing the first Thursday of the year
-
-  // Find the Thursday of the current week
-  // weekday: Monday=1, Sunday=7
-  final weekDay = date.weekday;
-  final thursday = date.add(Duration(days: 4 - weekDay));
-
-  // Find the first Thursday of the year (which is in week 1)
-  final jan4 = DateTime(thursday.year, 1, 4);
-  final jan4Thursday = jan4.add(Duration(days: 4 - jan4.weekday));
-
-  // Calculate the week number
-  final weekNumber =
-      1 + ((thursday.difference(jan4Thursday).inDays) / 7).floor();
-
-  return weekNumber;
 }
 
 // ============================================================================
@@ -4935,9 +4871,8 @@ class _TimeLegendColumn extends StatelessWidget {
     final columnHeight = hourHeight * totalHours;
     final legendWidth = theme.dayTheme?.timeLegendWidth ?? 60.0;
 
-    // Check RTL for tick positioning
-    final localizations = MCalDateFormatUtils();
-    final isRTL = localizations.isRTL(locale);
+    // Check RTL for tick positioning — reads from the outer Directionality wrapper.
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
 
     // Check if ticks should be shown
     final showTicks = theme.dayTheme?.showTimeLegendTicks ?? true;
@@ -5330,9 +5265,8 @@ class _CurrentTimeIndicatorState extends State<_CurrentTimeIndicator> {
       hourHeight: widget.hourHeight,
     );
 
-    // Check RTL
-    final localizations = MCalDateFormatUtils();
-    final isRTL = localizations.isRTL(widget.locale);
+    // Check RTL — reads from the outer Directionality wrapper.
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
 
     // Create context for custom builder
     final indicatorContext = MCalCurrentTimeContext(
@@ -6728,9 +6662,12 @@ class _TimedEventsLayer extends StatelessWidget {
     MCalCalendarEvent event,
     MCalTimedEventTileContext tileContext,
   ) {
-    // Format time for display
-    final startTimeStr = DateFormat('h:mm a').format(event.start);
-    final endTimeStr = DateFormat('h:mm a').format(event.end);
+    // Format time using the ambient locale so Arabic users get Arabic-script
+    // AM/PM designators (ص/م) and Arabic-Indic numerals, which have the correct
+    // Unicode BiDi categories for RTL paragraph rendering.
+    final locale = Localizations.maybeLocaleOf(context) ?? const Locale('en');
+    final startTimeStr = DateFormat('h:mm a', locale.toString()).format(event.start);
+    final endTimeStr = DateFormat('h:mm a', locale.toString()).format(event.end);
     final timeRange = '$startTimeStr - $endTimeStr';
 
     // Calculate duration for semantic label

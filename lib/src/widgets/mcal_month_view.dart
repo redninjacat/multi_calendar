@@ -342,6 +342,22 @@ class MCalMonthView extends StatefulWidget {
   /// If not provided, the locale from the widget tree is used.
   final Locale? locale;
 
+  /// Controls the layout direction of the entire calendar widget — not just
+  /// text — including column ordering, button positions, date cell sequencing,
+  /// and the event / date-label positioning within each week row.
+  ///
+  /// Resolution priority:
+  ///   1. This parameter (if provided).
+  ///   2. Ambient [Directionality] from the widget tree.
+  ///   3. [locale]-based detection via [MCalDateFormatUtils.isRTL] (if locale
+  ///      is available).
+  ///   4. [TextDirection.ltr] as a final fallback.
+  ///
+  /// Follows the same [TextDirection] convention used throughout Flutter (e.g.
+  /// [Directionality], [TextField], [Text]), where [TextDirection.rtl] flips
+  /// the full layout, not just text rendering.
+  final TextDirection? textDirection;
+
   // ============ Hover callbacks ============
 
   /// Callback invoked when the mouse hovers over a day cell.
@@ -864,6 +880,7 @@ class MCalMonthView extends StatefulWidget {
     this.onSwipeNavigation,
     this.dateFormat,
     this.locale,
+    this.textDirection,
     // Hover callbacks
     this.onHoverCell,
     this.onHoverEvent,
@@ -1556,8 +1573,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     BuildContext context,
     MCalThemeData resolvedTheme,
     Locale resolvedLocale,
+    bool isRTL,
   ) {
-    final isRTL = Directionality.of(context) == TextDirection.rtl;
 
     // Task 9: Determine scroll physics based on swipe navigation setting and boundaries.
     // During an active resize, use NeverScrollableScrollPhysics to prevent the
@@ -1593,11 +1610,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
               MCalSwipeNavigationDirection.vertical
           ? Axis.vertical
           : Axis.horizontal,
-      // Reverse for RTL languages when horizontal
-      reverse:
-          isRTL &&
-          widget.swipeNavigationDirection ==
-              MCalSwipeNavigationDirection.horizontal,
+      // Never reverse: standard calendar convention (swipe left = next month,
+      // swipe right = previous month) applies regardless of locale. Reversing
+      // for RTL would also flip programmatic animateToPage() calls, making
+      // the button-triggered slide animation go the wrong way.
+      reverse: false,
       itemBuilder: (context, pageIndex) {
         // Convert page index to month and build the grid for that month
         final month = _pageIndexToMonth(pageIndex);
@@ -1677,9 +1694,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       },
     );
 
-    // Wrap in Directionality for RTL support
-    final textDirection = isRTL ? TextDirection.rtl : TextDirection.ltr;
-    return Directionality(textDirection: textDirection, child: pageView);
+    return pageView;
   }
 
   /// Resolves the calendar theme from context.
@@ -1690,6 +1705,19 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// 3. [MCalThemeData.fromTheme(Theme.of(context))]
   MCalThemeData _resolveTheme(BuildContext context) {
     return MCalTheme.of(context);
+  }
+
+  /// Resolves the effective [TextDirection] for the calendar using the
+  /// priority chain documented on [MCalMonthView.textDirection].
+  TextDirection _resolveTextDirection(BuildContext context) {
+    if (widget.textDirection != null) return widget.textDirection!;
+    final ambient = Directionality.maybeOf(context);
+    if (ambient != null) return ambient;
+    final locale = widget.locale;
+    if (locale != null && MCalDateFormatUtils().isRTL(locale)) {
+      return TextDirection.rtl;
+    }
+    return TextDirection.ltr;
   }
 
   // ============================================================================
@@ -1775,6 +1803,10 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final theme = _resolveTheme(context);
     final locale = widget.locale ?? Localizations.localeOf(context);
     final firstDayOfWeek = widget.controller.resolvedFirstDayOfWeek;
+    // Resolve layout direction via the documented priority chain:
+    // widget.textDirection → ambient Directionality → locale-based → LTR.
+    final textDirection = _resolveTextDirection(context);
+    final isRTL = textDirection == TextDirection.rtl;
 
     // Build the main calendar content (ClipRect prevents overflow errors)
     final calendarContent = ClipRect(
@@ -1801,7 +1833,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         ),
         Expanded(
           key: _gridAreaKey,
-          child: _buildMonthGridWithRTL(context, theme, locale),
+          child: _buildMonthGridWithRTL(context, theme, locale, isRTL),
         ),
         ],
       ),
@@ -1865,14 +1897,19 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final enableKeyEvents =
         widget.enableKeyboardNavigation || widget.enableDragToMove;
 
-    return MCalTheme(
-      data: theme,
-      child: Semantics(
-        label: semanticsLabel,
-        container: true,
-        child: Focus(
-          focusNode: _focusNode,
-          onKeyEvent: enableKeyEvents ? _handleKeyEvent : null,
+    // Wrap the entire calendar (navigator + header + grid) in a single
+    // Directionality widget so all children share a consistent text direction
+    // derived from the resolved locale, regardless of the ambient context.
+    return Directionality(
+      textDirection: textDirection,
+      child: MCalTheme(
+        data: theme,
+        child: Semantics(
+          label: semanticsLabel,
+          container: true,
+          child: Focus(
+            focusNode: _focusNode,
+            onKeyEvent: enableKeyEvents ? _handleKeyEvent : null,
           child: LayoutBuilder(
             builder: (context, constraints) {
               // Calculate the calendar size for edge detection
@@ -1916,6 +1953,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
                 child: shortcutsContent,
               );
             },
+          ),
           ),
         ),
       ),
@@ -4159,6 +4197,13 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   /// In LTR: equals week number width; in RTL: 0 (week numbers on right).
   double _cachedContentOffsetX = 0;
 
+  /// Tracks the last resolved firstDayOfWeek used to compute dates.
+  /// Because the controller is a mutable shared object, comparing
+  /// oldWidget.controller.resolvedFirstDayOfWeek with the current value always
+  /// yields the same result in didUpdateWidget. We track the last-seen value
+  /// separately so we can detect a real change.
+  late int _lastFirstDayOfWeek;
+
   /// Cached event duration for the current drag operation.
   int _cachedEventDuration = 1;
 
@@ -4181,6 +4226,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   @override
   void initState() {
     super.initState();
+    _lastFirstDayOfWeek = widget.controller.resolvedFirstDayOfWeek;
     _computeDates();
     widget.dragHandler?.addListener(_onDragHandlerChanged);
   }
@@ -4188,8 +4234,10 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
   @override
   void didUpdateWidget(_MonthPageWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final currentFirstDayOfWeek = widget.controller.resolvedFirstDayOfWeek;
     if (oldWidget.month != widget.month ||
-        oldWidget.controller.resolvedFirstDayOfWeek != widget.controller.resolvedFirstDayOfWeek) {
+        _lastFirstDayOfWeek != currentFirstDayOfWeek) {
+      _lastFirstDayOfWeek = currentFirstDayOfWeek;
       _computeDates();
     }
     if (oldWidget.dragHandler != widget.dragHandler) {
@@ -5636,9 +5684,13 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
     final textDirection = Directionality.of(context);
     final isRTL = textDirection == TextDirection.rtl;
 
-    // Calculate week number for week number column
+    // Calculate week number for week number column using the controller's
+    // firstDayOfWeek so that Month View and Day View always agree.
     final firstDayOfWeekDate = widget.dates.first;
-    final weekNumber = getISOWeekNumber(firstDayOfWeekDate);
+    final weekNumber = getWeekNumber(
+      firstDayOfWeekDate,
+      widget.controller.resolvedFirstDayOfWeek,
+    );
 
     // Build week number cell if needed
     Widget? weekNumberCell;
@@ -7837,23 +7889,25 @@ class _WeekdayHeaderRowWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = mcalL10n(context);
-    final isRTL = MCalDateFormatUtils().isRTL(locale);
+    // Use ambient Directionality (set by the outer calendar wrapper) rather
+    // than a locale string check to avoid any mismatch between the two.
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
 
-    // Generate weekday names in the correct order based on firstDayOfWeek
-    // Use abbreviated names (Short) for better fit
+    // Generate weekday names in logical first-day-of-week order.
+    // Do NOT reverse for RTL: the Row widget is already in RTL context (first
+    // child appears on the RIGHT), so the logical order [firstDay … lastDay]
+    // is automatically displayed right-to-left. Reversing here would
+    // double-flip the order and produce an incorrect LTR result.
     final weekdayNames = <String>[];
     for (int i = 0; i < 7; i++) {
       final dayIndex = (firstDayOfWeek + i) % 7;
       weekdayNames.add(MCalDateFormatUtils.weekdayShortName(l10n, dayIndex));
     }
 
-    // If RTL, reverse the order
-    final displayNames = isRTL ? weekdayNames.reversed.toList() : weekdayNames;
-
     // Build the day headers
     final dayHeaders = List.generate(7, (index) {
       final dayOfWeek = (firstDayOfWeek + index) % 7;
-      final dayName = displayNames[index];
+      final dayName = weekdayNames[index];
 
       // Default header content (without Expanded - that's added at the end)
       Widget headerContent = Container(
@@ -7957,7 +8011,12 @@ class _NavigatorWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = mcalL10n(context);
-    final isRTL = MCalDateFormatUtils().isRTL(locale);
+    // Use the ambient Directionality (set by the outer calendar wrapper) for
+    // RTL detection. This is more reliable than a locale-string check and
+    // ensures the navigator always agrees with the rest of the calendar.
+    // Icons stay semantically consistent (← = previous, → = next); the Row
+    // in RTL context automatically places the previous button on the right
+    // and the next button on the left without any manual icon swapping.
 
     // Calculate if navigation is allowed
     final canGoPrevious = _canGoPrevious();
@@ -7976,13 +8035,13 @@ class _NavigatorWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Semantics(
-            label: 'Previous month',
+            label: l10n.previousMonth,
             button: true,
             enabled: canGoPrevious,
             child: IconButton(
-              icon: Icon(isRTL ? Icons.chevron_right : Icons.chevron_left),
+              icon: const Icon(Icons.chevron_left),
               onPressed: canGoPrevious ? onPrevious : null,
-              tooltip: 'Previous month',
+              tooltip: l10n.previousMonth,
             ),
           ),
           Expanded(
@@ -8001,13 +8060,13 @@ class _NavigatorWidget extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Semantics(
-                label: 'Next month',
+                label: l10n.nextMonth,
                 button: true,
                 enabled: canGoNext,
                 child: IconButton(
-                  icon: Icon(isRTL ? Icons.chevron_left : Icons.chevron_right),
+                  icon: const Icon(Icons.chevron_right),
                   onPressed: canGoNext ? onNext : null,
-                  tooltip: 'Next month',
+                  tooltip: l10n.nextMonth,
                 ),
               ),
               Semantics(
@@ -8039,10 +8098,7 @@ class _NavigatorWidget extends StatelessWidget {
       navigator = navigatorBuilder!(context, contextObj, navigator);
     }
 
-    // Wrap in Directionality for RTL support
-    // Note: Using enum values directly - TextDirection is an enum from dart:ui
-    final textDirection = isRTL ? TextDirection.rtl : TextDirection.ltr;
-    return Directionality(textDirection: textDirection, child: navigator);
+    return navigator;
   }
 
   /// Checks if navigation to previous month is allowed.

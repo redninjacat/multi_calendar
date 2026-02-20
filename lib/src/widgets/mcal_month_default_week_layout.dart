@@ -178,6 +178,11 @@ class MCalMonthDefaultWeekLayoutBuilder {
       builder: (context, constraints) {
         final dayWidth = constraints.maxWidth / 7;
         final rowHeight = constraints.maxHeight;
+        // Respect the ambient text direction so that date labels, event tiles,
+        // and overflow indicators are positioned from the correct edge.
+        // Layer-1 (Row with Expanded cells) already handles RTL automatically;
+        // here we mirror the Layer-2 absolute positions to match.
+        final isRTL = Directionality.of(context) == TextDirection.rtl;
 
         // Calculate layout metrics
         final bool dateLabelAtTop =
@@ -273,7 +278,8 @@ class MCalMonthDefaultWeekLayoutBuilder {
 
           children.add(
             Positioned(
-              left: dayWidth * dayIndex + 2,
+              left: isRTL ? null : dayWidth * dayIndex + 2,
+              right: isRTL ? dayWidth * dayIndex + 2 : null,
               top: dateLabelAtTop
                   ? dateLabelPadding
                   : rowHeight - config.dateLabelHeight - dateLabelPadding,
@@ -296,7 +302,12 @@ class MCalMonthDefaultWeekLayoutBuilder {
               ? config.tileHorizontalSpacing
               : 0.0;
 
-          final left = dayWidth * segment.startDayInWeek + leftSpacing;
+          // In RTL, column 0 is visually on the RIGHT. We position from
+          // the right edge so that the tile sits in the correct column(s).
+          // "leftSpacing" is the spacing on the logical-start side of the event
+          // (visual right in RTL); "rightSpacing" on the logical-end side.
+          final edgeOffset = dayWidth * segment.startDayInWeek +
+              (isRTL ? rightSpacing : leftSpacing);
           final top = eventsTopOffset + (row * tileSlotHeight);
           final tileWidth =
               dayWidth * segment.spanDays - leftSpacing - rightSpacing;
@@ -312,7 +323,8 @@ class MCalMonthDefaultWeekLayoutBuilder {
 
           children.add(
             Positioned(
-              left: left,
+              left: isRTL ? null : edgeOffset,
+              right: isRTL ? edgeOffset : null,
               top: top,
               width: tileWidth,
               height: config.tileHeight,
@@ -339,7 +351,8 @@ class MCalMonthDefaultWeekLayoutBuilder {
 
           children.add(
             Positioned(
-              left: dayWidth * dayIndex + 4,
+              left: isRTL ? null : dayWidth * dayIndex + 4,
+              right: isRTL ? dayWidth * dayIndex + 4 : null,
               top: top,
               width: dayWidth - 8,
               height: config.overflowIndicatorHeight,

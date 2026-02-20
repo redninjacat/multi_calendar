@@ -159,18 +159,6 @@ DateTimeRange getVisibleGridRange(
   );
 }
 
-/// Calculates the ISO 8601 week number for a given date.
-///
-/// ISO 8601 defines week 1 as the week containing the first Thursday
-/// of the year. Weeks start on Monday.
-///
-/// Returns a value from 1 to 53.
-///
-/// Example:
-/// ```dart
-/// final week = getISOWeekNumber(DateTime(2024, 1, 1)); // Returns 1
-/// final week2 = getISOWeekNumber(DateTime(2023, 1, 1)); // Returns 52 (of 2022)
-/// ```
 /// Calculates the number of calendar days between two dates.
 ///
 /// This function is DST-safe: it counts calendar days rather than using
@@ -195,32 +183,75 @@ int daysBetween(DateTime from, DateTime to) {
   return toUtc.difference(fromUtc).inDays;
 }
 
-int getISOWeekNumber(DateTime date) {
-  // Calculate day of year (1-366)
-  final startOfYear = DateTime(date.year, 1, 1);
-  final dayOfYear = date.difference(startOfYear).inDays + 1;
+/// Calculates the week number for [date] relative to [firstDayOfWeek].
+///
+/// [firstDayOfWeek] uses the same 0-based convention as
+/// [MCalEventController.firstDayOfWeek]: 0 = Sunday, 1 = Monday, …,
+/// 6 = Saturday.
+///
+/// The algorithm generalises ISO 8601 to any week-start day:
+///  - A "week anchor" is computed as the day 3 positions after the week start
+///    (e.g. Thursday for Monday-start, Wednesday for Sunday-start).
+///  - Week 1 of a year is the first week whose anchor falls in January.
+///
+/// When [firstDayOfWeek] is [DateTime.monday] (1) the results are identical to
+/// ISO 8601, so both views produce the same numbers as before for the default
+/// Monday-start setting.
+///
+/// Returns a value from 1 to 53.
+int getWeekNumber(DateTime date, int firstDayOfWeek) {
+  final weekStart = _weekStartOf(date, firstDayOfWeek);
+  // Anchor is 3 days into the week (determines which year the week belongs to).
+  final anchor = DateTime(weekStart.year, weekStart.month, weekStart.day + 3);
+  final firstWS = _firstWeekStart(anchor.year, firstDayOfWeek);
 
-  // DateTime.weekday: Monday = 1, Sunday = 7 (ISO 8601 convention)
-  final weekday = date.weekday;
+  final daysDiff = DateTime.utc(weekStart.year, weekStart.month, weekStart.day)
+      .difference(
+        DateTime.utc(firstWS.year, firstWS.month, firstWS.day),
+      )
+      .inDays;
 
-  // Calculate week number using ISO 8601 formula
-  final weekNumber = ((dayOfYear - weekday + 10) ~/ 7);
+  final weekNumber = 1 + daysDiff ~/ 7;
 
-  // Handle edge case: week 0 means it's the last week of the previous year
-  if (weekNumber == 0) {
-    // Recursively get the week number for Dec 31 of the previous year
-    return getISOWeekNumber(DateTime(date.year - 1, 12, 31));
-  }
-
-  // Handle edge case: week 53 might actually be week 1 of the next year
-  if (weekNumber == 53) {
-    // Check if Dec 31 of this year is before Thursday (weekday < 4)
-    final dec31 = DateTime(date.year, 12, 31);
-    if (dec31.weekday < 4) {
-      // It's actually week 1 of the next year
-      return 1;
-    }
+  // The week belongs to the previous year (days before week 1).
+  if (weekNumber < 1) {
+    final prevFirstWS = _firstWeekStart(anchor.year - 1, firstDayOfWeek);
+    final prevDiff =
+        DateTime.utc(weekStart.year, weekStart.month, weekStart.day)
+            .difference(
+              DateTime.utc(prevFirstWS.year, prevFirstWS.month, prevFirstWS.day),
+            )
+            .inDays;
+    return 1 + prevDiff ~/ 7;
   }
 
   return weekNumber;
 }
+
+/// Returns the [DateTime] of the start of the week containing [date], where
+/// weeks begin on [firstDayOfWeek] (0 = Sunday, 1 = Monday, …, 6 = Saturday).
+DateTime _weekStartOf(DateTime date, int firstDayOfWeek) {
+  // Convert controller convention (0=Sun…6=Sat) to DateTime.weekday (1=Mon…7=Sun).
+  final fDow = firstDayOfWeek == 0 ? 7 : firstDayOfWeek;
+  final daysSince = (date.weekday - fDow + 7) % 7;
+  return DateTime(date.year, date.month, date.day - daysSince);
+}
+
+/// Returns the start date of week 1 of [year] for the given [firstDayOfWeek].
+///
+/// Week 1 is the first week whose anchor (weekStart + 3 days) falls in January.
+DateTime _firstWeekStart(int year, int firstDayOfWeek) {
+  final jan1WeekStart = _weekStartOf(DateTime(year, 1, 1), firstDayOfWeek);
+  final anchor =
+      DateTime(jan1WeekStart.year, jan1WeekStart.month, jan1WeekStart.day + 3);
+  if (anchor.year == year) {
+    return jan1WeekStart;
+  }
+  // Anchor fell in the previous year → week 1 starts the following week.
+  return DateTime(
+    jan1WeekStart.year,
+    jan1WeekStart.month,
+    jan1WeekStart.day + 7,
+  );
+}
+
