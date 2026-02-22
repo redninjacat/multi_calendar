@@ -108,7 +108,6 @@ void main() {
         date: baseDate,
         startHour: startHour,
         hourHeight: hourHeight,
-        timeSlotDuration: const Duration(minutes: 15),
       );
       expect(time.year, baseDate.year);
       expect(time.month, baseDate.month);
@@ -124,7 +123,6 @@ void main() {
         date: baseDate,
         startHour: startHour,
         hourHeight: hourHeight,
-        timeSlotDuration: const Duration(minutes: 15),
       );
       expect(time1.hour, 9);
       expect(time1.minute, 0);
@@ -135,48 +133,21 @@ void main() {
         date: baseDate,
         startHour: startHour,
         hourHeight: hourHeight,
-        timeSlotDuration: const Duration(minutes: 15),
       );
       expect(time2.hour, 10);
       expect(time2.minute, 30);
     });
 
-    test('handles snap-to-grid with 15-minute intervals', () {
-      // 147 pixels would be ~10:27 - should snap to 10:30
+    test('rounds to nearest minute (no snapping)', () {
+      // 147 pixels / 60 px/hr = 2.45 hr = 2h27m from 8:00 = 10:27
       final time = offsetToTime(
         offset: 147.0,
         date: baseDate,
         startHour: startHour,
         hourHeight: hourHeight,
-        timeSlotDuration: const Duration(minutes: 15),
       );
       expect(time.hour, 10);
-      expect(time.minute, 30);
-    });
-
-    test('handles snap-to-grid with 5-minute intervals', () {
-      // 145 pixels = 2h25m from 8:00 = 10:25
-      final time = offsetToTime(
-        offset: 145.0,
-        date: baseDate,
-        startHour: startHour,
-        hourHeight: hourHeight,
-        timeSlotDuration: const Duration(minutes: 5),
-      );
-      expect(time.hour, 10);
-      expect(time.minute, 25);
-    });
-
-    test('handles snap-to-grid with 60-minute intervals', () {
-      final time = offsetToTime(
-        offset: 90.0, // 1.5 hours - should snap to 9:00 or 10:00
-        date: baseDate,
-        startHour: startHour,
-        hourHeight: hourHeight,
-        timeSlotDuration: const Duration(minutes: 60),
-      );
-      expect(time.hour, 10);
-      expect(time.minute, 0);
+      expect(time.minute, 27);
     });
 
     test('preserves date from input', () {
@@ -186,11 +157,40 @@ void main() {
         date: date,
         startHour: 0,
         hourHeight: hourHeight,
-        timeSlotDuration: const Duration(minutes: 15),
       );
       expect(time.year, 2025);
       expect(time.month, 12);
       expect(time.day, 25);
+    });
+
+    test('snapToTimeSlot snaps to 15-minute intervals', () {
+      final raw = DateTime(2026, 1, 1, 10, 27);
+      final snapped = snapToTimeSlot(
+        time: raw,
+        timeSlotDuration: const Duration(minutes: 15),
+      );
+      expect(snapped.hour, 10);
+      expect(snapped.minute, 30);
+    });
+
+    test('snapToTimeSlot snaps to 5-minute intervals', () {
+      final raw = DateTime(2026, 1, 1, 10, 23);
+      final snapped = snapToTimeSlot(
+        time: raw,
+        timeSlotDuration: const Duration(minutes: 5),
+      );
+      expect(snapped.hour, 10);
+      expect(snapped.minute, 25);
+    });
+
+    test('snapToTimeSlot snaps to 60-minute intervals', () {
+      final raw = DateTime(2026, 1, 1, 9, 30);
+      final snapped = snapToTimeSlot(
+        time: raw,
+        timeSlotDuration: const Duration(minutes: 60),
+      );
+      expect(snapped.hour, 10);
+      expect(snapped.minute, 0);
     });
   });
 
@@ -430,7 +430,6 @@ void main() {
           date: baseDate,
           startHour: startHour,
           hourHeight: hourHeight,
-          timeSlotDuration: const Duration(minutes: 15),
         );
         expect(recovered.hour, time.hour);
         expect(recovered.minute, time.minute);
@@ -471,7 +470,6 @@ void main() {
         date: DateTime(2024, 3, 10), // DST transition day
         startHour: 8,
         hourHeight: hourHeight,
-        timeSlotDuration: const Duration(minutes: 15),
       );
       expect(time.hour, 10);
       expect(time.minute, 30);

@@ -107,25 +107,11 @@ class MCalDragHandler extends ChangeNotifier {
   /// Whether the pointer is currently in the edge zone.
   ///
   /// Set to `true` by [handleEdgeProximity] when [nearEdge] is true, and
-  /// `false` when the pointer leaves the edge. Used by the self-repeating
-  /// timer to decide whether to schedule another navigation.
+  /// reset to `false` when the pointer leaves the edge OR after the timer
+  /// fires and navigates.  After navigation the old page's proximity state
+  /// is stale — resetting forces the next [handleEdgeProximity] call (from
+  /// the new page's onMove) to re-evaluate before scheduling another timer.
   bool _isNearEdge = false;
-
-  /// The navigation callback captured from the most recent
-  /// [handleEdgeProximity] call. Retained so the self-repeating timer can
-  /// re-invoke it without a new pointer-move event.
-  VoidCallback? _edgeNavigateCallback;
-
-  /// The delay captured from the most recent [handleEdgeProximity] call.
-  Duration? _edgeNavigateDelay;
-
-  /// Extra pause inserted between consecutive automatic navigations.
-  ///
-  /// After the first navigation fires (using the caller-provided delay),
-  /// each subsequent repeat waits this duration *plus* the original delay.
-  /// This gives the page transition animation time to settle and provides
-  /// a comfortable rhythm for the user (hold-to-scroll).
-  static const Duration _edgeRepeatDelay = Duration(milliseconds: 400);
 
   /// Default delay before edge navigation triggers (in milliseconds).
   static const int defaultEdgeNavigationDelayMs = 500;
@@ -210,6 +196,10 @@ class MCalDragHandler extends ChangeNotifier {
 
   /// Whether a resize operation is currently in progress.
   bool get isResizing => _isResizing;
+
+  /// Debug-only accessors for logging from external widgets.
+  bool get debugIsNearEdge => _isNearEdge;
+  bool get debugEdgeTimerActive => _edgeNavigationTimer != null;
 
   /// The event currently being resized, or null if not resizing.
   MCalCalendarEvent? get resizingEvent => _resizingEvent;
@@ -424,6 +414,7 @@ class MCalDragHandler extends ChangeNotifier {
   /// dragHandler.cancelDrag();
   /// ```
   void cancelDrag() {
+    debugPrint('[DD] cancelDrag() called — isDragging=$isDragging edgeTimerActive=${_edgeNavigationTimer != null}');
     _reset();
   }
 
@@ -505,10 +496,11 @@ class MCalDragHandler extends ChangeNotifier {
 
     if (nearEdge) {
       _isNearEdge = true;
-      _edgeNavigateCallback = navigateCallback;
-      _edgeNavigateDelay = delay;
 
-      // Start the initial timer if none is pending.
+      // Start the initial timer if none is pending.  Each timer fire resets
+      // _isNearEdge → false, so a new timer will only start once the next
+      // handleEdgeProximity(true, ...) call confirms the cursor is still
+      // near the edge on the (possibly new) page.
       if (_edgeNavigationTimer == null) {
         _startEdgeTimer(
           delay ?? const Duration(milliseconds: defaultEdgeNavigationDelayMs),
@@ -518,8 +510,6 @@ class MCalDragHandler extends ChangeNotifier {
     } else {
       // Left the edge zone — cancel everything so next entry starts fresh.
       _isNearEdge = false;
-      _edgeNavigateCallback = null;
-      _edgeNavigateDelay = null;
       _cancelEdgeNavigationTimer();
     }
   }
@@ -531,32 +521,39 @@ class MCalDragHandler extends ChangeNotifier {
   /// the edge.
   void _startEdgeTimer(Duration delay, VoidCallback navigateCallback) {
     _edgeNavigationTimer?.cancel();
+    debugPrint('[DD] EdgeTimer: scheduled delay=${delay.inMilliseconds}ms isDragging=$isDragging isResizing=$isResizing');
     _edgeNavigationTimer = Timer(delay, () {
       _edgeNavigationTimer = null;
-      if (!(isDragging || isResizing)) return;
+      debugPrint('[DD] EdgeTimer FIRED: isDragging=$isDragging isResizing=$isResizing _isNearEdge=$_isNearEdge');
+      if (!(isDragging || isResizing)) {
+        debugPrint('[DD] EdgeTimer FIRED: guard triggered — NOT navigating (drag/resize not active)');
+        return;
+      }
 
       // Navigate
+      debugPrint('[DD] EdgeTimer FIRED: calling navigateCallback');
       navigateCallback();
 
-      // If still near the edge, queue the next navigation after the
-      // repeat delay. Use the latest callback in case the direction
-      // changed (shouldn't happen, but be safe).
-      if (_isNearEdge) {
-        final cb = _edgeNavigateCallback ?? navigateCallback;
-        final nextDelay = _edgeNavigateDelay ??
-            const Duration(milliseconds: defaultEdgeNavigationDelayMs);
-        _startEdgeTimer(_edgeRepeatDelay + nextDelay, cb);
-      }
+      // Reset _isNearEdge after navigating.  The page just changed, so the
+      // old proximity measurement is stale.  Do NOT auto-reschedule based
+      // on it — the next onMove / handleEdgeProximity call on the new page
+      // will re-establish _isNearEdge if the cursor is still near the edge.
+      // Without this reset, a Day View page change (where _processDragMove
+      // may bail out before reaching the edge check) leaves _isNearEdge
+      // stuck true and the timer reschedules forever.
+      _isNearEdge = false;
+      debugPrint('[DD] EdgeTimer: _isNearEdge reset to false after navigate — waiting for next handleEdgeProximity call');
     });
   }
 
   /// Cancels the edge navigation timer and resets all edge-repeat state.
   void _cancelEdgeNavigationTimer() {
+    if (_edgeNavigationTimer != null) {
+      debugPrint('[DD] EdgeTimer: CANCELLED _isNearEdge=$_isNearEdge isDragging=$isDragging');
+    }
     _edgeNavigationTimer?.cancel();
     _edgeNavigationTimer = null;
     _isNearEdge = false;
-    _edgeNavigateCallback = null;
-    _edgeNavigateDelay = null;
   }
 
   /// Cancels the debounce timer if active.
@@ -582,6 +579,7 @@ class MCalDragHandler extends ChangeNotifier {
   /// edge navigation timer from firing during drop processing.
   /// This is safe to call even if no timer is active.
   void cancelEdgeNavigation() {
+    debugPrint('[DD] cancelEdgeNavigation() called — edgeTimerActive=${_edgeNavigationTimer != null} isDragging=$isDragging');
     _cancelEdgeNavigationTimer();
   }
 

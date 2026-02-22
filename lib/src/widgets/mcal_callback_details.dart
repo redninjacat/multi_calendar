@@ -804,6 +804,9 @@ class MCalEventDroppedDetails {
 class MCalGrabOffsetHolder {
   /// The X offset in pixels from the tile's left edge where the user tapped.
   double grabOffsetX = 0.0;
+
+  /// The Y offset in pixels from the tile's top edge where the user tapped.
+  double grabOffsetY = 0.0;
 }
 
 /// Data object passed during drag-and-drop operations.
@@ -840,11 +843,30 @@ class MCalDragData {
   /// to the cursor is: cursor_x - grabOffsetX
   double get grabOffsetX => _grabOffsetHolder.grabOffsetX;
 
+  /// The Y offset in pixels from the tile's top edge where the user tapped.
+  ///
+  /// `details.offset.dy` is the feedback widget's top-left Y in global
+  /// coordinates. The cursor's actual global Y is:
+  ///   cursor_y = details.offset.dy + grabOffsetY
+  double get grabOffsetY => _grabOffsetHolder.grabOffsetY;
+
   /// The horizontal spacing (margin) applied to event tiles.
   ///
   /// This is used in drop target calculations to account for the margin
   /// between the cell edge and the tile edge.
   final double horizontalSpacing;
+
+  /// Width of the feedback widget in pixels.
+  ///
+  /// Used by edge detection to compute the feedback tile's right edge:
+  ///   rightEdge = details.offset.dx + feedbackWidth
+  final double feedbackWidth;
+
+  /// Height of the feedback widget in pixels.
+  ///
+  /// Used by edge detection to compute the feedback tile's bottom edge:
+  ///   bottomEdge = details.offset.dy + feedbackHeight
+  final double feedbackHeight;
 
   /// Creates a new [MCalDragData] instance with a holder for grab offset.
   MCalDragData({
@@ -852,6 +874,8 @@ class MCalDragData {
     required this.sourceDate,
     required MCalGrabOffsetHolder grabOffsetHolder,
     required this.horizontalSpacing,
+    required this.feedbackWidth,
+    required this.feedbackHeight,
   }) : _grabOffsetHolder = grabOffsetHolder;
 }
 

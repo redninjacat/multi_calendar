@@ -146,6 +146,14 @@ class MCalDraggableEventTile extends StatefulWidget {
   /// Used to calculate the full tile width for the dragged feedback.
   final double dayWidth;
 
+  /// The height of the event tile.
+  ///
+  /// When provided the drag feedback [SizedBox] is constrained to this height,
+  /// so the feedback matches the source tile exactly. Month View omits this
+  /// (height is determined by the tile content); Day View passes the computed
+  /// pixel height derived from the event's duration and [hourHeight].
+  final double? tileHeight;
+
   /// The horizontal spacing around the tile.
   final double horizontalSpacing;
 
@@ -165,6 +173,7 @@ class MCalDraggableEventTile extends StatefulWidget {
     required this.sourceDate,
     required this.dayWidth,
     required this.horizontalSpacing,
+    this.tileHeight,
     this.enabled = true,
     this.dragLongPressDelay = const Duration(milliseconds: 200),
     this.draggedTileBuilder,
@@ -236,10 +245,9 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
           -event.localPosition.dy,
         );
 
-        // Update the holder directly - no setState needed since MCalDragData
-        // reads from the holder. The holder pattern solves the timing issue
-        // where LongPressDraggable captures data at build time.
         _grabOffsetHolder.grabOffsetX = newGrabOffsetX;
+        _grabOffsetHolder.grabOffsetY = event.localPosition.dy;
+        debugPrint('[DD] DraggableTile pointerDown: localPos=${event.localPosition} globalPos=${event.position} grabOffset=($newGrabOffsetX, ${event.localPosition.dy}) feedbackOffset=$newFeedbackOffset hSpacing=${widget.horizontalSpacing} tileHeight=${widget.tileHeight} dayWidth=${widget.dayWidth}');
 
         // Still need setState for feedbackOffset since it's used in the build
         if (_feedbackOffset != newFeedbackOffset) {
@@ -254,6 +262,8 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
           sourceDate: widget.sourceDate,
           grabOffsetHolder: _grabOffsetHolder,
           horizontalSpacing: widget.horizontalSpacing,
+          feedbackWidth: widget.dayWidth * _calculateEventDurationDays(),
+          feedbackHeight: widget.tileHeight ?? 0.0,
         ),
         delay: widget.dragLongPressDelay,
         feedbackOffset: _feedbackOffset,
@@ -339,23 +349,34 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
         child: widget.defaultFeedbackBuilder!(tileWidth),
       );
     } else {
-      // Fallback: just use the child with elevation
-      feedbackContent = Material(
-        elevation: _defaultDraggedTileElevation,
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(
-          capturedTheme?.eventTileCornerRadius ?? 4.0,
+      // Fallback: just use the child with elevation.
+      // Explicitly size to containerWidth × tileHeight so the Material gets
+      // tight constraints.  Without this, Align(center) below converts the
+      // outer SizedBox's tight constraints to loose ones, letting the child
+      // collapse to its intrinsic text size (the "tiny box" bug).
+      feedbackContent = SizedBox(
+        width: containerWidth,
+        height: widget.tileHeight,
+        child: Material(
+          elevation: _defaultDraggedTileElevation,
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(
+            capturedTheme?.eventTileCornerRadius ?? 4.0,
+          ),
+          child: widget.child,
         ),
-        child: widget.child,
       );
     }
 
-    // Wrap in a SizedBox with the exact container width.
-    // This ensures the feedback widget has a consistent logical size that
-    // matches the event's day span, making grabOffsetX calculations reliable.
-    // The content is left-aligned within this container.
+    // Wrap in a SizedBox with the exact container dimensions.
+    // Width equals dayWidth × eventDurationDays — for Day View this equals
+    // the column width; for Month View multi-day events it spans several cells.
+    // Align(center) keeps feedbackContent visually centred inside this
+    // logical span (important for Month View), while feedbackContent itself
+    // carries the real visual dimensions set above.
     return SizedBox(
       width: containerWidth,
+      height: widget.tileHeight,
       child: Align(
         alignment: AlignmentDirectional.center,
         child: feedbackContent,
@@ -384,8 +405,8 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
     return defaultSource;
   }
 
-  /// Handles the drag start event.
   void _handleDragStarted() {
+    debugPrint('[DD] DraggableTile dragStarted: event="${widget.event.title}" grabOffset=(${_grabOffsetHolder.grabOffsetX}, ${_grabOffsetHolder.grabOffsetY}) feedbackOffset=$_feedbackOffset');
     widget.onDragStarted?.call();
   }
 
@@ -399,8 +420,8 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
     widget.onDragCanceled?.call();
   }
 
-  /// Updates the current drag position.
   void _handleDragUpdate(DragUpdateDetails details) {
     _currentDragPosition = details.globalPosition;
+    debugPrint('[DD] DraggableTile dragUpdate: rawPointerGlobal=${details.globalPosition}');
   }
 }

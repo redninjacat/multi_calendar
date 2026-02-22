@@ -5099,6 +5099,8 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             sourceDate: sourceDate,
             grabOffsetHolder: MCalGrabOffsetHolder(),
             horizontalSpacing: 0,
+            feedbackWidth: 0,
+            feedbackHeight: 0,
           );
 
       overlay = widget.dropTargetOverlayBuilder!(

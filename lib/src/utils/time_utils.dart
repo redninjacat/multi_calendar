@@ -36,11 +36,17 @@ double timeToOffset({
   return (minutesFromStart / 60.0) * hourHeight;
 }
 
-/// Converts a vertical offset to a time, with time slot snapping.
+/// Converts a vertical offset to a time at 1-minute resolution.
 ///
 /// Returns a DateTime on the given [date] with the time calculated from the
-/// vertical [offset]. The time is automatically snapped to the nearest
-/// [timeSlotDuration] boundary.
+/// vertical [offset]. The result is rounded to the nearest whole minute.
+/// No time-slot snapping is applied — callers that want snapping should
+/// pass the result to [snapToTimeSlot] (or [_applySnapping] in the widget).
+///
+/// Keeping conversion and snapping separate ensures that [gridlineInterval]
+/// (a purely visual concept controlling where gridlines are drawn) never
+/// influences drag granularity.  All snapping is governed solely by
+/// [timeSlotDuration] and [snapRange] at the call site.
 ///
 /// This function is pure and DST-safe, using the DateTime constructor form
 /// to avoid DST-related arithmetic errors.
@@ -52,9 +58,8 @@ double timeToOffset({
 ///   date: DateTime(2026, 2, 14),
 ///   startHour: 8,
 ///   hourHeight: 60.0,
-///   timeSlotDuration: Duration(minutes: 15),
 /// );
-/// // Returns DateTime(2026, 2, 14, 10, 30)
+/// // Returns DateTime(2026, 2, 14, 10, 30) (150px / 60px/hr * 60 min/hr = 150 min from 08:00 → 10:30)
 /// ```
 ///
 /// Parameters:
@@ -62,23 +67,18 @@ double timeToOffset({
 /// - [date]: The date to use for the returned DateTime.
 /// - [startHour]: The hour at which the time range starts (0-23).
 /// - [hourHeight]: The height in pixels of one hour.
-/// - [timeSlotDuration]: The duration of each time slot for snapping.
 ///
-/// Returns a DateTime with the calculated and snapped time on the given date.
+/// Returns a DateTime with the calculated time on the given date.
 DateTime offsetToTime({
   required double offset,
   required DateTime date,
   required int startHour,
   required double hourHeight,
-  required Duration timeSlotDuration,
 }) {
-  final minutesFromStart = (offset / hourHeight) * 60;
-  final snappedMinutes =
-      (minutesFromStart / timeSlotDuration.inMinutes).round() *
-      timeSlotDuration.inMinutes;
+  final minutesFromStart = ((offset / hourHeight) * 60).round();
 
   // DST-safe: construct DateTime with hour/minute components
-  final totalMinutes = startHour * 60 + snappedMinutes;
+  final totalMinutes = startHour * 60 + minutesFromStart;
   final hour = totalMinutes ~/ 60;
   final minute = totalMinutes % 60;
 
