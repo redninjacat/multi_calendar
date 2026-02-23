@@ -81,6 +81,12 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   bool _autoFocusOnEventTap = true;
 
   // ============================================================
+  // RTL Override Settings
+  // ============================================================
+  TextDirection? _textDirectionOverride;
+  TextDirection? _layoutDirectionOverride;
+
+  // ============================================================
   // Time Range Settings
   // ============================================================
   int _startHour = 6;
@@ -102,6 +108,11 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   // ============================================================
   bool _enableSpecialTimeRegions = true;
   bool _enableBlackoutTimes = true;
+
+  // ============================================================
+  // Status Label
+  // ============================================================
+  String _statusLabel = '—';
 
   @override
   void initState() {
@@ -139,6 +150,37 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   void dispose() {
     _eventController.dispose();
     super.dispose();
+  }
+
+  void _setStatus(String message) {
+    setState(() => _statusLabel = message);
+  }
+
+  Widget _buildStatusLabel(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 14,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _statusLabel,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   List<MCalTimeRegion> _buildTimeRegions() {
@@ -240,7 +282,12 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
     return ResponsiveControlPanel(
       controlPanelTitle: l10n.featureSettings,
       controlPanel: _buildControlPanel(l10n),
-      child: _buildDayView(l10n),
+      child: Column(
+        children: [
+          _buildStatusLabel(context),
+          Expanded(child: _buildDayView(l10n)),
+        ],
+      ),
     );
   }
 
@@ -397,8 +444,8 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             ControlWidgets.slider(
               label: l10n.settingDragEdgeNavigationDelay,
               value: _dragEdgeNavigationDelay.inMilliseconds.toDouble(),
-              min: 100,
-              max: 1000,
+              min: 500,
+              max: 2000,
               divisions: 9,
               onChanged: (v) => setState(
                 () => _dragEdgeNavigationDelay = Duration(
@@ -411,7 +458,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               label: l10n.settingDragLongPressDelay,
               value: _dragLongPressDelay.inMilliseconds.toDouble(),
               min: 100,
-              max: 500,
+              max: 1000,
               divisions: 8,
               onChanged: (v) => setState(
                 () => _dragLongPressDelay = Duration(milliseconds: v.toInt()),
@@ -469,6 +516,34 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               label: l10n.settingAutoFocusOnEventTap,
               value: _autoFocusOnEventTap,
               onChanged: (v) => setState(() => _autoFocusOnEventTap = v),
+            ),
+          ],
+        ),
+
+        // RTL Override Section
+        ControlPanelSection(
+          title: 'RTL Override', // TODO: Add ARB key sectionRtlOverride
+          children: [
+            ControlWidgets.dropdown<TextDirection?>(
+              label: 'Text Direction', // TODO: Add ARB key settingTextDirection
+              value: _textDirectionOverride,
+              items: const [
+                DropdownMenuItem(value: null, child: Text('Inherit')),
+                DropdownMenuItem(value: TextDirection.ltr, child: Text('LTR')),
+                DropdownMenuItem(value: TextDirection.rtl, child: Text('RTL')),
+              ],
+              onChanged: (v) => setState(() => _textDirectionOverride = v),
+            ),
+            ControlWidgets.dropdown<TextDirection?>(
+              label:
+                  'Layout Direction', // TODO: Add ARB key settingLayoutDirection
+              value: _layoutDirectionOverride,
+              items: const [
+                DropdownMenuItem(value: null, child: Text('Inherit')),
+                DropdownMenuItem(value: TextDirection.ltr, child: Text('LTR')),
+                DropdownMenuItem(value: TextDirection.rtl, child: Text('RTL')),
+              ],
+              onChanged: (v) => setState(() => _layoutDirectionOverride = v),
             ),
           ],
         ),
@@ -635,6 +710,8 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
           enableSwipeNavigation: _enableSwipeNavigation,
           specialTimeRegions: _buildTimeRegions(),
           locale: widget.locale,
+          textDirection: _textDirectionOverride,
+          layoutDirection: _layoutDirectionOverride,
           // Gesture Handlers - All wired to SnackBars
           onDayHeaderTap: (context, date) {
             SnackBarHelper.show(
@@ -710,22 +787,20 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
           },
           onHoverEvent: (context, event) {
             if (event != null) {
-              SnackBarHelper.show(
-                context,
-                l10n.snackbarHoverEvent(event.title),
-              );
+              _setStatus('Event: ${event.title}');
+            } else {
+              _setStatus('—');
             }
           },
           onHoverTimeSlot: (context, slotContext) {
             if (slotContext != null) {
               final hour = slotContext.hour ?? 0;
               final minute = slotContext.minute ?? 0;
-              SnackBarHelper.show(
-                context,
-                l10n.snackbarHoverTimeSlot(
-                  '$hour:${minute.toString().padLeft(2, '0')}',
-                ),
+              _setStatus(
+                'Time slot: $hour:${minute.toString().padLeft(2, '0')}',
               );
+            } else {
+              _setStatus('—');
             }
           },
           onOverflowTap: (context, events, date) {
@@ -736,12 +811,8 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
           },
           onDragWillAccept: (details) {
             final time = details.newStartDate;
-            SnackBarHelper.show(
-              context,
-              l10n.snackbarDragWillAccept(
-                details.event.title,
-                '${time.hour}:${time.minute.toString().padLeft(2, '0')}',
-              ),
+            _setStatus(
+              'Drop → ${time.hour}:${time.minute.toString().padLeft(2, '0')} (${details.event.title})',
             );
             return true;
           },
@@ -757,15 +828,9 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             return true;
           },
           onResizeWillAccept: (details) {
-            final duration = details.newEndDate.difference(
-              details.newStartDate,
-            );
-            SnackBarHelper.show(
-              context,
-              l10n.snackbarResizeWillAccept(
-                details.event.title,
-                duration.inMinutes.toString(),
-              ),
+            final duration = details.newEndDate.difference(details.newStartDate);
+            _setStatus(
+              'Resize → ${duration.inMinutes}min (${details.event.title})',
             );
             return true;
           },

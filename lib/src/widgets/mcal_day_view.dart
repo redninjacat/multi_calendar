@@ -20,6 +20,7 @@ import 'mcal_callback_details.dart';
 import 'mcal_day_view_contexts.dart';
 import 'mcal_drag_handler.dart';
 import 'mcal_draggable_event_tile.dart';
+import 'mcal_layout_directionality.dart';
 import 'mcal_month_view_contexts.dart' show MCalWeekNumberContext;
 
 // ============================================================================
@@ -181,6 +182,7 @@ class MCalDayView extends StatefulWidget {
     this.timeLabelFormat,
     this.locale,
     this.textDirection,
+    this.layoutDirection,
     this.showSubHourLabels = false,
     this.subHourLabelInterval,
     this.subHourLabelBuilder,
@@ -405,7 +407,8 @@ class MCalDayView extends StatefulWidget {
     BuildContext context,
     MCalWeekNumberContext weekContext,
     Widget defaultWidget,
-  )? weekNumberBuilder;
+  )?
+  weekNumberBuilder;
 
   /// The interval between gridlines in the time grid.
   ///
@@ -444,9 +447,12 @@ class MCalDayView extends StatefulWidget {
   /// If null, uses the system locale from [Localizations].
   final Locale? locale;
 
-  /// Controls the layout direction of the entire calendar widget — not just
-  /// text — including column ordering, button positions, and time-slot
-  /// sequencing.
+  /// Controls the direction used to render text within the calendar (event
+  /// titles, time labels, day header, etc.).
+  ///
+  /// This only affects text rendering — it does **not** control the visual
+  /// layout of the time legend, navigation buttons, or swipe direction. Use
+  /// [layoutDirection] for those concerns.
   ///
   /// Resolution priority:
   ///   1. This parameter (if provided).
@@ -455,9 +461,28 @@ class MCalDayView extends StatefulWidget {
   ///      is available).
   ///   4. [TextDirection.ltr] as a final fallback.
   ///
-  /// Follows the same [TextDirection] convention used throughout Flutter (e.g.
-  /// [Directionality], [TextField], [Text]).
+  /// Setting this independently from [layoutDirection] allows RTL scripts
+  /// (e.g., Hebrew, Arabic) to render text correctly while keeping the
+  /// time legend and navigation in an LTR layout.
   final TextDirection? textDirection;
+
+  /// Controls the visual layout direction of the calendar — column ordering,
+  /// navigation button positions, time-legend placement, swipe direction, and
+  /// drag edge detection.
+  ///
+  /// This does **not** affect text rendering. Use [textDirection] for that.
+  ///
+  /// Resolution priority:
+  ///   1. This parameter (if provided).
+  ///   2. Ambient [Directionality] from the widget tree.
+  ///   3. [locale]-based detection via [MCalDateFormatUtils.isRTL] (if locale
+  ///      is available).
+  ///   4. [TextDirection.ltr] as a final fallback.
+  ///
+  /// Setting this independently from [textDirection] allows RTL scripts
+  /// (e.g., Hebrew, Arabic) to render text correctly while keeping the
+  /// time legend and navigation in an LTR layout.
+  final TextDirection? layoutDirection;
 
   /// Whether to display sub-hour time labels in the time legend.
   ///
@@ -782,7 +807,7 @@ class MCalDayView extends StatefulWidget {
   ///
   /// Only fires when [enableSwipeNavigation] is true.
   final void Function(BuildContext context, MCalSwipeNavigationDetails details)?
-      onSwipeNavigation;
+  onSwipeNavigation;
 
   // ============================================================================
   // Builder Callbacks
@@ -867,7 +892,11 @@ class MCalDayView extends StatefulWidget {
   /// If null, uses default navigator rendering (prev/today/next buttons).
   ///
   /// Receives the current display date.
-  final Widget Function(BuildContext context, DateTime displayDate, Widget defaultWidget)?
+  final Widget Function(
+    BuildContext context,
+    DateTime displayDate,
+    Widget defaultWidget,
+  )?
   navigatorBuilder;
 
   /// Builder for custom day layout (advanced).
@@ -976,7 +1005,8 @@ class MCalDayView extends StatefulWidget {
   ///   return edge == MCalResizeEdge.start ? 6.0 : 4.0;
   /// }
   /// ```
-  final double Function(MCalTimedEventTileContext, MCalResizeEdge)? resizeHandleInset;
+  final double Function(MCalTimedEventTileContext, MCalResizeEdge)?
+  resizeHandleInset;
 
   /// Builder for loading state.
   ///
@@ -985,7 +1015,8 @@ class MCalDayView extends StatefulWidget {
   ///
   /// The builder receives the default loading widget as the last parameter,
   /// allowing you to wrap or replace it.
-  final Widget Function(BuildContext context, Widget defaultWidget)? loadingBuilder;
+  final Widget Function(BuildContext context, Widget defaultWidget)?
+  loadingBuilder;
 
   /// Builder for error state.
   ///
@@ -994,7 +1025,12 @@ class MCalDayView extends StatefulWidget {
   ///
   /// Receives the error object and the default error widget as the last parameter,
   /// allowing you to wrap or replace it.
-  final Widget Function(BuildContext context, Object error, Widget defaultWidget)? errorBuilder;
+  final Widget Function(
+    BuildContext context,
+    Object error,
+    Widget defaultWidget,
+  )?
+  errorBuilder;
 
   /// Builder for special time regions.
   ///
@@ -1039,7 +1075,8 @@ class MCalDayView extends StatefulWidget {
   ///   return true;
   /// }
   /// ```
-  final bool Function(BuildContext, MCalTimeSlotInteractivityDetails)? timeSlotInteractivityCallback;
+  final bool Function(BuildContext, MCalTimeSlotInteractivityDetails)?
+  timeSlotInteractivityCallback;
 
   // ============================================================================
   // Interaction Callbacks
@@ -1053,41 +1090,48 @@ class MCalDayView extends StatefulWidget {
   /// Called when the day header is long-pressed.
   ///
   /// Receives [BuildContext] and the display date.
-  final void Function(BuildContext context, DateTime date)? onDayHeaderLongPress;
+  final void Function(BuildContext context, DateTime date)?
+  onDayHeaderLongPress;
 
   /// Called when the day header is double-tapped.
   ///
   /// Receives [BuildContext] and [MCalDayHeaderContext] with the display date.
-  final void Function(BuildContext context, MCalDayHeaderContext headerContext)? onDayHeaderDoubleTap;
+  final void Function(BuildContext context, MCalDayHeaderContext headerContext)?
+  onDayHeaderDoubleTap;
 
   /// Called when a time label in the time legend is tapped.
   ///
   /// Receives [BuildContext] and [MCalTimeLabelContext].
-  final void Function(BuildContext context, MCalTimeLabelContext labelContext)? onTimeLabelTap;
+  final void Function(BuildContext context, MCalTimeLabelContext labelContext)?
+  onTimeLabelTap;
 
   /// Called when a time label in the time legend is long-pressed.
   ///
   /// Receives [BuildContext] and [MCalTimeLabelContext].
-  final void Function(BuildContext context, MCalTimeLabelContext labelContext)? onTimeLabelLongPress;
+  final void Function(BuildContext context, MCalTimeLabelContext labelContext)?
+  onTimeLabelLongPress;
 
   /// Called when a time label in the time legend is double-tapped.
   ///
   /// Receives [BuildContext] and [MCalTimeLabelContext].
-  final void Function(BuildContext context, MCalTimeLabelContext labelContext)? onTimeLabelDoubleTap;
+  final void Function(BuildContext context, MCalTimeLabelContext labelContext)?
+  onTimeLabelDoubleTap;
 
   /// Called when an empty time slot is tapped.
   ///
   /// Receives [BuildContext] and [MCalTimeSlotContext] with the date and time of the tapped slot.
   ///
   /// Useful for creating new events at the tapped time.
-  final void Function(BuildContext context, MCalTimeSlotContext slotContext)? onTimeSlotTap;
+  final void Function(BuildContext context, MCalTimeSlotContext slotContext)?
+  onTimeSlotTap;
 
   /// Called when an empty time slot is long-pressed.
   ///
   /// Receives [BuildContext] and [MCalTimeSlotContext] with the date and time of the pressed slot.
   ///
   /// Useful for creating new events at the pressed time.
-  final void Function(BuildContext context, MCalTimeSlotContext slotContext)? onTimeSlotLongPress;
+  final void Function(BuildContext context, MCalTimeSlotContext slotContext)?
+  onTimeSlotLongPress;
 
   /// Called when empty time slot space is double-tapped.
   ///
@@ -1096,7 +1140,8 @@ class MCalDayView extends StatefulWidget {
   ///
   /// Double-tap does not conflict with single tap; Flutter's gesture arena
   /// ensures only one gesture wins.
-  final void Function(BuildContext context, MCalTimeSlotContext slotContext)? onTimeSlotDoubleTap;
+  final void Function(BuildContext context, MCalTimeSlotContext slotContext)?
+  onTimeSlotDoubleTap;
 
   /// Called when an event tile is tapped.
   ///
@@ -1156,13 +1201,21 @@ class MCalDayView extends StatefulWidget {
   /// The overflow indicator appears when there are more all-day events than [allDaySectionMaxRows].
   ///
   /// Receives [BuildContext], the list of overflowing events, and the display date.
-  final void Function(BuildContext context, List<MCalCalendarEvent> events, DateTime date)?
+  final void Function(
+    BuildContext context,
+    List<MCalCalendarEvent> events,
+    DateTime date,
+  )?
   onOverflowTap;
 
   /// Called when the all-day section overflow indicator is long-pressed.
   ///
   /// Receives [BuildContext], the list of overflowing events, and the display date.
-  final void Function(BuildContext context, List<MCalCalendarEvent> events, DateTime date)?
+  final void Function(
+    BuildContext context,
+    List<MCalCalendarEvent> events,
+    DateTime date,
+  )?
   onOverflowLongPress;
 
   /// Called when the all-day section overflow indicator is double-tapped.
@@ -1386,7 +1439,8 @@ class MCalDayViewState extends State<MCalDayView> {
   // so they can drop onto time slots outside the current viewport.
   Timer? _verticalScrollTimer;
   double _verticalScrollDelta = 0.0; // px per 16ms frame, negative = up
-  bool _verticalScrollReprocessDrag = false; // re-run _processDragMove each tick
+  bool _verticalScrollReprocessDrag =
+      false; // re-run _processDragMove each tick
 
   // Grace period: suppress vertical auto-scroll for a short window after drag
   // start so that pressing an event near the viewport top/bottom doesn't
@@ -1516,7 +1570,7 @@ class MCalDayViewState extends State<MCalDayView> {
     _displayDate = _dateOnly(widget.controller.displayDate);
     _scrollController = widget.scrollController ?? ScrollController();
     _focusNode = FocusNode();
-    
+
     // Initialize swipe navigation PageController if enabled (Task 8)
     if (widget.enableSwipeNavigation) {
       _swipeReferenceDate = DateTime(
@@ -1528,7 +1582,7 @@ class MCalDayViewState extends State<MCalDayView> {
         initialPage: _initialSwipePageIndex,
       );
     }
-    
+
     widget.controller.addListener(_onControllerChanged);
     _loadEvents();
     _startCurrentTimeTimer();
@@ -1544,7 +1598,8 @@ class MCalDayViewState extends State<MCalDayView> {
     if (widget.scrollController == null) {
       _scrollController?.dispose();
     }
-    _swipePageController?.dispose(); // Task 8: Dispose swipe navigation controller
+    _swipePageController
+        ?.dispose(); // Task 8: Dispose swipe navigation controller
     widget.controller.removeListener(_onControllerChanged);
     super.dispose();
   }
@@ -1613,7 +1668,7 @@ class MCalDayViewState extends State<MCalDayView> {
     return widget.theme ?? MCalTheme.of(context);
   }
 
-  /// Resolves the effective [TextDirection] for the calendar using the
+  /// Resolves the effective text [TextDirection] for the calendar using the
   /// priority chain documented on [MCalDayView.textDirection].
   TextDirection _resolveTextDirection(BuildContext context) {
     if (widget.textDirection != null) return widget.textDirection!;
@@ -1626,9 +1681,22 @@ class MCalDayViewState extends State<MCalDayView> {
     return TextDirection.ltr;
   }
 
+  /// Resolves the effective layout [TextDirection] for the calendar using the
+  /// priority chain documented on [MCalDayView.layoutDirection].
+  TextDirection _resolveLayoutDirection(BuildContext context) {
+    if (widget.layoutDirection != null) return widget.layoutDirection!;
+    final ambient = Directionality.maybeOf(context);
+    if (ambient != null) return ambient;
+    final locale = widget.locale;
+    if (locale != null && MCalDateFormatUtils().isRTL(locale)) {
+      return TextDirection.rtl;
+    }
+    return TextDirection.ltr;
+  }
+
   /// Checks if the current layout direction is RTL.
-  bool _isRTL(BuildContext context) {
-    return Directionality.of(context) == TextDirection.rtl;
+  bool _isLayoutRTL(BuildContext context) {
+    return MCalLayoutDirectionality.of(context);
   }
 
   /// Resolves whether drag-to-resize should be enabled.
@@ -1663,7 +1731,7 @@ class MCalDayViewState extends State<MCalDayView> {
     if (_swipeReferenceDate == null) {
       return _displayDate;
     }
-    
+
     final dayOffset = pageIndex - _initialSwipePageIndex;
     return DateTime(
       _swipeReferenceDate!.year,
@@ -1679,13 +1747,17 @@ class MCalDayViewState extends State<MCalDayView> {
   /// 2. Updates the controller's display date (which triggers onDisplayDateChanged)
   /// 3. Fires the onSwipeNavigation callback with direction details
   void _onSwipePageChanged(int pageIndex) {
-    debugPrint('[DD] SwipePageChanged: pageIndex=$pageIndex isProgrammatic=$_isProgrammaticPageChange isDragActive=$_isDragActive isResizing=${_dragHandler?.isResizing}');
+    debugPrint(
+      '[DD] SwipePageChanged: pageIndex=$pageIndex isProgrammatic=$_isProgrammaticPageChange isDragActive=$_isDragActive isResizing=${_dragHandler?.isResizing}',
+    );
     // Skip if this is a programmatic change to avoid recursive updates
     if (_isProgrammaticPageChange) return;
 
     final newDay = _pageIndexToDay(pageIndex);
     final previousDay = _displayDate;
-    debugPrint('[DD] SwipePageChanged: NAVIGATING from $previousDay → $newDay (from=${StackTrace.current.toString().split('\n').skip(1).take(2).join(' | ')})');
+    debugPrint(
+      '[DD] SwipePageChanged: NAVIGATING from $previousDay → $newDay (from=${StackTrace.current.toString().split('\n').skip(1).take(2).join(' | ')})',
+    );
 
     // Skip if same day (shouldn't happen but be safe)
     if (newDay.year == previousDay.year &&
@@ -1727,20 +1799,26 @@ class MCalDayViewState extends State<MCalDayView> {
     final normalizedControllerDate = _dateOnly(widget.controller.displayDate);
     if (normalizedControllerDate != _displayDate) {
       final oldDate = _displayDate;
-      debugPrint('[DD] ControllerChanged: date $oldDate → $normalizedControllerDate isDragActive=$_isDragActive isResizing=${_dragHandler?.isResizing}');
+      debugPrint(
+        '[DD] ControllerChanged: date $oldDate → $normalizedControllerDate isDragActive=$_isDragActive isResizing=${_dragHandler?.isResizing}',
+      );
       setState(() {
         _displayDate = _dateOnly(widget.controller.displayDate);
       });
 
       // Task 8: Update PageController when display date changes programmatically
-      if (widget.enableSwipeNavigation && _swipePageController != null && _swipeReferenceDate != null) {
+      if (widget.enableSwipeNavigation &&
+          _swipePageController != null &&
+          _swipeReferenceDate != null) {
         final dayOffset = daysBetween(_swipeReferenceDate!, _displayDate);
         final newPageIndex = _initialSwipePageIndex + dayOffset;
 
         if (_swipePageController!.hasClients) {
           // Use flag to prevent _onSwipePageChanged from firing
           _isProgrammaticPageChange = true;
-          debugPrint('[DD] ControllerChanged: jumpToPage($newPageIndex) isProgrammatic=true');
+          debugPrint(
+            '[DD] ControllerChanged: jumpToPage($newPageIndex) isProgrammatic=true',
+          );
           _swipePageController!.jumpToPage(newPageIndex);
           _isProgrammaticPageChange = false;
           debugPrint('[DD] ControllerChanged: isProgrammatic reset to false');
@@ -1940,14 +2018,19 @@ class MCalDayViewState extends State<MCalDayView> {
     // Everything above this Y is the day header / all-day area.
     final timeGridBox =
         _timeGridKey.currentContext?.findRenderObject() as RenderBox?;
-    if (timeGridBox != null && timeGridBox.attached && timeGridBox.size.width > 0) {
+    if (timeGridBox != null &&
+        timeGridBox.attached &&
+        timeGridBox.size.width > 0) {
       final timeGridGlobal = timeGridBox.localToGlobal(Offset.zero);
-      _cachedTimeGridTopInDayContent = timeGridGlobal.dy - _cachedDayContentOffset.dy;
+      _cachedTimeGridTopInDayContent =
+          timeGridGlobal.dy - _cachedDayContentOffset.dy;
       _cachedTimeGridGlobalLeft = timeGridGlobal.dx;
       _cachedTimeGridGlobalRight = timeGridGlobal.dx + timeGridBox.size.width;
       _cachedTimeGridGlobalTop = timeGridGlobal.dy;
     } else {
-      debugPrint('[DD] CacheLayout: WARNING — timeGridBox null/detached/zero-size, skipping cache');
+      debugPrint(
+        '[DD] CacheLayout: WARNING — timeGridBox null/detached/zero-size, skipping cache',
+      );
       _layoutCachedForDrag = false;
       return;
     }
@@ -1959,7 +2042,9 @@ class MCalDayViewState extends State<MCalDayView> {
     _cachedMinuteHeight = hourHeight / 60.0;
 
     _layoutCachedForDrag = true;
-    debugPrint('[DD] CacheLayout: dayContentOffset=$_cachedDayContentOffset dayContentSize=$_cachedDayContentSize timeGridTopInDayContent=$_cachedTimeGridTopInDayContent timeGridGlobal=($_cachedTimeGridGlobalLeft..$_cachedTimeGridGlobalRight top=$_cachedTimeGridGlobalTop) scrollOffset=$_cachedScrollOffset minuteHeight=$_cachedMinuteHeight');
+    debugPrint(
+      '[DD] CacheLayout: dayContentOffset=$_cachedDayContentOffset dayContentSize=$_cachedDayContentSize timeGridTopInDayContent=$_cachedTimeGridTopInDayContent timeGridGlobal=($_cachedTimeGridGlobalLeft..$_cachedTimeGridGlobalRight top=$_cachedTimeGridGlobalTop) scrollOffset=$_cachedScrollOffset minuteHeight=$_cachedMinuteHeight',
+    );
   }
 
   /// Sends a screen reader announcement for accessibility.
@@ -1988,10 +2073,14 @@ class MCalDayViewState extends State<MCalDayView> {
     if (!widget.enableDragToMove) return;
 
     debugPrint('[DD] ═══════════════════════════════════════════════════');
-    debugPrint('[DD] DragStarted: event="${event.title}" source=$sourceDate isAllDay=${event.isAllDay}');
+    debugPrint(
+      '[DD] DragStarted: event="${event.title}" source=$sourceDate isAllDay=${event.isAllDay}',
+    );
     final sc = _scrollController;
     final scAttached = sc != null && sc.hasClients;
-    debugPrint('[DD] DragStarted: scrollOffset=${scAttached ? sc.offset : 'N/A'} scrollMax=${scAttached ? sc.position.maxScrollExtent : 'N/A'} viewportDim=${scAttached ? sc.position.viewportDimension : 'N/A'}');
+    debugPrint(
+      '[DD] DragStarted: scrollOffset=${scAttached ? sc.offset : 'N/A'} scrollMax=${scAttached ? sc.position.maxScrollExtent : 'N/A'} viewportDim=${scAttached ? sc.position.viewportDimension : 'N/A'}',
+    );
     _isDragActive = true;
     _layoutCachedForDrag = false;
     _dragStartTime = DateTime.now();
@@ -2012,7 +2101,9 @@ class MCalDayViewState extends State<MCalDayView> {
   /// accepted, _handleDrop already ran and called cancelDrag(); we only need
   /// to clean up when the drop was rejected (released outside valid target).
   void _handleDragEnded(bool wasAccepted) {
-    debugPrint('[DD] DragEnded: wasAccepted=$wasAccepted isDragActive=$_isDragActive proposedValid=${_dragHandler?.isProposedDropValid} vertScrollTimerActive=${_verticalScrollTimer?.isActive}');
+    debugPrint(
+      '[DD] DragEnded: wasAccepted=$wasAccepted isDragActive=$_isDragActive proposedValid=${_dragHandler?.isProposedDropValid} vertScrollTimerActive=${_verticalScrollTimer?.isActive}',
+    );
 
     // If the drag was already cleaned up by _handleDragCancelled (which fires
     // first from Flutter's Draggable), skip redundant processing.
@@ -2021,11 +2112,17 @@ class MCalDayViewState extends State<MCalDayView> {
       return;
     }
 
-    if (!wasAccepted && _dragHandler != null && _dragHandler!.isProposedDropValid) {
-      debugPrint('[DD] DragEnded: NOT accepted but proposedDrop is valid — completing drop via _completePendingDrop');
+    if (!wasAccepted &&
+        _dragHandler != null &&
+        _dragHandler!.isProposedDropValid) {
+      debugPrint(
+        '[DD] DragEnded: NOT accepted but proposedDrop is valid — completing drop via _completePendingDrop',
+      );
       _completePendingDrop();
     } else if (!wasAccepted) {
-      debugPrint('[DD] DragEnded: drop was NOT accepted and no valid proposal — calling cancelDrag()');
+      debugPrint(
+        '[DD] DragEnded: drop was NOT accepted and no valid proposal — calling cancelDrag()',
+      );
       _dragHandler?.cancelDrag();
     }
 
@@ -2055,10 +2152,16 @@ class MCalDayViewState extends State<MCalDayView> {
   /// When [isUserCancel] is true, the user explicitly cancelled (e.g. via
   /// Escape key or pointer cancel), so always discard.
   void _handleDragCancelled({bool isUserCancel = false}) {
-    debugPrint('[DD] DragCancelled: isUserCancel=$isUserCancel proposedValid=${_dragHandler?.isProposedDropValid}');
+    debugPrint(
+      '[DD] DragCancelled: isUserCancel=$isUserCancel proposedValid=${_dragHandler?.isProposedDropValid}',
+    );
 
-    if (!isUserCancel && _dragHandler != null && _dragHandler!.isProposedDropValid) {
-      debugPrint('[DD] DragCancelled: NOT user cancel and proposedDrop is valid — completing drop via _completePendingDrop');
+    if (!isUserCancel &&
+        _dragHandler != null &&
+        _dragHandler!.isProposedDropValid) {
+      debugPrint(
+        '[DD] DragCancelled: NOT user cancel and proposedDrop is valid — completing drop via _completePendingDrop',
+      );
       _completePendingDrop();
     } else {
       _ensureDragHandler.cancelDrag();
@@ -2147,9 +2250,11 @@ class MCalDayViewState extends State<MCalDayView> {
       case LogicalKeyboardKey.arrowLeft:
       case LogicalKeyboardKey.arrowRight:
         if (widget.showNavigator) {
-          final isRTL = Directionality.of(context) == TextDirection.rtl;
-          if ((event.logicalKey == LogicalKeyboardKey.arrowLeft && !isRTL) ||
-              (event.logicalKey == LogicalKeyboardKey.arrowRight && isRTL)) {
+          final isLayoutRTL = MCalLayoutDirectionality.of(context);
+          if ((event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+                  !isLayoutRTL) ||
+              (event.logicalKey == LogicalKeyboardKey.arrowRight &&
+                  isLayoutRTL)) {
             _handleNavigatePrevious();
           } else {
             _handleNavigateNext();
@@ -2183,8 +2288,8 @@ class MCalDayViewState extends State<MCalDayView> {
     final proposedEnd = _keyboardMoveProposedEnd;
     if (ev == null || proposedStart == null || proposedEnd == null) return null;
 
-    final isRTL = Directionality.of(context) == TextDirection.rtl;
-    final rtlMult = isRTL ? -1 : 1;
+    final isLayoutRTL = MCalLayoutDirectionality.of(context);
+    final rtlMult = isLayoutRTL ? -1 : 1;
 
     switch (event.logicalKey) {
       case LogicalKeyboardKey.escape:
@@ -2270,7 +2375,8 @@ class MCalDayViewState extends State<MCalDayView> {
     final ev = _keyboardMoveEvent;
     final start = _keyboardMoveProposedStart;
     final end = _keyboardMoveProposedEnd;
-    if (dragHandler == null || ev == null || start == null || end == null) return;
+    if (dragHandler == null || ev == null || start == null || end == null)
+      return;
 
     final isValid = _validateDropForEvent(ev, start, end);
     dragHandler.updateProposedDropRange(
@@ -2303,7 +2409,8 @@ class MCalDayViewState extends State<MCalDayView> {
     if (event.isAllDay) return true;
     for (final other in _timedEvents) {
       if (other.id == event.id) continue;
-      if (proposedStart.isBefore(other.end) && other.start.isBefore(proposedEnd)) {
+      if (proposedStart.isBefore(other.end) &&
+          other.start.isBefore(proposedEnd)) {
         return false;
       }
     }
@@ -2390,13 +2497,16 @@ class MCalDayViewState extends State<MCalDayView> {
       _keyboardMoveProposedStart!.day,
       _keyboardMoveProposedStart!.hour,
       _keyboardMoveProposedStart!.minute +
-          _keyboardMoveOriginalEnd!.difference(_keyboardMoveOriginalStart!).inMinutes,
+          _keyboardMoveOriginalEnd!
+              .difference(_keyboardMoveOriginalStart!)
+              .inMinutes,
     );
     _updateKeyboardMovePreview();
     if (mounted) {
       final locale = widget.locale ?? Localizations.localeOf(context);
-      final timeStr = DateFormat.Hm(locale.toString())
-          .format(_keyboardMoveProposedStart!);
+      final timeStr = DateFormat.Hm(
+        locale.toString(),
+      ).format(_keyboardMoveProposedStart!);
       _announceScreenReader(context, 'Moved to $timeStr');
     }
     setState(() {});
@@ -2409,9 +2519,20 @@ class MCalDayViewState extends State<MCalDayView> {
     var end = _keyboardMoveProposedEnd;
     if (ev == null || start == null || end == null) return;
 
-    start = DateTime(start.year, start.month, start.day + deltaDays,
-        start.hour, start.minute);
-    end = DateTime(end.year, end.month, end.day + deltaDays, end.hour, end.minute);
+    start = DateTime(
+      start.year,
+      start.month,
+      start.day + deltaDays,
+      start.hour,
+      start.minute,
+    );
+    end = DateTime(
+      end.year,
+      end.month,
+      end.day + deltaDays,
+      end.hour,
+      end.minute,
+    );
 
     _keyboardMoveProposedStart = start;
     _keyboardMoveProposedEnd = end;
@@ -2443,11 +2564,7 @@ class MCalDayViewState extends State<MCalDayView> {
       return;
     }
 
-    final sourceDate = DateTime(
-      ev.start.year,
-      ev.start.month,
-      ev.start.day,
-    );
+    final sourceDate = DateTime(ev.start.year, ev.start.month, ev.start.day);
     final dragData = MCalDragData(
       event: ev,
       sourceDate: sourceDate,
@@ -2593,15 +2710,16 @@ class MCalDayViewState extends State<MCalDayView> {
     final deltaPx = (deltaSlots * slotMins / 60.0) * hourHeight;
     final minOffset = 0.0;
     final maxOffset = (widget.endHour - widget.startHour + 1) * hourHeight;
-    _keyboardResizeEdgeOffset =
-        (_keyboardResizeEdgeOffset + deltaPx).clamp(minOffset, maxOffset);
+    _keyboardResizeEdgeOffset = (_keyboardResizeEdgeOffset + deltaPx).clamp(
+      minOffset,
+      maxOffset,
+    );
     _updateKeyboardResizePreview();
     if (mounted) {
-      final edge = _keyboardResizeEdge == MCalResizeEdge.start ? 'start' : 'end';
-      _announceScreenReader(
-        context,
-        'Adjusted $edge time',
-      );
+      final edge = _keyboardResizeEdge == MCalResizeEdge.start
+          ? 'start'
+          : 'end';
+      _announceScreenReader(context, 'Adjusted $edge time');
     }
     setState(() {});
   }
@@ -2613,8 +2731,9 @@ class MCalDayViewState extends State<MCalDayView> {
 
     final event = dragHandler.resizingEvent!;
     final edge = _keyboardResizeEdge ?? MCalResizeEdge.end;
-    final newEdge =
-        edge == MCalResizeEdge.start ? MCalResizeEdge.end : MCalResizeEdge.start;
+    final newEdge = edge == MCalResizeEdge.start
+        ? MCalResizeEdge.end
+        : MCalResizeEdge.start;
     _keyboardResizeEdge = newEdge;
     _ensureDragHandler.cancelResize();
     _ensureDragHandler.startResize(event, newEdge);
@@ -2630,10 +2749,7 @@ class MCalDayViewState extends State<MCalDayView> {
     _updateKeyboardResizePreview();
     if (mounted) {
       final edgeLabel = newEdge == MCalResizeEdge.start ? 'start' : 'end';
-      _announceScreenReader(
-        context,
-        'Now adjusting $edgeLabel time',
-      );
+      _announceScreenReader(context, 'Now adjusting $edgeLabel time');
     }
     setState(() {});
   }
@@ -2719,7 +2835,9 @@ class MCalDayViewState extends State<MCalDayView> {
     // Hold scroll so SingleChildScrollView doesn't steal the pointer
     _releaseResizeScrollHold();
     final scForHold = _scrollController;
-    final position = (scForHold != null && scForHold.hasClients) ? scForHold.position : null;
+    final position = (scForHold != null && scForHold.hasClients)
+        ? scForHold.position
+        : null;
     if (position != null && position.hasPixels) {
       try {
         _resizeScrollHold = position.hold(() {
@@ -2765,10 +2883,7 @@ class MCalDayViewState extends State<MCalDayView> {
     // Auto-scroll viewport when the resize handle is dragged near an edge.
     // reprocessDrag = false: resize tracks accumulated delta, not absolute
     // position, so we don't need to re-run drag-move on each scroll tick.
-    _checkVerticalScrollEdge(
-      pointerEvent.position.dy,
-      reprocessDrag: false,
-    );
+    _checkVerticalScrollEdge(pointerEvent.position.dy, reprocessDrag: false);
   }
 
   /// Called by the parent [Listener.onPointerUp].
@@ -2952,11 +3067,19 @@ class MCalDayViewState extends State<MCalDayView> {
       if (widget.onEventResized != null) {
         final shouldKeep = widget.onEventResized!(context, details);
         if (shouldKeep) {
-          widget.controller.modifyOccurrence(event.id, originalStart, updatedEvent);
+          widget.controller.modifyOccurrence(
+            event.id,
+            originalStart,
+            updatedEvent,
+          );
         }
       } else {
         // No callback provided — auto-accept and modify occurrence
-        widget.controller.modifyOccurrence(event.id, originalStart, updatedEvent);
+        widget.controller.modifyOccurrence(
+          event.id,
+          originalStart,
+          updatedEvent,
+        );
       }
     } else {
       // Non-recurring event: update controller first, then call callback
@@ -2964,7 +3087,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
       if (widget.onEventResized != null) {
         final shouldKeep = widget.onEventResized!(context, details);
-        
+
         // If callback returns false, revert the change
         if (!shouldKeep) {
           final revertedEvent = event.copyWith(
@@ -3046,7 +3169,9 @@ class MCalDayViewState extends State<MCalDayView> {
     _debugTileCenterGlobal = Offset(tileCenterX, tileCenterY);
     if (mounted) setState(() {});
 
-    debugPrint('[DD] DragPointerMove(fallback): globalPos=$globalPos feedbackX=$feedbackGlobalX tileCenterX=$tileCenterX grabOffsetX=$_cachedGrabOffsetX tileWidth=$_feedbackTileWidth');
+    debugPrint(
+      '[DD] DragPointerMove(fallback): globalPos=$globalPos feedbackX=$feedbackGlobalX tileCenterX=$tileCenterX grabOffsetX=$_cachedGrabOffsetX tileWidth=$_feedbackTileWidth',
+    );
 
     // Edge detection uses the tile center (not cursor) against 25% edge zones.
     if (widget.dragEdgeNavigationEnabled) {
@@ -3080,7 +3205,9 @@ class MCalDayViewState extends State<MCalDayView> {
     _cachedGrabOffsetY = data.grabOffsetY;
 
     if (_dragMoveDebounceTimer == null || !_dragMoveDebounceTimer!.isActive) {
-      debugPrint('[DD] DragMove(raw): offset=${details.offset} grab=(${data.grabOffsetX},${data.grabOffsetY}) tileSize=($_feedbackTileWidth x $_feedbackTileHeight)');
+      debugPrint(
+        '[DD] DragMove(raw): offset=${details.offset} grab=(${data.grabOffsetX},${data.grabOffsetY}) tileSize=($_feedbackTileWidth x $_feedbackTileHeight)',
+      );
       _dragMoveDebounceTimer = Timer(
         const Duration(milliseconds: 16),
         _processDragMove,
@@ -3106,7 +3233,9 @@ class MCalDayViewState extends State<MCalDayView> {
     // vertical-scroll timer after _handleDrop already called cancelDrag()), bail
     // out immediately.
     if (!dragHandler.isDragging && !dragHandler.isResizing) {
-      debugPrint('[DD] _processDragMove: bailing out — drag/resize not active (stale timer tick?)');
+      debugPrint(
+        '[DD] _processDragMove: bailing out — drag/resize not active (stale timer tick?)',
+      );
       _cancelVerticalScrollTimer();
       return;
     }
@@ -3145,8 +3274,12 @@ class MCalDayViewState extends State<MCalDayView> {
     final bool isInTimeGrid = localY >= _cachedTimeGridTopInDayContent;
 
     final scForLog = _scrollController;
-    final scOffsetStr = (scForLog != null && scForLog.hasClients) ? '${scForLog.offset}' : 'N/A';
-    debugPrint('[DD] ProcessDragMove: feedbackGlobal=$feedbackGlobal grabOffset=(${dragData.grabOffsetX}, ${dragData.grabOffsetY}) cursorGlobal=($cursorGlobalX, $cursorGlobalY) tileCenterX=$tileCenterX localInDayContent=($localX, $localY) timeGridTopInDayContent=$_cachedTimeGridTopInDayContent isInTimeGrid=$isInTimeGrid scrollOffset=$scOffsetStr');
+    final scOffsetStr = (scForLog != null && scForLog.hasClients)
+        ? '${scForLog.offset}'
+        : 'N/A';
+    debugPrint(
+      '[DD] ProcessDragMove: feedbackGlobal=$feedbackGlobal grabOffset=(${dragData.grabOffsetX}, ${dragData.grabOffsetY}) cursorGlobal=($cursorGlobalX, $cursorGlobalY) tileCenterX=$tileCenterX localInDayContent=($localX, $localY) timeGridTopInDayContent=$_cachedTimeGridTopInDayContent isInTimeGrid=$isInTimeGrid scrollOffset=$scOffsetStr',
+    );
 
     // For drop-target time calculation, compute the feedback widget's
     // position within the time grid's content coordinate system.
@@ -3156,12 +3289,16 @@ class MCalDayViewState extends State<MCalDayView> {
         _timeGridKey.currentContext?.findRenderObject() as RenderBox?;
     if (timeGridBox != null && timeGridBox.attached) {
       final feedbackLocal = timeGridBox.globalToLocal(feedbackGlobal);
-      debugPrint('[DD] ProcessDragMove: feedbackLocalInTimeGrid=$feedbackLocal timeGridGlobal=${timeGridBox.localToGlobal(Offset.zero)} timeGridSize=${timeGridBox.size}');
+      debugPrint(
+        '[DD] ProcessDragMove: feedbackLocalInTimeGrid=$feedbackLocal timeGridGlobal=${timeGridBox.localToGlobal(Offset.zero)} timeGridSize=${timeGridBox.size}',
+      );
 
       if (isInTimeGrid) {
         final bool wasAllDayEvent = dragData.event.isAllDay;
         if (wasAllDayEvent) {
-          debugPrint('[DD] ProcessDragMove: REGION=timeGrid, converting allDay→timed');
+          debugPrint(
+            '[DD] ProcessDragMove: REGION=timeGrid, converting allDay→timed',
+          );
           _handleAllDayToTimedConversion(feedbackLocal);
         } else {
           debugPrint('[DD] ProcessDragMove: REGION=timeGrid, sameTypeMove');
@@ -3172,7 +3309,9 @@ class MCalDayViewState extends State<MCalDayView> {
         _handleTimedToAllDayConversion(feedbackLocal);
       }
     } else {
-      debugPrint('[DD] ProcessDragMove: WARNING — timeGridBox null=${timeGridBox == null} attached=${timeGridBox?.attached}');
+      debugPrint(
+        '[DD] ProcessDragMove: WARNING — timeGridBox null=${timeGridBox == null} attached=${timeGridBox?.attached}',
+      );
     }
 
     // --- Edge detection ---
@@ -3320,7 +3459,9 @@ class MCalDayViewState extends State<MCalDayView> {
         proposedEnd: proposedEnd,
       );
 
-      debugPrint('[DD] SameTypeMove: allDay event → proposedStart=$proposedStart isValid=$isValid');
+      debugPrint(
+        '[DD] SameTypeMove: allDay event → proposedStart=$proposedStart isValid=$isValid',
+      );
       dragHandler.updateProposedDropRange(
         proposedStart: proposedStart,
         proposedEnd: proposedEnd,
@@ -3351,7 +3492,9 @@ class MCalDayViewState extends State<MCalDayView> {
         proposedEnd: proposedEnd,
       );
 
-      debugPrint('[DD] SameTypeMove: timed event localY=${localPosition.dy} → rawTime=$proposedStart snapped=$snappedStart end=$proposedEnd isValid=$isValid displayDate=$_displayDate');
+      debugPrint(
+        '[DD] SameTypeMove: timed event localY=${localPosition.dy} → rawTime=$proposedStart snapped=$snappedStart end=$proposedEnd isValid=$isValid displayDate=$_displayDate',
+      );
       dragHandler.updateProposedDropRange(
         proposedStart: snappedStart,
         proposedEnd: proposedEnd,
@@ -3383,7 +3526,10 @@ class MCalDayViewState extends State<MCalDayView> {
   ///
   /// [feedbackGlobalY] is the feedback tile's top-left Y in global coordinates.
   /// The bottom edge is computed as `feedbackGlobalY + _feedbackTileHeight`.
-  void _checkVerticalScrollEdge(double feedbackGlobalY, {bool reprocessDrag = false}) {
+  void _checkVerticalScrollEdge(
+    double feedbackGlobalY, {
+    bool reprocessDrag = false,
+  }) {
     if (_dragStartTime != null &&
         DateTime.now().difference(_dragStartTime!) < _vertEdgeGracePeriod) {
       debugPrint('[DD] VertEdge: within grace period — skipping');
@@ -3417,13 +3563,20 @@ class MCalDayViewState extends State<MCalDayView> {
 
     const maxSpeed = 10.0;
 
-    debugPrint('[DD] VertEdge: tileTop=$tileTop tileBottom=$tileBottom viewportTop=$viewportTop viewportBottom=$viewportBottom threshold=$_vertEdgeThresholdPx scrollOffset=${sc.offset}');
+    debugPrint(
+      '[DD] VertEdge: tileTop=$tileTop tileBottom=$tileBottom viewportTop=$viewportTop viewportBottom=$viewportBottom threshold=$_vertEdgeThresholdPx scrollOffset=${sc.offset}',
+    );
 
     // Tile's top edge within threshold of viewport top → scroll up.
     final distFromTop = tileTop - viewportTop;
     if (distFromTop < _vertEdgeThresholdPx && sc.offset > 0) {
-      final proximity = (1.0 - distFromTop / _vertEdgeThresholdPx).clamp(0.0, 1.0);
-      debugPrint('[DD] VertEdge: NEAR TOP — distFromTop=$distFromTop proximity=$proximity');
+      final proximity = (1.0 - distFromTop / _vertEdgeThresholdPx).clamp(
+        0.0,
+        1.0,
+      );
+      debugPrint(
+        '[DD] VertEdge: NEAR TOP — distFromTop=$distFromTop proximity=$proximity',
+      );
       _startVerticalScrollTimer(
         -(maxSpeed * proximity).clamp(1.0, maxSpeed),
         reprocessDrag: reprocessDrag,
@@ -3433,8 +3586,13 @@ class MCalDayViewState extends State<MCalDayView> {
     else if (viewportBottom - tileBottom < _vertEdgeThresholdPx &&
         sc.offset < sc.position.maxScrollExtent) {
       final distFromBottom = viewportBottom - tileBottom;
-      final proximity = (1.0 - distFromBottom / _vertEdgeThresholdPx).clamp(0.0, 1.0);
-      debugPrint('[DD] VertEdge: NEAR BOTTOM — distFromBottom=$distFromBottom proximity=$proximity');
+      final proximity = (1.0 - distFromBottom / _vertEdgeThresholdPx).clamp(
+        0.0,
+        1.0,
+      );
+      debugPrint(
+        '[DD] VertEdge: NEAR BOTTOM — distFromBottom=$distFromBottom proximity=$proximity',
+      );
       _startVerticalScrollTimer(
         (maxSpeed * proximity).clamp(1.0, maxSpeed),
         reprocessDrag: reprocessDrag,
@@ -3461,38 +3619,45 @@ class MCalDayViewState extends State<MCalDayView> {
       return;
     }
 
-    debugPrint('[DD] VertScrollTimer: STARTED delta=$deltaPerFrame reprocessDrag=$reprocessDrag isDragActive=$_isDragActive');
-    _verticalScrollTimer = Timer.periodic(
-      const Duration(milliseconds: 16),
-      (_) {
-        final sc = _scrollController;
-        if (sc == null || !sc.hasClients) {
-          debugPrint('[DD] VertScrollTimer TICK: no scroll controller — cancelling');
-          _cancelVerticalScrollTimer();
-          return;
-        }
-        final newOffset = (sc.offset + _verticalScrollDelta)
-            .clamp(0.0, sc.position.maxScrollExtent);
-        if (newOffset == sc.offset) {
-          debugPrint('[DD] VertScrollTimer TICK: boundary reached — cancelling');
-          _cancelVerticalScrollTimer();
-          return;
-        }
-
-        if (!_isDragActive) {
-          debugPrint('[DD] VertScrollTimer TICK: drag no longer active — cancelling');
-          _cancelVerticalScrollTimer();
-          return;
-        }
-        sc.jumpTo(newOffset);
-
-        // Re-run drag-move processing so the drop-target preview updates as
-        // the content shifts beneath the stationary pointer.
-        if (_verticalScrollReprocessDrag && _latestDragDetails != null) {
-          _processDragMove();
-        }
-      },
+    debugPrint(
+      '[DD] VertScrollTimer: STARTED delta=$deltaPerFrame reprocessDrag=$reprocessDrag isDragActive=$_isDragActive',
     );
+    _verticalScrollTimer = Timer.periodic(const Duration(milliseconds: 16), (
+      _,
+    ) {
+      final sc = _scrollController;
+      if (sc == null || !sc.hasClients) {
+        debugPrint(
+          '[DD] VertScrollTimer TICK: no scroll controller — cancelling',
+        );
+        _cancelVerticalScrollTimer();
+        return;
+      }
+      final newOffset = (sc.offset + _verticalScrollDelta).clamp(
+        0.0,
+        sc.position.maxScrollExtent,
+      );
+      if (newOffset == sc.offset) {
+        debugPrint('[DD] VertScrollTimer TICK: boundary reached — cancelling');
+        _cancelVerticalScrollTimer();
+        return;
+      }
+
+      if (!_isDragActive) {
+        debugPrint(
+          '[DD] VertScrollTimer TICK: drag no longer active — cancelling',
+        );
+        _cancelVerticalScrollTimer();
+        return;
+      }
+      sc.jumpTo(newOffset);
+
+      // Re-run drag-move processing so the drop-target preview updates as
+      // the content shifts beneath the stationary pointer.
+      if (_verticalScrollReprocessDrag && _latestDragDetails != null) {
+        _processDragMove();
+      }
+    });
   }
 
   /// Cancels the vertical auto-scroll timer and resets its state.
@@ -3522,9 +3687,12 @@ class MCalDayViewState extends State<MCalDayView> {
 
     if (_isProcessingDrop) return;
 
-    final timeGridWidth = _cachedTimeGridGlobalRight - _cachedTimeGridGlobalLeft;
+    final timeGridWidth =
+        _cachedTimeGridGlobalRight - _cachedTimeGridGlobalLeft;
     if (timeGridWidth <= 0) {
-      debugPrint('[DD] EdgeProx: invalid time grid width ($timeGridWidth) — skipping');
+      debugPrint(
+        '[DD] EdgeProx: invalid time grid width ($timeGridWidth) — skipping',
+      );
       return;
     }
 
@@ -3534,7 +3702,9 @@ class MCalDayViewState extends State<MCalDayView> {
     final tileCenterLocalX = tileCenterGlobalX - _cachedTimeGridGlobalLeft;
 
     if (tileCenterLocalX < edgeZoneWidth) {
-      debugPrint('[DD] EdgeProx: NEAR LEFT (tileCenterGlobalX=$tileCenterGlobalX tileCenterLocalX=$tileCenterLocalX edgeZoneWidth=$edgeZoneWidth)');
+      debugPrint(
+        '[DD] EdgeProx: NEAR LEFT (tileCenterGlobalX=$tileCenterGlobalX tileCenterLocalX=$tileCenterLocalX edgeZoneWidth=$edgeZoneWidth)',
+      );
       dragHandler.handleEdgeProximity(
         true,
         true,
@@ -3542,7 +3712,9 @@ class MCalDayViewState extends State<MCalDayView> {
         delay: widget.dragEdgeNavigationDelay,
       );
     } else if (tileCenterLocalX > (timeGridWidth - edgeZoneWidth)) {
-      debugPrint('[DD] EdgeProx: NEAR RIGHT (tileCenterGlobalX=$tileCenterGlobalX tileCenterLocalX=$tileCenterLocalX edgeZoneWidth=$edgeZoneWidth)');
+      debugPrint(
+        '[DD] EdgeProx: NEAR RIGHT (tileCenterGlobalX=$tileCenterGlobalX tileCenterLocalX=$tileCenterLocalX edgeZoneWidth=$edgeZoneWidth)',
+      );
       dragHandler.handleEdgeProximity(
         true,
         false,
@@ -3745,12 +3917,16 @@ class MCalDayViewState extends State<MCalDayView> {
   void _handleDrop(DragTargetDetails<MCalDragData> details) {
     final dragHandler = _dragHandler;
 
-    debugPrint('[DD] HandleDrop ENTRY: offset=${details.offset} isDragging=${dragHandler?.isDragging} isNearEdge=${dragHandler?.debugIsNearEdge} edgeTimerActive=${dragHandler?.debugEdgeTimerActive} vertScrollTimerActive=${_verticalScrollTimer?.isActive}');
+    debugPrint(
+      '[DD] HandleDrop ENTRY: offset=${details.offset} isDragging=${dragHandler?.isDragging} isNearEdge=${dragHandler?.debugIsNearEdge} edgeTimerActive=${dragHandler?.debugEdgeTimerActive} vertScrollTimerActive=${_verticalScrollTimer?.isActive}',
+    );
 
     // Cancel edge navigation and vertical scroll immediately.
     dragHandler?.cancelEdgeNavigation();
     _cancelVerticalScrollTimer();
-    debugPrint('[DD] HandleDrop: after cancel timers — edgeTimerActive=${dragHandler?.debugEdgeTimerActive}');
+    debugPrint(
+      '[DD] HandleDrop: after cancel timers — edgeTimerActive=${dragHandler?.debugEdgeTimerActive}',
+    );
 
     // Set drop-processing flag so _processDragMove skips edge detection.
     _isProcessingDrop = true;
@@ -3764,7 +3940,9 @@ class MCalDayViewState extends State<MCalDayView> {
     _latestDragDetails = details;
     _layoutCachedForDrag = false;
     _processDragMove();
-    debugPrint('[DD] HandleDrop: after _processDragMove — edgeTimerActive=${dragHandler?.debugEdgeTimerActive} isNearEdge=${dragHandler?.debugIsNearEdge} vertScrollTimerActive=${_verticalScrollTimer?.isActive}');
+    debugPrint(
+      '[DD] HandleDrop: after _processDragMove — edgeTimerActive=${dragHandler?.debugEdgeTimerActive} isNearEdge=${dragHandler?.debugIsNearEdge} vertScrollTimerActive=${_verticalScrollTimer?.isActive}',
+    );
 
     // Check if drop is valid
     if (dragHandler != null && !dragHandler.isProposedDropValid) {
@@ -3790,19 +3968,31 @@ class MCalDayViewState extends State<MCalDayView> {
     // Sanity check: proposed date should match the currently displayed day.
     // If a stale edge navigation changed _displayDate after the last valid
     // _processDragMove, the proposed dates could belong to the wrong day.
-    final proposedDay = DateTime(proposedStart.year, proposedStart.month, proposedStart.day);
+    final proposedDay = DateTime(
+      proposedStart.year,
+      proposedStart.month,
+      proposedStart.day,
+    );
     if (!event.isAllDay && proposedDay != _displayDate) {
-      debugPrint('[DD] HandleDrop: proposed day $proposedDay ≠ displayDate $_displayDate — correcting to displayDate');
+      debugPrint(
+        '[DD] HandleDrop: proposed day $proposedDay ≠ displayDate $_displayDate — correcting to displayDate',
+      );
       final correctedStart = DateTime(
-        _displayDate.year, _displayDate.month, _displayDate.day,
-        proposedStart.hour, proposedStart.minute,
+        _displayDate.year,
+        _displayDate.month,
+        _displayDate.day,
+        proposedStart.hour,
+        proposedStart.minute,
       );
       final duration = proposedEnd.difference(proposedStart);
       final correctedEnd = correctedStart.add(duration);
       dragHandler?.updateProposedDropRange(
         proposedStart: correctedStart,
         proposedEnd: correctedEnd,
-        isValid: _validateDrop(proposedStart: correctedStart, proposedEnd: correctedEnd),
+        isValid: _validateDrop(
+          proposedStart: correctedStart,
+          proposedEnd: correctedEnd,
+        ),
         preserveTime: true,
       );
     }
@@ -3812,8 +4002,7 @@ class MCalDayViewState extends State<MCalDayView> {
     final finalEnd = dragHandler?.proposedEndDate ?? proposedEnd;
 
     String? typeConversion;
-    if (event.isAllDay &&
-        (finalStart.hour != 0 || finalStart.minute != 0)) {
+    if (event.isAllDay && (finalStart.hour != 0 || finalStart.minute != 0)) {
       typeConversion = 'allDayToTimed';
     } else if (!event.isAllDay &&
         finalStart.hour == 0 &&
@@ -3847,7 +4036,9 @@ class MCalDayViewState extends State<MCalDayView> {
       typeConversion: typeConversion,
     );
 
-    debugPrint('[DD] HandleDrop: finalStart=$finalStart finalEnd=$finalEnd displayDate=$_displayDate typeConversion=$typeConversion');
+    debugPrint(
+      '[DD] HandleDrop: finalStart=$finalStart finalEnd=$finalEnd displayDate=$_displayDate typeConversion=$typeConversion',
+    );
 
     if (event.recurrenceRule != null) {
       if (widget.onEventDropped != null) {
@@ -3860,11 +4051,7 @@ class MCalDayViewState extends State<MCalDayView> {
           );
         }
       } else {
-        widget.controller.modifyOccurrence(
-          event.id,
-          event.start,
-          updatedEvent,
-        );
+        widget.controller.modifyOccurrence(event.id, event.start, updatedEvent);
       }
     } else {
       widget.controller.addEvents([updatedEvent]);
@@ -3881,10 +4068,14 @@ class MCalDayViewState extends State<MCalDayView> {
       }
     }
 
-    debugPrint('[DD] HandleDrop: calling cancelDrag() to complete — edgeTimerActive=${dragHandler?.debugEdgeTimerActive} vertScrollTimerActive=${_verticalScrollTimer?.isActive}');
+    debugPrint(
+      '[DD] HandleDrop: calling cancelDrag() to complete — edgeTimerActive=${dragHandler?.debugEdgeTimerActive} vertScrollTimerActive=${_verticalScrollTimer?.isActive}',
+    );
     dragHandler?.cancelDrag();
     _isProcessingDrop = false;
-    debugPrint('[DD] HandleDrop EXIT: after cancelDrag — edgeTimerActive=${dragHandler?.debugEdgeTimerActive} vertScrollTimerActive=${_verticalScrollTimer?.isActive}');
+    debugPrint(
+      '[DD] HandleDrop EXIT: after cancelDrag — edgeTimerActive=${dragHandler?.debugEdgeTimerActive} vertScrollTimerActive=${_verticalScrollTimer?.isActive}',
+    );
 
     if (mounted) {
       final locale = widget.locale ?? Localizations.localeOf(context);
@@ -3907,7 +4098,9 @@ class MCalDayViewState extends State<MCalDayView> {
     final dragHandler = _dragHandler;
     final dragData = _latestDragDetails?.data;
     if (dragHandler == null || dragData == null) {
-      debugPrint('[DD] CompletePendingDrop: no dragHandler or dragData — cancelling');
+      debugPrint(
+        '[DD] CompletePendingDrop: no dragHandler or dragData — cancelling',
+      );
       dragHandler?.cancelDrag();
       return;
     }
@@ -3923,14 +4116,23 @@ class MCalDayViewState extends State<MCalDayView> {
     final event = dragData.event;
 
     // Correct proposed day to match displayed day if needed.
-    final proposedDay = DateTime(proposedStart.year, proposedStart.month, proposedStart.day);
+    final proposedDay = DateTime(
+      proposedStart.year,
+      proposedStart.month,
+      proposedStart.day,
+    );
     DateTime finalStart = proposedStart;
     DateTime finalEnd = proposedEnd;
     if (!event.isAllDay && proposedDay != _displayDate) {
-      debugPrint('[DD] CompletePendingDrop: proposed day $proposedDay ≠ displayDate $_displayDate — correcting');
+      debugPrint(
+        '[DD] CompletePendingDrop: proposed day $proposedDay ≠ displayDate $_displayDate — correcting',
+      );
       finalStart = DateTime(
-        _displayDate.year, _displayDate.month, _displayDate.day,
-        proposedStart.hour, proposedStart.minute,
+        _displayDate.year,
+        _displayDate.month,
+        _displayDate.day,
+        proposedStart.hour,
+        proposedStart.minute,
       );
       final duration = proposedEnd.difference(proposedStart);
       finalEnd = finalStart.add(duration);
@@ -3939,7 +4141,9 @@ class MCalDayViewState extends State<MCalDayView> {
     String? typeConversion;
     if (event.isAllDay && (finalStart.hour != 0 || finalStart.minute != 0)) {
       typeConversion = 'allDayToTimed';
-    } else if (!event.isAllDay && finalStart.hour == 0 && finalStart.minute == 0) {
+    } else if (!event.isAllDay &&
+        finalStart.hour == 0 &&
+        finalStart.minute == 0) {
       typeConversion = 'timedToAllDay';
     }
 
@@ -3948,7 +4152,9 @@ class MCalDayViewState extends State<MCalDayView> {
       title: event.title,
       start: finalStart,
       end: finalEnd,
-      isAllDay: typeConversion == 'timedToAllDay' || (typeConversion == null && event.isAllDay),
+      isAllDay:
+          typeConversion == 'timedToAllDay' ||
+          (typeConversion == null && event.isAllDay),
       color: event.color,
       comment: event.comment,
       externalId: event.externalId,
@@ -3967,13 +4173,19 @@ class MCalDayViewState extends State<MCalDayView> {
       typeConversion: typeConversion,
     );
 
-    debugPrint('[DD] CompletePendingDrop: finalStart=$finalStart finalEnd=$finalEnd displayDate=$_displayDate typeConversion=$typeConversion');
+    debugPrint(
+      '[DD] CompletePendingDrop: finalStart=$finalStart finalEnd=$finalEnd displayDate=$_displayDate typeConversion=$typeConversion',
+    );
 
     if (event.recurrenceRule != null) {
       if (widget.onEventDropped != null) {
         final shouldKeep = widget.onEventDropped!(context, dropDetails);
         if (shouldKeep) {
-          widget.controller.modifyOccurrence(event.id, event.start, updatedEvent);
+          widget.controller.modifyOccurrence(
+            event.id,
+            event.start,
+            updatedEvent,
+          );
         }
       } else {
         widget.controller.modifyOccurrence(event.id, event.start, updatedEvent);
@@ -3983,7 +4195,9 @@ class MCalDayViewState extends State<MCalDayView> {
       if (widget.onEventDropped != null) {
         final shouldKeep = widget.onEventDropped!(context, dropDetails);
         if (!shouldKeep) {
-          widget.controller.addEvents([event.copyWith(start: event.start, end: event.end)]);
+          widget.controller.addEvents([
+            event.copyWith(start: event.start, end: event.end),
+          ]);
         }
       }
     }
@@ -3992,9 +4206,14 @@ class MCalDayViewState extends State<MCalDayView> {
 
     if (mounted) {
       final locale = widget.locale ?? Localizations.localeOf(context);
-      final dateStr = DateFormat.yMMMMEEEEd(locale.toString()).format(finalStart);
+      final dateStr = DateFormat.yMMMMEEEEd(
+        locale.toString(),
+      ).format(finalStart);
       final timeStr = DateFormat.Hm(locale.toString()).format(finalStart);
-      _announceScreenReader(context, 'Moved ${event.title} to $timeStr on $dateStr');
+      _announceScreenReader(
+        context,
+        'Moved ${event.title} to $timeStr on $dateStr',
+      );
     }
   }
 
@@ -4003,7 +4222,9 @@ class MCalDayViewState extends State<MCalDayView> {
   // ============================================================================
 
   void _handleNavigatePrevious() {
-    debugPrint('[DD] NavigatePrevious CALLED at=${DateTime.now().toIso8601String()} from=${StackTrace.current.toString().split('\n').skip(1).take(3).join(' | ')}');
+    debugPrint(
+      '[DD] NavigatePrevious CALLED at=${DateTime.now().toIso8601String()} from=${StackTrace.current.toString().split('\n').skip(1).take(3).join(' | ')}',
+    );
     _layoutCachedForDrag = false;
     final previousDay = DateTime(
       _displayDate.year,
@@ -4015,7 +4236,9 @@ class MCalDayViewState extends State<MCalDayView> {
   }
 
   void _handleNavigateNext() {
-    debugPrint('[DD] NavigateNext CALLED at=${DateTime.now().toIso8601String()} from=${StackTrace.current.toString().split('\n').skip(1).take(3).join(' | ')}');
+    debugPrint(
+      '[DD] NavigateNext CALLED at=${DateTime.now().toIso8601String()} from=${StackTrace.current.toString().split('\n').skip(1).take(3).join(' | ')}',
+    );
     _layoutCachedForDrag = false;
     final nextDay = DateTime(
       _displayDate.year,
@@ -4040,9 +4263,14 @@ class MCalDayViewState extends State<MCalDayView> {
 
       final timeGridBox =
           _timeGridKey.currentContext?.findRenderObject() as RenderBox?;
-      final isReady = timeGridBox != null && timeGridBox.attached && timeGridBox.size.width > 0;
+      final isReady =
+          timeGridBox != null &&
+          timeGridBox.attached &&
+          timeGridBox.size.width > 0;
 
-      debugPrint('[DD] PostNavLayoutRefresh(attempt=$attempt): isReady=$isReady timeGridSize=${timeGridBox?.size}');
+      debugPrint(
+        '[DD] PostNavLayoutRefresh(attempt=$attempt): isReady=$isReady timeGridSize=${timeGridBox?.size}',
+      );
 
       if (!isReady && attempt < _maxPostNavRetries) {
         _schedulePostNavLayoutRefresh(attempt + 1);
@@ -4050,7 +4278,9 @@ class MCalDayViewState extends State<MCalDayView> {
       }
 
       if (!isReady) {
-        debugPrint('[DD] PostNavLayoutRefresh: EXHAUSTED retries — layout still not ready');
+        debugPrint(
+          '[DD] PostNavLayoutRefresh: EXHAUSTED retries — layout still not ready',
+        );
         return;
       }
 
@@ -4071,7 +4301,9 @@ class MCalDayViewState extends State<MCalDayView> {
         final cursorX = _lastFallbackCursorGlobal!.dx;
         final feedbackX = cursorX - _cachedGrabOffsetX;
         final tileCenterX = feedbackX + _feedbackTileWidth / 2;
-        debugPrint('[DD] PostNavEdgeRecheck: tileCenterX=$tileCenterX cursorX=$cursorX feedbackX=$feedbackX at=${DateTime.now().toIso8601String()}');
+        debugPrint(
+          '[DD] PostNavEdgeRecheck: tileCenterX=$tileCenterX cursorX=$cursorX feedbackX=$feedbackX at=${DateTime.now().toIso8601String()}',
+        );
         _checkEdgeProximity(tileCenterX);
       }
     });
@@ -4163,7 +4395,12 @@ class MCalDayViewState extends State<MCalDayView> {
     );
 
     final tile = widget.dropTargetTileBuilder != null
-        ? widget.dropTargetTileBuilder!(context, event, tileContext, defaultTile)
+        ? widget.dropTargetTileBuilder!(
+            context,
+            event,
+            tileContext,
+            defaultTile,
+          )
         : defaultTile;
 
     return Stack(
@@ -4257,7 +4494,11 @@ class MCalDayViewState extends State<MCalDayView> {
         isValid: isValid,
         sourceDate: sourceDate,
       );
-      overlay = widget.dropTargetOverlayBuilder!(context, overlayDetails, defaultOverlay);
+      overlay = widget.dropTargetOverlayBuilder!(
+        context,
+        overlayDetails,
+        defaultOverlay,
+      );
     } else {
       overlay = defaultOverlay;
     }
@@ -4282,7 +4523,8 @@ class MCalDayViewState extends State<MCalDayView> {
     // PageView pre-renders adjacent pages; sharing one controller across
     // multiple SingleChildScrollView instances causes detach/reattach cycles
     // that reset the scroll offset to 0 on every setState rebuild.
-    final isCurrentPage = date.year == _displayDate.year &&
+    final isCurrentPage =
+        date.year == _displayDate.year &&
         date.month == _displayDate.month &&
         date.day == _displayDate.day;
     return SingleChildScrollView(
@@ -4291,7 +4533,7 @@ class MCalDayViewState extends State<MCalDayView> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!_isRTL(context))
+          if (!_isLayoutRTL(context))
             _TimeLegendColumn(
               startHour: widget.startHour,
               endHour: widget.endHour,
@@ -4309,10 +4551,8 @@ class MCalDayViewState extends State<MCalDayView> {
               subHourLabelInterval: widget.subHourLabelInterval,
               subHourLabelBuilder: widget.subHourLabelBuilder,
             ),
-          Expanded(
-            child: _buildTimeGrid(context, locale, date, timedEvents),
-          ),
-          if (_isRTL(context))
+          Expanded(child: _buildTimeGrid(context, locale, date, timedEvents)),
+          if (_isLayoutRTL(context))
             _TimeLegendColumn(
               startHour: widget.startHour,
               endHour: widget.endHour,
@@ -4505,23 +4745,17 @@ class MCalDayViewState extends State<MCalDayView> {
             child: Semantics(
               label: scheduleLabel,
               hint: doubleTapHint,
-              child: ColoredBox(
-                color: Colors.transparent,
-                child: stack,
-              ),
+              child: ColoredBox(color: Colors.transparent, child: stack),
             ),
           )
-        : Semantics(
-            label: scheduleLabel,
-            container: true,
-            child: stack,
-          );
+        : Semantics(label: scheduleLabel, container: true, child: stack);
 
     // Attach _timeGridKey to this SizedBox which always has the full
     // time grid dimensions (contentHeight x full width), even when the page
     // has no events.  The key is only on the active page to avoid GlobalKey
     // duplication across PageView pre-built pages.
-    final isCurrentPage = date.year == _displayDate.year &&
+    final isCurrentPage =
+        date.year == _displayDate.year &&
         date.month == _displayDate.month &&
         date.day == _displayDate.day;
     return SizedBox(
@@ -4548,8 +4782,8 @@ class MCalDayViewState extends State<MCalDayView> {
     final locale = widget.locale ?? Localizations.localeOf(context);
     final l10n = mcalL10n(context);
     final prefix = l10n.dropTargetPrefix;
-    final validStr = dragHandler.isProposedDropValid 
-        ? l10n.dropTargetValid 
+    final validStr = dragHandler.isProposedDropValid
+        ? l10n.dropTargetValid
         : l10n.dropTargetInvalid;
 
     final startTimeStr = DateFormat.Hm(locale.toString()).format(proposedStart);
@@ -4589,7 +4823,10 @@ class MCalDayViewState extends State<MCalDayView> {
         startTime: tappedTime,
         endTime: slotEndTime,
       );
-      final isInteractive = widget.timeSlotInteractivityCallback!(context, interactivityDetails);
+      final isInteractive = widget.timeSlotInteractivityCallback!(
+        context,
+        interactivityDetails,
+      );
       if (!isInteractive) return; // Early return if slot is not interactive
     }
 
@@ -4633,7 +4870,10 @@ class MCalDayViewState extends State<MCalDayView> {
         startTime: tappedTime,
         endTime: slotEndTime,
       );
-      final isInteractive = widget.timeSlotInteractivityCallback!(context, interactivityDetails);
+      final isInteractive = widget.timeSlotInteractivityCallback!(
+        context,
+        interactivityDetails,
+      );
       if (!isInteractive) return; // Early return if slot is not interactive
     }
 
@@ -4683,7 +4923,10 @@ class MCalDayViewState extends State<MCalDayView> {
         startTime: tappedTime,
         endTime: slotEndTime,
       );
-      final isInteractive = widget.timeSlotInteractivityCallback!(context, interactivityDetails);
+      final isInteractive = widget.timeSlotInteractivityCallback!(
+        context,
+        interactivityDetails,
+      );
       if (!isInteractive) return; // Early return if slot is not interactive
     }
 
@@ -4819,18 +5062,18 @@ class MCalDayViewState extends State<MCalDayView> {
       ),
       MCalDayViewKeyboardMoveIntent:
           CallbackAction<MCalDayViewKeyboardMoveIntent>(
-        onInvoke: (_) {
-          _enterKeyboardMoveMode();
-          return null;
-        },
-      ),
+            onInvoke: (_) {
+              _enterKeyboardMoveMode();
+              return null;
+            },
+          ),
       MCalDayViewKeyboardResizeIntent:
           CallbackAction<MCalDayViewKeyboardResizeIntent>(
-        onInvoke: (_) {
-          _enterKeyboardResizeMode();
-          return null;
-        },
-      ),
+            onInvoke: (_) {
+              _enterKeyboardResizeMode();
+              return null;
+            },
+          ),
     };
   }
 
@@ -4944,10 +5187,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
   /// Builds the main Column containing the navigator and day content.
   /// Extracted so both the DragTarget and non-drag paths can share it.
-  Widget _buildMainColumn(
-    Locale locale,
-    Widget dayViewContent,
-  ) {
+  Widget _buildMainColumn(Locale locale, Widget dayViewContent) {
     return Column(
       children: [
         if (widget.showNavigator)
@@ -4962,10 +5202,7 @@ class MCalDayViewState extends State<MCalDayView> {
             onNext: _handleNavigateNext,
             onToday: _handleNavigateToday,
           ),
-        Expanded(
-          key: _dayContentKey,
-          child: dayViewContent,
-        ),
+        Expanded(key: _dayContentKey, child: dayViewContent),
       ],
     );
   }
@@ -4984,7 +5221,8 @@ class MCalDayViewState extends State<MCalDayView> {
     final dayContentGlobal = dayContentBox.localToGlobal(Offset.zero);
     final dayContentSize = dayContentBox.size;
 
-    final timeGridWidth = _cachedTimeGridGlobalRight - _cachedTimeGridGlobalLeft;
+    final timeGridWidth =
+        _cachedTimeGridGlobalRight - _cachedTimeGridGlobalLeft;
     if (timeGridWidth <= 0) return const [];
 
     final edgeZoneWidth = timeGridWidth * _edgeZoneFraction;
@@ -5014,6 +5252,58 @@ class MCalDayViewState extends State<MCalDayView> {
     ];
   }
 
+  /// Debug overlays: translucent blue rectangles showing the top and bottom
+  /// vertical auto-scroll trigger zones (each [_vertEdgeThresholdPx] pixels
+  /// tall, spanning the full time grid width).
+  ///
+  /// Scroll UP fires when the tile's **top** edge enters the top blue band.
+  /// Scroll DOWN fires when the tile's **bottom** edge enters the bottom band.
+  /// Only rendered when [_isDragActive] is true.
+  List<Widget> _buildScrollEdgeZoneOverlays() {
+    if (!_layoutCachedForDrag) return const [];
+
+    final dayContentBox =
+        _dayContentKey.currentContext?.findRenderObject() as RenderBox?;
+    if (dayContentBox == null || !dayContentBox.attached) return const [];
+
+    final sc = _scrollController;
+    if (sc == null || !sc.hasClients) return const [];
+
+    final dayContentGlobal = dayContentBox.localToGlobal(Offset.zero);
+
+    final timeGridWidth =
+        _cachedTimeGridGlobalRight - _cachedTimeGridGlobalLeft;
+    if (timeGridWidth <= 0) return const [];
+
+    final viewportHeight = sc.position.viewportDimension;
+
+    // Convert viewport global bounds to day-content-local coords.
+    final timeGridLocalLeft = _cachedTimeGridGlobalLeft - dayContentGlobal.dx;
+    final viewportTopLocal = _cachedTimeGridGlobalTop - dayContentGlobal.dy;
+    final viewportBottomLocal = viewportTopLocal + viewportHeight;
+
+    const color = Color(0x440000CC);
+
+    return [
+      // Top threshold zone — tile's top edge entering here triggers scroll up.
+      Positioned(
+        left: timeGridLocalLeft,
+        top: viewportTopLocal,
+        width: timeGridWidth,
+        height: _vertEdgeThresholdPx,
+        child: IgnorePointer(child: ColoredBox(color: color)),
+      ),
+      // Bottom threshold zone — tile's bottom edge entering here triggers scroll down.
+      Positioned(
+        left: timeGridLocalLeft,
+        top: viewportBottomLocal - _vertEdgeThresholdPx,
+        width: timeGridWidth,
+        height: _vertEdgeThresholdPx,
+        child: IgnorePointer(child: ColoredBox(color: color)),
+      ),
+    ];
+  }
+
   /// DEBUG: Draws a thick red vertical line at the tile center's horizontal
   /// position — this is the coordinate used for edge detection.
   /// The line spans the full day-content height.
@@ -5036,9 +5326,7 @@ class MCalDayViewState extends State<MCalDayView> {
       top: 0.0,
       width: 3,
       height: lineHeight,
-      child: IgnorePointer(
-        child: ColoredBox(color: Color(0xFFFF0000)),
-      ),
+      child: IgnorePointer(child: ColoredBox(color: Color(0xFFFF0000))),
     );
   }
 
@@ -5049,17 +5337,21 @@ class MCalDayViewState extends State<MCalDayView> {
   @override
   Widget build(BuildContext context) {
     final locale = widget.locale ?? Localizations.localeOf(context);
-    // Resolve layout direction via the documented priority chain:
-    // widget.textDirection → ambient Directionality → locale-based → LTR.
+    // Resolve text and layout directions independently via the documented
+    // priority chains. textDirection drives text rendering (the outer
+    // Directionality wrapper). layoutDirection drives all visual layout logic
+    // (time-legend side, navigation direction, drag edge detection) via the
+    // MCalLayoutDirectionality InheritedWidget placed inside the wrapper.
     final textDirection = _resolveTextDirection(context);
+    final layoutDirection = _resolveLayoutDirection(context);
     final enableKeyEvents =
         widget.enableKeyboardNavigation || widget.enableDragToMove;
 
     final enableResize = _resolveDragToResize();
-    
+
     // Build the main day view content (with or without PageView)
     Widget dayViewContent;
-    
+
     if (widget.enableSwipeNavigation && _swipePageController != null) {
       // Day view always uses horizontal swipe: vertical is already used
       // to scroll through hours of the day.
@@ -5069,7 +5361,9 @@ class MCalDayViewState extends State<MCalDayView> {
       // events without this lock. For drag-to-move, LongPressDraggable already
       // claims the pointer exclusively so no lock is needed there.
       final isResizing = _dragHandler?.isResizing == true;
-      debugPrint('[DD] PageView build: isResizing=$isResizing isDragActive=$_isDragActive');
+      debugPrint(
+        '[DD] PageView build: isResizing=$isResizing isDragActive=$_isDragActive',
+      );
       dayViewContent = PageView.builder(
         controller: _swipePageController!,
         scrollDirection: Axis.horizontal,
@@ -5112,7 +5406,7 @@ class MCalDayViewState extends State<MCalDayView> {
         dayViewContent = _buildDayContent(_displayDate, locale);
       }
     }
-    
+
     final focusContent = Focus(
       focusNode: _focusNode,
       onKeyEvent: enableKeyEvents ? _handleKeyEvent : null,
@@ -5157,18 +5451,19 @@ class MCalDayViewState extends State<MCalDayView> {
                 onLeave: (_) => _handleDragLeave(),
                 onAcceptWithDetails: _handleDrop,
                 builder: (context, candidateData, rejectedData) {
-                  final content = _buildMainColumn(
-                    locale, dayViewContent,
-                  );
+                  final content = _buildMainColumn(locale, dayViewContent);
                   final dropLabel = _buildDropTargetSemanticLabel(context);
                   final mainContent = dropLabel != null
                       ? Semantics(label: dropLabel, child: content)
                       : content;
-                  final centerLine = _isDragActive ? _buildTileCenterLine() : null;
+                  final centerLine = _isDragActive
+                      ? _buildTileCenterLine()
+                      : null;
                   return Stack(
                     children: [
                       mainContent,
                       if (_isDragActive) ..._buildEdgeZoneOverlays(),
+                      if (_isDragActive) ..._buildScrollEdgeZoneOverlays(),
                       if (centerLine != null) centerLine,
                     ],
                   );
@@ -5183,17 +5478,33 @@ class MCalDayViewState extends State<MCalDayView> {
       child: Actions(actions: _buildActionsMap(), child: focusContent),
     );
 
+    // Wrap in two layers:
+    // • Outer Directionality(textDirection): drives text rendering direction
+    //   for all Text widgets — event titles, time labels, day header, etc.
+    // • Inner MCalLayoutDirectionality(isLayoutRTL): carries layout direction used
+    //   by all explicit isLayoutRTL checks (time-legend side, nav arrow actions,
+    //   drag/drop geometry). Row/Column widgets that rely on ambient
+    //   Directionality for ordering (e.g., the navigator Row) use
+    //   textDirection, which is expected for the common case where both are
+    //   the same. When they differ the caller has chosen an unconventional
+    //   combination and should expect some ordering to follow textDirection.
     return Directionality(
       textDirection: textDirection,
-      child: Semantics(
-        label:
-            widget.semanticsLabel ??
-            'Day view for ${DateFormat.yMMMMEEEEd(locale.toString()).format(_displayDate)}',
-        child: shortcutsContent,
+      child: MCalLayoutDirectionality(
+        isLayoutRTL: layoutDirection == TextDirection.rtl,
+        child: Semantics(
+          label:
+              widget.semanticsLabel ??
+              'Day view for ${DateFormat.yMMMMEEEEd(locale.toString()).format(_displayDate)}',
+          child: shortcutsContent,
+        ),
       ),
     );
   }
 }
+
+// MCalLayoutDirectionality is defined in mcal_layout_directionality.dart and shared
+// with mcal_month_view.dart and mcal_month_default_week_layout.dart.
 
 // ============================================================================
 // Day Navigator Component
@@ -5251,10 +5562,10 @@ class _DayNavigator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = mcalL10n(context);
-    // Use ambient Directionality (set by the outer calendar wrapper) for RTL.
-    // Icons stay semantically consistent (← = previous, → = next); the Row
-    // in RTL context automatically places previous on the right and next on
-    // the left without any manual button-order swapping.
+    // Use ambient Directionality (set to layoutDirection by the outer wrapper)
+    // for RTL. Icons stay semantically consistent (← = previous, → = next);
+    // the Row in RTL context automatically places previous on the right and
+    // next on the left without any manual button-order swapping.
 
     // Calculate if navigation is allowed
     final canGoPrevious = _canGoPrevious();
@@ -5265,7 +5576,7 @@ class _DayNavigator extends StatelessWidget {
     final formattedDate = dateFormat.format(displayDate);
 
     // Build default navigator — always use LTR button order and let the
-    // ambient Directionality handle visual reversal for RTL layouts.
+    // ambient Directionality (layoutDirection) handle visual reversal for RTL.
     Widget navigator = Container(
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
       decoration: BoxDecoration(color: theme.navigatorBackgroundColor),
@@ -5351,7 +5662,6 @@ class _DayNavigator extends StatelessWidget {
       ),
     ];
   }
-
 }
 
 // ============================================================================
@@ -5380,6 +5690,7 @@ class _DayHeader extends StatelessWidget {
 
   final DateTime displayDate;
   final bool showWeekNumbers;
+
   /// The first day of the week (0 = Sunday, 1 = Monday, … 6 = Saturday),
   /// matching [MCalEventController.resolvedFirstDayOfWeek]. Used to compute
   /// the week number consistently with the Month View.
@@ -5387,8 +5698,10 @@ class _DayHeader extends StatelessWidget {
   final MCalThemeData theme;
   final Locale locale;
   final TextDirection textDirection;
-  final Widget Function(BuildContext, MCalDayHeaderContext, Widget)? dayHeaderBuilder;
-  final Widget Function(BuildContext, MCalWeekNumberContext, Widget)? weekNumberBuilder;
+  final Widget Function(BuildContext, MCalDayHeaderContext, Widget)?
+  dayHeaderBuilder;
+  final Widget Function(BuildContext, MCalWeekNumberContext, Widget)?
+  weekNumberBuilder;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final VoidCallback? onDoubleTap;
@@ -5598,7 +5911,8 @@ class _TimeLegendColumn extends StatelessWidget {
   final int endHour;
   final double hourHeight;
   final DateFormat? timeLabelFormat;
-  final Widget Function(BuildContext, MCalTimeLabelContext, Widget)? timeLabelBuilder;
+  final Widget Function(BuildContext, MCalTimeLabelContext, Widget)?
+  timeLabelBuilder;
   final MCalThemeData theme;
   final Locale locale;
   final void Function(BuildContext, MCalTimeLabelContext)? onTimeLabelTap;
@@ -5608,7 +5922,8 @@ class _TimeLegendColumn extends StatelessWidget {
   final DateTime displayDate;
   final bool showSubHourLabels;
   final Duration? subHourLabelInterval;
-  final Widget Function(BuildContext, MCalTimeLabelContext, Widget)? subHourLabelBuilder;
+  final Widget Function(BuildContext, MCalTimeLabelContext, Widget)?
+  subHourLabelBuilder;
 
   /// Estimated height for a single-line time label (12px font + line height).
   static const double _labelHeight = 20.0;
@@ -5619,15 +5934,16 @@ class _TimeLegendColumn extends StatelessWidget {
     final columnHeight = hourHeight * totalHours;
     final legendWidth = theme.dayTheme?.timeLegendWidth ?? 60.0;
 
-    // Check RTL for tick positioning — reads from the outer Directionality wrapper.
-    final isRTL = Directionality.of(context) == TextDirection.rtl;
+    // Check RTL for tick positioning — reads from the MCalLayoutDirectionality wrapper.
+    final isLayoutRTL = MCalLayoutDirectionality.of(context);
 
     // Check if ticks should be shown
     final showTicks = theme.dayTheme?.showTimeLegendTicks ?? true;
 
     // Resolved label position (default: topTrailingBelow)
     final labelPosition =
-        theme.dayTheme?.timeLabelPosition ?? MCalTimeLabelPosition.topTrailingBelow;
+        theme.dayTheme?.timeLabelPosition ??
+        MCalTimeLabelPosition.topTrailingBelow;
 
     return Container(
       width: legendWidth,
@@ -5644,11 +5960,14 @@ class _TimeLegendColumn extends StatelessWidget {
                 startHour: startHour,
                 endHour: endHour,
                 hourHeight: hourHeight,
-                tickColor: theme.dayTheme?.timeLegendTickColor ??
-                    Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                tickColor:
+                    theme.dayTheme?.timeLegendTickColor ??
+                    Theme.of(
+                      context,
+                    ).colorScheme.outline.withValues(alpha: 0.3),
                 tickWidth: theme.dayTheme?.timeLegendTickWidth ?? 1.0,
                 tickLength: theme.dayTheme?.timeLegendTickLength ?? 8.0,
-                isRTL: isRTL,
+                isLayoutRTL: isLayoutRTL,
                 displayDate: displayDate,
               ),
             ),
@@ -5664,9 +5983,11 @@ class _TimeLegendColumn extends StatelessWidget {
           // Sub-hour labels layer
           if (showSubHourLabels && subHourLabelInterval != null)
             for (int hour = startHour; hour <= endHour; hour++)
-              for (int minute = subHourLabelInterval!.inMinutes;
-                  minute < 60;
-                  minute += subHourLabelInterval!.inMinutes)
+              for (
+                int minute = subHourLabelInterval!.inMinutes;
+                minute < 60;
+                minute += subHourLabelInterval!.inMinutes
+              )
                 _buildPositionedLabel(
                   context,
                   hour: hour,
@@ -5688,7 +6009,8 @@ class _TimeLegendColumn extends StatelessWidget {
     required MCalTimeLabelPosition labelPosition,
   }) {
     // Reference gridline Y
-    final isBottomRef = labelPosition == MCalTimeLabelPosition.bottomLeadingAbove ||
+    final isBottomRef =
+        labelPosition == MCalTimeLabelPosition.bottomLeadingAbove ||
         labelPosition == MCalTimeLabelPosition.bottomTrailingAbove;
 
     final refMinute = isBottomRef ? 60 : 0;
@@ -5772,7 +6094,8 @@ class _TimeLegendColumn extends StatelessWidget {
     final semanticLabel = DateFormat('h a', locale.toString()).format(time);
 
     final baseStyle =
-        theme.dayTheme?.timeLegendTextStyle ?? TextStyle(fontSize: 12, color: Colors.grey[600]);
+        theme.dayTheme?.timeLegendTextStyle ??
+        TextStyle(fontSize: 12, color: Colors.grey[600]);
 
     // Build default label
     final defaultWidget = Text(formattedTime, style: baseStyle);
@@ -5782,7 +6105,9 @@ class _TimeLegendColumn extends StatelessWidget {
         : defaultWidget;
 
     // Wrap with gesture detector if any callback provided
-    if (onTimeLabelTap != null || onTimeLabelLongPress != null || onTimeLabelDoubleTap != null) {
+    if (onTimeLabelTap != null ||
+        onTimeLabelLongPress != null ||
+        onTimeLabelDoubleTap != null) {
       label = GestureDetector(
         onTap: onTimeLabelTap != null
             ? () => onTimeLabelTap!(context, labelContext)
@@ -5809,12 +6134,19 @@ class _TimeLegendColumn extends StatelessWidget {
     // Wrap with semantic label
     return Semantics(
       label: semanticLabel,
-      button: onTimeLabelTap != null || onTimeLabelLongPress != null || onTimeLabelDoubleTap != null,
+      button:
+          onTimeLabelTap != null ||
+          onTimeLabelLongPress != null ||
+          onTimeLabelDoubleTap != null,
       child: label,
     );
   }
 
-  Widget _buildSubHourLabel(BuildContext context, {required int hour, required int minute}) {
+  Widget _buildSubHourLabel(
+    BuildContext context, {
+    required int hour,
+    required int minute,
+  }) {
     final time = DateTime(
       displayDate.year,
       displayDate.month,
@@ -5833,7 +6165,11 @@ class _TimeLegendColumn extends StatelessWidget {
     }
 
     final formattedTime = format.format(time);
-    final labelContext = MCalTimeLabelContext(hour: hour, minute: minute, time: time);
+    final labelContext = MCalTimeLabelContext(
+      hour: hour,
+      minute: minute,
+      time: time,
+    );
 
     final baseStyle = theme.dayTheme?.timeLegendTextStyle;
     final baseFontSize = baseStyle?.fontSize ?? 12.0;
@@ -5871,7 +6207,7 @@ class _TimeLegendTickPainter extends CustomPainter {
     required this.tickColor,
     required this.tickWidth,
     required this.tickLength,
-    required this.isRTL,
+    required this.isLayoutRTL,
     required this.displayDate,
   });
 
@@ -5881,7 +6217,7 @@ class _TimeLegendTickPainter extends CustomPainter {
   final Color tickColor;
   final double tickWidth;
   final double tickLength;
-  final bool isRTL;
+  final bool isLayoutRTL;
   final DateTime displayDate;
 
   @override
@@ -5908,13 +6244,9 @@ class _TimeLegendTickPainter extends CustomPainter {
       );
 
       // Draw tick extending from the appropriate edge
-      if (isRTL) {
+      if (isLayoutRTL) {
         // RTL: tick extends from left edge
-        canvas.drawLine(
-          Offset(0, yOffset),
-          Offset(tickLength, yOffset),
-          paint,
-        );
+        canvas.drawLine(Offset(0, yOffset), Offset(tickLength, yOffset), paint);
       } else {
         // LTR: tick extends from right edge
         canvas.drawLine(
@@ -5934,7 +6266,7 @@ class _TimeLegendTickPainter extends CustomPainter {
         tickColor != oldDelegate.tickColor ||
         tickWidth != oldDelegate.tickWidth ||
         tickLength != oldDelegate.tickLength ||
-        isRTL != oldDelegate.isRTL;
+        isLayoutRTL != oldDelegate.isLayoutRTL;
   }
 }
 
@@ -6013,8 +6345,8 @@ class _CurrentTimeIndicatorState extends State<_CurrentTimeIndicator> {
       hourHeight: widget.hourHeight,
     );
 
-    // Check RTL — reads from the outer Directionality wrapper.
-    final isRTL = Directionality.of(context) == TextDirection.rtl;
+    // Check layout RTL — reads from the MCalLayoutDirectionality wrapper.
+    final isLayoutRTL = MCalLayoutDirectionality.of(context);
 
     // Create context for custom builder
     final indicatorContext = MCalCurrentTimeContext(
@@ -6029,14 +6361,17 @@ class _CurrentTimeIndicatorState extends State<_CurrentTimeIndicator> {
     final semanticLabel = l10n.currentTime(formattedTime);
 
     // Default indicator: horizontal line with leading dot
-    final indicatorColor = widget.theme.dayTheme?.currentTimeIndicatorColor ?? Colors.red;
-    final indicatorWidth = widget.theme.dayTheme?.currentTimeIndicatorWidth ?? 2.0;
-    final dotRadius = widget.theme.dayTheme?.currentTimeIndicatorDotRadius ?? 6.0;
+    final indicatorColor =
+        widget.theme.dayTheme?.currentTimeIndicatorColor ?? Colors.red;
+    final indicatorWidth =
+        widget.theme.dayTheme?.currentTimeIndicatorWidth ?? 2.0;
+    final dotRadius =
+        widget.theme.dayTheme?.currentTimeIndicatorDotRadius ?? 6.0;
 
     final defaultWidget = Row(
       children: [
         // Leading dot (left for LTR, right for RTL)
-        if (!isRTL) _buildDot(dotRadius, indicatorColor),
+        if (!isLayoutRTL) _buildDot(dotRadius, indicatorColor),
 
         // Horizontal line
         Expanded(
@@ -6044,7 +6379,7 @@ class _CurrentTimeIndicatorState extends State<_CurrentTimeIndicator> {
         ),
 
         // Trailing dot (right for RTL)
-        if (isRTL) _buildDot(dotRadius, indicatorColor),
+        if (isLayoutRTL) _buildDot(dotRadius, indicatorColor),
       ],
     );
 
@@ -6098,7 +6433,8 @@ class _TimeRegionsLayer extends StatelessWidget {
   final int endHour;
   final double hourHeight;
   final MCalThemeData theme;
-  final Widget Function(BuildContext, MCalTimeRegionContext, Widget)? timeRegionBuilder;
+  final Widget Function(BuildContext, MCalTimeRegionContext, Widget)?
+  timeRegionBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -6261,7 +6597,8 @@ class _TimeRegionsLayer extends StatelessWidget {
                     Icon(
                       region.icon,
                       size: 16,
-                      color: theme.dayTheme?.timeRegionTextColor ?? Colors.black54,
+                      color:
+                          theme.dayTheme?.timeRegionTextColor ?? Colors.black54,
                     ),
                     if (region.text != null) const SizedBox(width: 4),
                   ],
@@ -6273,7 +6610,8 @@ class _TimeRegionsLayer extends StatelessWidget {
                           TextStyle(
                             fontSize: 12,
                             color:
-                                theme.dayTheme?.timeRegionTextColor ?? Colors.black54,
+                                theme.dayTheme?.timeRegionTextColor ??
+                                Colors.black54,
                           ),
                     ),
                 ],
@@ -6339,7 +6677,8 @@ class _GridlinesLayer extends StatelessWidget {
   final DateTime displayDate;
   final MCalThemeData theme;
   final Locale locale;
-  final Widget Function(BuildContext, MCalGridlineContext, Widget)? gridlineBuilder;
+  final Widget Function(BuildContext, MCalGridlineContext, Widget)?
+  gridlineBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -6363,13 +6702,16 @@ class _GridlinesLayer extends StatelessWidget {
           gridlineInterval: gridlineInterval,
           displayDate: displayDate,
           hourGridlineColor:
-              theme.dayTheme?.hourGridlineColor ?? Colors.grey.withValues(alpha: 0.2),
+              theme.dayTheme?.hourGridlineColor ??
+              Colors.grey.withValues(alpha: 0.2),
           hourGridlineWidth: theme.dayTheme?.hourGridlineWidth ?? 1.0,
           majorGridlineColor:
-              theme.dayTheme?.majorGridlineColor ?? Colors.grey.withValues(alpha: 0.15),
+              theme.dayTheme?.majorGridlineColor ??
+              Colors.grey.withValues(alpha: 0.15),
           majorGridlineWidth: theme.dayTheme?.majorGridlineWidth ?? 1.0,
           minorGridlineColor:
-              theme.dayTheme?.minorGridlineColor ?? Colors.grey.withValues(alpha: 0.08),
+              theme.dayTheme?.minorGridlineColor ??
+              Colors.grey.withValues(alpha: 0.08),
           minorGridlineWidth: theme.dayTheme?.minorGridlineWidth ?? 0.5,
         ),
         child:
@@ -6384,13 +6726,19 @@ class _GridlinesLayer extends StatelessWidget {
     double width;
     switch (gridline.type) {
       case MCalGridlineType.hour:
-        color = theme.dayTheme?.hourGridlineColor ?? Colors.grey.withValues(alpha: 0.2);
+        color =
+            theme.dayTheme?.hourGridlineColor ??
+            Colors.grey.withValues(alpha: 0.2);
         width = theme.dayTheme?.hourGridlineWidth ?? 1.0;
       case MCalGridlineType.major:
-        color = theme.dayTheme?.majorGridlineColor ?? Colors.grey.withValues(alpha: 0.15);
+        color =
+            theme.dayTheme?.majorGridlineColor ??
+            Colors.grey.withValues(alpha: 0.15);
         width = theme.dayTheme?.majorGridlineWidth ?? 1.0;
       case MCalGridlineType.minor:
-        color = theme.dayTheme?.minorGridlineColor ?? Colors.grey.withValues(alpha: 0.08);
+        color =
+            theme.dayTheme?.minorGridlineColor ??
+            Colors.grey.withValues(alpha: 0.08);
         width = theme.dayTheme?.minorGridlineWidth ?? 0.5;
     }
     return Container(height: width, color: color);
@@ -6533,9 +6881,12 @@ class _AllDayEventsSection extends StatelessWidget {
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final void Function(BuildContext, MCalEventTapDetails)? onEventDoubleTap;
   final String? keyboardFocusedEventId;
-  final void Function(BuildContext, List<MCalCalendarEvent>, DateTime)? onOverflowTap;
-  final void Function(BuildContext, List<MCalCalendarEvent>, DateTime)? onOverflowLongPress;
-  final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowDoubleTap;
+  final void Function(BuildContext, List<MCalCalendarEvent>, DateTime)?
+  onOverflowTap;
+  final void Function(BuildContext, List<MCalCalendarEvent>, DateTime)?
+  onOverflowLongPress;
+  final void Function(BuildContext, MCalOverflowTapDetails)?
+  onOverflowDoubleTap;
   final void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotTap;
   final void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotLongPress;
   final void Function(MCalCalendarEvent, DateTime)? onDragStarted;
@@ -6548,7 +6899,12 @@ class _AllDayEventsSection extends StatelessWidget {
     Widget,
   )?
   draggedTileBuilder;
-  final Widget Function(BuildContext, MCalCalendarEvent, MCalDragSourceDetails, Widget)?
+  final Widget Function(
+    BuildContext,
+    MCalCalendarEvent,
+    MCalDragSourceDetails,
+    Widget,
+  )?
   dragSourceTileBuilder;
   final Duration dragLongPressDelay;
 
@@ -6681,7 +7037,9 @@ class _AllDayEventsSection extends StatelessWidget {
         onDragCanceled: onDragCancelled,
         child: tile,
       );
-    } else if (onEventTap != null || onEventLongPress != null || onEventDoubleTap != null) {
+    } else if (onEventTap != null ||
+        onEventLongPress != null ||
+        onEventDoubleTap != null) {
       // Wrap with gesture detector for tap/long-press/double-tap when drag is disabled
       tile = GestureDetector(
         onTap: onEventTap != null
@@ -6781,7 +7139,9 @@ class _AllDayEventsSection extends StatelessWidget {
             : null,
         onDoubleTap: onOverflowDoubleTap != null
             ? () {
-                final visibleEvents = events.take(events.length - count).toList();
+                final visibleEvents = events
+                    .take(events.length - count)
+                    .toList();
                 onOverflowDoubleTap!(
                   context,
                   MCalOverflowTapDetails(
@@ -6847,20 +7207,21 @@ class _DisabledTimeSlotsLayer extends StatelessWidget {
   final double hourHeight;
   final Duration timeSlotDuration;
   final DateTime displayDate;
-  final bool Function(BuildContext, MCalTimeSlotInteractivityDetails) interactivityCallback;
+  final bool Function(BuildContext, MCalTimeSlotInteractivityDetails)
+  interactivityCallback;
 
   @override
   Widget build(BuildContext context) {
     // Build list of disabled time slots
     final disabledSlots = <Widget>[];
     final slotMinutes = timeSlotDuration.inMinutes;
-    
+
     // Iterate through all time slots
     for (int hour = startHour; hour <= endHour; hour++) {
       for (int minute = 0; minute < 60; minute += slotMinutes) {
         // Skip slots that go beyond endHour
         if (hour == endHour && minute > 0) break;
-        
+
         final slotStartTime = DateTime(
           displayDate.year,
           displayDate.month,
@@ -6869,7 +7230,7 @@ class _DisabledTimeSlotsLayer extends StatelessWidget {
           minute,
         );
         final slotEndTime = slotStartTime.add(timeSlotDuration);
-        
+
         // Check if this slot is interactive
         final details = MCalTimeSlotInteractivityDetails(
           date: DateTime(displayDate.year, displayDate.month, displayDate.day),
@@ -6878,14 +7239,14 @@ class _DisabledTimeSlotsLayer extends StatelessWidget {
           startTime: slotStartTime,
           endTime: slotEndTime,
         );
-        
+
         final isInteractive = interactivityCallback(context, details);
-        
+
         // If not interactive, add an overlay
         if (!isInteractive) {
           final topOffset = _timeToOffset(slotStartTime);
           final slotHeight = (slotMinutes / 60.0) * hourHeight;
-          
+
           disabledSlots.add(
             Positioned(
               top: topOffset,
@@ -6893,20 +7254,18 @@ class _DisabledTimeSlotsLayer extends StatelessWidget {
               right: 0,
               height: slotHeight,
               child: IgnorePointer(
-                child: Container(
-                  color: Colors.grey.withValues(alpha: 0.3),
-                ),
+                child: Container(color: Colors.grey.withValues(alpha: 0.3)),
               ),
             ),
           );
         }
       }
     }
-    
+
     if (disabledSlots.isEmpty) {
       return const SizedBox.shrink();
     }
-    
+
     return Stack(children: disabledSlots);
   }
 
@@ -7090,7 +7449,8 @@ class _TimeGridEventsLayer extends StatelessWidget {
     Widget,
   )?
   timedEventTileBuilder;
-  final Widget Function(BuildContext, MCalDayLayoutContext, Widget)? dayLayoutBuilder;
+  final Widget Function(BuildContext, MCalDayLayoutContext, Widget)?
+  dayLayoutBuilder;
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final void Function(BuildContext, MCalEventTapDetails)? onEventDoubleTap;
@@ -7104,13 +7464,23 @@ class _TimeGridEventsLayer extends StatelessWidget {
     Widget,
   )?
   draggedTileBuilder;
-  final Widget Function(BuildContext, MCalCalendarEvent, MCalDragSourceDetails, Widget)?
+  final Widget Function(
+    BuildContext,
+    MCalCalendarEvent,
+    MCalDragSourceDetails,
+    Widget,
+  )?
   dragSourceTileBuilder;
   final Duration dragLongPressDelay;
   final void Function(MCalCalendarEvent, DateTime)? onDragStarted;
   final void Function(bool)? onDragEnded;
   final void Function()? onDragCancelled;
-  final Widget Function(BuildContext, MCalCalendarEvent, MCalResizeEdge, Widget)?
+  final Widget Function(
+    BuildContext,
+    MCalCalendarEvent,
+    MCalResizeEdge,
+    Widget,
+  )?
   timeResizeHandleBuilder;
   final double Function(MCalTimedEventTileContext, MCalResizeEdge)?
   resizeHandleInset;
@@ -7259,7 +7629,9 @@ class _TimeGridEventsLayer extends StatelessWidget {
         onDragCanceled: onDragCancelled,
         child: tile,
       );
-    } else if (onEventTap != null || onEventLongPress != null || onEventDoubleTap != null) {
+    } else if (onEventTap != null ||
+        onEventLongPress != null ||
+        onEventDoubleTap != null) {
       tile = GestureDetector(
         onTap: onEventTap != null
             ? () => onEventTap!(
@@ -7293,7 +7665,14 @@ class _TimeGridEventsLayer extends StatelessWidget {
         onResizeEnd != null &&
         onResizeCancel != null &&
         _shouldShowResizeHandles(event)) {
-      tile = _wrapWithResizeHandles(context, tile, event, tileContext, width, height);
+      tile = _wrapWithResizeHandles(
+        context,
+        tile,
+        event,
+        tileContext,
+        width,
+        height,
+      );
     }
 
     return Positioned(
@@ -7322,8 +7701,10 @@ class _TimeGridEventsLayer extends StatelessWidget {
     double height,
   ) {
     final handleSize = theme.dayTheme?.resizeHandleSize ?? 8.0;
-    final startInset = resizeHandleInset?.call(tileContext, MCalResizeEdge.start) ?? 0.0;
-    final endInset = resizeHandleInset?.call(tileContext, MCalResizeEdge.end) ?? 0.0;
+    final startInset =
+        resizeHandleInset?.call(tileContext, MCalResizeEdge.start) ?? 0.0;
+    final endInset =
+        resizeHandleInset?.call(tileContext, MCalResizeEdge.end) ?? 0.0;
     final children = <Widget>[Positioned.fill(child: tile)];
 
     children.add(
@@ -7378,10 +7759,8 @@ class _TimeGridEventsLayer extends StatelessWidget {
 
     final contrastColor = _getContrastColor(tileColor);
     final timeColor = contrastColor.withValues(alpha: 0.9);
-    final showTimeRange = tileContext.endTime
-            .difference(tileContext.startTime)
-            .inMinutes >=
-        30;
+    final showTimeRange =
+        tileContext.endTime.difference(tileContext.startTime).inMinutes >= 30;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 1.0),
@@ -7389,7 +7768,9 @@ class _TimeGridEventsLayer extends StatelessWidget {
       decoration: BoxDecoration(
         color: tileColor.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(
-          theme.dayTheme?.timedEventBorderRadius ?? theme.eventTileCornerRadius ?? 4.0,
+          theme.dayTheme?.timedEventBorderRadius ??
+              theme.eventTileCornerRadius ??
+              4.0,
         ),
         border: Border.all(color: tileColor, width: 1.0),
       ),
@@ -7432,8 +7813,14 @@ class _TimeGridEventsLayer extends StatelessWidget {
     // AM/PM designators (ص/م) and Arabic-Indic numerals, which have the correct
     // Unicode BiDi categories for RTL paragraph rendering.
     final locale = Localizations.maybeLocaleOf(context) ?? const Locale('en');
-    final startTimeStr = DateFormat('h:mm a', locale.toString()).format(event.start);
-    final endTimeStr = DateFormat('h:mm a', locale.toString()).format(event.end);
+    final startTimeStr = DateFormat(
+      'h:mm a',
+      locale.toString(),
+    ).format(event.start);
+    final endTimeStr = DateFormat(
+      'h:mm a',
+      locale.toString(),
+    ).format(event.end);
     final timeRange = '$startTimeStr - $endTimeStr';
 
     // Calculate duration for semantic label
@@ -7450,17 +7837,17 @@ class _TimeGridEventsLayer extends StatelessWidget {
         '${event.title}, $startTimeStr to $endTimeStr, $durationStr';
 
     // Build default tile
-    final defaultWidget = _buildDefaultTimedEventTile(event, tileContext, timeRange);
+    final defaultWidget = _buildDefaultTimedEventTile(
+      event,
+      tileContext,
+      timeRange,
+    );
 
     final tileWidget = timedEventTileBuilder != null
         ? timedEventTileBuilder!(context, event, tileContext, defaultWidget)
         : defaultWidget;
 
-    return Semantics(
-      label: semanticLabel,
-      button: true,
-      child: tileWidget,
-    );
+    return Semantics(label: semanticLabel, button: true, child: tileWidget);
   }
 
   /// Builds compact tile content for small events (height < 40px).
@@ -7474,7 +7861,8 @@ class _TimeGridEventsLayer extends StatelessWidget {
     required Color timeColor,
     required MCalThemeData theme,
   }) {
-    final titleStyle = theme.eventTileTextStyle?.copyWith(
+    final titleStyle =
+        theme.eventTileTextStyle?.copyWith(
           fontSize: 10,
           fontWeight: FontWeight.w600,
           color: contrastColor,
@@ -7580,7 +7968,12 @@ class _TimeResizeHandle extends StatelessWidget {
   final double tileWidth;
   final double tileHeight;
   final double inset;
-  final Widget Function(BuildContext, MCalCalendarEvent, MCalResizeEdge, Widget)?
+  final Widget Function(
+    BuildContext,
+    MCalCalendarEvent,
+    MCalResizeEdge,
+    Widget,
+  )?
   visualBuilder;
   final void Function(MCalCalendarEvent, MCalResizeEdge, int)? onPointerDown;
 

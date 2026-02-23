@@ -81,11 +81,22 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
   bool _autoFocusOnCellTap = true;
 
   // ============================================================
+  // RTL Override Settings
+  // ============================================================
+  TextDirection? _textDirectionOverride;
+  TextDirection? _layoutDirectionOverride;
+
+  // ============================================================
   // Blackout Days Settings
   // ============================================================
   bool _enableBlackoutDays = false;
   Set<int> _blackoutDaysOfWeek = {};
   late Set<DateTime> _blackoutDates;
+
+  // ============================================================
+  // Status Label
+  // ============================================================
+  String _statusLabel = '—';
 
   @override
   void initState() {
@@ -154,6 +165,37 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
     });
   }
 
+  void _setStatus(String message) {
+    setState(() => _statusLabel = message);
+  }
+
+  Widget _buildStatusLabel(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 14,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _statusLabel,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -162,7 +204,10 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
     return ResponsiveControlPanel(
       controlPanelTitle: l10n.featureSettings,
       controlPanel: _buildControlPanel(l10n),
-      child: MCalMonthView(
+      child: Column(
+        children: [
+          _buildStatusLabel(context),
+          Expanded(child: MCalMonthView(
         controller: _controller,
         // Navigation
         showNavigator: _showNavigator,
@@ -194,6 +239,9 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
         // Keyboard
         enableKeyboardNavigation: _enableKeyboardNavigation,
         autoFocusOnCellTap: _autoFocusOnCellTap,
+        // RTL Override
+        textDirection: _textDirectionOverride,
+        layoutDirection: _layoutDirectionOverride,
         // Gesture handlers
         onCellTap: (ctx, details) {
           SnackBarHelper.show(
@@ -258,24 +306,33 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
           );
         },
         onHoverCell: (context, cellContext) {
-          // Note: Hover events can be very frequent, so we don't show a SnackBar
-          // to avoid overwhelming the UI. In a real app, you might update a status bar.
+          if (cellContext != null) {
+            _setStatus('Cell: ${_formatDate(cellContext.date, locale)}');
+          } else {
+            _setStatus('—');
+          }
         },
         onHoverEvent: (context, eventContext) {
-          // Note: Similar to hover cell, these are very frequent
+          if (eventContext != null) {
+            _setStatus('Event: ${eventContext.event.title}');
+          } else {
+            _setStatus('—');
+          }
         },
         onDragWillAccept: (ctx, details) {
           // Validate against blackout days
           if (_enableBlackoutDays &&
               _blackoutDates.contains(details.proposedStartDate)) {
-            SnackBarHelper.show(
-              context,
+            _setStatus(
               l10n.snackbarDropRejected(
                 _formatDate(details.proposedStartDate, locale),
               ),
             );
             return false;
           }
+          _setStatus(
+            'Drop → ${_formatDate(details.proposedStartDate, locale)} (${details.event.title})',
+          );
           return true;
         },
         onEventDropped: (ctx, details) {
@@ -315,6 +372,8 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
             l10n.snackbarSwipeNavigation(details.direction.name),
           );
         },
+      )),
+        ],
       ),
     );
   }
@@ -442,8 +501,8 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
             ControlWidgets.slider(
               label: l10n.settingDragEdgeNavigationDelay,
               value: _dragEdgeNavigationDelay.inMilliseconds.toDouble(),
-              min: 300,
-              max: 1500,
+              min: 500,
+              max: 2000,
               divisions: 12,
               onChanged: (value) => setState(
                 () => _dragEdgeNavigationDelay = Duration(
@@ -455,7 +514,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
             ControlWidgets.slider(
               label: l10n.settingDragLongPressDelay,
               value: _dragLongPressDelay.inMilliseconds.toDouble(),
-              min: 200,
+              min: 100,
               max: 1000,
               divisions: 8,
               onChanged: (value) => setState(
@@ -552,6 +611,35 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
             ),
           ],
         ),
+
+        // RTL Override Section
+        ControlPanelSection(
+          title: 'RTL Override', // TODO: Add ARB key sectionRtlOverride
+          children: [
+            ControlWidgets.dropdown<TextDirection?>(
+              label: 'Text Direction', // TODO: Add ARB key settingTextDirection
+              value: _textDirectionOverride,
+              items: const [
+                DropdownMenuItem(value: null, child: Text('Inherit')),
+                DropdownMenuItem(value: TextDirection.ltr, child: Text('LTR')),
+                DropdownMenuItem(value: TextDirection.rtl, child: Text('RTL')),
+              ],
+              onChanged: (v) => setState(() => _textDirectionOverride = v),
+            ),
+            ControlWidgets.dropdown<TextDirection?>(
+              label:
+                  'Layout Direction', // TODO: Add ARB key settingLayoutDirection
+              value: _layoutDirectionOverride,
+              items: const [
+                DropdownMenuItem(value: null, child: Text('Inherit')),
+                DropdownMenuItem(value: TextDirection.ltr, child: Text('LTR')),
+                DropdownMenuItem(value: TextDirection.rtl, child: Text('RTL')),
+              ],
+              onChanged: (v) => setState(() => _layoutDirectionOverride = v),
+            ),
+          ],
+        ),
+
         // Blackout Days Section
         ControlPanelSection(
           title: l10n.sectionBlackoutDays,
