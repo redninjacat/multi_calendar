@@ -20,17 +20,39 @@ class DayThemeTab extends StatefulWidget {
 }
 
 class _DayThemeTabState extends State<DayThemeTab> {
-  // Current theme preset selection
+  // ============================================================
+  // Preset Selection
+  // ============================================================
   ThemePreset _selectedPreset = ThemePreset.defaultPreset;
 
-  // Time Legend properties
+  // ============================================================
+  // Event Properties
+  // ============================================================
+  Color? _eventTileBackgroundColor;
+  double? _timedEventBorderRadius;
+  double? _timedEventMinHeight;
+  EdgeInsets? _timedEventPadding;
+  bool? _ignoreEventColors;
+
+  // ============================================================
+  // All-Day Event Properties
+  // ============================================================
+  Color? _allDayEventBackgroundColor;
+  Color? _allDayEventBorderColor;
+  double? _allDayEventBorderWidth;
+
+  // ============================================================
+  // Time Legend Properties
+  // ============================================================
   double? _timeLegendWidth;
   bool? _showTimeLegendTicks;
   Color? _timeLegendTickColor;
   double? _timeLegendTickWidth;
   double? _timeLegendTickLength;
 
-  // Gridline properties
+  // ============================================================
+  // Gridline Properties
+  // ============================================================
   Color? _hourGridlineColor;
   double? _hourGridlineWidth;
   Color? _majorGridlineColor;
@@ -38,34 +60,30 @@ class _DayThemeTabState extends State<DayThemeTab> {
   Color? _minorGridlineColor;
   double? _minorGridlineWidth;
 
-  // Current time indicator properties
+  // ============================================================
+  // Current Time Indicator Properties
+  // ============================================================
   Color? _currentTimeIndicatorColor;
   double? _currentTimeIndicatorWidth;
   double? _currentTimeIndicatorDotRadius;
 
-  // Event properties
-  Color? _eventTileBackgroundColor;
-  double? _timedEventBorderRadius;
-  double? _timedEventMinHeight;
-  EdgeInsets? _timedEventPadding;
-  bool? _ignoreEventColors;
-
-  // All-day event properties
-  Color? _allDayEventBackgroundColor;
-  Color? _allDayEventBorderColor;
-  double? _allDayEventBorderWidth;
-
-  // Time region properties
+  // ============================================================
+  // Time Region Properties
+  // ============================================================
   Color? _specialTimeRegionColor;
   Color? _blockedTimeRegionColor;
   Color? _timeRegionBorderColor;
   Color? _timeRegionTextColor;
 
-  // Resize properties
+  // ============================================================
+  // Resize Properties
+  // ============================================================
   double? _resizeHandleSize;
   int? _minResizeDurationMinutes;
 
-  // Calendar controller
+  // ============================================================
+  // Calendar Controller
+  // ============================================================
   late final MCalEventController _controller;
 
   @override

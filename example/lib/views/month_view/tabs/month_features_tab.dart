@@ -36,39 +36,53 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
   late MCalEventController _controller;
   DateTime _currentMonth = DateTime.now();
 
-  // Navigation settings
+  // ============================================================
+  // Navigation Settings
+  // ============================================================
   bool _showNavigator = true;
   bool _enableSwipeNavigation = true;
   MCalSwipeNavigationDirection _swipeNavigationDirection =
       MCalSwipeNavigationDirection.horizontal;
   int _firstDayOfWeek = DateTime.sunday;
 
-  // Display settings
+  // ============================================================
+  // Display Settings
+  // ============================================================
   bool _showWeekNumbers = false;
   int _maxVisibleEventsPerDay = 5;
 
-  // Drag & Drop settings
+  // ============================================================
+  // Drag & Drop Settings
+  // ============================================================
   bool _enableDragToMove = true;
   bool _showDropTargetTiles = true;
   bool _showDropTargetOverlay = true;
   bool _dropTargetTilesAboveOverlay = false;
   bool _dragEdgeNavigationEnabled = true;
-  int _dragEdgeNavigationDelay = 1000;
-  int _dragLongPressDelay = 200;
+  Duration _dragEdgeNavigationDelay = const Duration(milliseconds: 1200);
+  Duration _dragLongPressDelay = const Duration(milliseconds: 200);
 
-  // Resize settings
+  // ============================================================
+  // Resize Settings
+  // ============================================================
   bool? _enableDragToResize = true;
 
-  // Animation settings
+  // ============================================================
+  // Animation Settings
+  // ============================================================
   bool? _enableAnimations = true;
-  int _animationDuration = 300;
+  Duration _animationDuration = const Duration(milliseconds: 300);
   Curve _animationCurve = Curves.easeInOut;
 
-  // Keyboard settings
+  // ============================================================
+  // Keyboard Settings
+  // ============================================================
   bool _enableKeyboardNavigation = true;
   bool _autoFocusOnCellTap = true;
 
-  // Blackout days settings
+  // ============================================================
+  // Blackout Days Settings
+  // ============================================================
   bool _enableBlackoutDays = false;
   Set<int> _blackoutDaysOfWeek = {};
   late Set<DateTime> _blackoutDates;
@@ -169,15 +183,13 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
         showDropTargetOverlay: _showDropTargetOverlay,
         dropTargetTilesAboveOverlay: _dropTargetTilesAboveOverlay,
         dragEdgeNavigationEnabled: _dragEdgeNavigationEnabled,
-        dragEdgeNavigationDelay: Duration(
-          milliseconds: _dragEdgeNavigationDelay,
-        ),
-        dragLongPressDelay: Duration(milliseconds: _dragLongPressDelay),
+        dragEdgeNavigationDelay: _dragEdgeNavigationDelay,
+        dragLongPressDelay: _dragLongPressDelay,
         // Resize
         enableDragToResize: _enableDragToResize,
         // Animation
         enableAnimations: _enableAnimations,
-        animationDuration: Duration(milliseconds: _animationDuration),
+        animationDuration: _animationDuration,
         animationCurve: _animationCurve,
         // Keyboard
         enableKeyboardNavigation: _enableKeyboardNavigation,
@@ -311,7 +323,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Navigation section
+        // Navigation Section
         ControlPanelSection(
           showTopDivider: false,
           title: l10n.sectionNavigation,
@@ -374,7 +386,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
             ),
           ],
         ),
-        // Display section
+        // Display Section
         ControlPanelSection(
           title: l10n.sectionDisplay,
           children: [
@@ -394,7 +406,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
             ),
           ],
         ),
-        // Drag & Drop section
+        // Drag & Drop Section
         ControlPanelSection(
           title: l10n.sectionDragAndDrop,
           children: [
@@ -422,32 +434,39 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
                   setState(() => _dropTargetTilesAboveOverlay = value),
             ),
             ControlWidgets.toggle(
-              label: l10n.settingDragEdgeNavigationDelay,
+              label: l10n.settingDragEdgeNavigationEnabled,
               value: _dragEdgeNavigationEnabled,
               onChanged: (value) =>
                   setState(() => _dragEdgeNavigationEnabled = value),
             ),
             ControlWidgets.slider(
               label: l10n.settingDragEdgeNavigationDelay,
-              value: _dragEdgeNavigationDelay.toDouble(),
+              value: _dragEdgeNavigationDelay.inMilliseconds.toDouble(),
               min: 300,
               max: 1500,
               divisions: 12,
-              onChanged: (value) =>
-                  setState(() => _dragEdgeNavigationDelay = value.toInt()),
+              onChanged: (value) => setState(
+                () => _dragEdgeNavigationDelay = Duration(
+                  milliseconds: value.toInt(),
+                ),
+              ),
+              valueLabel: '${_dragEdgeNavigationDelay.inMilliseconds}ms',
             ),
             ControlWidgets.slider(
               label: l10n.settingDragLongPressDelay,
-              value: _dragLongPressDelay.toDouble(),
+              value: _dragLongPressDelay.inMilliseconds.toDouble(),
               min: 200,
               max: 1000,
               divisions: 8,
-              onChanged: (value) =>
-                  setState(() => _dragLongPressDelay = value.toInt()),
+              onChanged: (value) => setState(
+                () =>
+                    _dragLongPressDelay = Duration(milliseconds: value.toInt()),
+              ),
+              valueLabel: '${_dragLongPressDelay.inMilliseconds}ms',
             ),
           ],
         ),
-        // Resize section
+        // Resize Section
         ControlPanelSection(
           title: l10n.sectionResize,
           children: [
@@ -458,7 +477,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
             ),
           ],
         ),
-        // Animation section
+        // Animation Section
         ControlPanelSection(
           title: l10n.sectionAnimation,
           children: [
@@ -469,12 +488,15 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
             ),
             ControlWidgets.slider(
               label: l10n.settingAnimationDuration,
-              value: _animationDuration.toDouble(),
+              value: _animationDuration.inMilliseconds.toDouble(),
               min: 100,
               max: 1000,
               divisions: 9,
-              onChanged: (value) =>
-                  setState(() => _animationDuration = value.toInt()),
+              onChanged: (value) => setState(
+                () =>
+                    _animationDuration = Duration(milliseconds: value.toInt()),
+              ),
+              valueLabel: '${_animationDuration.inMilliseconds}ms',
             ),
             ControlWidgets.dropdown<Curve>(
               label: l10n.settingAnimationCurve,
@@ -513,7 +535,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
             ),
           ],
         ),
-        // Keyboard section
+        // Keyboard Section
         ControlPanelSection(
           title: l10n.sectionKeyboard,
           children: [
@@ -530,7 +552,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
             ),
           ],
         ),
-        // Blackout Days section
+        // Blackout Days Section
         ControlPanelSection(
           title: l10n.sectionBlackoutDays,
           children: [

@@ -35,19 +35,12 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   late MCalEventController _eventController;
 
   // ============================================================
-  // Time Range Settings
-  // ============================================================
-  int _startHour = 6;
-  int _endHour = 22;
-  Duration _timeSlotDuration = const Duration(minutes: 15);
-  Duration _gridlineInterval = const Duration(minutes: 15);
-  double _hourHeight = 80.0;
-
-  // ============================================================
   // Navigation Settings
   // ============================================================
   bool _showNavigator = true;
   bool _autoScrollToCurrentTime = true;
+  bool _enableSwipeNavigation = true;
+  int _firstDayOfWeek = DateTime.sunday;
 
   // ============================================================
   // Display Settings
@@ -67,7 +60,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   bool _showDropTargetOverlay = true;
   bool _dropTargetTilesAboveOverlay = false;
   bool _dragEdgeNavigationEnabled = true;
-  Duration _dragEdgeNavigationDelay = const Duration(milliseconds: 1000);
+  Duration _dragEdgeNavigationDelay = const Duration(milliseconds: 1200);
   Duration _dragLongPressDelay = const Duration(milliseconds: 200);
 
   // ============================================================
@@ -76,34 +69,33 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   bool? _enableDragToResize = true;
 
   // ============================================================
-  // Snapping Settings
-  // ============================================================
-  bool _snapToTimeSlots = true;
-  bool _snapToOtherEvents = false;
-  bool _snapToCurrentTime = false;
-  Duration _snapRange = const Duration(minutes: 5);
-
-  // ============================================================
   // Animation Settings
   // ============================================================
   bool? _enableAnimations = true;
   Duration _animationDuration = const Duration(milliseconds: 300);
 
   // ============================================================
-  // Swipe Navigation Settings
-  // ============================================================
-  bool _enableSwipeNavigation = true;
-
-  // ============================================================
-  // First Day of Week
-  // ============================================================
-  int _firstDayOfWeek = DateTime.sunday;
-
-  // ============================================================
   // Keyboard Settings
   // ============================================================
   bool _enableKeyboardNavigation = true;
   bool _autoFocusOnEventTap = true;
+
+  // ============================================================
+  // Time Range Settings
+  // ============================================================
+  int _startHour = 6;
+  int _endHour = 22;
+  Duration _timeSlotDuration = const Duration(minutes: 15);
+  Duration _gridlineInterval = const Duration(minutes: 15);
+  double _hourHeight = 80.0;
+
+  // ============================================================
+  // Snapping Settings
+  // ============================================================
+  bool _snapToTimeSlots = true;
+  bool _snapToOtherEvents = false;
+  bool _snapToCurrentTime = false;
+  Duration _snapRange = const Duration(minutes: 5);
 
   // ============================================================
   // Time Regions Settings

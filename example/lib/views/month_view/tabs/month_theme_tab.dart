@@ -22,13 +22,14 @@ class MonthThemeTab extends StatefulWidget {
 class _MonthThemeTabState extends State<MonthThemeTab> {
   late MCalEventController _controller;
   
-  // Current preset selection
+  // ============================================================
+  // Preset Selection
+  // ============================================================
   ThemePreset _selectedPreset = ThemePreset.defaultPreset;
-  
-  // Theme properties - initialized from default preset
-  late Color _cellBackgroundColor;
-  late Color _cellBorderColor;
-  late Color _todayBackgroundColor;
+
+  // ============================================================
+  // Event Tile Properties
+  // ============================================================
   late Color _eventTileBackgroundColor;
   late double _eventTileHeight;
   late double _eventTileCornerRadius;
@@ -36,17 +37,52 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
   late double _eventTileVerticalSpacing;
   late double _eventTileBorderWidth;
   bool _ignoreEventColors = false;
+
+  // ============================================================
+  // Cell Properties
+  // ============================================================
+  late Color _cellBackgroundColor;
+  late Color _cellBorderColor;
+  late Color _todayBackgroundColor;
+
+  // ============================================================
+  // Header Properties
+  // ============================================================
   late Color _weekdayHeaderBackgroundColor;
+
+  // ============================================================
+  // Date Label Properties
+  // ============================================================
   late double _dateLabelHeight;
   DateLabelPosition _dateLabelPosition = DateLabelPosition.topLeft;
+
+  // ============================================================
+  // Overflow Properties
+  // ============================================================
   late double _overflowIndicatorHeight;
+
+  // ============================================================
+  // Navigator Properties
+  // ============================================================
   late Color _navigatorBackgroundColor;
+
+  // ============================================================
+  // Drag & Drop Properties
+  // ============================================================
   late Color _dropTargetCellValidColor;
   late Color _dropTargetCellInvalidColor;
   late double _dragSourceOpacity;
   late double _draggedTileElevation;
+
+  // ============================================================
+  // Hover Properties
+  // ============================================================
   late Color _hoverCellBackgroundColor;
   late Color _hoverEventBackgroundColor;
+
+  // ============================================================
+  // Week Number Properties
+  // ============================================================
   late Color _weekNumberBackgroundColor;
 
   @override
