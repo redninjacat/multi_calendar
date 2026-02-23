@@ -1398,6 +1398,16 @@ class MCalDayViewState extends State<MCalDayView> {
 
   MCalDragHandler? _dragHandler;
   bool _isDragActive = false;
+
+  /// Sets [_isDragActive] and logs every transition with the caller name.
+  /// Helps diagnose spurious true→false→true cycles after a drop.
+  void _setDragActive(bool value, String caller) {
+    if (_isDragActive == value) return;
+    debugPrint(
+      '[DD] isDragActive: $_isDragActive → $value  caller=$caller  ts=${DateTime.now().toIso8601String()}',
+    );
+    _isDragActive = value;
+  }
   bool _isResizeActive = false;
   bool _isProcessingDrop = false;
   bool _isDragTargetActive = false;
@@ -1477,6 +1487,12 @@ class MCalDayViewState extends State<MCalDayView> {
   // _schedulePostNavLayoutRefresh to re-check edge proximity after navigation
   // when the DragTarget is no longer active (onLeave has fired).
   Offset? _lastFallbackCursorGlobal;
+
+  // Feedback widget top-left in global coordinates, computed by the fallback
+  // pointer handler from the cursor position minus grab offsets. Used by
+  // _processDragMove when _isDragTargetActive is false so the drop preview
+  // and debug overlay continue to track the dragged tile even after DragLeave.
+  Offset? _fallbackFeedbackGlobal;
 
   // ============================================================================
   // Layout Cache
@@ -2081,7 +2097,7 @@ class MCalDayViewState extends State<MCalDayView> {
     debugPrint(
       '[DD] DragStarted: scrollOffset=${scAttached ? sc.offset : 'N/A'} scrollMax=${scAttached ? sc.position.maxScrollExtent : 'N/A'} viewportDim=${scAttached ? sc.position.viewportDimension : 'N/A'}',
     );
-    _isDragActive = true;
+    _setDragActive(true, '_handleDragStarted');
     _layoutCachedForDrag = false;
     _dragStartTime = DateTime.now();
     _ensureDragHandler.startDrag(event, sourceDate);
@@ -2097,6 +2113,52 @@ class MCalDayViewState extends State<MCalDayView> {
 
   /// Called when a drag operation ends.
   ///
+  /// Resets every piece of drag state — flags, timers, caches, and debug aids.
+  ///
+  /// Call this at the end of every drag termination path (ended, cancelled) so
+  /// that no stale value from one drag session can bleed into the next.
+  void _resetDragState() {
+    // Flags
+    _setDragActive(false, '_resetDragState');
+    _isDragTargetActive = false;
+    _isProcessingDrop = false;
+    _layoutCachedForDrag = false;
+
+    // Timers — cancel before nulling to avoid firing after reset.
+    _dragMoveDebounceTimer?.cancel();
+    _dragMoveDebounceTimer = null;
+    _cancelVerticalScrollTimer();
+
+    // Live drag data
+    _latestDragDetails = null;
+    _dragStartTime = null;
+
+    // Feedback tile dimensions and grab offsets
+    _feedbackTileWidth = 0.0;
+    _feedbackTileHeight = 0.0;
+    _cachedGrabOffsetX = 0.0;
+    _cachedGrabOffsetY = 0.0;
+
+    // Vertical scroll state
+    _verticalScrollDelta = 0.0;
+    _verticalScrollReprocessDrag = false;
+
+    // Drag layout cache
+    _cachedDayContentOffset = Offset.zero;
+    _cachedDayContentSize = Size.zero;
+    _cachedTimeGridTopInDayContent = 0.0;
+    _cachedScrollOffset = 0.0;
+    _cachedTimeGridGlobalLeft = 0.0;
+    _cachedTimeGridGlobalRight = 0.0;
+    _cachedTimeGridGlobalTop = 0.0;
+    _cachedMinuteHeight = 0.0;
+
+    // Debug overlays and fallback position cache
+    _debugTileCenterGlobal = null;
+    _lastFallbackCursorGlobal = null;
+    _fallbackFeedbackGlobal = null;
+  }
+
   /// Cleans up drag state and resets cached layout flag. When the drop was
   /// accepted, _handleDrop already ran and called cancelDrag(); we only need
   /// to clean up when the drop was rejected (released outside valid target).
@@ -2105,8 +2167,8 @@ class MCalDayViewState extends State<MCalDayView> {
       '[DD] DragEnded: wasAccepted=$wasAccepted isDragActive=$_isDragActive proposedValid=${_dragHandler?.isProposedDropValid} vertScrollTimerActive=${_verticalScrollTimer?.isActive}',
     );
 
-    // If the drag was already cleaned up by _handleDragCancelled (which fires
-    // first from Flutter's Draggable), skip redundant processing.
+    // Drag already cleaned up — _handleDrop (accepted) or _handleDragCancelled
+    // (which fires before onDragEnd) already called _resetDragState().
     if (!_isDragActive) {
       debugPrint('[DD] DragEnded: drag already inactive — skipping');
       return;
@@ -2118,7 +2180,9 @@ class MCalDayViewState extends State<MCalDayView> {
       debugPrint(
         '[DD] DragEnded: NOT accepted but proposedDrop is valid — completing drop via _completePendingDrop',
       );
+      // _completePendingDrop handles cancelDrag + _resetDragState + setState.
       _completePendingDrop();
+      return;
     } else if (!wasAccepted) {
       debugPrint(
         '[DD] DragEnded: drop was NOT accepted and no valid proposal — calling cancelDrag()',
@@ -2126,19 +2190,7 @@ class MCalDayViewState extends State<MCalDayView> {
       _dragHandler?.cancelDrag();
     }
 
-    _isDragActive = false;
-    _isDragTargetActive = false;
-    _isProcessingDrop = false;
-    _layoutCachedForDrag = false;
-    _dragStartTime = null;
-    _feedbackTileWidth = 0.0;
-    _feedbackTileHeight = 0.0;
-    _cachedGrabOffsetX = 0.0;
-    _cachedGrabOffsetY = 0.0;
-    _debugTileCenterGlobal = null;
-    _lastFallbackCursorGlobal = null;
-    _cancelVerticalScrollTimer();
-
+    _resetDragState();
     setState(() {});
   }
 
@@ -2153,8 +2205,15 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Escape key or pointer cancel), so always discard.
   void _handleDragCancelled({bool isUserCancel = false}) {
     debugPrint(
-      '[DD] DragCancelled: isUserCancel=$isUserCancel proposedValid=${_dragHandler?.isProposedDropValid}',
+      '[DD] DragCancelled: isUserCancel=$isUserCancel isDragActive=$_isDragActive proposedValid=${_dragHandler?.isProposedDropValid}',
     );
+
+    // Guard: _handleDrop already called _resetDragState() for accepted drops.
+    // This mirrors the identical guard in _handleDragEnded.
+    if (!_isDragActive) {
+      debugPrint('[DD] DragCancelled: drag already inactive — skipping');
+      return;
+    }
 
     if (!isUserCancel &&
         _dragHandler != null &&
@@ -2162,21 +2221,13 @@ class MCalDayViewState extends State<MCalDayView> {
       debugPrint(
         '[DD] DragCancelled: NOT user cancel and proposedDrop is valid — completing drop via _completePendingDrop',
       );
+      // _completePendingDrop handles cancelDrag + _resetDragState + setState.
       _completePendingDrop();
-    } else {
-      _ensureDragHandler.cancelDrag();
+      return;
     }
-    _isDragActive = false;
-    _isDragTargetActive = false;
-    _dragStartTime = null;
-    _feedbackTileWidth = 0.0;
-    _feedbackTileHeight = 0.0;
-    _cachedGrabOffsetX = 0.0;
-    _cachedGrabOffsetY = 0.0;
-    _debugTileCenterGlobal = null;
-    _lastFallbackCursorGlobal = null;
-    _cancelVerticalScrollTimer();
 
+    _ensureDragHandler.cancelDrag();
+    _resetDragState();
     setState(() {});
   }
 
@@ -3155,34 +3206,33 @@ class MCalDayViewState extends State<MCalDayView> {
     if (!_isDragActive || !_layoutCachedForDrag) return;
 
     // If DragTarget.onMove is still active, it drives _processDragMove which
-    // already calls _checkEdgeProximity. We only step in after DragLeave.
+    // already handles edge detection and drop preview. We only step in after
+    // DragLeave.
     if (_isDragTargetActive) return;
 
     final globalPos = event.position;
     _lastFallbackCursorGlobal = globalPos;
     final feedbackGlobalX = globalPos.dx - _cachedGrabOffsetX;
     final feedbackGlobalY = globalPos.dy - _cachedGrabOffsetY;
-    final tileCenterX = feedbackGlobalX + _feedbackTileWidth / 2;
-    final tileCenterY = feedbackGlobalY + _feedbackTileHeight / 2;
 
-    // TEMPORARY DEBUG: update tile center position for the debug overlay.
-    _debugTileCenterGlobal = Offset(tileCenterX, tileCenterY);
-    if (mounted) setState(() {});
+    // Store the computed feedback position so _processDragMove can use it
+    // instead of the stale _latestDragDetails.offset.  This allows the drop
+    // preview, edge detection, and debug overlay to all stay in sync with the
+    // live tile position even when the tile's left edge exits the DragTarget.
+    _fallbackFeedbackGlobal = Offset(feedbackGlobalX, feedbackGlobalY);
 
     debugPrint(
-      '[DD] DragPointerMove(fallback): globalPos=$globalPos feedbackX=$feedbackGlobalX tileCenterX=$tileCenterX grabOffsetX=$_cachedGrabOffsetX tileWidth=$_feedbackTileWidth',
+      '[DD] DragPointerMove(fallback): globalPos=$globalPos feedbackX=$feedbackGlobalX tileCenterX=${feedbackGlobalX + _feedbackTileWidth / 2} grabOffsetX=$_cachedGrabOffsetX tileWidth=$_feedbackTileWidth',
     );
 
-    // Edge detection uses the tile center (not cursor) against 25% edge zones.
-    if (widget.dragEdgeNavigationEnabled) {
-      _checkEdgeProximity(tileCenterX);
-    }
-
-    // Also check vertical scroll using tile's top edge.
-    final localY = globalPos.dy - _cachedDayContentOffset.dy;
-    final isInTimeGrid = localY >= _cachedTimeGridTopInDayContent;
-    if (isInTimeGrid) {
-      _checkVerticalScrollEdge(feedbackGlobalY, reprocessDrag: true);
+    // Delegate all processing (edge detection, drop preview, debug overlay) to
+    // _processDragMove via the debounce timer — same path as the DragTarget
+    // onMove handler, but using _fallbackFeedbackGlobal for position.
+    if (_dragMoveDebounceTimer == null || !_dragMoveDebounceTimer!.isActive) {
+      _dragMoveDebounceTimer = Timer(
+        const Duration(milliseconds: 16),
+        _processDragMove,
+      );
     }
   }
 
@@ -3195,9 +3245,15 @@ class MCalDayViewState extends State<MCalDayView> {
     _latestDragDetails = details;
     _isDragTargetActive = true;
 
-    // Cache feedback tile dimensions and grab offsets from drag data.
+    // Refresh feedback tile dimensions and grab offsets from drag data on every
+    // move so that a new drag session always picks up the current tile size —
+    // never a value left over from a previous drag.  feedbackWidth is a final
+    // field on MCalDragData (set at long-press recognition time), so it is the
+    // same value on every call within one session; updating unconditionally is
+    // safe and eliminates the stale-width bug that appeared after dragging an
+    // event between overlap and non-overlap slots.
     final data = details.data;
-    if (_feedbackTileWidth == 0.0 && data.feedbackWidth > 0) {
+    if (data.feedbackWidth > 0) {
       _feedbackTileWidth = data.feedbackWidth;
       _feedbackTileHeight = data.feedbackHeight;
     }
@@ -3248,21 +3304,24 @@ class MCalDayViewState extends State<MCalDayView> {
       if (!_layoutCachedForDrag) return; // RenderBoxes not ready
     }
 
-    // details.offset is the feedback widget's top-left in global coordinates.
+    // Resolve the feedback widget's top-left in global coordinates.
+    // When DragTarget is still active, use the live details.offset.
+    // When in fallback mode (after DragLeave), use the position computed from
+    // the raw pointer event so the drop preview and debug overlay continue
+    // tracking the tile rather than freezing at the last DragTarget position.
     final dragData = details.data;
-    final feedbackGlobal = details.offset;
+    final feedbackGlobal = (!_isDragTargetActive && _fallbackFeedbackGlobal != null)
+        ? _fallbackFeedbackGlobal!
+        : details.offset;
     final cursorGlobalX = feedbackGlobal.dx + dragData.grabOffsetX;
     final cursorGlobalY = feedbackGlobal.dy + dragData.grabOffsetY;
     final tileCenterX = feedbackGlobal.dx + _feedbackTileWidth / 2;
     final tileCenterY = feedbackGlobal.dy + _feedbackTileHeight / 2;
 
-    // TEMPORARY DEBUG: update tile center position for the debug overlay.
-    // Only update if DragTarget is still active; when in fallback mode after
-    // DragLeave, the stale _latestDragDetails would jump the line back to an
-    // old position — the fallback handler handles updates instead.
-    if (_isDragTargetActive) {
-      _debugTileCenterGlobal = Offset(tileCenterX, tileCenterY);
-    }
+    // TEMPORARY DEBUG: always update tile center so the overlay tracks the
+    // tile center regardless of whether we're in DragTarget-active or fallback
+    // mode.  Both paths now provide accurate positions.
+    _debugTileCenterGlobal = Offset(tileCenterX, tileCenterY);
 
     // Convert to grid-area-local coordinates (cursor-based for region detection).
     final localX = cursorGlobalX - _cachedDayContentOffset.dx;
@@ -3318,12 +3377,14 @@ class MCalDayViewState extends State<MCalDayView> {
     // Horizontal: uses the tile's visual center against 25% edge zones within
     // the time grid. This triggers navigation when the tile center enters the
     // edge zone, not when the cursor does.
-    // Skip when the DragTarget has fired onLeave (!_isDragTargetActive):
-    // _latestDragDetails contains stale offset data whose tileCenterX may
-    // land in the middle of the grid, falsely cancelling a valid edge timer.
-    // The fallback _handleDragPointerMove handler will re-detect the edge
-    // with the correct cursor-derived tile center on the next pointer event.
-    if (widget.dragEdgeNavigationEnabled && _isDragTargetActive) {
+    // We can run this in both DragTarget-active mode and fallback mode because
+    // feedbackGlobal is now accurate in both cases (fallback uses
+    // _fallbackFeedbackGlobal which is computed from the live pointer position).
+    // The only case where we must skip is when _latestDragDetails is stale and
+    // no fallback position is available — but that cannot happen here since we
+    // return early above if both sources are unavailable.
+    if (widget.dragEdgeNavigationEnabled &&
+        (_isDragTargetActive || _fallbackFeedbackGlobal != null)) {
       _checkEdgeProximity(tileCenterX);
     }
 
@@ -3543,19 +3604,24 @@ class MCalDayViewState extends State<MCalDayView> {
       return;
     }
 
-    final timeGridBox =
-        _timeGridKey.currentContext?.findRenderObject() as RenderBox?;
-    if (timeGridBox == null || !timeGridBox.attached) {
-      debugPrint('[DD] VertEdge: timeGridBox null/detached — cancelling');
+    if (!_layoutCachedForDrag) {
+      debugPrint('[DD] VertEdge: layout not cached — cancelling');
       _cancelVerticalScrollTimer();
       return;
     }
-    final timeGridGlobal = timeGridBox.localToGlobal(Offset.zero);
+
     final viewportHeight = sc.position.viewportDimension;
 
-    // The scroll viewport occupies [timeGridGlobal.dy .. timeGridGlobal.dy + viewportHeight]
-    // in global coordinates.
-    final viewportTop = timeGridGlobal.dy;
+    // _timeGridKey is on the scrollable *content* (a SizedBox spanning the
+    // full time grid height), so its global Y shifts as the user scrolls.
+    // We need the *viewport container's* fixed screen position instead.
+    //
+    // At cache time: _cachedTimeGridGlobalTop = viewport_screen_top - _cachedScrollOffset
+    // Therefore:      viewport_screen_top     = _cachedTimeGridGlobalTop + _cachedScrollOffset
+    //
+    // This value is invariant for the lifetime of the drag even as the user
+    // auto-scrolls, because the viewport container doesn't move on screen.
+    final viewportTop = _cachedTimeGridGlobalTop + _cachedScrollOffset;
     final viewportBottom = viewportTop + viewportHeight;
 
     final tileTop = feedbackGlobalY;
@@ -3901,7 +3967,10 @@ class MCalDayViewState extends State<MCalDayView> {
   void _handleDragLeave() {
     debugPrint('[DD] DragLeave: isDragActive=$_isDragActive');
     _isDragTargetActive = false;
-    _dragHandler?.clearProposedDropRange();
+    // Do NOT clear the proposed drop range here — the fallback pointer handler
+    // will continue calling _processDragMove with live positions so the drop
+    // preview keeps tracking the tile center even when the tile's left edge
+    // exits the DragTarget boundary.
 
     if (!_isDragActive) {
       _dragMoveDebounceTimer?.cancel();
@@ -4072,10 +4141,17 @@ class MCalDayViewState extends State<MCalDayView> {
       '[DD] HandleDrop: calling cancelDrag() to complete — edgeTimerActive=${dragHandler?.debugEdgeTimerActive} vertScrollTimerActive=${_verticalScrollTimer?.isActive}',
     );
     dragHandler?.cancelDrag();
-    _isProcessingDrop = false;
+
+    // Clear all drag state immediately so the overlays disappear in this frame.
+    // _handleDragEnded will fire later via Flutter's gesture pipeline but will
+    // see _isDragActive=false and return early — no double-reset.
+    _resetDragState();
+
     debugPrint(
       '[DD] HandleDrop EXIT: after cancelDrag — edgeTimerActive=${dragHandler?.debugEdgeTimerActive} vertScrollTimerActive=${_verticalScrollTimer?.isActive}',
     );
+
+    setState(() {});
 
     if (mounted) {
       final locale = widget.locale ?? Localizations.localeOf(context);
@@ -4203,6 +4279,13 @@ class MCalDayViewState extends State<MCalDayView> {
     }
 
     dragHandler.cancelDrag();
+
+    // Clear all drag state immediately so the overlays disappear in this frame.
+    // The caller (_handleDragCancelled / _handleDragEnded) will also call
+    // _resetDragState(), but those run later in Flutter's gesture pipeline and
+    // will see _isDragActive=false and return early — no double-reset.
+    _resetDragState();
+    setState(() {});
 
     if (mounted) {
       final locale = widget.locale ?? Localizations.localeOf(context);
@@ -5211,15 +5294,17 @@ class MCalDayViewState extends State<MCalDayView> {
   /// edge navigation trigger zones (each 25% of the time grid width).
   /// Day navigation arms when the tile's center enters a green zone.
   /// Only rendered when [_isDragActive] is true.
-  List<Widget> _buildEdgeZoneOverlays() {
+  /// [stackContext] is the [BuildContext] from the [DragTarget] builder —
+  /// its [RenderBox] origin equals the Stack's top-left, which is the correct
+  /// reference for all [Positioned] children inside the Stack.
+  List<Widget> _buildEdgeZoneOverlays(BuildContext stackContext) {
     if (!_layoutCachedForDrag) return const [];
 
-    final dayContentBox =
-        _dayContentKey.currentContext?.findRenderObject() as RenderBox?;
-    if (dayContentBox == null || !dayContentBox.attached) return const [];
-
-    final dayContentGlobal = dayContentBox.localToGlobal(Offset.zero);
-    final dayContentSize = dayContentBox.size;
+    // Use the DragTarget builder's RenderBox as the Stack coordinate origin.
+    final stackBox = stackContext.findRenderObject() as RenderBox?;
+    if (stackBox == null || !stackBox.attached) return const [];
+    final stackGlobal = stackBox.localToGlobal(Offset.zero);
+    final stackSize = stackBox.size;
 
     final timeGridWidth =
         _cachedTimeGridGlobalRight - _cachedTimeGridGlobalLeft;
@@ -5227,8 +5312,14 @@ class MCalDayViewState extends State<MCalDayView> {
 
     final edgeZoneWidth = timeGridWidth * _edgeZoneFraction;
 
-    // Convert time grid global coords to day-content-local coords.
-    final timeGridLocalLeft = _cachedTimeGridGlobalLeft - dayContentGlobal.dx;
+    // Convert time grid global coords to Stack-local coords.
+    final timeGridLocalLeft = _cachedTimeGridGlobalLeft - stackGlobal.dx;
+    final timeGridLocalTop =
+        (_cachedTimeGridGlobalTop + _cachedScrollOffset) - stackGlobal.dy;
+
+    // Height spans from the top of the scroll viewport to the bottom of the
+    // Stack (covers the entire visible time grid area).
+    final overlayHeight = stackSize.height - timeGridLocalTop;
 
     const color = Color(0x3300CC00);
 
@@ -5236,40 +5327,45 @@ class MCalDayViewState extends State<MCalDayView> {
       // Left 25% zone — inside the time grid, left edge.
       Positioned(
         left: timeGridLocalLeft,
-        top: 0,
+        top: timeGridLocalTop,
         width: edgeZoneWidth,
-        height: dayContentSize.height,
+        height: overlayHeight,
         child: IgnorePointer(child: ColoredBox(color: color)),
       ),
       // Right 25% zone — inside the time grid, right edge.
       Positioned(
         left: timeGridLocalLeft + timeGridWidth - edgeZoneWidth,
-        top: 0,
+        top: timeGridLocalTop,
         width: edgeZoneWidth,
-        height: dayContentSize.height,
+        height: overlayHeight,
         child: IgnorePointer(child: ColoredBox(color: color)),
       ),
     ];
   }
 
-  /// Debug overlays: translucent blue rectangles showing the top and bottom
+  /// Debug overlays: translucent red rectangles showing the top and bottom
   /// vertical auto-scroll trigger zones (each [_vertEdgeThresholdPx] pixels
   /// tall, spanning the full time grid width).
   ///
-  /// Scroll UP fires when the tile's **top** edge enters the top blue band.
+  /// Scroll UP fires when the tile's **top** edge enters the top band.
   /// Scroll DOWN fires when the tile's **bottom** edge enters the bottom band.
   /// Only rendered when [_isDragActive] is true.
-  List<Widget> _buildScrollEdgeZoneOverlays() {
+  ///
+  /// [stackContext] is the [BuildContext] from the [DragTarget] builder —
+  /// its [RenderBox] origin equals the Stack's top-left, which is the correct
+  /// reference for all [Positioned] children inside the Stack.
+  List<Widget> _buildScrollEdgeZoneOverlays(BuildContext stackContext) {
     if (!_layoutCachedForDrag) return const [];
-
-    final dayContentBox =
-        _dayContentKey.currentContext?.findRenderObject() as RenderBox?;
-    if (dayContentBox == null || !dayContentBox.attached) return const [];
 
     final sc = _scrollController;
     if (sc == null || !sc.hasClients) return const [];
 
-    final dayContentGlobal = dayContentBox.localToGlobal(Offset.zero);
+    // Use the DragTarget builder's RenderBox as the Stack coordinate origin.
+    // This is the correct origin for all Positioned children — it includes the
+    // navigator height above _dayContentKey, which would otherwise shift bands.
+    final stackBox = stackContext.findRenderObject() as RenderBox?;
+    if (stackBox == null || !stackBox.attached) return const [];
+    final stackGlobal = stackBox.localToGlobal(Offset.zero);
 
     final timeGridWidth =
         _cachedTimeGridGlobalRight - _cachedTimeGridGlobalLeft;
@@ -5277,12 +5373,16 @@ class MCalDayViewState extends State<MCalDayView> {
 
     final viewportHeight = sc.position.viewportDimension;
 
-    // Convert viewport global bounds to day-content-local coords.
-    final timeGridLocalLeft = _cachedTimeGridGlobalLeft - dayContentGlobal.dx;
-    final viewportTopLocal = _cachedTimeGridGlobalTop - dayContentGlobal.dy;
+    // _timeGridKey sits on the scrollable content, so _cachedTimeGridGlobalTop
+    // decreases as the user scrolls down. The viewport container is fixed:
+    //   viewport_screen_top = _cachedTimeGridGlobalTop + _cachedScrollOffset
+    // Convert that fixed global Y to Stack-local coords.
+    final timeGridLocalLeft = _cachedTimeGridGlobalLeft - stackGlobal.dx;
+    final viewportTopLocal =
+        (_cachedTimeGridGlobalTop + _cachedScrollOffset) - stackGlobal.dy;
     final viewportBottomLocal = viewportTopLocal + viewportHeight;
 
-    const color = Color(0x440000CC);
+    const color = Color(0x44FF0000);
 
     return [
       // Top threshold zone — tile's top edge entering here triggers scroll up.
@@ -5451,6 +5551,9 @@ class MCalDayViewState extends State<MCalDayView> {
                 onLeave: (_) => _handleDragLeave(),
                 onAcceptWithDetails: _handleDrop,
                 builder: (context, candidateData, rejectedData) {
+                  debugPrint(
+                    '[DD] DragTarget.builder: isDragActive=$_isDragActive candidates=${candidateData.length} rejected=${rejectedData.length}  ts=${DateTime.now().toIso8601String()}',
+                  );
                   final content = _buildMainColumn(locale, dayViewContent);
                   final dropLabel = _buildDropTargetSemanticLabel(context);
                   final mainContent = dropLabel != null
@@ -5462,8 +5565,8 @@ class MCalDayViewState extends State<MCalDayView> {
                   return Stack(
                     children: [
                       mainContent,
-                      if (_isDragActive) ..._buildEdgeZoneOverlays(),
-                      if (_isDragActive) ..._buildScrollEdgeZoneOverlays(),
+                      if (_isDragActive) ..._buildEdgeZoneOverlays(context),
+                      if (_isDragActive) ..._buildScrollEdgeZoneOverlays(context),
                       if (centerLine != null) centerLine,
                     ],
                   );
