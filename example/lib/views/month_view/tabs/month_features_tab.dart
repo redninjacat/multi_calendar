@@ -53,8 +53,8 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
   bool _showDropTargetOverlay = true;
   bool _dropTargetTilesAboveOverlay = false;
   bool _dragEdgeNavigationEnabled = true;
-  int _dragEdgeNavigationDelay = 900;
-  int _dragLongPressDelay = 500;
+  int _dragEdgeNavigationDelay = 1000;
+  int _dragLongPressDelay = 200;
 
   // Resize settings
   bool? _enableDragToResize = true;

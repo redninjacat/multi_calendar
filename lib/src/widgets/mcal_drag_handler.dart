@@ -502,6 +502,7 @@ class MCalDragHandler extends ChangeNotifier {
       // handleEdgeProximity(true, ...) call confirms the cursor is still
       // near the edge on the (possibly new) page.
       if (_edgeNavigationTimer == null) {
+        debugPrint('[DD] EdgeProx: nearEdge=true, no timer pending — starting new timer at=${DateTime.now().toIso8601String()} isLeft=$isLeftEdge');
         _startEdgeTimer(
           delay ?? const Duration(milliseconds: defaultEdgeNavigationDelayMs),
           navigateCallback,
@@ -521,17 +522,19 @@ class MCalDragHandler extends ChangeNotifier {
   /// the edge.
   void _startEdgeTimer(Duration delay, VoidCallback navigateCallback) {
     _edgeNavigationTimer?.cancel();
-    debugPrint('[DD] EdgeTimer: scheduled delay=${delay.inMilliseconds}ms isDragging=$isDragging isResizing=$isResizing');
+    final scheduledAt = DateTime.now();
+    debugPrint('[DD] EdgeTimer: scheduled delay=${delay.inMilliseconds}ms at=${scheduledAt.toIso8601String()} isDragging=$isDragging isResizing=$isResizing');
     _edgeNavigationTimer = Timer(delay, () {
       _edgeNavigationTimer = null;
-      debugPrint('[DD] EdgeTimer FIRED: isDragging=$isDragging isResizing=$isResizing _isNearEdge=$_isNearEdge');
+      final firedAt = DateTime.now();
+      final elapsed = firedAt.difference(scheduledAt).inMilliseconds;
+      debugPrint('[DD] EdgeTimer FIRED: at=${firedAt.toIso8601String()} elapsed=${elapsed}ms isDragging=$isDragging isResizing=$isResizing _isNearEdge=$_isNearEdge');
       if (!(isDragging || isResizing)) {
         debugPrint('[DD] EdgeTimer FIRED: guard triggered — NOT navigating (drag/resize not active)');
         return;
       }
 
-      // Navigate
-      debugPrint('[DD] EdgeTimer FIRED: calling navigateCallback');
+      debugPrint('[DD] EdgeTimer FIRED: calling navigateCallback at=${DateTime.now().toIso8601String()}');
       navigateCallback();
 
       // Reset _isNearEdge after navigating.  The page just changed, so the
@@ -542,14 +545,14 @@ class MCalDragHandler extends ChangeNotifier {
       // may bail out before reaching the edge check) leaves _isNearEdge
       // stuck true and the timer reschedules forever.
       _isNearEdge = false;
-      debugPrint('[DD] EdgeTimer: _isNearEdge reset to false after navigate — waiting for next handleEdgeProximity call');
+      debugPrint('[DD] EdgeTimer: _isNearEdge reset to false after navigate at=${DateTime.now().toIso8601String()}');
     });
   }
 
   /// Cancels the edge navigation timer and resets all edge-repeat state.
   void _cancelEdgeNavigationTimer() {
     if (_edgeNavigationTimer != null) {
-      debugPrint('[DD] EdgeTimer: CANCELLED _isNearEdge=$_isNearEdge isDragging=$isDragging');
+      debugPrint('[DD] EdgeTimer: CANCELLED at=${DateTime.now().toIso8601String()} _isNearEdge=$_isNearEdge isDragging=$isDragging');
     }
     _edgeNavigationTimer?.cancel();
     _edgeNavigationTimer = null;

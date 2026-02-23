@@ -1419,6 +1419,11 @@ class MCalDayViewState extends State<MCalDayView> {
   // the tile center even after DragLeave.
   Offset? _debugTileCenterGlobal;
 
+  // Last cursor position from the fallback pointer handler. Used by
+  // _schedulePostNavLayoutRefresh to re-check edge proximity after navigation
+  // when the DragTarget is no longer active (onLeave has fired).
+  Offset? _lastFallbackCursorGlobal;
+
   // ============================================================================
   // Layout Cache
   // ============================================================================
@@ -1729,12 +1734,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
       // Task 8: Update PageController when display date changes programmatically
       if (widget.enableSwipeNavigation && _swipePageController != null && _swipeReferenceDate != null) {
-        final newDate = DateTime(
-          _displayDate.year,
-          _displayDate.month,
-          _displayDate.day,
-        );
-        final dayOffset = newDate.difference(_swipeReferenceDate!).inDays;
+        final dayOffset = daysBetween(_swipeReferenceDate!, _displayDate);
         final newPageIndex = _initialSwipePageIndex + dayOffset;
 
         if (_swipePageController!.hasClients) {
@@ -2039,6 +2039,7 @@ class MCalDayViewState extends State<MCalDayView> {
     _cachedGrabOffsetX = 0.0;
     _cachedGrabOffsetY = 0.0;
     _debugTileCenterGlobal = null;
+    _lastFallbackCursorGlobal = null;
     _cancelVerticalScrollTimer();
 
     setState(() {});
@@ -2070,6 +2071,7 @@ class MCalDayViewState extends State<MCalDayView> {
     _cachedGrabOffsetX = 0.0;
     _cachedGrabOffsetY = 0.0;
     _debugTileCenterGlobal = null;
+    _lastFallbackCursorGlobal = null;
     _cancelVerticalScrollTimer();
 
     setState(() {});
@@ -3034,6 +3036,7 @@ class MCalDayViewState extends State<MCalDayView> {
     if (_isDragTargetActive) return;
 
     final globalPos = event.position;
+    _lastFallbackCursorGlobal = globalPos;
     final feedbackGlobalX = globalPos.dx - _cachedGrabOffsetX;
     final feedbackGlobalY = globalPos.dy - _cachedGrabOffsetY;
     final tileCenterX = feedbackGlobalX + _feedbackTileWidth / 2;
@@ -3176,7 +3179,12 @@ class MCalDayViewState extends State<MCalDayView> {
     // Horizontal: uses the tile's visual center against 25% edge zones within
     // the time grid. This triggers navigation when the tile center enters the
     // edge zone, not when the cursor does.
-    if (widget.dragEdgeNavigationEnabled) {
+    // Skip when the DragTarget has fired onLeave (!_isDragTargetActive):
+    // _latestDragDetails contains stale offset data whose tileCenterX may
+    // land in the middle of the grid, falsely cancelling a valid edge timer.
+    // The fallback _handleDragPointerMove handler will re-detect the edge
+    // with the correct cursor-derived tile center on the next pointer event.
+    if (widget.dragEdgeNavigationEnabled && _isDragTargetActive) {
       _checkEdgeProximity(tileCenterX);
     }
 
@@ -3995,7 +4003,7 @@ class MCalDayViewState extends State<MCalDayView> {
   // ============================================================================
 
   void _handleNavigatePrevious() {
-    debugPrint('[DD] NavigatePrevious CALLED from=${StackTrace.current.toString().split('\n').skip(1).take(3).join(' | ')}');
+    debugPrint('[DD] NavigatePrevious CALLED at=${DateTime.now().toIso8601String()} from=${StackTrace.current.toString().split('\n').skip(1).take(3).join(' | ')}');
     _layoutCachedForDrag = false;
     final previousDay = DateTime(
       _displayDate.year,
@@ -4007,7 +4015,7 @@ class MCalDayViewState extends State<MCalDayView> {
   }
 
   void _handleNavigateNext() {
-    debugPrint('[DD] NavigateNext CALLED from=${StackTrace.current.toString().split('\n').skip(1).take(3).join(' | ')}');
+    debugPrint('[DD] NavigateNext CALLED at=${DateTime.now().toIso8601String()} from=${StackTrace.current.toString().split('\n').skip(1).take(3).join(' | ')}');
     _layoutCachedForDrag = false;
     final nextDay = DateTime(
       _displayDate.year,
@@ -4048,6 +4056,23 @@ class MCalDayViewState extends State<MCalDayView> {
 
       if (_latestDragDetails != null) {
         _processDragMove();
+      }
+
+      // When the DragTarget has fired onLeave (e.g. leftward drag), the
+      // stale _latestDragDetails can't supply a correct tileCenterX for edge
+      // detection — _processDragMove guards against that. But the cursor is
+      // typically stationary after navigation, so no new pointer events arrive
+      // to trigger the fallback handler. Re-compute tileCenterX from the last
+      // known fallback cursor position and explicitly re-check edge proximity.
+      if (!_isDragTargetActive &&
+          widget.dragEdgeNavigationEnabled &&
+          _lastFallbackCursorGlobal != null &&
+          _feedbackTileWidth > 0) {
+        final cursorX = _lastFallbackCursorGlobal!.dx;
+        final feedbackX = cursorX - _cachedGrabOffsetX;
+        final tileCenterX = feedbackX + _feedbackTileWidth / 2;
+        debugPrint('[DD] PostNavEdgeRecheck: tileCenterX=$tileCenterX cursorX=$cursorX feedbackX=$feedbackX at=${DateTime.now().toIso8601String()}');
+        _checkEdgeProximity(tileCenterX);
       }
     });
   }

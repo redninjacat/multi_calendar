@@ -7,7 +7,8 @@ import '../../../shared/utils/sample_events.dart';
 import '../../../shared/widgets/control_panel_section.dart';
 import '../../../shared/widgets/control_widgets.dart';
 import '../../../shared/widgets/event_detail_dialog.dart';
-import '../../../shared/widgets/event_form_dialog.dart' show showEventCreateDialog, showEventEditDialog;
+import '../../../shared/widgets/event_form_dialog.dart'
+    show showEventCreateDialog, showEventEditDialog;
 import '../../../shared/widgets/responsive_control_panel.dart';
 import '../../../shared/widgets/snackbar_helper.dart';
 
@@ -66,8 +67,8 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   bool _showDropTargetOverlay = true;
   bool _dropTargetTilesAboveOverlay = false;
   bool _dragEdgeNavigationEnabled = true;
-  Duration _dragEdgeNavigationDelay = const Duration(milliseconds: 500);
-  Duration _dragLongPressDelay = const Duration(milliseconds: 250);
+  Duration _dragEdgeNavigationDelay = const Duration(milliseconds: 1000);
+  Duration _dragLongPressDelay = const Duration(milliseconds: 200);
 
   // ============================================================
   // Resize Settings
@@ -214,10 +215,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
     );
     if (newEvent != null && mounted) {
       _eventController.addEvents([newEvent]);
-      SnackBarHelper.show(
-        context,
-        l10n.snackbarEventCreated(newEvent.title),
-      );
+      SnackBarHelper.show(context, l10n.snackbarEventCreated(newEvent.title));
     }
   }
 
@@ -240,10 +238,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   void _handleDeleteEvent(MCalCalendarEvent event) {
     final l10n = AppLocalizations.of(context)!;
     _eventController.removeEvents([event.id]);
-    SnackBarHelper.show(
-      context,
-      l10n.snackbarEventDeleted(event.title),
-    );
+    SnackBarHelper.show(context, l10n.snackbarEventDeleted(event.title));
   }
 
   @override
@@ -335,10 +330,12 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               label: l10n.settingSubHourLabelInterval,
               value: _subHourLabelInterval?.inMinutes ?? 30,
               items: [15, 20, 30]
-                  .map((m) => DropdownMenuItem(
-                        value: m,
-                        child: Text(l10n.valueMinutes(m)),
-                      ))
+                  .map(
+                    (m) => DropdownMenuItem(
+                      value: m,
+                      child: Text(l10n.valueMinutes(m)),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) {
                 if (v != null) {
@@ -359,15 +356,16 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               label: l10n.settingAllDayToTimedDuration,
               value: _allDayToTimedDuration.inMinutes,
               items: [30, 60, 90, 120]
-                  .map((minutes) => DropdownMenuItem(
-                        value: minutes,
-                        child: Text(l10n.valueMinutes(minutes)),
-                      ))
+                  .map(
+                    (minutes) => DropdownMenuItem(
+                      value: minutes,
+                      child: Text(l10n.valueMinutes(minutes)),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) {
                 if (v != null) {
-                  setState(
-                      () => _allDayToTimedDuration = Duration(minutes: v));
+                  setState(() => _allDayToTimedDuration = Duration(minutes: v));
                 }
               },
             ),
@@ -410,8 +408,11 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               min: 100,
               max: 1000,
               divisions: 9,
-              onChanged: (v) => setState(() =>
-                  _dragEdgeNavigationDelay = Duration(milliseconds: v.toInt())),
+              onChanged: (v) => setState(
+                () => _dragEdgeNavigationDelay = Duration(
+                  milliseconds: v.toInt(),
+                ),
+              ),
               valueLabel: '${_dragEdgeNavigationDelay.inMilliseconds}ms',
             ),
             ControlWidgets.slider(
@@ -420,8 +421,9 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               min: 100,
               max: 500,
               divisions: 8,
-              onChanged: (v) => setState(() =>
-                  _dragLongPressDelay = Duration(milliseconds: v.toInt())),
+              onChanged: (v) => setState(
+                () => _dragLongPressDelay = Duration(milliseconds: v.toInt()),
+              ),
               valueLabel: '${_dragLongPressDelay.inMilliseconds}ms',
             ),
           ],
@@ -454,8 +456,9 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               min: 100,
               max: 800,
               divisions: 14,
-              onChanged: (v) => setState(() =>
-                  _animationDuration = Duration(milliseconds: v.toInt())),
+              onChanged: (v) => setState(
+                () => _animationDuration = Duration(milliseconds: v.toInt()),
+              ),
               valueLabel: '${_animationDuration.inMilliseconds}ms',
             ),
           ],
@@ -506,10 +509,12 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               label: l10n.settingTimeSlotDuration,
               value: _timeSlotDuration.inMinutes,
               items: [5, 10, 15, 20, 30, 60]
-                  .map((minutes) => DropdownMenuItem(
-                        value: minutes,
-                        child: Text(l10n.valueMinutes(minutes)),
-                      ))
+                  .map(
+                    (minutes) => DropdownMenuItem(
+                      value: minutes,
+                      child: Text(l10n.valueMinutes(minutes)),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) {
                 if (v != null) {
@@ -521,10 +526,12 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               label: l10n.settingGridlineInterval,
               value: _gridlineInterval.inMinutes,
               items: [5, 10, 15, 20, 30, 60]
-                  .map((minutes) => DropdownMenuItem(
-                        value: minutes,
-                        child: Text(l10n.valueMinutes(minutes)),
-                      ))
+                  .map(
+                    (minutes) => DropdownMenuItem(
+                      value: minutes,
+                      child: Text(l10n.valueMinutes(minutes)),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) {
                 if (v != null) {
@@ -612,7 +619,9 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
           showCurrentTimeIndicator: _showCurrentTimeIndicator,
           showWeekNumbers: _showWeekNumbers,
           showSubHourLabels: _showSubHourLabels,
-          subHourLabelInterval: _showSubHourLabels ? _subHourLabelInterval : null,
+          subHourLabelInterval: _showSubHourLabels
+              ? _subHourLabelInterval
+              : null,
           allDaySectionMaxRows: _allDaySectionMaxRows,
           allDayToTimedDuration: _allDayToTimedDuration,
           enableDragToMove: _enableDragToMove,
@@ -651,7 +660,9 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             final t = labelContext.time;
             SnackBarHelper.show(
               context,
-              l10n.snackbarTimeLabelTap('${t.hour}:${t.minute.toString().padLeft(2, '0')}'),
+              l10n.snackbarTimeLabelTap(
+                '${t.hour}:${t.minute.toString().padLeft(2, '0')}',
+              ),
             );
           },
           onTimeSlotTap: (context, slotContext) {
@@ -659,7 +670,9 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             final minute = slotContext.minute ?? 0;
             SnackBarHelper.show(
               context,
-              l10n.snackbarTimeSlotTap('$hour:${minute.toString().padLeft(2, '0')}'),
+              l10n.snackbarTimeSlotTap(
+                '$hour:${minute.toString().padLeft(2, '0')}',
+              ),
             );
           },
           onTimeSlotLongPress: (context, slotContext) {
@@ -667,15 +680,25 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             final minute = slotContext.minute ?? 0;
             SnackBarHelper.show(
               context,
-              l10n.snackbarTimeSlotLongPress('$hour:${minute.toString().padLeft(2, '0')}'),
+              l10n.snackbarTimeSlotLongPress(
+                '$hour:${minute.toString().padLeft(2, '0')}',
+              ),
             );
           },
           onTimeSlotDoubleTap: (context, slotContext) {
             if (!slotContext.isAllDayArea) {
-              final time = DateTime(slotContext.displayDate.year, slotContext.displayDate.month, slotContext.displayDate.day, slotContext.hour ?? 0, slotContext.minute ?? 0);
+              final time = DateTime(
+                slotContext.displayDate.year,
+                slotContext.displayDate.month,
+                slotContext.displayDate.day,
+                slotContext.hour ?? 0,
+                slotContext.minute ?? 0,
+              );
               SnackBarHelper.show(
                 context,
-                l10n.snackbarEmptySpaceDoubleTap('${time.hour}:${time.minute.toString().padLeft(2, '0')}'),
+                l10n.snackbarEmptySpaceDoubleTap(
+                  '${time.hour}:${time.minute.toString().padLeft(2, '0')}',
+                ),
               );
               _handleCreateEvent(time);
             }
@@ -707,7 +730,9 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               final minute = slotContext.minute ?? 0;
               SnackBarHelper.show(
                 context,
-                l10n.snackbarHoverTimeSlot('$hour:${minute.toString().padLeft(2, '0')}'),
+                l10n.snackbarHoverTimeSlot(
+                  '$hour:${minute.toString().padLeft(2, '0')}',
+                ),
               );
             }
           },
@@ -740,7 +765,9 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             return true;
           },
           onResizeWillAccept: (details) {
-            final duration = details.newEndDate.difference(details.newStartDate);
+            final duration = details.newEndDate.difference(
+              details.newStartDate,
+            );
             SnackBarHelper.show(
               context,
               l10n.snackbarResizeWillAccept(
@@ -751,7 +778,9 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             return true;
           },
           onEventResized: (context, details) {
-            final duration = details.newEndDate.difference(details.newStartDate);
+            final duration = details.newEndDate.difference(
+              details.newStartDate,
+            );
             SnackBarHelper.show(
               context,
               l10n.snackbarEventResized(
