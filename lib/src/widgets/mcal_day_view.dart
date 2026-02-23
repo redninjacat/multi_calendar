@@ -310,7 +310,7 @@ class MCalDayView extends StatefulWidget {
 
   /// The starting hour of the day view (0-23).
   ///
-  /// Events before this hour will not be displayed in the timed events area.
+  /// Events before this hour will not be displayed in the time grid.
   /// Defaults to 0 (midnight).
   ///
   /// Example: Set to 8 for a work day view (8 AM - 6 PM):
@@ -325,7 +325,7 @@ class MCalDayView extends StatefulWidget {
 
   /// The ending hour of the day view (0-23).
   ///
-  /// Events after this hour will not be displayed in the timed events area.
+  /// Events after this hour will not be displayed in the time grid.
   /// Defaults to 23 (11 PM).
   ///
   /// Must be greater than [startHour].
@@ -407,7 +407,7 @@ class MCalDayView extends StatefulWidget {
     Widget defaultWidget,
   )? weekNumberBuilder;
 
-  /// The interval between gridlines in the timed events area.
+  /// The interval between gridlines in the time grid.
   ///
   /// Valid values: 1, 5, 10, 15, 20, 30, or 60 minutes.
   /// Gridlines are classified as hour (on the hour), major (30 min), or minor (other).
@@ -536,12 +536,12 @@ class MCalDayView extends StatefulWidget {
   /// Defaults to [Curves.easeInOut].
   final Curve initialScrollCurve;
 
-  /// The scroll physics for the timed events area.
+  /// The scroll physics for the time grid.
   ///
   /// If null, uses platform-appropriate default physics.
   final ScrollPhysics? scrollPhysics;
 
-  /// Optional external scroll controller for the timed events area.
+  /// Optional external scroll controller for the time grid.
   ///
   /// If provided, you can programmatically control scrolling.
   /// If null, an internal controller is created.
@@ -560,7 +560,7 @@ class MCalDayView extends StatefulWidget {
 
   /// The default duration for all-day events converted to timed events.
   ///
-  /// When dragging an all-day event into the timed area, it will be given this duration.
+  /// When dragging an all-day event into the time grid, it will be given this duration.
   ///
   /// Defaults to 1 hour.
   final Duration allDayToTimedDuration;
@@ -665,7 +665,7 @@ class MCalDayView extends StatefulWidget {
   /// A list of special time regions to display.
   ///
   /// Time regions can represent blocked time, lunch breaks, non-working hours, etc.
-  /// They are rendered as colored overlays in the timed events area.
+  /// They are rendered as colored overlays in the time grid.
   ///
   /// Supports recurring regions via RRULE.
   ///
@@ -812,7 +812,7 @@ class MCalDayView extends StatefulWidget {
   )?
   timeLabelBuilder;
 
-  /// Builder for gridlines in the timed events area.
+  /// Builder for gridlines in the time grid.
   ///
   /// If null, uses default gridline rendering.
   ///
@@ -1296,7 +1296,7 @@ class MCalDayView extends StatefulWidget {
 ///
 /// ## Public API
 ///
-/// - [scrollToTime] — Programmatically scroll the timed events area to a
+/// - [scrollToTime] — Programmatically scroll the time grid to a
 ///   specific time of day.
 ///
 /// ## Display Date
@@ -1346,12 +1346,14 @@ class MCalDayViewState extends State<MCalDayView> {
   MCalDragHandler? _dragHandler;
   bool _isDragActive = false;
   bool _isResizeActive = false;
+  bool _isProcessingDrop = false;
+  bool _isDragTargetActive = false;
 
   // Drag debouncing (matches Month View lines 3915-3922)
   DragTargetDetails<MCalDragData>? _latestDragDetails;
   Timer? _dragMoveDebounceTimer;
 
-  // Resize state: offset of the edge being dragged (from top of timed area)
+  // Resize state: offset of the edge being dragged (from top of time grid)
   double _resizeEdgeOffset = 0.0;
 
   /// Pointer ID for active resize gesture (survives scroll/navigation).
@@ -1380,7 +1382,7 @@ class MCalDayViewState extends State<MCalDayView> {
   bool _autoScrollDone = false;
 
   // Vertical auto-scroll during drag/resize: when the user drags near the
-  // top or bottom of the visible timed area, scroll the content automatically
+  // top or bottom of the visible time grid, scroll the content automatically
   // so they can drop onto time slots outside the current viewport.
   Timer? _verticalScrollTimer;
   double _verticalScrollDelta = 0.0; // px per 16ms frame, negative = up
@@ -1393,32 +1395,35 @@ class MCalDayViewState extends State<MCalDayView> {
   static const _vertEdgeGracePeriod = Duration(milliseconds: 400);
 
   // Navigation cooldown: suppress horizontal edge detection for a short window
-  // after a page navigation to prevent double-navigation when the cursor
-  // remains near the edge on the new page.
-  DateTime? _lastEdgeNavigationTime;
-  static const _edgeNavCooldown = Duration(milliseconds: 800);
+  // (Edge navigation cooldown removed — the drag handler's own _isNearEdge
+  // reset-after-navigate mechanism prevents double-navigation, matching the
+  // Month View pattern.)
 
-  // Minimum number of pixels the tile's edge must exceed the timed area
-  // boundary before horizontal edge navigation triggers. Prevents
-  // hair-trigger navigation when the tile barely overlaps the boundary.
-  static const _edgeMarginPx = 10.0;
+  // Fraction of the time grid width that defines each edge navigation zone.
+  // The left and right 25% of the time grid are trigger zones; the center 50%
+  // is a safe zone.  Detection is based on the tile's horizontal center.
+  static const _edgeZoneFraction = 0.25;
 
   // The tile's top/bottom edge must be within this many pixels of the
   // scroll viewport's top/bottom boundary to trigger vertical auto-scroll.
   static const _vertEdgeThresholdPx = 40.0;
 
   // Feedback tile dimensions and grab offsets — cached from MCalDragData.
-  // Used for tile-edge-based edge detection (left/right/top/bottom).
   double _feedbackTileWidth = 0.0;
   double _feedbackTileHeight = 0.0;
   double _cachedGrabOffsetX = 0.0;
   double _cachedGrabOffsetY = 0.0;
 
+  // TEMPORARY DEBUG: tile center in global coordinates, updated from both
+  // DragTarget.onMove and raw pointer fallback so the debug overlay tracks
+  // the tile center even after DragLeave.
+  Offset? _debugTileCenterGlobal;
+
   // ============================================================================
   // Layout Cache
   // ============================================================================
 
-  // Measured once when the timed-events area lays out (via LayoutBuilder) and
+  // Measured once when the time grid lays out (via LayoutBuilder) and
   // used throughout as a fallback when widget.hourHeight is not explicitly set.
   // A value of 0.0 means not yet measured; callers fall back to widget.hourHeight
   // or the default of 80.0 px/hour.
@@ -1428,17 +1433,17 @@ class MCalDayViewState extends State<MCalDayView> {
   // page navigation) to avoid repeated RenderBox lookups every frame.
   // Mirrors the caching strategy in Month View's _updateLayoutCache.
   bool _layoutCachedForDrag = false;
-  Offset _cachedGridAreaOffset = Offset.zero;
-  Size _cachedGridAreaSize = Size.zero;
-  double _cachedTimelineTopInGrid = 0.0; // Y offset of timed area within grid
+  Offset _cachedDayContentOffset = Offset.zero;
+  Size _cachedDayContentSize = Size.zero;
+  double _cachedTimeGridTopInDayContent = 0.0;
   double _cachedScrollOffset = 0.0;
 
-  // Timed events area boundaries in global coordinates for tile-edge-based
+  // Time grid boundaries in global coordinates for tile-edge-based
   // edge detection. Left/right define where horizontal edge navigation
-  // triggers; top is also used for the all-day ↔ timed boundary.
-  double _cachedTimedAreaGlobalLeft = 0.0;
-  double _cachedTimedAreaGlobalRight = 0.0;
-  double _cachedTimedAreaGlobalTop = 0.0;
+  // triggers; top is also used for the all-day area ↔ time grid boundary.
+  double _cachedTimeGridGlobalLeft = 0.0;
+  double _cachedTimeGridGlobalRight = 0.0;
+  double _cachedTimeGridGlobalTop = 0.0;
   double _cachedMinuteHeight = 0.0; // px per minute
 
   // ============================================================================
@@ -1489,8 +1494,8 @@ class MCalDayViewState extends State<MCalDayView> {
   // Keys for Layout Access
   // ============================================================================
 
-  final GlobalKey _timedEventsAreaKey = GlobalKey();
-  final GlobalKey _gridAreaKey = GlobalKey();
+  final GlobalKey _timeGridKey = GlobalKey();
+  final GlobalKey _dayContentKey = GlobalKey();
 
   /// Position from the most recent [GestureDetector.onDoubleTapDown].
   /// Used by [onDoubleTap] since it does not receive position.
@@ -1921,28 +1926,30 @@ class MCalDayViewState extends State<MCalDayView> {
   /// RenderBox lookups in one place and store the results so `_processDragMove`
   /// uses cheap cached arithmetic on every frame.
   void _cacheLayoutForDrag() {
-    final gridBox =
-        _gridAreaKey.currentContext?.findRenderObject() as RenderBox?;
-    if (gridBox == null || !gridBox.attached) {
-      debugPrint('[DD] CacheLayout: FAILED — gridBox null or detached');
+    final dayContentBox =
+        _dayContentKey.currentContext?.findRenderObject() as RenderBox?;
+    if (dayContentBox == null || !dayContentBox.attached) {
+      debugPrint('[DD] CacheLayout: FAILED — dayContentBox null or detached');
       return;
     }
 
-    _cachedGridAreaOffset = gridBox.localToGlobal(Offset.zero);
-    _cachedGridAreaSize = gridBox.size;
+    _cachedDayContentOffset = dayContentBox.localToGlobal(Offset.zero);
+    _cachedDayContentSize = dayContentBox.size;
 
-    // Determine where the timed-events area starts within the grid.
-    // Everything above this Y is header / all-day section.
-    final timedBox =
-        _timedEventsAreaKey.currentContext?.findRenderObject() as RenderBox?;
-    if (timedBox != null && timedBox.attached) {
-      final timedGlobal = timedBox.localToGlobal(Offset.zero);
-      _cachedTimelineTopInGrid = timedGlobal.dy - _cachedGridAreaOffset.dy;
-      _cachedTimedAreaGlobalLeft = timedGlobal.dx;
-      _cachedTimedAreaGlobalRight = timedGlobal.dx + timedBox.size.width;
-      _cachedTimedAreaGlobalTop = timedGlobal.dy;
+    // Determine where the time grid starts within the day content.
+    // Everything above this Y is the day header / all-day area.
+    final timeGridBox =
+        _timeGridKey.currentContext?.findRenderObject() as RenderBox?;
+    if (timeGridBox != null && timeGridBox.attached && timeGridBox.size.width > 0) {
+      final timeGridGlobal = timeGridBox.localToGlobal(Offset.zero);
+      _cachedTimeGridTopInDayContent = timeGridGlobal.dy - _cachedDayContentOffset.dy;
+      _cachedTimeGridGlobalLeft = timeGridGlobal.dx;
+      _cachedTimeGridGlobalRight = timeGridGlobal.dx + timeGridBox.size.width;
+      _cachedTimeGridGlobalTop = timeGridGlobal.dy;
     } else {
-      debugPrint('[DD] CacheLayout: WARNING — timedEventsBox null or detached');
+      debugPrint('[DD] CacheLayout: WARNING — timeGridBox null/detached/zero-size, skipping cache');
+      _layoutCachedForDrag = false;
+      return;
     }
 
     final sc = _scrollController;
@@ -1952,7 +1959,7 @@ class MCalDayViewState extends State<MCalDayView> {
     _cachedMinuteHeight = hourHeight / 60.0;
 
     _layoutCachedForDrag = true;
-    debugPrint('[DD] CacheLayout: gridOffset=$_cachedGridAreaOffset gridSize=$_cachedGridAreaSize timelineTopInGrid=$_cachedTimelineTopInGrid timedAreaGlobal=($_cachedTimedAreaGlobalLeft..$_cachedTimedAreaGlobalRight top=$_cachedTimedAreaGlobalTop) scrollOffset=$_cachedScrollOffset minuteHeight=$_cachedMinuteHeight');
+    debugPrint('[DD] CacheLayout: dayContentOffset=$_cachedDayContentOffset dayContentSize=$_cachedDayContentSize timeGridTopInDayContent=$_cachedTimeGridTopInDayContent timeGridGlobal=($_cachedTimeGridGlobalLeft..$_cachedTimeGridGlobalRight top=$_cachedTimeGridGlobalTop) scrollOffset=$_cachedScrollOffset minuteHeight=$_cachedMinuteHeight');
   }
 
   /// Sends a screen reader announcement for accessibility.
@@ -2005,40 +2012,64 @@ class MCalDayViewState extends State<MCalDayView> {
   /// accepted, _handleDrop already ran and called cancelDrag(); we only need
   /// to clean up when the drop was rejected (released outside valid target).
   void _handleDragEnded(bool wasAccepted) {
-    debugPrint('[DD] DragEnded: wasAccepted=$wasAccepted isDragActive=$_isDragActive vertScrollTimerActive=${_verticalScrollTimer?.isActive}');
+    debugPrint('[DD] DragEnded: wasAccepted=$wasAccepted isDragActive=$_isDragActive proposedValid=${_dragHandler?.isProposedDropValid} vertScrollTimerActive=${_verticalScrollTimer?.isActive}');
+
+    // If the drag was already cleaned up by _handleDragCancelled (which fires
+    // first from Flutter's Draggable), skip redundant processing.
+    if (!_isDragActive) {
+      debugPrint('[DD] DragEnded: drag already inactive — skipping');
+      return;
+    }
+
+    if (!wasAccepted && _dragHandler != null && _dragHandler!.isProposedDropValid) {
+      debugPrint('[DD] DragEnded: NOT accepted but proposedDrop is valid — completing drop via _completePendingDrop');
+      _completePendingDrop();
+    } else if (!wasAccepted) {
+      debugPrint('[DD] DragEnded: drop was NOT accepted and no valid proposal — calling cancelDrag()');
+      _dragHandler?.cancelDrag();
+    }
+
     _isDragActive = false;
+    _isDragTargetActive = false;
+    _isProcessingDrop = false;
     _layoutCachedForDrag = false;
     _dragStartTime = null;
-    _lastEdgeNavigationTime = null;
     _feedbackTileWidth = 0.0;
     _feedbackTileHeight = 0.0;
     _cachedGrabOffsetX = 0.0;
     _cachedGrabOffsetY = 0.0;
+    _debugTileCenterGlobal = null;
     _cancelVerticalScrollTimer();
-
-    if (!wasAccepted) {
-      debugPrint('[DD] DragEnded: drop was NOT accepted — calling cancelDrag()');
-      _dragHandler?.cancelDrag();
-    }
 
     setState(() {});
   }
 
   /// Called when a drag operation is cancelled.
   ///
-  /// Cleans up drag state and cancels any pending edge navigation.
-  /// This is called when the user presses Escape or when the system
-  /// cancels the drag gesture.
-  void _handleDragCancelled() {
-    debugPrint('[DD] DragCancelled');
-    _ensureDragHandler.cancelDrag();
+  /// When [isUserCancel] is false (the default), this was triggered by
+  /// Flutter's `onDraggableCanceled` — the DragTarget didn't accept the drop
+  /// because the pointer was outside its bounds. If there's a valid proposed
+  /// drop range, complete the drop instead of discarding it.
+  ///
+  /// When [isUserCancel] is true, the user explicitly cancelled (e.g. via
+  /// Escape key or pointer cancel), so always discard.
+  void _handleDragCancelled({bool isUserCancel = false}) {
+    debugPrint('[DD] DragCancelled: isUserCancel=$isUserCancel proposedValid=${_dragHandler?.isProposedDropValid}');
+
+    if (!isUserCancel && _dragHandler != null && _dragHandler!.isProposedDropValid) {
+      debugPrint('[DD] DragCancelled: NOT user cancel and proposedDrop is valid — completing drop via _completePendingDrop');
+      _completePendingDrop();
+    } else {
+      _ensureDragHandler.cancelDrag();
+    }
     _isDragActive = false;
+    _isDragTargetActive = false;
     _dragStartTime = null;
-    _lastEdgeNavigationTime = null;
     _feedbackTileWidth = 0.0;
     _feedbackTileHeight = 0.0;
     _cachedGrabOffsetX = 0.0;
     _cachedGrabOffsetY = 0.0;
+    _debugTileCenterGlobal = null;
     _cancelVerticalScrollTimer();
 
     setState(() {});
@@ -2431,9 +2462,9 @@ class MCalDayViewState extends State<MCalDayView> {
       startHour: widget.startHour,
       hourHeight: hourHeight,
     );
-    final timedBox = _timedEventsAreaKey.currentContext?.findRenderObject();
-    final globalOffset = timedBox is RenderBox
-        ? timedBox.localToGlobal(Offset(0, localY))
+    final timeGridBox = _timeGridKey.currentContext?.findRenderObject();
+    final globalOffset = timeGridBox is RenderBox
+        ? timeGridBox.localToGlobal(Offset(0, localY))
         : Offset.zero;
     final details = DragTargetDetails<MCalDragData>(
       data: dragData,
@@ -2994,30 +3025,35 @@ class MCalDayViewState extends State<MCalDayView> {
   /// DragTarget's `onMove` is still firing (normal case), `_latestDragDetails`
   /// is non-null and `_processDragMove` handles everything — we only use the
   /// raw pointer here for edge detection when the DragTarget has fired
-  /// `onLeave` (e.g. the cursor is over the time legend).
+  /// `onLeave` (e.g. the cursor has left the time grid).
   void _handleDragPointerMove(PointerMoveEvent event) {
     if (!_isDragActive || !_layoutCachedForDrag) return;
 
     // If DragTarget.onMove is still active, it drives _processDragMove which
-    // already calls _checkEdgeProximity. We only step in when _latestDragDetails
-    // was nulled by DragLeave.
-    if (_latestDragDetails != null) return;
+    // already calls _checkEdgeProximity. We only step in after DragLeave.
+    if (_isDragTargetActive) return;
 
     final globalPos = event.position;
-    // Reconstruct the feedback tile's global left from the cursor position.
     final feedbackGlobalX = globalPos.dx - _cachedGrabOffsetX;
+    final feedbackGlobalY = globalPos.dy - _cachedGrabOffsetY;
+    final tileCenterX = feedbackGlobalX + _feedbackTileWidth / 2;
+    final tileCenterY = feedbackGlobalY + _feedbackTileHeight / 2;
 
-    debugPrint('[DD] DragPointerMove(fallback): globalPos=$globalPos feedbackGlobalX=$feedbackGlobalX');
+    // TEMPORARY DEBUG: update tile center position for the debug overlay.
+    _debugTileCenterGlobal = Offset(tileCenterX, tileCenterY);
+    if (mounted) setState(() {});
 
+    debugPrint('[DD] DragPointerMove(fallback): globalPos=$globalPos feedbackX=$feedbackGlobalX tileCenterX=$tileCenterX grabOffsetX=$_cachedGrabOffsetX tileWidth=$_feedbackTileWidth');
+
+    // Edge detection uses the tile center (not cursor) against 25% edge zones.
     if (widget.dragEdgeNavigationEnabled) {
-      _checkEdgeProximity(feedbackGlobalX);
+      _checkEdgeProximity(tileCenterX);
     }
 
     // Also check vertical scroll using tile's top edge.
-    final feedbackGlobalY = globalPos.dy - _cachedGrabOffsetY;
-    final localY = globalPos.dy - _cachedGridAreaOffset.dy;
-    final isInTimedRegion = localY >= _cachedTimelineTopInGrid;
-    if (isInTimedRegion) {
+    final localY = globalPos.dy - _cachedDayContentOffset.dy;
+    final isInTimeGrid = localY >= _cachedTimeGridTopInDayContent;
+    if (isInTimeGrid) {
       _checkVerticalScrollEdge(feedbackGlobalY, reprocessDrag: true);
     }
   }
@@ -3029,6 +3065,7 @@ class MCalDayViewState extends State<MCalDayView> {
   /// calculations to run at most once per 16ms.
   void _handleDragMove(DragTargetDetails<MCalDragData> details) {
     _latestDragDetails = details;
+    _isDragTargetActive = true;
 
     // Cache feedback tile dimensions and grab offsets from drag data.
     final data = details.data;
@@ -3052,7 +3089,7 @@ class MCalDayViewState extends State<MCalDayView> {
   ///
   /// This contains all the expensive calculations that should only
   /// run at most once per 16ms frame.  The DragTarget wraps the entire
-  /// interactive surface (all-day + scrollable timed area), so this method
+  /// interactive surface (all-day area + time grid), so this method
   /// handles both region detection and 4-zone edge detection in a single
   /// pass — matching the Month View's `_processDragMove` structure.
   void _processDragMove() {
@@ -3080,66 +3117,79 @@ class MCalDayViewState extends State<MCalDayView> {
     }
 
     // details.offset is the feedback widget's top-left in global coordinates.
-    // Recover the cursor's true position by adding grab offsets (matching the
-    // pattern Month View uses).
     final dragData = details.data;
     final feedbackGlobal = details.offset;
     final cursorGlobalX = feedbackGlobal.dx + dragData.grabOffsetX;
     final cursorGlobalY = feedbackGlobal.dy + dragData.grabOffsetY;
+    final tileCenterX = feedbackGlobal.dx + _feedbackTileWidth / 2;
+    final tileCenterY = feedbackGlobal.dy + _feedbackTileHeight / 2;
 
-    // Convert to grid-area-local coordinates.
-    final localX = cursorGlobalX - _cachedGridAreaOffset.dx;
-    final localY = cursorGlobalY - _cachedGridAreaOffset.dy;
+    // TEMPORARY DEBUG: update tile center position for the debug overlay.
+    // Only update if DragTarget is still active; when in fallback mode after
+    // DragLeave, the stale _latestDragDetails would jump the line back to an
+    // old position — the fallback handler handles updates instead.
+    if (_isDragTargetActive) {
+      _debugTileCenterGlobal = Offset(tileCenterX, tileCenterY);
+    }
+
+    // Convert to grid-area-local coordinates (cursor-based for region detection).
+    final localX = cursorGlobalX - _cachedDayContentOffset.dx;
+    final localY = cursorGlobalY - _cachedDayContentOffset.dy;
 
     // --- Region detection ---
-    // Everything above _cachedTimelineTopInGrid is header / all-day.
-    // Everything at or below is the scrollable timed area.
-    final bool isInTimedRegion = localY >= _cachedTimelineTopInGrid;
+    // Everything above _cachedTimeGridTopInDayContent is the all-day area.
+    // Everything at or below is the scrollable time grid.
+    final bool isInTimeGrid = localY >= _cachedTimeGridTopInDayContent;
 
     final scForLog = _scrollController;
     final scOffsetStr = (scForLog != null && scForLog.hasClients) ? '${scForLog.offset}' : 'N/A';
-    debugPrint('[DD] ProcessDragMove: feedbackGlobal=$feedbackGlobal grabOffset=(${dragData.grabOffsetX}, ${dragData.grabOffsetY}) cursorGlobal=($cursorGlobalX, $cursorGlobalY) localInGrid=($localX, $localY) timelineTopInGrid=$_cachedTimelineTopInGrid isInTimedRegion=$isInTimedRegion scrollOffset=$scOffsetStr');
+    debugPrint('[DD] ProcessDragMove: feedbackGlobal=$feedbackGlobal grabOffset=(${dragData.grabOffsetX}, ${dragData.grabOffsetY}) cursorGlobal=($cursorGlobalX, $cursorGlobalY) tileCenterX=$tileCenterX localInDayContent=($localX, $localY) timeGridTopInDayContent=$_cachedTimeGridTopInDayContent isInTimeGrid=$isInTimeGrid scrollOffset=$scOffsetStr');
 
     // For drop-target time calculation, compute the feedback widget's
-    // position within the timed-events area's content coordinate system.
-    // We need a fresh lookup of the timed events box because its global
+    // position within the time grid's content coordinate system.
+    // We need a fresh lookup of the time grid box because its global
     // origin changes during vertical auto-scroll.
-    final RenderBox? timedEventsBox =
-        _timedEventsAreaKey.currentContext?.findRenderObject() as RenderBox?;
-    if (timedEventsBox != null && timedEventsBox.attached) {
-      final feedbackLocal = timedEventsBox.globalToLocal(feedbackGlobal);
-      debugPrint('[DD] ProcessDragMove: feedbackLocalInTimedArea=$feedbackLocal timedBoxGlobal=${timedEventsBox.localToGlobal(Offset.zero)} timedBoxSize=${timedEventsBox.size}');
+    final RenderBox? timeGridBox =
+        _timeGridKey.currentContext?.findRenderObject() as RenderBox?;
+    if (timeGridBox != null && timeGridBox.attached) {
+      final feedbackLocal = timeGridBox.globalToLocal(feedbackGlobal);
+      debugPrint('[DD] ProcessDragMove: feedbackLocalInTimeGrid=$feedbackLocal timeGridGlobal=${timeGridBox.localToGlobal(Offset.zero)} timeGridSize=${timeGridBox.size}');
 
-      if (isInTimedRegion) {
+      if (isInTimeGrid) {
         final bool wasAllDayEvent = dragData.event.isAllDay;
         if (wasAllDayEvent) {
-          debugPrint('[DD] ProcessDragMove: REGION=timed, converting allDay→timed');
+          debugPrint('[DD] ProcessDragMove: REGION=timeGrid, converting allDay→timed');
           _handleAllDayToTimedConversion(feedbackLocal);
         } else {
-          debugPrint('[DD] ProcessDragMove: REGION=timed, sameTypeMove');
+          debugPrint('[DD] ProcessDragMove: REGION=timeGrid, sameTypeMove');
           _handleSameTypeMove(feedbackLocal);
         }
       } else {
-        debugPrint('[DD] ProcessDragMove: REGION=allDay/header');
+        debugPrint('[DD] ProcessDragMove: REGION=allDay');
         _handleTimedToAllDayConversion(feedbackLocal);
       }
     } else {
-      debugPrint('[DD] ProcessDragMove: WARNING — timedEventsBox null=${timedEventsBox == null} attached=${timedEventsBox?.attached}');
+      debugPrint('[DD] ProcessDragMove: WARNING — timeGridBox null=${timeGridBox == null} attached=${timeGridBox?.attached}');
     }
 
     // --- Edge detection ---
-    // Horizontal: uses tile edges with margin against timed area boundaries.
+    // Horizontal: uses the tile's visual center against 25% edge zones within
+    // the time grid. This triggers navigation when the tile center enters the
+    // edge zone, not when the cursor does.
     if (widget.dragEdgeNavigationEnabled) {
-      _checkEdgeProximity(feedbackGlobal.dx);
+      _checkEdgeProximity(tileCenterX);
     }
 
     // Vertical auto-scroll: uses tile's top/bottom edge proximity to the
-    // visible scroll viewport. Only active in the timed region.
-    if (isInTimedRegion) {
+    // visible scroll viewport. Only active in the time grid.
+    if (isInTimeGrid) {
       _checkVerticalScrollEdge(feedbackGlobal.dy, reprocessDrag: true);
     } else {
       _cancelVerticalScrollTimer();
     }
+
+    // TEMPORARY DEBUG: force rebuild so the tile center line overlay updates.
+    if (mounted) setState(() {});
   }
 
   /// Handles conversion from all-day event to timed event during drag.
@@ -3339,19 +3389,19 @@ class MCalDayViewState extends State<MCalDayView> {
       return;
     }
 
-    final timedEventsBox =
-        _timedEventsAreaKey.currentContext?.findRenderObject() as RenderBox?;
-    if (timedEventsBox == null || !timedEventsBox.attached) {
-      debugPrint('[DD] VertEdge: timedEventsBox null/detached — cancelling');
+    final timeGridBox =
+        _timeGridKey.currentContext?.findRenderObject() as RenderBox?;
+    if (timeGridBox == null || !timeGridBox.attached) {
+      debugPrint('[DD] VertEdge: timeGridBox null/detached — cancelling');
       _cancelVerticalScrollTimer();
       return;
     }
-    final timedBoxGlobal = timedEventsBox.localToGlobal(Offset.zero);
+    final timeGridGlobal = timeGridBox.localToGlobal(Offset.zero);
     final viewportHeight = sc.position.viewportDimension;
 
-    // The scroll viewport occupies [timedBoxGlobal.dy .. timedBoxGlobal.dy + viewportHeight]
+    // The scroll viewport occupies [timeGridGlobal.dy .. timeGridGlobal.dy + viewportHeight]
     // in global coordinates.
-    final viewportTop = timedBoxGlobal.dy;
+    final viewportTop = timeGridGlobal.dy;
     final viewportBottom = viewportTop + viewportHeight;
 
     final tileTop = feedbackGlobalY;
@@ -3416,8 +3466,13 @@ class MCalDayViewState extends State<MCalDayView> {
         final newOffset = (sc.offset + _verticalScrollDelta)
             .clamp(0.0, sc.position.maxScrollExtent);
         if (newOffset == sc.offset) {
-          // Hit a boundary — no further scrolling possible.
           debugPrint('[DD] VertScrollTimer TICK: boundary reached — cancelling');
+          _cancelVerticalScrollTimer();
+          return;
+        }
+
+        if (!_isDragActive) {
+          debugPrint('[DD] VertScrollTimer TICK: drag no longer active — cancelling');
           _cancelVerticalScrollTimer();
           return;
         }
@@ -3443,55 +3498,43 @@ class MCalDayViewState extends State<MCalDayView> {
     _verticalScrollReprocessDrag = false;
   }
 
-  /// Checks all 4 edge zones for horizontal page navigation and vertical
-  /// auto-scroll proximity.  Uses grid-area-local coordinates so the zones
-  /// are defined relative to the entire DragTarget surface.
+  /// Checks horizontal edge proximity for day navigation using the **cursor
+  /// (pointer) position**, matching the Month View pattern.
   ///
-  /// Zones:
-  ///   LEFT  → previous day (page navigation)
-  ///   RIGHT → next day (page navigation)
-  ///   (vertical auto-scroll is handled separately in _checkVerticalScrollEdge)
-  /// Checks whether the feedback tile's edges are past the timed-events area
-  /// boundaries by at least [_edgeMarginPx] pixels, triggering horizontal
-  /// page navigation when they are.
+  /// The time grid is divided into three zones: the left [_edgeZoneFraction]
+  /// (25%), a center safe zone (50%), and the right [_edgeZoneFraction] (25%).
+  /// Navigation triggers when the cursor enters a side zone.
   ///
-  /// Uses the tile's LEFT and RIGHT edges (not the cursor position) so that
-  /// dragging a wide tile slightly over the time legend naturally triggers
-  /// left-edge navigation. The margin prevents hair-trigger navigation
-  /// when the tile barely overlaps the boundary.
-  void _checkEdgeProximity(double feedbackGlobalX) {
+  /// [tileCenterGlobalX] is the tile's visual center horizontal position in
+  /// global coordinates. Navigation triggers when this enters the 25% edge
+  /// zones within the time grid.
+  void _checkEdgeProximity(double tileCenterGlobalX) {
     final dragHandler = _dragHandler;
     if (dragHandler == null) return;
 
-    if (_lastEdgeNavigationTime != null &&
-        DateTime.now().difference(_lastEdgeNavigationTime!) <
-            _edgeNavCooldown) {
-      debugPrint('[DD] EdgeProx: within nav cooldown — skipping');
+    if (_isProcessingDrop) return;
+
+    final timeGridWidth = _cachedTimeGridGlobalRight - _cachedTimeGridGlobalLeft;
+    if (timeGridWidth <= 0) {
+      debugPrint('[DD] EdgeProx: invalid time grid width ($timeGridWidth) — skipping');
       return;
     }
 
-    if (_cachedTimedAreaGlobalRight <= 0) return;
+    final edgeZoneWidth = timeGridWidth * _edgeZoneFraction;
 
-    final tileLeft = feedbackGlobalX;
-    final tileRight = feedbackGlobalX + _feedbackTileWidth;
+    // Convert tile center to local-within-time-grid coordinates.
+    final tileCenterLocalX = tileCenterGlobalX - _cachedTimeGridGlobalLeft;
 
-    // Tile's left edge must be at least _edgeMarginPx past (to the left of)
-    // the timed area's left boundary to trigger left-edge navigation.
-    final leftThreshold = _cachedTimedAreaGlobalLeft - _edgeMarginPx;
-    // Tile's right edge must be at least _edgeMarginPx past (to the right of)
-    // the timed area's right boundary to trigger right-edge navigation.
-    final rightThreshold = _cachedTimedAreaGlobalRight + _edgeMarginPx;
-
-    if (tileLeft < leftThreshold) {
-      debugPrint('[DD] EdgeProx: NEAR LEFT (tileLeft=$tileLeft leftThreshold=$leftThreshold timedLeft=$_cachedTimedAreaGlobalLeft)');
+    if (tileCenterLocalX < edgeZoneWidth) {
+      debugPrint('[DD] EdgeProx: NEAR LEFT (tileCenterGlobalX=$tileCenterGlobalX tileCenterLocalX=$tileCenterLocalX edgeZoneWidth=$edgeZoneWidth)');
       dragHandler.handleEdgeProximity(
         true,
         true,
         _handleNavigatePrevious,
         delay: widget.dragEdgeNavigationDelay,
       );
-    } else if (tileRight > rightThreshold) {
-      debugPrint('[DD] EdgeProx: NEAR RIGHT (tileRight=$tileRight rightThreshold=$rightThreshold timedRight=$_cachedTimedAreaGlobalRight)');
+    } else if (tileCenterLocalX > (timeGridWidth - edgeZoneWidth)) {
+      debugPrint('[DD] EdgeProx: NEAR RIGHT (tileCenterGlobalX=$tileCenterGlobalX tileCenterLocalX=$tileCenterLocalX edgeZoneWidth=$edgeZoneWidth)');
       dragHandler.handleEdgeProximity(
         true,
         false,
@@ -3677,15 +3720,9 @@ class MCalDayViewState extends State<MCalDayView> {
   /// the proposed range from scratch before reading proposed dates.
   void _handleDragLeave() {
     debugPrint('[DD] DragLeave: isDragActive=$_isDragActive');
+    _isDragTargetActive = false;
     _dragHandler?.clearProposedDropRange();
 
-    // When the user drags into the time legend (left of the timed events
-    // area), Flutter fires DragTarget.onLeave because the feedback widget
-    // partially exits the target's hit-test bounds.  We must NOT clear
-    // _latestDragDetails because edge detection (_checkEdgeProximity) needs
-    // the last known cursor position to trigger left-edge navigation.
-    // Only fully tear down when no drag is active (e.g. a cancelled drag
-    // where Flutter cleans up the DragTarget state).
     if (!_isDragActive) {
       _dragMoveDebounceTimer?.cancel();
       _dragMoveDebounceTimer = null;
@@ -3702,9 +3739,13 @@ class MCalDayViewState extends State<MCalDayView> {
 
     debugPrint('[DD] HandleDrop ENTRY: offset=${details.offset} isDragging=${dragHandler?.isDragging} isNearEdge=${dragHandler?.debugIsNearEdge} edgeTimerActive=${dragHandler?.debugEdgeTimerActive} vertScrollTimerActive=${_verticalScrollTimer?.isActive}');
 
-    // Cancel edge navigation immediately
+    // Cancel edge navigation and vertical scroll immediately.
     dragHandler?.cancelEdgeNavigation();
-    debugPrint('[DD] HandleDrop: after cancelEdgeNavigation — edgeTimerActive=${dragHandler?.debugEdgeTimerActive}');
+    _cancelVerticalScrollTimer();
+    debugPrint('[DD] HandleDrop: after cancel timers — edgeTimerActive=${dragHandler?.debugEdgeTimerActive}');
+
+    // Set drop-processing flag so _processDragMove skips edge detection.
+    _isProcessingDrop = true;
 
     // Flush any pending local debounce timer and process immediately.
     // Force a fresh layout cache so the final time computation uses the
@@ -3720,41 +3761,63 @@ class MCalDayViewState extends State<MCalDayView> {
     // Check if drop is valid
     if (dragHandler != null && !dragHandler.isProposedDropValid) {
       debugPrint('[DD] HandleDrop: drop is INVALID — calling cancelDrag()');
-      // Invalid drop - clear all drag state so drop indicators disappear
       dragHandler.cancelDrag();
+      _isProcessingDrop = false;
       return;
     }
 
     final dragData = details.data;
     final event = dragData.event;
 
-    // Use the proposed dates from the drag handler if available.
     final proposedStart = dragHandler?.proposedStartDate;
     final proposedEnd = dragHandler?.proposedEndDate;
 
     if (proposedStart == null || proposedEnd == null) {
-      // No valid proposed dates, can't complete drop - clear all drag state
+      debugPrint('[DD] HandleDrop: no proposed dates — cancelling');
       dragHandler?.cancelDrag();
+      _isProcessingDrop = false;
       return;
     }
 
-    // Determine if type conversion occurred
+    // Sanity check: proposed date should match the currently displayed day.
+    // If a stale edge navigation changed _displayDate after the last valid
+    // _processDragMove, the proposed dates could belong to the wrong day.
+    final proposedDay = DateTime(proposedStart.year, proposedStart.month, proposedStart.day);
+    if (!event.isAllDay && proposedDay != _displayDate) {
+      debugPrint('[DD] HandleDrop: proposed day $proposedDay ≠ displayDate $_displayDate — correcting to displayDate');
+      final correctedStart = DateTime(
+        _displayDate.year, _displayDate.month, _displayDate.day,
+        proposedStart.hour, proposedStart.minute,
+      );
+      final duration = proposedEnd.difference(proposedStart);
+      final correctedEnd = correctedStart.add(duration);
+      dragHandler?.updateProposedDropRange(
+        proposedStart: correctedStart,
+        proposedEnd: correctedEnd,
+        isValid: _validateDrop(proposedStart: correctedStart, proposedEnd: correctedEnd),
+        preserveTime: true,
+      );
+    }
+
+    // Re-read proposed dates (may have been corrected above).
+    final finalStart = dragHandler?.proposedStartDate ?? proposedStart;
+    final finalEnd = dragHandler?.proposedEndDate ?? proposedEnd;
+
     String? typeConversion;
     if (event.isAllDay &&
-        (proposedStart.hour != 0 || proposedStart.minute != 0)) {
+        (finalStart.hour != 0 || finalStart.minute != 0)) {
       typeConversion = 'allDayToTimed';
     } else if (!event.isAllDay &&
-        proposedStart.hour == 0 &&
-        proposedStart.minute == 0) {
+        finalStart.hour == 0 &&
+        finalStart.minute == 0) {
       typeConversion = 'timedToAllDay';
     }
 
-    // Build the updated event
     final updatedEvent = MCalCalendarEvent(
       id: event.id,
       title: event.title,
-      start: proposedStart,
-      end: proposedEnd,
+      start: finalStart,
+      end: finalEnd,
       isAllDay:
           typeConversion == 'timedToAllDay' ||
           (typeConversion == null && event.isAllDay),
@@ -3765,46 +3828,41 @@ class MCalDayViewState extends State<MCalDayView> {
       recurrenceRule: event.recurrenceRule,
     );
 
-    // Build drop details for callback
     final dropDetails = MCalEventDroppedDetails(
       event: event,
       oldStartDate: event.start,
       oldEndDate: event.end,
-      newStartDate: proposedStart,
-      newEndDate: proposedEnd,
+      newStartDate: finalStart,
+      newEndDate: finalEnd,
       isRecurring: event.recurrenceRule != null,
       seriesId: event.recurrenceRule != null ? event.id : null,
       typeConversion: typeConversion,
     );
 
-    // Handle recurring vs non-recurring events (matching Month View pattern)
+    debugPrint('[DD] HandleDrop: finalStart=$finalStart finalEnd=$finalEnd displayDate=$_displayDate typeConversion=$typeConversion');
+
     if (event.recurrenceRule != null) {
-      // Recurring event: call callback first, only modify if accepted
       if (widget.onEventDropped != null) {
         final shouldKeep = widget.onEventDropped!(context, dropDetails);
         if (shouldKeep) {
           widget.controller.modifyOccurrence(
             event.id,
-            event.start, // original date
+            event.start,
             updatedEvent,
           );
         }
       } else {
-        // No callback provided — auto-accept and modify occurrence
         widget.controller.modifyOccurrence(
           event.id,
-          event.start, // original date
+          event.start,
           updatedEvent,
         );
       }
     } else {
-      // Non-recurring event: update controller first, then call callback
       widget.controller.addEvents([updatedEvent]);
 
       if (widget.onEventDropped != null) {
         final shouldKeep = widget.onEventDropped!(context, dropDetails);
-        
-        // If callback returns false, revert the change
         if (!shouldKeep) {
           final revertedEvent = event.copyWith(
             start: event.start,
@@ -3815,23 +3873,120 @@ class MCalDayViewState extends State<MCalDayView> {
       }
     }
 
-    // Mark drag as complete - this clears all drag state including isDragging.
-    // This prevents the microtask in _handleDragEnded from doing redundant cleanup.
     debugPrint('[DD] HandleDrop: calling cancelDrag() to complete — edgeTimerActive=${dragHandler?.debugEdgeTimerActive} vertScrollTimerActive=${_verticalScrollTimer?.isActive}');
     dragHandler?.cancelDrag();
+    _isProcessingDrop = false;
     debugPrint('[DD] HandleDrop EXIT: after cancelDrag — edgeTimerActive=${dragHandler?.debugEdgeTimerActive} vertScrollTimerActive=${_verticalScrollTimer?.isActive}');
 
-    // Screen reader announcement for successful drop
     if (mounted) {
       final locale = widget.locale ?? Localizations.localeOf(context);
       final dateStr = DateFormat.yMMMMEEEEd(
         locale.toString(),
-      ).format(proposedStart);
-      final timeStr = DateFormat.Hm(locale.toString()).format(proposedStart);
+      ).format(finalStart);
+      final timeStr = DateFormat.Hm(locale.toString()).format(finalStart);
       _announceScreenReader(
         context,
         'Moved ${event.title} to $timeStr on $dateStr',
       );
+    }
+  }
+
+  /// Completes a drop using the last proposed range when the DragTarget's
+  /// `onAcceptWithDetails` was not called (because the pointer left the
+  /// target bounds). The proposed range was set by `_processDragMove` or
+  /// `_handleDragPointerMove` and is still valid.
+  void _completePendingDrop() {
+    final dragHandler = _dragHandler;
+    final dragData = _latestDragDetails?.data;
+    if (dragHandler == null || dragData == null) {
+      debugPrint('[DD] CompletePendingDrop: no dragHandler or dragData — cancelling');
+      dragHandler?.cancelDrag();
+      return;
+    }
+
+    final proposedStart = dragHandler.proposedStartDate;
+    final proposedEnd = dragHandler.proposedEndDate;
+    if (proposedStart == null || proposedEnd == null) {
+      debugPrint('[DD] CompletePendingDrop: no proposed dates — cancelling');
+      dragHandler.cancelDrag();
+      return;
+    }
+
+    final event = dragData.event;
+
+    // Correct proposed day to match displayed day if needed.
+    final proposedDay = DateTime(proposedStart.year, proposedStart.month, proposedStart.day);
+    DateTime finalStart = proposedStart;
+    DateTime finalEnd = proposedEnd;
+    if (!event.isAllDay && proposedDay != _displayDate) {
+      debugPrint('[DD] CompletePendingDrop: proposed day $proposedDay ≠ displayDate $_displayDate — correcting');
+      finalStart = DateTime(
+        _displayDate.year, _displayDate.month, _displayDate.day,
+        proposedStart.hour, proposedStart.minute,
+      );
+      final duration = proposedEnd.difference(proposedStart);
+      finalEnd = finalStart.add(duration);
+    }
+
+    String? typeConversion;
+    if (event.isAllDay && (finalStart.hour != 0 || finalStart.minute != 0)) {
+      typeConversion = 'allDayToTimed';
+    } else if (!event.isAllDay && finalStart.hour == 0 && finalStart.minute == 0) {
+      typeConversion = 'timedToAllDay';
+    }
+
+    final updatedEvent = MCalCalendarEvent(
+      id: event.id,
+      title: event.title,
+      start: finalStart,
+      end: finalEnd,
+      isAllDay: typeConversion == 'timedToAllDay' || (typeConversion == null && event.isAllDay),
+      color: event.color,
+      comment: event.comment,
+      externalId: event.externalId,
+      occurrenceId: event.occurrenceId,
+      recurrenceRule: event.recurrenceRule,
+    );
+
+    final dropDetails = MCalEventDroppedDetails(
+      event: event,
+      oldStartDate: event.start,
+      oldEndDate: event.end,
+      newStartDate: finalStart,
+      newEndDate: finalEnd,
+      isRecurring: event.recurrenceRule != null,
+      seriesId: event.recurrenceRule != null ? event.id : null,
+      typeConversion: typeConversion,
+    );
+
+    debugPrint('[DD] CompletePendingDrop: finalStart=$finalStart finalEnd=$finalEnd displayDate=$_displayDate typeConversion=$typeConversion');
+
+    if (event.recurrenceRule != null) {
+      if (widget.onEventDropped != null) {
+        final shouldKeep = widget.onEventDropped!(context, dropDetails);
+        if (shouldKeep) {
+          widget.controller.modifyOccurrence(event.id, event.start, updatedEvent);
+        }
+      } else {
+        widget.controller.modifyOccurrence(event.id, event.start, updatedEvent);
+      }
+    } else {
+      widget.controller.addEvents([updatedEvent]);
+      if (widget.onEventDropped != null) {
+        final shouldKeep = widget.onEventDropped!(context, dropDetails);
+        if (!shouldKeep) {
+          widget.controller.addEvents([event.copyWith(start: event.start, end: event.end)]);
+        }
+      }
+    }
+
+    dragHandler.cancelDrag();
+
+    if (mounted) {
+      final locale = widget.locale ?? Localizations.localeOf(context);
+      final dateStr = DateFormat.yMMMMEEEEd(locale.toString()).format(finalStart);
+      final timeStr = DateFormat.Hm(locale.toString()).format(finalStart);
+      _announceScreenReader(context, 'Moved ${event.title} to $timeStr on $dateStr');
     }
   }
 
@@ -3842,7 +3997,6 @@ class MCalDayViewState extends State<MCalDayView> {
   void _handleNavigatePrevious() {
     debugPrint('[DD] NavigatePrevious CALLED from=${StackTrace.current.toString().split('\n').skip(1).take(3).join(' | ')}');
     _layoutCachedForDrag = false;
-    _lastEdgeNavigationTime = DateTime.now();
     final previousDay = DateTime(
       _displayDate.year,
       _displayDate.month,
@@ -3855,7 +4009,6 @@ class MCalDayViewState extends State<MCalDayView> {
   void _handleNavigateNext() {
     debugPrint('[DD] NavigateNext CALLED from=${StackTrace.current.toString().split('\n').skip(1).take(3).join(' | ')}');
     _layoutCachedForDrag = false;
-    _lastEdgeNavigationTime = DateTime.now();
     final nextDay = DateTime(
       _displayDate.year,
       _displayDate.month,
@@ -3865,27 +4018,31 @@ class MCalDayViewState extends State<MCalDayView> {
     _schedulePostNavLayoutRefresh();
   }
 
-  /// After a page navigation during drag, the new page's timed events area
+  /// After a page navigation during drag, the new page's time grid
   /// hasn't laid out yet when `_cacheLayoutForDrag()` first runs. Schedule
   /// post-frame callbacks to invalidate the cache and retry until the new
   /// page's render objects are ready. The PageView animation can take several
   /// frames to complete, so we retry up to [_maxPostNavRetries] times.
-  static const _maxPostNavRetries = 5;
+  static const _maxPostNavRetries = 15;
 
   void _schedulePostNavLayoutRefresh([int attempt = 0]) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_isDragActive) return;
       _layoutCachedForDrag = false;
 
-      // Check if the timed events box is ready on the new page.
-      final timedBox =
-          _timedEventsAreaKey.currentContext?.findRenderObject() as RenderBox?;
-      final isReady = timedBox != null && timedBox.attached && timedBox.size.width > 0;
+      final timeGridBox =
+          _timeGridKey.currentContext?.findRenderObject() as RenderBox?;
+      final isReady = timeGridBox != null && timeGridBox.attached && timeGridBox.size.width > 0;
 
-      debugPrint('[DD] PostNavLayoutRefresh(attempt=$attempt): isReady=$isReady timedBoxSize=${timedBox?.size}');
+      debugPrint('[DD] PostNavLayoutRefresh(attempt=$attempt): isReady=$isReady timeGridSize=${timeGridBox?.size}');
 
       if (!isReady && attempt < _maxPostNavRetries) {
         _schedulePostNavLayoutRefresh(attempt + 1);
+        return;
+      }
+
+      if (!isReady) {
+        debugPrint('[DD] PostNavLayoutRefresh: EXHAUSTED retries — layout still not ready');
         return;
       }
 
@@ -4083,14 +4240,14 @@ class MCalDayViewState extends State<MCalDayView> {
     return Stack(children: [overlay]);
   }
 
-  /// Builds the timed events area with Stack and optional DragTarget.
+  /// Builds the time grid with Stack and optional DragTarget.
   ///
   /// Returns a Stack containing:
   /// - Layer 1+2: Main content (gridlines + regions + events + current time)
-  /// Builds the scrollable content row containing the time legend and timed
-  /// events area.  Extracted so the DragTarget (which now wraps this entire
+  /// Builds the scrollable content row containing the time legend and time
+  /// grid.  Extracted so the DragTarget (which now wraps this entire
   /// area) and the non-drag path share the same widget tree.
-  Widget _buildScrollableTimedContent(
+  Widget _buildScrollableTimeGridContent(
     BuildContext context,
     Locale locale,
     DateTime date,
@@ -4128,7 +4285,7 @@ class MCalDayViewState extends State<MCalDayView> {
               subHourLabelBuilder: widget.subHourLabelBuilder,
             ),
           Expanded(
-            child: _buildTimedEventsArea(context, locale, date, timedEvents),
+            child: _buildTimeGrid(context, locale, date, timedEvents),
           ),
           if (_isRTL(context))
             _TimeLegendColumn(
@@ -4157,7 +4314,7 @@ class MCalDayViewState extends State<MCalDayView> {
   /// - Layer 4: Drop target overlay (highlighted time slots) when [showDropTargetOverlay]
   ///
   /// Layer order is controlled by [dropTargetTilesAboveOverlay].
-  Widget _buildTimedEventsArea(
+  Widget _buildTimeGrid(
     BuildContext context,
     Locale locale,
     DateTime date,
@@ -4219,15 +4376,7 @@ class MCalDayViewState extends State<MCalDayView> {
             theme: _resolveTheme(context),
             timeRegionBuilder: widget.timeRegionBuilder,
           ),
-        _TimedEventsLayer(
-          // Only attach the GlobalKey to the active page. PageView pre-builds
-          // adjacent pages simultaneously; assigning the same GlobalKey to
-          // multiple widgets in the tree causes a duplicate-key assertion.
-          key: (date.year == _displayDate.year &&
-                  date.month == _displayDate.month &&
-                  date.day == _displayDate.day)
-              ? _timedEventsAreaKey
-              : null,
+        _TimeGridEventsLayer(
           events: timedEvents,
           displayDate: date,
           startHour: widget.startHour,
@@ -4343,7 +4492,18 @@ class MCalDayViewState extends State<MCalDayView> {
             child: stack,
           );
 
-    return SizedBox(height: contentHeight, child: gestureChild);
+    // Attach _timeGridKey to this SizedBox which always has the full
+    // time grid dimensions (contentHeight x full width), even when the page
+    // has no events.  The key is only on the active page to avoid GlobalKey
+    // duplication across PageView pre-built pages.
+    final isCurrentPage = date.year == _displayDate.year &&
+        date.month == _displayDate.month &&
+        date.day == _displayDate.day;
+    return SizedBox(
+      key: isCurrentPage ? _timeGridKey : null,
+      height: contentHeight,
+      child: gestureChild,
+    );
   }
 
   /// Builds the semantic label for the drop target when drag/resize is active.
@@ -4523,7 +4683,7 @@ class MCalDayViewState extends State<MCalDayView> {
     if (_timedEvents.isEmpty) return false;
 
     final renderBox =
-        _timedEventsAreaKey.currentContext?.findRenderObject() as RenderBox?;
+        _timeGridKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) return false;
 
     final areaWidth = renderBox.size.width;
@@ -4746,7 +4906,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
         // Main content area with Time Legend and Events.
         Expanded(
-          child: _buildScrollableTimedContent(
+          child: _buildScrollableTimeGridContent(
             context,
             locale,
             date,
@@ -4778,10 +4938,82 @@ class MCalDayViewState extends State<MCalDayView> {
             onToday: _handleNavigateToday,
           ),
         Expanded(
-          key: _gridAreaKey,
+          key: _dayContentKey,
           child: dayViewContent,
         ),
       ],
+    );
+  }
+
+  /// Debug overlays: translucent green rectangles showing the left and right
+  /// edge navigation trigger zones (each 25% of the time grid width).
+  /// Day navigation arms when the tile's center enters a green zone.
+  /// Only rendered when [_isDragActive] is true.
+  List<Widget> _buildEdgeZoneOverlays() {
+    if (!_layoutCachedForDrag) return const [];
+
+    final dayContentBox =
+        _dayContentKey.currentContext?.findRenderObject() as RenderBox?;
+    if (dayContentBox == null || !dayContentBox.attached) return const [];
+
+    final dayContentGlobal = dayContentBox.localToGlobal(Offset.zero);
+    final dayContentSize = dayContentBox.size;
+
+    final timeGridWidth = _cachedTimeGridGlobalRight - _cachedTimeGridGlobalLeft;
+    if (timeGridWidth <= 0) return const [];
+
+    final edgeZoneWidth = timeGridWidth * _edgeZoneFraction;
+
+    // Convert time grid global coords to day-content-local coords.
+    final timeGridLocalLeft = _cachedTimeGridGlobalLeft - dayContentGlobal.dx;
+
+    const color = Color(0x3300CC00);
+
+    return [
+      // Left 25% zone — inside the time grid, left edge.
+      Positioned(
+        left: timeGridLocalLeft,
+        top: 0,
+        width: edgeZoneWidth,
+        height: dayContentSize.height,
+        child: IgnorePointer(child: ColoredBox(color: color)),
+      ),
+      // Right 25% zone — inside the time grid, right edge.
+      Positioned(
+        left: timeGridLocalLeft + timeGridWidth - edgeZoneWidth,
+        top: 0,
+        width: edgeZoneWidth,
+        height: dayContentSize.height,
+        child: IgnorePointer(child: ColoredBox(color: color)),
+      ),
+    ];
+  }
+
+  /// DEBUG: Draws a thick red vertical line at the tile center's horizontal
+  /// position — this is the coordinate used for edge detection.
+  /// The line spans the full day-content height.
+  Widget? _buildTileCenterLine() {
+    final center = _debugTileCenterGlobal;
+    if (center == null || !_layoutCachedForDrag) return null;
+
+    final dayContentBox =
+        _dayContentKey.currentContext?.findRenderObject() as RenderBox?;
+    if (dayContentBox == null || !dayContentBox.attached) return null;
+
+    final dayContentGlobal = dayContentBox.localToGlobal(Offset.zero);
+    final dayContentSize = dayContentBox.size;
+
+    final localX = center.dx - dayContentGlobal.dx;
+    final lineHeight = dayContentSize.height;
+
+    return Positioned(
+      left: localX - 1.5,
+      top: 0.0,
+      width: 3,
+      height: lineHeight,
+      child: IgnorePointer(
+        child: ColoredBox(color: Color(0xFFFF0000)),
+      ),
     );
   }
 
@@ -4879,7 +5111,7 @@ class MCalDayViewState extends State<MCalDayView> {
         onPointerCancel: (enableResize || widget.enableDragToMove)
             ? (event) {
                 if (_isDragActive) {
-                  _handleDragCancelled();
+                  _handleDragCancelled(isUserCancel: true);
                 }
                 if (enableResize) {
                   _handleResizePointerCancelFromParent(event);
@@ -4887,7 +5119,7 @@ class MCalDayViewState extends State<MCalDayView> {
               }
             : null,
         // DragTarget wraps the ENTIRE interactive surface (navigator +
-        // all-day + scrollable timed area + time legend across all pages)
+        // all-day area + time grid + time legend across all pages)
         // so that:
         //  1. The pointer never leaves the DragTarget bounds when dragging
         //     into the time legend or all-day area (no spurious DragLeave).
@@ -4904,10 +5136,17 @@ class MCalDayViewState extends State<MCalDayView> {
                     locale, dayViewContent,
                   );
                   final dropLabel = _buildDropTargetSemanticLabel(context);
-                  if (dropLabel != null) {
-                    return Semantics(label: dropLabel, child: content);
-                  }
-                  return content;
+                  final mainContent = dropLabel != null
+                      ? Semantics(label: dropLabel, child: content)
+                      : content;
+                  final centerLine = _isDragActive ? _buildTileCenterLine() : null;
+                  return Stack(
+                    children: [
+                      mainContent,
+                      if (_isDragActive) ..._buildEdgeZoneOverlays(),
+                      if (centerLine != null) centerLine,
+                    ],
+                  );
                 },
               )
             : _buildMainColumn(locale, dayViewContent),
@@ -6782,9 +7021,8 @@ class _GridlinesPainter extends CustomPainter {
 ///
 /// This is a static rendering layer - drag-and-drop and resize functionality
 /// are implemented separately in later tasks.
-class _TimedEventsLayer extends StatelessWidget {
-  const _TimedEventsLayer({
-    super.key,
+class _TimeGridEventsLayer extends StatelessWidget {
+  const _TimeGridEventsLayer({
     required this.events,
     required this.displayDate,
     required this.startHour,
