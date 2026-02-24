@@ -307,6 +307,21 @@ class MCalTimedEventTileContext {
   /// The end time of this event occurrence on [displayDate].
   final DateTime endTime;
 
+  /// Whether the event starts on [displayDate].
+  ///
+  /// False when this tile represents a continuation segment — the event
+  /// started on a previous day. In that case [startTime] is clamped to the
+  /// beginning of the visible time window and no start (top) resize handle
+  /// should be shown.
+  final bool isStartOnDisplayDate;
+
+  /// Whether the event ends on [displayDate].
+  ///
+  /// False when this tile represents a segment that continues to the next
+  /// day. In that case [endTime] is clamped to the end of the visible time
+  /// window and no end (bottom) resize handle should be shown.
+  final bool isEndOnDisplayDate;
+
   /// True when this context is used to build a drop target preview tile.
   ///
   /// During drag operations, a semi-transparent preview tile is shown at
@@ -328,6 +343,8 @@ class MCalTimedEventTileContext {
     required this.totalColumns,
     required this.startTime,
     required this.endTime,
+    this.isStartOnDisplayDate = true,
+    this.isEndOnDisplayDate = true,
     this.isDropTargetPreview,
     this.dropValid,
   });

@@ -1435,6 +1435,10 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Scroll hold that freezes [SingleChildScrollView] during resize.
   ScrollHoldController? _resizeScrollHold;
 
+  /// Last pointer position during an active resize, used to re-check edge
+  /// proximity after day navigation while the pointer is stationary.
+  Offset? _lastResizePointerGlobal;
+
   static const double _resizeDragThreshold = 8.0;
 
   // ============================================================================
@@ -1867,18 +1871,76 @@ class MCalDayViewState extends State<MCalDayView> {
   ///
   /// This is needed by [_buildDayContent] so that adjacent pages pre-built by
   /// [PageView] show their own events rather than the current day's events.
+  ///
+  /// During cross-day resize, also injects a preview version of the resizing
+  /// event for days within the proposed range that do not yet have it, so the
+  /// user sees the event continuation tile on the destination day while the
+  /// handle is still being dragged.
   ({List<MCalCalendarEvent> allDay, List<MCalCalendarEvent> timed})
   _eventsForPageDate(DateTime date) {
+    final List<MCalCalendarEvent> allDay;
+    List<MCalCalendarEvent> timed;
+
     if (date.year == _displayDate.year &&
         date.month == _displayDate.month &&
         date.day == _displayDate.day) {
-      return (allDay: _allDayEvents, timed: _timedEvents);
+      allDay = _allDayEvents;
+      timed = _timedEvents;
+    } else {
+      final all = widget.controller.getEventsForDate(date);
+      allDay = all.where((e) => e.isAllDay).toList();
+      timed = all.where((e) => !e.isAllDay).toList();
     }
-    final all = widget.controller.getEventsForDate(date);
-    return (
-      allDay: all.where((e) => e.isAllDay).toList(),
-      timed: all.where((e) => !e.isAllDay).toList(),
-    );
+
+    // During resize, substitute or inject a proposed-size version of the
+    // resizing event so tiles update in real time while the handle is dragged:
+    //
+    //  • Source day (event already in list): replace with proposed version so
+    //    the tile stretches/shrinks visually as the handle moves.
+    //  • Destination day (event not yet in list): inject the proposed version
+    //    so the continuation tile appears before the drop is committed.
+    if (_isResizeActive) {
+      final dragHandler = _dragHandler;
+      final proposedStart = dragHandler?.proposedStartDate;
+      final proposedEnd = dragHandler?.proposedEndDate;
+      final resizingEvent = dragHandler?.resizingEvent;
+
+      if (resizingEvent != null &&
+          !resizingEvent.isAllDay &&
+          proposedStart != null &&
+          proposedEnd != null) {
+        final day = DateTime(date.year, date.month, date.day);
+        final propStartDay = DateTime(
+          proposedStart.year,
+          proposedStart.month,
+          proposedStart.day,
+        );
+        final propEndDay = DateTime(
+          proposedEnd.year,
+          proposedEnd.month,
+          proposedEnd.day,
+        );
+
+        if (!day.isBefore(propStartDay) && !day.isAfter(propEndDay)) {
+          final proposedVersion = resizingEvent.copyWith(
+            start: proposedStart,
+            end: proposedEnd,
+          );
+          final existingIndex = timed.indexWhere(
+            (e) => e.id == resizingEvent.id,
+          );
+          if (existingIndex >= 0) {
+            // Source day: replace the committed tile with the proposed version.
+            timed = List.of(timed)..[existingIndex] = proposedVersion;
+          } else {
+            // Destination day: inject a preview tile.
+            timed = [...timed, proposedVersion];
+          }
+        }
+      }
+    }
+
+    return (allDay: allDay, timed: timed);
   }
 
   void _startCurrentTimeTimer() {
@@ -2931,10 +2993,18 @@ class MCalDayViewState extends State<MCalDayView> {
       pointerEvent.delta.dy,
     );
 
-    // Auto-scroll viewport when the resize handle is dragged near an edge.
-    // reprocessDrag = false: resize tracks accumulated delta, not absolute
-    // position, so we don't need to re-run drag-move on each scroll tick.
+    // Store pointer position for post-navigation edge re-check.
+    _lastResizePointerGlobal = pointerEvent.position;
+
+    // Vertical auto-scroll when the resize handle is near the top/bottom of
+    // the visible viewport. reprocessDrag=false: resize tracks an accumulated
+    // delta, not an absolute position, so no need to re-run drag-move each tick.
     _checkVerticalScrollEdge(pointerEvent.position.dy, reprocessDrag: false);
+
+    // Horizontal edge detection for cross-day navigation:
+    // start handle near leading edge → previous day,
+    // end handle near trailing edge → next day.
+    _checkResizeEdgeProximity(pointerEvent.position);
   }
 
   /// Called by the parent [Listener.onPointerUp].
@@ -2963,8 +3033,13 @@ class MCalDayViewState extends State<MCalDayView> {
     _resizeGestureStarted = false;
     _pendingResizeEvent = null;
     _pendingResizeEdge = null;
+    _lastResizePointerGlobal = null;
     _releaseResizeScrollHold();
     _cancelVerticalScrollTimer();
+    _dragHandler?.cancelEdgeNavigation();
+    // Invalidate the layout cache so a subsequent drag session re-captures
+    // fresh RenderBox positions (the resize may have scrolled the viewport).
+    _layoutCachedForDrag = false;
 
     if (_isResizeActive) {
       _isResizeActive = false;
@@ -2975,6 +3050,9 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Called when resize drag starts. Initializes resize state.
   void _handleResizeStart(MCalCalendarEvent event, MCalResizeEdge edge) {
     if (!_resolveDragToResize()) return;
+    // Populate the drag layout cache so _checkVerticalScrollEdge has the
+    // viewport bounds it needs for auto-scroll edge detection during resize.
+    _cacheLayoutForDrag();
     final hourHeight = _cachedHourHeight > 0
         ? _cachedHourHeight
         : (widget.hourHeight ?? 80.0);
@@ -3001,6 +3079,90 @@ class MCalDayViewState extends State<MCalDayView> {
       );
     }
     setState(() {});
+  }
+
+  /// Recomputes the proposed resize range from the current pointer position and
+  /// live scroll offset, without requiring a pointer-move event.
+  ///
+  /// Called on every vertical scroll timer tick so the proposed start/end time
+  /// updates as the viewport shifts beneath a stationary resize handle. Without
+  /// this, the tile stays pinned to its pre-scroll offset while the content
+  /// scrolls away beneath the pointer.
+  void _reprocessResize() {
+    if (!_isResizeActive) return;
+    final event = _pendingResizeEvent;
+    final edge = _pendingResizeEdge;
+    final pointerGlobal = _lastResizePointerGlobal;
+    if (event == null || edge == null || pointerGlobal == null) return;
+
+    final sc = _scrollController;
+    if (sc == null || !sc.hasClients) return;
+
+    // viewport_screen_top is invariant: the fixed on-screen Y of the top edge
+    // of the scroll viewport (computed at cache time, doesn't change as
+    // content scrolls).
+    final viewportTop = _cachedTimeGridGlobalTop + _cachedScrollOffset;
+
+    // Pointer's absolute Y position within the time-grid content, accounting
+    // for the current (possibly post-scroll) scroll offset.
+    final newEdgeOffset = (pointerGlobal.dy - viewportTop) + sc.offset;
+
+    final hourHeight = _cachedHourHeight > 0
+        ? _cachedHourHeight
+        : (widget.hourHeight ?? 80.0);
+    final maxOffset = (widget.endHour - widget.startHour + 1) * hourHeight;
+    final clampedOffset = newEdgeOffset.clamp(0.0, maxOffset);
+
+    // Minimum event duration in pixels.
+    final eventMinDuration = widget.timeSlotDuration.inMinutes >= 15
+        ? widget.timeSlotDuration
+        : const Duration(minutes: 15);
+    final minDurationPx = eventMinDuration.inMinutes * hourHeight / 60.0;
+
+    // Effective start/end offsets on the current display day — clamped to the
+    // day's visible range so multi-day events (where one edge is off-screen)
+    // use the day boundary (0 or maxOffset) as the reference limit.
+    final isStartOnCurrentDay =
+        event.start.year == _displayDate.year &&
+        event.start.month == _displayDate.month &&
+        event.start.day == _displayDate.day;
+    final isEndOnCurrentDay =
+        event.end.year == _displayDate.year &&
+        event.end.month == _displayDate.month &&
+        event.end.day == _displayDate.day;
+
+    final effectiveStartPx = isStartOnCurrentDay
+        ? timeToOffset(
+            time: event.start,
+            startHour: widget.startHour,
+            hourHeight: hourHeight,
+          )
+        : 0.0;
+    final effectiveEndPx = isEndOnCurrentDay
+        ? timeToOffset(
+            time: event.end,
+            startHour: widget.startHour,
+            hourHeight: hourHeight,
+          )
+        : maxOffset;
+
+    // Stop auto-scroll the moment the dragged edge would cross the minimum-
+    // duration boundary imposed by the other edge.  Without this the timer
+    // keeps firing after the proposed time is already clamped, producing the
+    // visual effect of the handle "passing through" the opposite edge.
+    if (edge == MCalResizeEdge.end && clampedOffset <= effectiveStartPx + minDurationPx) {
+      _cancelVerticalScrollTimer();
+      return;
+    }
+    if (edge == MCalResizeEdge.start && clampedOffset >= effectiveEndPx - minDurationPx) {
+      _cancelVerticalScrollTimer();
+      return;
+    }
+
+    // Apply the absolute offset then let _handleResizeUpdate (delta = 0.0)
+    // recalculate the proposed times via the same snapping/validation logic.
+    _resizeEdgeOffset = clampedOffset;
+    _handleResizeUpdate(event, edge, 0.0);
   }
 
   /// Called during resize drag. Updates proposed range from accumulated offset.
@@ -3221,10 +3383,6 @@ class MCalDayViewState extends State<MCalDayView> {
     // live tile position even when the tile's left edge exits the DragTarget.
     _fallbackFeedbackGlobal = Offset(feedbackGlobalX, feedbackGlobalY);
 
-    debugPrint(
-      '[DD] DragPointerMove(fallback): globalPos=$globalPos feedbackX=$feedbackGlobalX tileCenterX=${feedbackGlobalX + _feedbackTileWidth / 2} grabOffsetX=$_cachedGrabOffsetX tileWidth=$_feedbackTileWidth',
-    );
-
     // Delegate all processing (edge detection, drop preview, debug overlay) to
     // _processDragMove via the debounce timer — same path as the DragTarget
     // onMove handler, but using _fallbackFeedbackGlobal for position.
@@ -3261,9 +3419,6 @@ class MCalDayViewState extends State<MCalDayView> {
     _cachedGrabOffsetY = data.grabOffsetY;
 
     if (_dragMoveDebounceTimer == null || !_dragMoveDebounceTimer!.isActive) {
-      debugPrint(
-        '[DD] DragMove(raw): offset=${details.offset} grab=(${data.grabOffsetX},${data.grabOffsetY}) tileSize=($_feedbackTileWidth x $_feedbackTileHeight)',
-      );
       _dragMoveDebounceTimer = Timer(
         const Duration(milliseconds: 16),
         _processDragMove,
@@ -3313,7 +3468,6 @@ class MCalDayViewState extends State<MCalDayView> {
     final feedbackGlobal = (!_isDragTargetActive && _fallbackFeedbackGlobal != null)
         ? _fallbackFeedbackGlobal!
         : details.offset;
-    final cursorGlobalX = feedbackGlobal.dx + dragData.grabOffsetX;
     final cursorGlobalY = feedbackGlobal.dy + dragData.grabOffsetY;
     final tileCenterX = feedbackGlobal.dx + _feedbackTileWidth / 2;
     final tileCenterY = feedbackGlobal.dy + _feedbackTileHeight / 2;
@@ -3323,22 +3477,13 @@ class MCalDayViewState extends State<MCalDayView> {
     // mode.  Both paths now provide accurate positions.
     _debugTileCenterGlobal = Offset(tileCenterX, tileCenterY);
 
-    // Convert to grid-area-local coordinates (cursor-based for region detection).
-    final localX = cursorGlobalX - _cachedDayContentOffset.dx;
+    // Convert to grid-area-local Y coordinate (cursor-based for region detection).
     final localY = cursorGlobalY - _cachedDayContentOffset.dy;
 
     // --- Region detection ---
     // Everything above _cachedTimeGridTopInDayContent is the all-day area.
     // Everything at or below is the scrollable time grid.
     final bool isInTimeGrid = localY >= _cachedTimeGridTopInDayContent;
-
-    final scForLog = _scrollController;
-    final scOffsetStr = (scForLog != null && scForLog.hasClients)
-        ? '${scForLog.offset}'
-        : 'N/A';
-    debugPrint(
-      '[DD] ProcessDragMove: feedbackGlobal=$feedbackGlobal grabOffset=(${dragData.grabOffsetX}, ${dragData.grabOffsetY}) cursorGlobal=($cursorGlobalX, $cursorGlobalY) tileCenterX=$tileCenterX localInDayContent=($localX, $localY) timeGridTopInDayContent=$_cachedTimeGridTopInDayContent isInTimeGrid=$isInTimeGrid scrollOffset=$scOffsetStr',
-    );
 
     // For drop-target time calculation, compute the feedback widget's
     // position within the time grid's content coordinate system.
@@ -3348,23 +3493,15 @@ class MCalDayViewState extends State<MCalDayView> {
         _timeGridKey.currentContext?.findRenderObject() as RenderBox?;
     if (timeGridBox != null && timeGridBox.attached) {
       final feedbackLocal = timeGridBox.globalToLocal(feedbackGlobal);
-      debugPrint(
-        '[DD] ProcessDragMove: feedbackLocalInTimeGrid=$feedbackLocal timeGridGlobal=${timeGridBox.localToGlobal(Offset.zero)} timeGridSize=${timeGridBox.size}',
-      );
 
       if (isInTimeGrid) {
         final bool wasAllDayEvent = dragData.event.isAllDay;
         if (wasAllDayEvent) {
-          debugPrint(
-            '[DD] ProcessDragMove: REGION=timeGrid, converting allDay→timed',
-          );
           _handleAllDayToTimedConversion(feedbackLocal);
         } else {
-          debugPrint('[DD] ProcessDragMove: REGION=timeGrid, sameTypeMove');
           _handleSameTypeMove(feedbackLocal);
         }
       } else {
-        debugPrint('[DD] ProcessDragMove: REGION=allDay');
         _handleTimedToAllDayConversion(feedbackLocal);
       }
     } else {
@@ -3520,9 +3657,6 @@ class MCalDayViewState extends State<MCalDayView> {
         proposedEnd: proposedEnd,
       );
 
-      debugPrint(
-        '[DD] SameTypeMove: allDay event → proposedStart=$proposedStart isValid=$isValid',
-      );
       dragHandler.updateProposedDropRange(
         proposedStart: proposedStart,
         proposedEnd: proposedEnd,
@@ -3553,9 +3687,6 @@ class MCalDayViewState extends State<MCalDayView> {
         proposedEnd: proposedEnd,
       );
 
-      debugPrint(
-        '[DD] SameTypeMove: timed event localY=${localPosition.dy} → rawTime=$proposedStart snapped=$snappedStart end=$proposedEnd isValid=$isValid displayDate=$_displayDate',
-      );
       dragHandler.updateProposedDropRange(
         proposedStart: snappedStart,
         proposedEnd: proposedEnd,
@@ -3629,19 +3760,12 @@ class MCalDayViewState extends State<MCalDayView> {
 
     const maxSpeed = 10.0;
 
-    debugPrint(
-      '[DD] VertEdge: tileTop=$tileTop tileBottom=$tileBottom viewportTop=$viewportTop viewportBottom=$viewportBottom threshold=$_vertEdgeThresholdPx scrollOffset=${sc.offset}',
-    );
-
     // Tile's top edge within threshold of viewport top → scroll up.
     final distFromTop = tileTop - viewportTop;
     if (distFromTop < _vertEdgeThresholdPx && sc.offset > 0) {
       final proximity = (1.0 - distFromTop / _vertEdgeThresholdPx).clamp(
         0.0,
         1.0,
-      );
-      debugPrint(
-        '[DD] VertEdge: NEAR TOP — distFromTop=$distFromTop proximity=$proximity',
       );
       _startVerticalScrollTimer(
         -(maxSpeed * proximity).clamp(1.0, maxSpeed),
@@ -3655,9 +3779,6 @@ class MCalDayViewState extends State<MCalDayView> {
       final proximity = (1.0 - distFromBottom / _vertEdgeThresholdPx).clamp(
         0.0,
         1.0,
-      );
-      debugPrint(
-        '[DD] VertEdge: NEAR BOTTOM — distFromBottom=$distFromBottom proximity=$proximity',
       );
       _startVerticalScrollTimer(
         (maxSpeed * proximity).clamp(1.0, maxSpeed),
@@ -3709,9 +3830,9 @@ class MCalDayViewState extends State<MCalDayView> {
         return;
       }
 
-      if (!_isDragActive) {
+      if (!_isDragActive && !_isResizeActive) {
         debugPrint(
-          '[DD] VertScrollTimer TICK: drag no longer active — cancelling',
+          '[DD] VertScrollTimer TICK: neither drag nor resize active — cancelling',
         );
         _cancelVerticalScrollTimer();
         return;
@@ -3722,6 +3843,12 @@ class MCalDayViewState extends State<MCalDayView> {
       // the content shifts beneath the stationary pointer.
       if (_verticalScrollReprocessDrag && _latestDragDetails != null) {
         _processDragMove();
+      }
+
+      // Re-run resize processing so the proposed time updates as the viewport
+      // scrolls beneath a stationary resize handle.
+      if (_isResizeActive) {
+        _reprocessResize();
       }
     });
   }
@@ -3790,6 +3917,314 @@ class MCalDayViewState extends State<MCalDayView> {
     } else {
       dragHandler.handleEdgeProximity(false, false, () {});
     }
+  }
+
+  /// Checks horizontal edge proximity during a resize gesture to trigger
+  /// day navigation.
+  ///
+  /// Uses the same 25% edge zone as drag-to-move ([_edgeZoneFraction]).
+  ///
+  /// Primary directions (always active):
+  ///   - Start handle → leading edge: navigate to previous day (extends event)
+  ///   - End handle   → trailing edge: navigate to next day (extends event)
+  ///
+  /// Reverse directions (active only when the proposed range spans > 1 day,
+  /// so single-day events cannot be shortened past their opposite edge):
+  ///   - End handle   → leading edge: navigate to previous day (shortens event)
+  ///   - Start handle → trailing edge: navigate to next day (shortens event)
+  ///
+  /// The time grid bounds are looked up fresh each call so no drag layout
+  /// cache is required.
+  void _checkResizeEdgeProximity(Offset pointerGlobal) {
+    final dragHandler = _dragHandler;
+    if (dragHandler == null || !dragHandler.isResizing) return;
+    if (!widget.dragEdgeNavigationEnabled) return;
+
+    final edge = _pendingResizeEdge;
+    final event = _pendingResizeEvent;
+    if (edge == null || event == null) return;
+
+    // Fresh lookup — resize doesn't populate the drag layout cache.
+    final RenderBox? timeGridBox =
+        _timeGridKey.currentContext?.findRenderObject() as RenderBox?;
+    if (timeGridBox == null || !timeGridBox.attached) return;
+
+    final timeGridLeft = timeGridBox.localToGlobal(Offset.zero).dx;
+    final timeGridWidth = timeGridBox.size.width;
+    if (timeGridWidth <= 0) return;
+
+    final edgeZoneWidth = timeGridWidth * _edgeZoneFraction;
+    final pointerLocalX = pointerGlobal.dx - timeGridLeft;
+    final isLayoutRTL = _isLayoutRTL(context);
+
+    // Leading edge: left in LTR, right in RTL.
+    final bool nearLeadingEdge = isLayoutRTL
+        ? pointerLocalX > (timeGridWidth - edgeZoneWidth)
+        : pointerLocalX < edgeZoneWidth;
+
+    // Trailing edge: right in LTR, left in RTL.
+    final bool nearTrailingEdge = isLayoutRTL
+        ? pointerLocalX < edgeZoneWidth
+        : pointerLocalX > (timeGridWidth - edgeZoneWidth);
+
+    // Use the proposed range if already set (covers mid-resize multi-day
+    // extension); fall back to the committed event times.
+    final rangeStart = dragHandler.proposedStartDate ?? event.start;
+    final rangeEnd = dragHandler.proposedEndDate ?? event.end;
+    final isMultiDay =
+        rangeStart.year != rangeEnd.year ||
+        rangeStart.month != rangeEnd.month ||
+        rangeStart.day != rangeEnd.day;
+
+    if (edge == MCalResizeEdge.start && nearLeadingEdge) {
+      // Extend start backward.
+      debugPrint(
+        '[DD] ResizeEdgeProx: NEAR LEADING (start handle) pointerLocalX=$pointerLocalX edgeZoneWidth=$edgeZoneWidth',
+      );
+      dragHandler.handleEdgeProximity(
+        true,
+        true,
+        _handleResizeNavigatePrevious,
+        delay: widget.dragEdgeNavigationDelay,
+      );
+    } else if (edge == MCalResizeEdge.start && isMultiDay && nearTrailingEdge) {
+      // Shorten start forward — only valid for multi-day events.
+      debugPrint(
+        '[DD] ResizeEdgeProx: NEAR TRAILING (start handle, multi-day) pointerLocalX=$pointerLocalX edgeZoneWidth=$edgeZoneWidth',
+      );
+      dragHandler.handleEdgeProximity(
+        true,
+        false,
+        _handleResizeNavigateNext,
+        delay: widget.dragEdgeNavigationDelay,
+      );
+    } else if (edge == MCalResizeEdge.end && nearTrailingEdge) {
+      // Extend end forward.
+      debugPrint(
+        '[DD] ResizeEdgeProx: NEAR TRAILING (end handle) pointerLocalX=$pointerLocalX edgeZoneWidth=$edgeZoneWidth',
+      );
+      dragHandler.handleEdgeProximity(
+        true,
+        false,
+        _handleResizeNavigateNext,
+        delay: widget.dragEdgeNavigationDelay,
+      );
+    } else if (edge == MCalResizeEdge.end && isMultiDay && nearLeadingEdge) {
+      // Shorten end backward — only valid for multi-day events.
+      debugPrint(
+        '[DD] ResizeEdgeProx: NEAR LEADING (end handle, multi-day) pointerLocalX=$pointerLocalX edgeZoneWidth=$edgeZoneWidth',
+      );
+      dragHandler.handleEdgeProximity(
+        true,
+        true,
+        _handleResizeNavigatePrevious,
+        delay: widget.dragEdgeNavigationDelay,
+      );
+    } else {
+      dragHandler.handleEdgeProximity(false, false, () {});
+    }
+  }
+
+  /// Navigates to the previous day during a resize gesture and re-checks
+  /// edge proximity after the new page lays out (pointer is stationary).
+  void _handleResizeNavigatePrevious() {
+    debugPrint(
+      '[DD] ResizeNavigatePrevious CALLED at=${DateTime.now().toIso8601String()}',
+    );
+    final previousDay = DateTime(
+      _displayDate.year,
+      _displayDate.month,
+      _displayDate.day - 1,
+    );
+    widget.controller.setDisplayDate(previousDay);
+    _schedulePostResizeNavRefresh();
+  }
+
+  /// Navigates to the next day during a resize gesture and re-checks edge
+  /// proximity after the new page lays out (pointer is stationary).
+  void _handleResizeNavigateNext() {
+    debugPrint(
+      '[DD] ResizeNavigateNext CALLED at=${DateTime.now().toIso8601String()}',
+    );
+    final nextDay = DateTime(
+      _displayDate.year,
+      _displayDate.month,
+      _displayDate.day + 1,
+    );
+    widget.controller.setDisplayDate(nextDay);
+    _schedulePostResizeNavRefresh();
+  }
+
+  /// After day navigation during resize the pointer is stationary so no new
+  /// pointer events arrive to re-arm the edge timer. Re-cache the layout for
+  /// the new page, reprocess the resize offset with the fresh layout (so the
+  /// proposed time is correct on the new day), then re-check edge proximity.
+  void _schedulePostResizeNavRefresh([int attempt = 0]) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_isResizeActive) return;
+
+      final timeGridBox =
+          _timeGridKey.currentContext?.findRenderObject() as RenderBox?;
+      final isReady =
+          timeGridBox != null &&
+          timeGridBox.attached &&
+          timeGridBox.size.width > 0;
+
+      debugPrint(
+        '[DD] PostResizeNavRefresh(attempt=$attempt): isReady=$isReady',
+      );
+
+      if (!isReady && attempt < _maxPostNavRetries) {
+        _schedulePostResizeNavRefresh(attempt + 1);
+        return;
+      }
+
+      if (!isReady) {
+        debugPrint(
+          '[DD] PostResizeNavRefresh: EXHAUSTED retries — layout still not ready',
+        );
+        return;
+      }
+
+      // Re-cache with the new page's layout so subsequent reprocess and scroll
+      // edge calculations use correct viewport bounds and scroll offset.
+      _layoutCachedForDrag = false;
+      _cacheLayoutForDrag();
+
+      // Recalculate the proposed time from the live pointer position using the
+      // freshly cached layout of the new page.
+      _reprocessResize();
+
+      // If the cursor landed on the wrong side of the anchored edge (e.g. end
+      // handle navigated back to the start day and is now above the start time),
+      // scroll the viewport so the anchor time is visible near the top.
+      _scrollToShowResizeAnchorIfNeeded();
+
+      // Re-arm the edge proximity timer — the pointer is stationary after
+      // navigation so no new pointer events arrive to trigger this.
+      final pos = _lastResizePointerGlobal;
+      if (pos != null) {
+        _checkResizeEdgeProximity(pos);
+      }
+    });
+  }
+
+  /// After resize day navigation, scrolls the viewport so that the "anchor"
+  /// time (the opposite edge of the event from the handle being dragged) is
+  /// near the top of the visible area when the cursor has landed on the wrong
+  /// side of it.
+  ///
+  /// Scenarios:
+  ///  - End handle navigated to the start day and cursor is above the event
+  ///    start time → scroll to show the start time near the top.
+  ///  - Start handle navigated to the end day and cursor is below the event
+  ///    end time → scroll to show the end time near the top.
+  void _scrollToShowResizeAnchorIfNeeded() {
+    final edge = _pendingResizeEdge;
+    final event = _pendingResizeEvent;
+    final pointerGlobal = _lastResizePointerGlobal;
+    if (edge == null || event == null || pointerGlobal == null) return;
+
+    final sc = _scrollController;
+    if (sc == null || !sc.hasClients) return;
+
+    final hourHeight = _cachedHourHeight > 0
+        ? _cachedHourHeight
+        : (widget.hourHeight ?? 80.0);
+
+    // Viewport screen-top is invariant for the current page.
+    final viewportTop = _cachedTimeGridGlobalTop + _cachedScrollOffset;
+    final cursorContentY = (pointerGlobal.dy - viewportTop) + sc.offset;
+
+    DateTime? anchorTime;
+
+    if (edge == MCalResizeEdge.end) {
+      // End handle: anchor is the event start. Check if we're back on the
+      // start day and the cursor is above the start time.
+      final eventStartDay = DateTime(
+        event.start.year,
+        event.start.month,
+        event.start.day,
+      );
+      final displayDay = DateTime(
+        _displayDate.year,
+        _displayDate.month,
+        _displayDate.day,
+      );
+      if (displayDay == eventStartDay) {
+        final startY = timeToOffset(
+          time: event.start,
+          startHour: widget.startHour,
+          hourHeight: hourHeight,
+        );
+        if (cursorContentY < startY) anchorTime = event.start;
+      }
+    } else {
+      // Start handle: anchor is the event end. Check if we're on the end day
+      // and the cursor is below the end time.
+      final eventEndDay = DateTime(
+        event.end.year,
+        event.end.month,
+        event.end.day,
+      );
+      final displayDay = DateTime(
+        _displayDate.year,
+        _displayDate.month,
+        _displayDate.day,
+      );
+      if (displayDay == eventEndDay) {
+        final endY = timeToOffset(
+          time: event.end,
+          startHour: widget.startHour,
+          hourHeight: hourHeight,
+        );
+        if (cursorContentY > endY) anchorTime = event.end;
+      }
+    }
+
+    if (anchorTime == null) return;
+
+    final anchorY = timeToOffset(
+      time: anchorTime,
+      startHour: widget.startHour,
+      hourHeight: hourHeight,
+    );
+    // Show the anchor with one hour of padding above so there is context.
+    final targetOffset = (anchorY - hourHeight).clamp(
+      0.0,
+      sc.position.maxScrollExtent,
+    );
+
+    // animateTo() releases _resizeScrollHold as a side-effect and takes
+    // 300ms, during which _resizeEdgeOffset becomes stale relative to the
+    // new scroll position.  After the animation settles, recompute the offset
+    // from the absolute pointer position so subsequent pointer moves produce
+    // correct deltas.  This mirrors what the vertical-scroll timer does on
+    // each tick via _reprocessResize(), but skips that method's min-duration
+    // early-return so the offset is always written (the delta-based
+    // _handleResizeUpdate applies the clamping instead).
+    sc.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    ).then((_) {
+      if (!mounted || !_isResizeActive) return;
+      final resizeEvent = _pendingResizeEvent;
+      final resizeEdge = _pendingResizeEdge;
+      final ptr = _lastResizePointerGlobal;
+      if (resizeEvent == null || resizeEdge == null || ptr == null) return;
+
+      // viewportTop is invariant for this page (cached top + cached scroll
+      // offset at cache time, which equals the fixed screen Y of the viewport).
+      final viewportTop = _cachedTimeGridGlobalTop + _cachedScrollOffset;
+      final newEdgeOffset = (ptr.dy - viewportTop) + sc.offset;
+      final maxOffset = (widget.endHour - widget.startHour + 1) * hourHeight;
+      _resizeEdgeOffset = newEdgeOffset.clamp(0.0, maxOffset);
+
+      // Apply via delta=0 so _handleResizeUpdate's validation and time
+      // snapping runs without adding any extra offset.
+      _handleResizeUpdate(resizeEvent, resizeEdge, 0.0);
+    });
   }
 
   /// Validates a proposed drop position.
@@ -5461,9 +5896,6 @@ class MCalDayViewState extends State<MCalDayView> {
       // events without this lock. For drag-to-move, LongPressDraggable already
       // claims the pointer exclusively so no lock is needed there.
       final isResizing = _dragHandler?.isResizing == true;
-      debugPrint(
-        '[DD] PageView build: isResizing=$isResizing isDragActive=$_isDragActive',
-      );
       dayViewContent = PageView.builder(
         controller: _swipePageController!,
         scrollDirection: Axis.horizontal,
@@ -5551,9 +5983,6 @@ class MCalDayViewState extends State<MCalDayView> {
                 onLeave: (_) => _handleDragLeave(),
                 onAcceptWithDetails: _handleDrop,
                 builder: (context, candidateData, rejectedData) {
-                  debugPrint(
-                    '[DD] DragTarget.builder: isDragActive=$_isDragActive candidates=${candidateData.length} rejected=${rejectedData.length}  ts=${DateTime.now().toIso8601String()}',
-                  );
                   final content = _buildMainColumn(locale, dayViewContent);
                   final dropLabel = _buildDropTargetSemanticLabel(context);
                   final mainContent = dropLabel != null
@@ -5565,8 +5994,10 @@ class MCalDayViewState extends State<MCalDayView> {
                   return Stack(
                     children: [
                       mainContent,
-                      if (_isDragActive) ..._buildEdgeZoneOverlays(context),
-                      if (_isDragActive) ..._buildScrollEdgeZoneOverlays(context),
+                      if (_isDragActive || _isResizeActive)
+                        ..._buildEdgeZoneOverlays(context),
+                      if (_isDragActive || _isResizeActive)
+                        ..._buildScrollEdgeZoneOverlays(context),
                       if (centerLine != null) centerLine,
                     ],
                   );
@@ -7648,15 +8079,43 @@ class _TimeGridEventsLayer extends StatelessWidget {
     final columnIndex = eventWithColumn.columnIndex;
     final totalColumns = eventWithColumn.totalColumns;
 
+    // Compute the day's visible time window boundaries.
+    // endHour=24 is handled by Duration arithmetic (gives midnight next day).
+    final dayStart = DateTime(
+      displayDate.year,
+      displayDate.month,
+      displayDate.day,
+    ).add(Duration(hours: startHour));
+    final dayEnd = DateTime(
+      displayDate.year,
+      displayDate.month,
+      displayDate.day,
+    ).add(Duration(hours: endHour));
+
+    // Determine the event's position in a potential multi-day span.
+    final isStartOnDisplayDate =
+        event.start.year == displayDate.year &&
+        event.start.month == displayDate.month &&
+        event.start.day == displayDate.day;
+    final isEndOnDisplayDate =
+        event.end.year == displayDate.year &&
+        event.end.month == displayDate.month &&
+        event.end.day == displayDate.day;
+
+    // Clamp the effective start/end to the visible day window so multi-day
+    // events don't overflow the time grid and position correctly on each day.
+    final effectiveStart = isStartOnDisplayDate ? event.start : dayStart;
+    final effectiveEnd = isEndOnDisplayDate ? event.end : dayEnd;
+
     // Calculate vertical position and height
     final startOffset = timeToOffset(
-      time: event.start,
+      time: effectiveStart,
       startHour: startHour,
       hourHeight: hourHeight,
     );
 
     final rawHeight = durationToHeight(
-      duration: event.end.difference(event.start),
+      duration: effectiveEnd.difference(effectiveStart),
       hourHeight: hourHeight,
     );
 
@@ -7669,14 +8128,16 @@ class _TimeGridEventsLayer extends StatelessWidget {
     final left = columnIndex * columnWidth;
     final width = columnWidth;
 
-    // Create tile context
+    // Create tile context with clamped times and day-position flags.
     final tileContext = MCalTimedEventTileContext(
       event: event,
       displayDate: displayDate,
       columnIndex: columnIndex,
       totalColumns: totalColumns,
-      startTime: event.start,
-      endTime: event.end,
+      startTime: effectiveStart,
+      endTime: effectiveEnd,
+      isStartOnDisplayDate: isStartOnDisplayDate,
+      isEndOnDisplayDate: isEndOnDisplayDate,
     );
 
     // Build the tile content
@@ -7767,7 +8228,7 @@ class _TimeGridEventsLayer extends StatelessWidget {
         onResizeUpdate != null &&
         onResizeEnd != null &&
         onResizeCancel != null &&
-        _shouldShowResizeHandles(event)) {
+        _shouldShowResizeHandles(event, tileContext)) {
       tile = _wrapWithResizeHandles(
         context,
         tile,
@@ -7787,8 +8248,20 @@ class _TimeGridEventsLayer extends StatelessWidget {
     );
   }
 
-  /// Returns true if the event duration meets the minimum for showing resize handles.
-  bool _shouldShowResizeHandles(MCalCalendarEvent event) {
+  /// Returns true if at least one resize handle should be shown for this tile.
+  ///
+  /// A handle is suppressed when the corresponding edge falls on a different
+  /// day (i.e. the tile is a continuation segment). Middle segments — where
+  /// both edges are on other days — return false immediately so the resize
+  /// overlay is skipped entirely.
+  bool _shouldShowResizeHandles(
+    MCalCalendarEvent event,
+    MCalTimedEventTileContext tileContext,
+  ) {
+    // Middle segment of a multi-day event: neither edge is adjustable here.
+    if (!tileContext.isStartOnDisplayDate && !tileContext.isEndOnDisplayDate) {
+      return false;
+    }
     final duration = event.end.difference(event.start);
     final minMinutes = theme.dayTheme?.minResizeDurationMinutes ?? 15;
     return duration.inMinutes >= minMinutes;
@@ -7804,38 +8277,45 @@ class _TimeGridEventsLayer extends StatelessWidget {
     double height,
   ) {
     final handleSize = theme.dayTheme?.resizeHandleSize ?? 8.0;
-    final startInset =
-        resizeHandleInset?.call(tileContext, MCalResizeEdge.start) ?? 0.0;
-    final endInset =
-        resizeHandleInset?.call(tileContext, MCalResizeEdge.end) ?? 0.0;
     final children = <Widget>[Positioned.fill(child: tile)];
 
-    children.add(
-      _TimeResizeHandle(
-        edge: MCalResizeEdge.start,
-        event: event,
-        handleSize: handleSize,
-        tileWidth: width,
-        tileHeight: height,
-        inset: startInset,
-        visualBuilder: timeResizeHandleBuilder,
-        onPointerDown: (e, edge, pointer) =>
-            onResizePointerDown?.call(e, edge, pointer),
-      ),
-    );
-    children.add(
-      _TimeResizeHandle(
-        edge: MCalResizeEdge.end,
-        event: event,
-        handleSize: handleSize,
-        tileWidth: width,
-        tileHeight: height,
-        inset: endInset,
-        visualBuilder: timeResizeHandleBuilder,
-        onPointerDown: (e, edge, pointer) =>
-            onResizePointerDown?.call(e, edge, pointer),
-      ),
-    );
+    // Only add the start (top) handle when the event starts on this day.
+    if (tileContext.isStartOnDisplayDate) {
+      final startInset =
+          resizeHandleInset?.call(tileContext, MCalResizeEdge.start) ?? 0.0;
+      children.add(
+        _TimeResizeHandle(
+          edge: MCalResizeEdge.start,
+          event: event,
+          handleSize: handleSize,
+          tileWidth: width,
+          tileHeight: height,
+          inset: startInset,
+          visualBuilder: timeResizeHandleBuilder,
+          onPointerDown: (e, edge, pointer) =>
+              onResizePointerDown?.call(e, edge, pointer),
+        ),
+      );
+    }
+
+    // Only add the end (bottom) handle when the event ends on this day.
+    if (tileContext.isEndOnDisplayDate) {
+      final endInset =
+          resizeHandleInset?.call(tileContext, MCalResizeEdge.end) ?? 0.0;
+      children.add(
+        _TimeResizeHandle(
+          edge: MCalResizeEdge.end,
+          event: event,
+          handleSize: handleSize,
+          tileWidth: width,
+          tileHeight: height,
+          inset: endInset,
+          visualBuilder: timeResizeHandleBuilder,
+          onPointerDown: (e, edge, pointer) =>
+              onResizePointerDown?.call(e, edge, pointer),
+        ),
+      );
+    }
 
     // Wrap in SizedBox to provide bounded constraints to the Stack.
     // All Stack children are Positioned, so the Stack cannot infer its own
@@ -7865,15 +8345,26 @@ class _TimeGridEventsLayer extends StatelessWidget {
     final showTimeRange =
         tileContext.endTime.difference(tileContext.startTime).inMinutes >= 30;
 
+    // Square off the corners where the event continues beyond this day.
+    final cornerRadius =
+        theme.dayTheme?.timedEventBorderRadius ??
+        theme.eventTileCornerRadius ??
+        4.0;
+    final topRadius =
+        tileContext.isStartOnDisplayDate ? Radius.circular(cornerRadius) : Radius.zero;
+    final bottomRadius =
+        tileContext.isEndOnDisplayDate ? Radius.circular(cornerRadius) : Radius.zero;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 1.0),
       padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
       decoration: BoxDecoration(
         color: tileColor.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(
-          theme.dayTheme?.timedEventBorderRadius ??
-              theme.eventTileCornerRadius ??
-              4.0,
+        borderRadius: BorderRadius.only(
+          topLeft: topRadius,
+          topRight: topRadius,
+          bottomLeft: bottomRadius,
+          bottomRight: bottomRadius,
         ),
         border: Border.all(color: tileColor, width: 1.0),
       ),
@@ -7916,15 +8407,36 @@ class _TimeGridEventsLayer extends StatelessWidget {
     // AM/PM designators (ص/م) and Arabic-Indic numerals, which have the correct
     // Unicode BiDi categories for RTL paragraph rendering.
     final locale = Localizations.maybeLocaleOf(context) ?? const Locale('en');
-    final startTimeStr = DateFormat(
-      'h:mm a',
-      locale.toString(),
-    ).format(event.start);
-    final endTimeStr = DateFormat(
-      'h:mm a',
-      locale.toString(),
-    ).format(event.end);
-    final timeRange = '$startTimeStr - $endTimeStr';
+    final localeStr = locale.toString();
+
+    // Build the time-range label shown inside the tile:
+    //   • Same day: just start and end times — "3:00 PM – 4:15 PM"
+    //   • 2–6 day span: day-of-week prefix on both edges — "Mon 3:00 PM – Wed 4:15 PM"
+    //   • > 6 day span: short date prefix on both edges — "Feb 24 3:00 PM – Mar 2 4:15 PM"
+    // The label always describes the full event range so every tile segment
+    // is self-contained regardless of which day is currently displayed.
+    final startTimeStr = DateFormat('h:mm a', localeStr).format(event.start);
+    final endTimeStr = DateFormat('h:mm a', localeStr).format(event.end);
+
+    final isSameDay =
+        event.start.year == event.end.year &&
+        event.start.month == event.end.month &&
+        event.start.day == event.end.day;
+
+    final String timeRange;
+    if (isSameDay) {
+      timeRange = '$startTimeStr – $endTimeStr';
+    } else {
+      final eventSpanDays = event.end.difference(event.start).inDays.abs();
+      final useDates = eventSpanDays > 6;
+      final startDayStr = useDates
+          ? DateFormat('MMM d', localeStr).format(event.start)
+          : DateFormat('EEE', localeStr).format(event.start);
+      final endDayStr = useDates
+          ? DateFormat('MMM d', localeStr).format(event.end)
+          : DateFormat('EEE', localeStr).format(event.end);
+      timeRange = '$startDayStr $startTimeStr – $endDayStr $endTimeStr';
+    }
 
     // Calculate duration for semantic label
     final duration = event.end.difference(event.start);

@@ -828,10 +828,26 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             return true;
           },
           onResizeWillAccept: (details) {
-            final duration = details.newEndDate.difference(details.newStartDate);
-            _setStatus(
-              'Resize → ${duration.inMinutes}min (${details.event.title})',
-            );
+            final start = details.newStartDate;
+            final end = details.newEndDate;
+            final span = end.difference(start);
+            final useDate = span.inDays > 6;
+            String _fmtDay(DateTime dt) {
+              final weekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][dt.weekday - 1];
+              final month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.month - 1];
+              return useDate ? '$month ${dt.day}' : weekday;
+            }
+            String _fmtTime(DateTime dt) {
+              final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+              final m = dt.minute.toString().padLeft(2, '0');
+              final ampm = dt.hour < 12 ? 'AM' : 'PM';
+              return m == '00' ? '$h $ampm' : '$h:$m $ampm';
+            }
+            final isSameDay = start.year == end.year && start.month == end.month && start.day == end.day;
+            final label = isSameDay
+                ? '${_fmtTime(start)} – ${_fmtTime(end)}'
+                : '${_fmtDay(start)} ${_fmtTime(start)} – ${_fmtDay(end)} ${_fmtTime(end)}';
+            _setStatus('Resize: ${details.event.title}  $label');
             return true;
           },
           onEventResized: (context, details) {
