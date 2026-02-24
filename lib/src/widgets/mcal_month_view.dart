@@ -2259,17 +2259,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   void _triggerCellTapForFocusedDate(DateTime focusedDate) {
     // Get events for this date
     final dayEvents = _events.where((event) {
-      final eventStart = DateTime(
-        event.start.year,
-        event.start.month,
-        event.start.day,
-      );
-      final eventEnd = DateTime(event.end.year, event.end.month, event.end.day);
-      final checkDate = DateTime(
-        focusedDate.year,
-        focusedDate.month,
-        focusedDate.day,
-      );
+      final eventStart = dateOnly(event.start);
+      final eventEnd = dateOnly(event.end);
+      final checkDate = dateOnly(focusedDate);
       return (checkDate.isAtSameMomentAs(eventStart) ||
           checkDate.isAtSameMomentAs(eventEnd) ||
           (checkDate.isAfter(eventStart) && checkDate.isBefore(eventEnd)));
@@ -2301,14 +2293,10 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   ///
   /// Uses the same logic as [_triggerCellTapForFocusedDate] for consistency.
   List<MCalCalendarEvent> _getEventsForDate(DateTime date) {
-    final checkDate = DateTime(date.year, date.month, date.day);
+    final checkDate = dateOnly(date);
     return _events.where((event) {
-      final eventStart = DateTime(
-        event.start.year,
-        event.start.month,
-        event.start.day,
-      );
-      final eventEnd = DateTime(event.end.year, event.end.month, event.end.day);
+      final eventStart = dateOnly(event.start);
+      final eventEnd = dateOnly(event.end);
       return (checkDate.isAtSameMomentAs(eventStart) ||
           checkDate.isAtSameMomentAs(eventEnd) ||
           (checkDate.isAfter(eventStart) && checkDate.isBefore(eventEnd)));
@@ -3511,7 +3499,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final DateTime pointerDate;
     if (rawDayIndex >= 0 && rawDayIndex < dates.length) {
       final d = dates[rawDayIndex];
-      pointerDate = DateTime(d.year, d.month, d.day);
+      pointerDate = dateOnly(d);
     } else {
       final firstDate = dates.first;
       pointerDate = DateTime(
@@ -3533,18 +3521,14 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           pointerDate.isBefore(originalEnd) ||
               pointerDate.isAtSameMomentAs(originalEnd)
           ? pointerDate
-          : DateTime(originalEnd.year, originalEnd.month, originalEnd.day);
+          : dateOnly(originalEnd);
       proposedEnd = originalEnd;
     } else {
       proposedEnd =
           pointerDate.isAfter(originalStart) ||
               pointerDate.isAtSameMomentAs(originalStart)
           ? pointerDate
-          : DateTime(
-              originalStart.year,
-              originalStart.month,
-              originalStart.day,
-            );
+          : dateOnly(originalStart);
       proposedStart = originalStart;
     }
 
@@ -3604,8 +3588,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final cells = <MCalHighlightCellInfo>[];
     if (weeks.isEmpty || dayWidth <= 0 || weekRowHeight <= 0) return cells;
 
-    final normalizedStart = DateTime(start.year, start.month, start.day);
-    final normalizedEnd = DateTime(end.year, end.month, end.day);
+    final normalizedStart = dateOnly(start);
+    final normalizedEnd = dateOnly(end);
     final totalDays = daysBetween(normalizedStart, normalizedEnd) + 1;
     int cellNumber = 0;
 
@@ -3613,11 +3597,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       final weekDates = weeks[weekRowIndex];
       for (int cellIndex = 0; cellIndex < weekDates.length; cellIndex++) {
         final cellDate = weekDates[cellIndex];
-        final normalizedCell = DateTime(
-          cellDate.year,
-          cellDate.month,
-          cellDate.day,
-        );
+        final normalizedCell = dateOnly(cellDate);
         if (!normalizedCell.isBefore(normalizedStart) &&
             !normalizedCell.isAfter(normalizedEnd)) {
           final cellLeft = contentOffsetX + (cellIndex * dayWidth);
@@ -4787,9 +4767,8 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
 
     if (dayWidth <= 0 || weekRowHeight <= 0) return cells;
 
-    // Normalize dates to date-only
-    final normalizedStart = DateTime(start.year, start.month, start.day);
-    final normalizedEnd = DateTime(end.year, end.month, end.day);
+    final normalizedStart = dateOnly(start);
+    final normalizedEnd = dateOnly(end);
     final totalDays = daysBetween(normalizedStart, normalizedEnd) + 1;
 
     int cellNumber = 0;
@@ -5853,7 +5832,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       final isCurrentMonth =
           date.year == widget.currentMonth.year &&
           date.month == widget.currentMonth.month;
-      final isToday = _isToday(date);
+      final isTodayDate = isToday(date);
 
       // Get events for this date (for callbacks, not rendering)
       final allDayEvents = _getEventsForDate(date);
@@ -5870,7 +5849,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           date: date,
           displayMonth: widget.currentMonth,
           isCurrentMonth: isCurrentMonth,
-          isToday: isToday,
+          isToday: isTodayDate,
           isSelectable: true,
           isFocused: isFocused,
           autoFocusOnCellTap: widget.autoFocusOnCellTap,
@@ -6369,22 +6348,13 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
     );
   }
 
-  bool _isToday(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day;
-  }
+  // isToday() is in date_utils.dart
 
   List<MCalCalendarEvent> _getEventsForDate(DateTime date) {
     final matchingEvents = widget.events.where((event) {
-      final eventStart = DateTime(
-        event.start.year,
-        event.start.month,
-        event.start.day,
-      );
-      final eventEnd = DateTime(event.end.year, event.end.month, event.end.day);
-      final checkDate = DateTime(date.year, date.month, date.day);
+      final eventStart = dateOnly(event.start);
+      final eventEnd = dateOnly(event.end);
+      final checkDate = dateOnly(date);
       return (checkDate.isAtSameMomentAs(eventStart) ||
           checkDate.isAtSameMomentAs(eventEnd) ||
           (checkDate.isAfter(eventStart) && checkDate.isBefore(eventEnd)));

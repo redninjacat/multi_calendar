@@ -159,6 +159,26 @@ DateTimeRange getVisibleGridRange(
   );
 }
 
+/// Strips the time component from a [DateTime], returning midnight of that day.
+///
+/// Example:
+/// ```dart
+/// dateOnly(DateTime(2026, 2, 24, 14, 30)); // DateTime(2026, 2, 24)
+/// ```
+DateTime dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+
+/// Returns true if [dt] falls on the current calendar day.
+///
+/// Example:
+/// ```dart
+/// isToday(DateTime.now());  // true
+/// isToday(DateTime(2000));  // false
+/// ```
+bool isToday(DateTime dt) {
+  final now = DateTime.now();
+  return dt.year == now.year && dt.month == now.month && dt.day == now.day;
+}
+
 /// Calculates the number of calendar days between two dates.
 ///
 /// This function is DST-safe: it counts calendar days rather than using

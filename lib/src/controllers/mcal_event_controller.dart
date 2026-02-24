@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/mcal_calendar_event.dart';
 import '../models/mcal_event_change_info.dart';
+import '../utils/date_utils.dart';
 import '../models/mcal_recurrence_exception.dart';
 import '../models/mcal_recurrence_rule.dart';
 
@@ -595,7 +596,7 @@ class MCalEventController extends ChangeNotifier {
   ///
   /// Returns a list of events that occur on the specified date.
   List<MCalCalendarEvent> getEventsForDate(DateTime date) {
-    final dayStart = DateTime(date.year, date.month, date.day);
+    final dayStart = dateOnly(date);
     final dayEnd = DateTime(date.year, date.month, date.day, 23, 59, 59, 999);
     return getEventsForRange(DateTimeRange(start: dayStart, end: dayEnd));
   }
@@ -627,11 +628,9 @@ class MCalEventController extends ChangeNotifier {
 
   /// Normalizes a [DateTime] to midnight (strips time components).
   ///
-  /// Returns `DateTime(date.year, date.month, date.day)` for consistent
-  /// map keying in the exception store and expansion cache.
-  DateTime _normalizeDate(DateTime date) {
-    return DateTime(date.year, date.month, date.day);
-  }
+  /// Returns midnight of the given date for consistent map keying in the
+  /// exception store and expansion cache.
+  DateTime _normalizeDate(DateTime date) => dateOnly(date);
 
   /// Advances a recurrence DTSTART close to [target] while staying aligned
   /// with the recurrence pattern defined by [rule].

@@ -309,9 +309,8 @@ class MCalMultiDayRenderer {
   /// Note: All-day events that start and end on the same day are NOT
   /// considered multi-day by this method.
   static bool isMultiDay(MCalCalendarEvent event) {
-    // Normalize to start of day for comparison
-    final startDay = DateTime(event.start.year, event.start.month, event.start.day);
-    final endDay = DateTime(event.end.year, event.end.month, event.end.day);
+    final startDay = dateOnly(event.start);
+    final endDay = dateOnly(event.end);
     return startDay.isBefore(endDay);
   }
 
@@ -403,9 +402,8 @@ class MCalMultiDayRenderer {
     final layouts = <MCalMultiDayEventLayout>[];
 
     for (final event in multiDayEvents) {
-      // Normalize event dates to start of day
-      final eventStartDay = DateTime(event.start.year, event.start.month, event.start.day);
-      final eventEndDay = DateTime(event.end.year, event.end.month, event.end.day);
+      final eventStartDay = dateOnly(event.start);
+      final eventEndDay = dateOnly(event.end);
 
       // Check if event overlaps with the visible grid
       if (eventEndDay.isBefore(gridStart) ||
@@ -612,9 +610,8 @@ class MCalMultiDayRenderer {
       ..sort(multiDayEventComparator);
 
     for (final event in sortedEvents) {
-      // Normalize event dates to start of day
-      final eventStartDay = DateTime(event.start.year, event.start.month, event.start.day);
-      final eventEndDay = DateTime(event.end.year, event.end.month, event.end.day);
+      final eventStartDay = dateOnly(event.start);
+      final eventEndDay = dateOnly(event.end);
 
       // Check if event overlaps with the visible grid
       if (eventEndDay.isBefore(gridStart) || eventStartDay.isAfter(gridEnd)) {

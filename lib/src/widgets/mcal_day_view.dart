@@ -1386,8 +1386,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
   late DateTime _displayDate;
 
-  /// Strips the time component from the controller's display date.
-  static DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+  // dateOnly() and isToday() are in date_utils.dart
 
   List<MCalCalendarEvent> _allEvents = [];
   List<MCalCalendarEvent> _allDayEvents = [];
@@ -1591,7 +1590,7 @@ class MCalDayViewState extends State<MCalDayView> {
   @override
   void initState() {
     super.initState();
-    _displayDate = _dateOnly(widget.controller.displayDate);
+    _displayDate = dateOnly(widget.controller.displayDate);
     _scrollController = widget.scrollController ?? ScrollController();
     _focusNode = FocusNode();
 
@@ -1636,7 +1635,7 @@ class MCalDayViewState extends State<MCalDayView> {
     if (widget.controller != oldWidget.controller) {
       oldWidget.controller.removeListener(_onControllerChanged);
       widget.controller.addListener(_onControllerChanged);
-      _displayDate = _dateOnly(widget.controller.displayDate);
+      _displayDate = dateOnly(widget.controller.displayDate);
       _loadEvents();
     }
 
@@ -1669,7 +1668,7 @@ class MCalDayViewState extends State<MCalDayView> {
     }
 
     // Reload events if display date changed
-    final normalizedNewDate = _dateOnly(widget.controller.displayDate);
+    final normalizedNewDate = dateOnly(widget.controller.displayDate);
     if (normalizedNewDate != _displayDate) {
       _displayDate = normalizedNewDate;
       _loadEvents();
@@ -1820,14 +1819,14 @@ class MCalDayViewState extends State<MCalDayView> {
   void _onControllerChanged() {
     if (!mounted) return;
 
-    final normalizedControllerDate = _dateOnly(widget.controller.displayDate);
+    final normalizedControllerDate = dateOnly(widget.controller.displayDate);
     if (normalizedControllerDate != _displayDate) {
       final oldDate = _displayDate;
       debugPrint(
         '[DD] ControllerChanged: date $oldDate → $normalizedControllerDate isDragActive=$_isDragActive isResizing=${_dragHandler?.isResizing}',
       );
       setState(() {
-        _displayDate = _dateOnly(widget.controller.displayDate);
+        _displayDate = dateOnly(widget.controller.displayDate);
       });
 
       // Task 8: Update PageController when display date changes programmatically
@@ -1913,17 +1912,9 @@ class MCalDayViewState extends State<MCalDayView> {
           !resizingEvent.isAllDay &&
           proposedStart != null &&
           proposedEnd != null) {
-        final day = DateTime(date.year, date.month, date.day);
-        final propStartDay = DateTime(
-          proposedStart.year,
-          proposedStart.month,
-          proposedStart.day,
-        );
-        final propEndDay = DateTime(
-          proposedEnd.year,
-          proposedEnd.month,
-          proposedEnd.day,
-        );
+        final day = dateOnly(date);
+        final propStartDay = dateOnly(proposedStart);
+        final propEndDay = dateOnly(proposedEnd);
 
         if (!day.isBefore(propStartDay) && !day.isAfter(propEndDay)) {
           final proposedVersion = resizingEvent.copyWith(
@@ -2653,9 +2644,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
     _keyboardMoveProposedStart = start;
     _keyboardMoveProposedEnd = end;
-    widget.controller.setDisplayDate(
-      DateTime(start.year, start.month, start.day),
-    );
+    widget.controller.setDisplayDate(dateOnly(start));
 
     _updateKeyboardMovePreview();
     if (mounted) {
@@ -2681,7 +2670,7 @@ class MCalDayViewState extends State<MCalDayView> {
       return;
     }
 
-    final sourceDate = DateTime(ev.start.year, ev.start.month, ev.start.day);
+    final sourceDate = dateOnly(ev.start);
     final dragData = MCalDragData(
       event: ev,
       sourceDate: sourceDate,
@@ -4838,9 +4827,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
   void _handleNavigateToday() {
     // Navigate to today
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
-    widget.controller.setDisplayDate(todayDate);
+    widget.controller.setDisplayDate(dateOnly(DateTime.now()));
   }
 
   // ============================================================================
@@ -5205,7 +5192,7 @@ class MCalDayViewState extends State<MCalDayView> {
           onResizeEnd: _handleResizeEnd,
           onResizeCancel: _handleResizeCancel,
         ),
-        if (widget.showCurrentTimeIndicator)
+        if (widget.showCurrentTimeIndicator && isToday(date))
           _CurrentTimeIndicator(
             startHour: widget.startHour,
             endHour: widget.endHour,
@@ -5352,7 +5339,7 @@ class MCalDayViewState extends State<MCalDayView> {
     if (widget.timeSlotInteractivityCallback != null) {
       final slotEndTime = tappedTime.add(widget.timeSlotDuration);
       final interactivityDetails = MCalTimeSlotInteractivityDetails(
-        date: DateTime(_displayDate.year, _displayDate.month, _displayDate.day),
+        date: dateOnly(_displayDate),
         hour: tappedTime.hour,
         minute: tappedTime.minute,
         startTime: tappedTime,
@@ -5399,7 +5386,7 @@ class MCalDayViewState extends State<MCalDayView> {
     if (widget.timeSlotInteractivityCallback != null) {
       final slotEndTime = tappedTime.add(widget.timeSlotDuration);
       final interactivityDetails = MCalTimeSlotInteractivityDetails(
-        date: DateTime(_displayDate.year, _displayDate.month, _displayDate.day),
+        date: dateOnly(_displayDate),
         hour: tappedTime.hour,
         minute: tappedTime.minute,
         startTime: tappedTime,
@@ -5452,7 +5439,7 @@ class MCalDayViewState extends State<MCalDayView> {
     if (widget.timeSlotInteractivityCallback != null) {
       final slotEndTime = tappedTime.add(widget.timeSlotDuration);
       final interactivityDetails = MCalTimeSlotInteractivityDetails(
-        date: DateTime(_displayDate.year, _displayDate.month, _displayDate.day),
+        date: dateOnly(_displayDate),
         hour: tappedTime.hour,
         minute: tappedTime.minute,
         startTime: tappedTime,
@@ -7784,7 +7771,7 @@ class _DisabledTimeSlotsLayer extends StatelessWidget {
 
         // Check if this slot is interactive
         final details = MCalTimeSlotInteractivityDetails(
-          date: DateTime(displayDate.year, displayDate.month, displayDate.day),
+          date: dateOnly(displayDate),
           hour: hour,
           minute: minute,
           startTime: slotStartTime,

@@ -70,6 +70,7 @@ export 'src/styles/mcal_month_theme_data.dart';
 export 'src/styles/mcal_theme.dart';
 // Export utilities
 export 'src/utils/color_utils.dart';
+export 'src/utils/date_utils.dart';
 export 'src/utils/mcal_date_format_utils.dart';
 // Export generated localization class
 export 'l10n/mcal_localizations.dart';

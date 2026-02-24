@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/mcal_calendar_event.dart';
+import '../utils/date_utils.dart';
 import 'mcal_layout_directionality.dart';
 import 'mcal_month_view_contexts.dart';
 import 'mcal_month_week_layout_contexts.dart';
@@ -264,7 +265,7 @@ class MCalMonthDefaultWeekLayoutBuilder {
           final labelContext = MCalDateLabelContext(
             date: date,
             isCurrentMonth: date.month == layoutContext.currentMonth.month,
-            isToday: _isToday(date),
+            isToday: isToday(date),
             defaultFormattedString: '${date.day}',
             locale: Localizations.localeOf(context),
             position: config.dateLabelPosition,
@@ -368,10 +369,5 @@ class MCalMonthDefaultWeekLayoutBuilder {
     );
   }
 
-  static bool _isToday(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day;
-  }
+  // isToday() is in date_utils.dart
 }
