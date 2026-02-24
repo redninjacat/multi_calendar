@@ -80,6 +80,60 @@ class ControlWidgets {
     );
   }
 
+  /// Creates a labeled range slider with two thumbs.
+  ///
+  /// - [label]: Localized label text for the slider
+  /// - [values]: Current [RangeValues] (start, end)
+  /// - [min], [max]: Value bounds
+  /// - [divisions]: Number of discrete steps
+  /// - [onChanged]: Callback when either thumb moves
+  /// - [valueLabel]: Optional custom display text
+  static Widget rangeSlider({
+    required String label,
+    required RangeValues values,
+    required double min,
+    required double max,
+    int? divisions,
+    required ValueChanged<RangeValues> onChanged,
+    String? valueLabel,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+              Text(
+                valueLabel ??
+                    '${values.start.toStringAsFixed(0)} – ${values.end.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          RangeSlider(
+            values: values,
+            min: min,
+            max: max,
+            divisions: divisions,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Creates a labeled dropdown selector.
   ///
   /// - [label]: Localized label text for the dropdown
@@ -254,18 +308,28 @@ class ControlWidgets {
           SizedBox(
             width: double.infinity,
             child: SegmentedButton<bool?>(
-              segments: const [
+              showSelectedIcon: false,
+              segments: [
                 ButtonSegment<bool?>(
                   value: null,
-                  icon: Icon(Icons.remove, size: 14),
+                  icon: Opacity(
+                    opacity: value == null ? 1.0 : 0.4,
+                    child: const Icon(Icons.remove, size: 16),
+                  ),
                 ),
                 ButtonSegment<bool?>(
                   value: false,
-                  icon: Icon(Icons.close, size: 14),
+                  icon: Opacity(
+                    opacity: value == false ? 1.0 : 0.4,
+                    child: const Icon(Icons.close, size: 16),
+                  ),
                 ),
                 ButtonSegment<bool?>(
                   value: true,
-                  icon: Icon(Icons.check, size: 14),
+                  icon: Opacity(
+                    opacity: value == true ? 1.0 : 0.4,
+                    child: const Icon(Icons.check, size: 16),
+                  ),
                 ),
               ],
               selected: {value},

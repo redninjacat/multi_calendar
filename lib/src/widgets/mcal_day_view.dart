@@ -298,7 +298,10 @@ class MCalDayView extends StatefulWidget {
 
     // Theme
     this.theme,
-  });
+  }) : assert(
+         endHour > startHour,
+         'endHour ($endHour) must be greater than startHour ($startHour)',
+       );
 
   /// The event controller that manages calendar events and display date.
   ///
@@ -1408,6 +1411,7 @@ class MCalDayViewState extends State<MCalDayView> {
     );
     _isDragActive = value;
   }
+
   bool _isResizeActive = false;
   bool _isProcessingDrop = false;
   bool _isDragTargetActive = false;
@@ -2590,7 +2594,7 @@ class MCalDayViewState extends State<MCalDayView> {
         ? _cachedHourHeight
         : (widget.hourHeight ?? 80.0);
     final minOffset = 0.0;
-    final maxOffset = (widget.endHour - widget.startHour + 1) * hourHeight;
+    final maxOffset = (widget.endHour - widget.startHour) * hourHeight;
     final startOffset = timeToOffset(
       time: start,
       startHour: widget.startHour,
@@ -2822,7 +2826,7 @@ class MCalDayViewState extends State<MCalDayView> {
         : (widget.hourHeight ?? 80.0);
     final deltaPx = (deltaSlots * slotMins / 60.0) * hourHeight;
     final minOffset = 0.0;
-    final maxOffset = (widget.endHour - widget.startHour + 1) * hourHeight;
+    final maxOffset = (widget.endHour - widget.startHour) * hourHeight;
     _keyboardResizeEdgeOffset = (_keyboardResizeEdgeOffset + deltaPx).clamp(
       minOffset,
       maxOffset,
@@ -3110,7 +3114,7 @@ class MCalDayViewState extends State<MCalDayView> {
     final hourHeight = _cachedHourHeight > 0
         ? _cachedHourHeight
         : (widget.hourHeight ?? 80.0);
-    final maxOffset = (widget.endHour - widget.startHour + 1) * hourHeight;
+    final maxOffset = (widget.endHour - widget.startHour) * hourHeight;
     final clampedOffset = newEdgeOffset.clamp(0.0, maxOffset);
 
     // Minimum event duration in pixels.
@@ -3150,11 +3154,13 @@ class MCalDayViewState extends State<MCalDayView> {
     // duration boundary imposed by the other edge.  Without this the timer
     // keeps firing after the proposed time is already clamped, producing the
     // visual effect of the handle "passing through" the opposite edge.
-    if (edge == MCalResizeEdge.end && clampedOffset <= effectiveStartPx + minDurationPx) {
+    if (edge == MCalResizeEdge.end &&
+        clampedOffset <= effectiveStartPx + minDurationPx) {
       _cancelVerticalScrollTimer();
       return;
     }
-    if (edge == MCalResizeEdge.start && clampedOffset >= effectiveEndPx - minDurationPx) {
+    if (edge == MCalResizeEdge.start &&
+        clampedOffset >= effectiveEndPx - minDurationPx) {
       _cancelVerticalScrollTimer();
       return;
     }
@@ -3178,7 +3184,7 @@ class MCalDayViewState extends State<MCalDayView> {
         ? _cachedHourHeight
         : (widget.hourHeight ?? 80.0);
     final minOffset = 0.0;
-    final maxOffset = (widget.endHour - widget.startHour + 1) * hourHeight;
+    final maxOffset = (widget.endHour - widget.startHour) * hourHeight;
     final eventMinDuration = widget.timeSlotDuration.inMinutes >= 15
         ? widget.timeSlotDuration
         : const Duration(minutes: 15);
@@ -3465,7 +3471,8 @@ class MCalDayViewState extends State<MCalDayView> {
     // the raw pointer event so the drop preview and debug overlay continue
     // tracking the tile rather than freezing at the last DragTarget position.
     final dragData = details.data;
-    final feedbackGlobal = (!_isDragTargetActive && _fallbackFeedbackGlobal != null)
+    final feedbackGlobal =
+        (!_isDragTargetActive && _fallbackFeedbackGlobal != null)
         ? _fallbackFeedbackGlobal!
         : details.offset;
     final cursorGlobalY = feedbackGlobal.dy + dragData.grabOffsetY;
@@ -4203,28 +4210,30 @@ class MCalDayViewState extends State<MCalDayView> {
     // each tick via _reprocessResize(), but skips that method's min-duration
     // early-return so the offset is always written (the delta-based
     // _handleResizeUpdate applies the clamping instead).
-    sc.animateTo(
-      targetOffset,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    ).then((_) {
-      if (!mounted || !_isResizeActive) return;
-      final resizeEvent = _pendingResizeEvent;
-      final resizeEdge = _pendingResizeEdge;
-      final ptr = _lastResizePointerGlobal;
-      if (resizeEvent == null || resizeEdge == null || ptr == null) return;
+    sc
+        .animateTo(
+          targetOffset,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        )
+        .then((_) {
+          if (!mounted || !_isResizeActive) return;
+          final resizeEvent = _pendingResizeEvent;
+          final resizeEdge = _pendingResizeEdge;
+          final ptr = _lastResizePointerGlobal;
+          if (resizeEvent == null || resizeEdge == null || ptr == null) return;
 
-      // viewportTop is invariant for this page (cached top + cached scroll
-      // offset at cache time, which equals the fixed screen Y of the viewport).
-      final viewportTop = _cachedTimeGridGlobalTop + _cachedScrollOffset;
-      final newEdgeOffset = (ptr.dy - viewportTop) + sc.offset;
-      final maxOffset = (widget.endHour - widget.startHour + 1) * hourHeight;
-      _resizeEdgeOffset = newEdgeOffset.clamp(0.0, maxOffset);
+          // viewportTop is invariant for this page (cached top + cached scroll
+          // offset at cache time, which equals the fixed screen Y of the viewport).
+          final viewportTop = _cachedTimeGridGlobalTop + _cachedScrollOffset;
+          final newEdgeOffset = (ptr.dy - viewportTop) + sc.offset;
+          final maxOffset = (widget.endHour - widget.startHour) * hourHeight;
+          _resizeEdgeOffset = newEdgeOffset.clamp(0.0, maxOffset);
 
-      // Apply via delta=0 so _handleResizeUpdate's validation and time
-      // snapping runs without adding any extra offset.
-      _handleResizeUpdate(resizeEvent, resizeEdge, 0.0);
-    });
+          // Apply via delta=0 so _handleResizeUpdate's validation and time
+          // snapping runs without adding any extra offset.
+          _handleResizeUpdate(resizeEvent, resizeEdge, 0.0);
+        });
   }
 
   /// Validates a proposed drop position.
@@ -4854,6 +4863,13 @@ class MCalDayViewState extends State<MCalDayView> {
       return const SizedBox.shrink();
     }
 
+    // During resize the real event tile already reflects the proposed bounds
+    // (via _eventsForPageDate's copyWith replacement), so rendering a second
+    // preview tile on top just creates visual noise.
+    if (dragHandler.resizingEvent != null) {
+      return const SizedBox.shrink();
+    }
+
     final proposedStart = dragHandler.proposedStartDate!;
     final proposedEnd = dragHandler.proposedEndDate!;
     final draggedEvent = dragHandler.draggedEvent;
@@ -5104,7 +5120,8 @@ class MCalDayViewState extends State<MCalDayView> {
     List<MCalCalendarEvent> timedEvents,
   ) {
     final hourHeight = widget.hourHeight ?? 80.0;
-    final contentHeight = (widget.endHour - widget.startHour + 1) * hourHeight;
+    final contentHeight =
+        (widget.endHour - widget.startHour).clamp(0, 24) * hourHeight;
 
     // Layer 1+2: Main content (gridlines + regions + events + current time)
     // Wrap gridlines in IgnorePointer when empty slot callbacks exist so taps
@@ -6464,7 +6481,7 @@ class _TimeLegendColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalHours = endHour - startHour + 1;
+    final totalHours = (endHour - startHour).clamp(0, 24);
     final columnHeight = hourHeight * totalHours;
     final legendWidth = theme.dayTheme?.timeLegendWidth ?? 60.0;
 
@@ -6611,7 +6628,7 @@ class _TimeLegendColumn extends StatelessWidget {
     } else {
       // Default: 12-hour for English-speaking locales, 24-hour for others
       format = _isEnglishLocale(locale)
-          ? DateFormat('h a', locale.toString()) // "9 AM", "2 PM"
+          ? DateFormat('h:mm a', locale.toString()) // "9:00 AM", "2:00 PM"
           : DateFormat('HH:mm', locale.toString()); // "09:00", "14:00"
     }
 
@@ -8350,10 +8367,12 @@ class _TimeGridEventsLayer extends StatelessWidget {
         theme.dayTheme?.timedEventBorderRadius ??
         theme.eventTileCornerRadius ??
         4.0;
-    final topRadius =
-        tileContext.isStartOnDisplayDate ? Radius.circular(cornerRadius) : Radius.zero;
-    final bottomRadius =
-        tileContext.isEndOnDisplayDate ? Radius.circular(cornerRadius) : Radius.zero;
+    final topRadius = tileContext.isStartOnDisplayDate
+        ? Radius.circular(cornerRadius)
+        : Radius.zero;
+    final bottomRadius = tileContext.isEndOnDisplayDate
+        ? Radius.circular(cornerRadius)
+        : Radius.zero;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 1.0),

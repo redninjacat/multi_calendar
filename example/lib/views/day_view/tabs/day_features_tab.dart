@@ -554,23 +554,26 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
         ControlPanelSection(
           title: l10n.sectionTimeRange,
           children: [
-            ControlWidgets.slider(
-              label: l10n.settingStartHour,
-              value: _startHour.toDouble(),
+            ControlWidgets.rangeSlider(
+              label: l10n.sectionTimeRange,
+              values: RangeValues(
+                _startHour.toDouble(),
+                _endHour.toDouble(),
+              ),
               min: 0,
-              max: 23,
-              divisions: 23,
-              onChanged: (v) => setState(() => _startHour = v.toInt()),
-              valueLabel: '$_startHour:00',
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingEndHour,
-              value: _endHour.toDouble(),
-              min: 1,
               max: 24,
-              divisions: 23,
-              onChanged: (v) => setState(() => _endHour = v.toInt()),
-              valueLabel: '$_endHour:00',
+              divisions: 24,
+              onChanged: (v) {
+                final newStart = v.start.round();
+                final newEnd = v.end.round();
+                if (newEnd - newStart >= 1) {
+                  setState(() {
+                    _startHour = newStart;
+                    _endHour = newEnd;
+                  });
+                }
+              },
+              valueLabel: '$_startHour:00 – $_endHour:00',
             ),
             ControlWidgets.dropdown<int>(
               label: l10n.settingTimeSlotDuration,
