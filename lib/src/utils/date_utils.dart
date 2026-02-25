@@ -159,6 +159,46 @@ DateTimeRange getVisibleGridRange(
   );
 }
 
+/// Shifts [date] by [days] calendar days, preserving the time-of-day.
+///
+/// Uses calendar-day arithmetic (the `DateTime` constructor) instead of
+/// `Duration`-based arithmetic. This makes it DST-safe: adding
+/// `Duration(days: 1)` adds exactly 24 wall-clock hours, which can land on the
+/// *wrong* calendar day when a DST transition shrinks or extends the day (e.g.
+/// adding 24 h at 00:00 on a "spring forward" day reaches 01:00 AM the next
+/// day, or at 00:00 on a "fall back" day reaches 23:00 the *same* day).
+///
+/// The constructor form `DateTime(y, m, d + N, ...)` always returns the correct
+/// local midnight of the target calendar day regardless of DST transitions.
+///
+/// [days] may be positive (forward), negative (backward), or zero (no-op).
+/// All time components (hour, minute, second, millisecond, microsecond) are
+/// preserved unchanged; only the date part is shifted.
+///
+/// Month and year rollovers are handled automatically by the constructor:
+/// `DateTime(2026, 12, 32)` resolves to `2027-01-01`.
+///
+/// Example:
+/// ```dart
+/// addDays(DateTime(2026, 3, 31), 1);          // 2026-04-01 00:00
+/// addDays(DateTime(2026, 1, 1, 14, 30), -1);  // 2025-12-31 14:30
+/// addDays(DateTime(2026, 2, 28), 1);          // 2026-03-01 (non-leap)
+/// addDays(DateTime(2024, 2, 28), 1);          // 2024-02-29 (leap)
+/// addDays(DateTime(2026, 3, 8), 7);           // 2026-03-15 (crosses US DST)
+/// ```
+DateTime addDays(DateTime date, int days) {
+  return DateTime(
+    date.year,
+    date.month,
+    date.day + days,
+    date.hour,
+    date.minute,
+    date.second,
+    date.millisecond,
+    date.microsecond,
+  );
+}
+
 /// Strips the time component from a [DateTime], returning midnight of that day.
 ///
 /// Example:

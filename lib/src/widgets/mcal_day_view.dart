@@ -1774,11 +1774,7 @@ class MCalDayViewState extends State<MCalDayView> {
     }
 
     final dayOffset = pageIndex - _initialSwipePageIndex;
-    return DateTime(
-      _swipeReferenceDate!.year,
-      _swipeReferenceDate!.month,
-      _swipeReferenceDate!.day + dayOffset,
-    );
+    return addDays(_swipeReferenceDate!, dayOffset);
   }
 
   /// Called when the user swipes to a different page in the PageView.
@@ -2701,20 +2697,8 @@ class MCalDayViewState extends State<MCalDayView> {
     var end = _keyboardMoveProposedEnd;
     if (ev == null || start == null || end == null) return;
 
-    start = DateTime(
-      start.year,
-      start.month,
-      start.day + deltaDays,
-      start.hour,
-      start.minute,
-    );
-    end = DateTime(
-      end.year,
-      end.month,
-      end.day + deltaDays,
-      end.hour,
-      end.minute,
-    );
+    start = addDays(start, deltaDays);
+    end = addDays(end, deltaDays);
 
     _keyboardMoveProposedStart = start;
     _keyboardMoveProposedEnd = end;
@@ -4101,12 +4085,7 @@ class MCalDayViewState extends State<MCalDayView> {
     debugPrint(
       '[DD] ResizeNavigatePrevious CALLED at=${DateTime.now().toIso8601String()}',
     );
-    final previousDay = DateTime(
-      _displayDate.year,
-      _displayDate.month,
-      _displayDate.day - 1,
-    );
-    widget.controller.setDisplayDate(previousDay);
+    widget.controller.setDisplayDate(addDays(_displayDate, -1));
     _schedulePostResizeNavRefresh();
   }
 
@@ -4116,12 +4095,7 @@ class MCalDayViewState extends State<MCalDayView> {
     debugPrint(
       '[DD] ResizeNavigateNext CALLED at=${DateTime.now().toIso8601String()}',
     );
-    final nextDay = DateTime(
-      _displayDate.year,
-      _displayDate.month,
-      _displayDate.day + 1,
-    );
-    widget.controller.setDisplayDate(nextDay);
+    widget.controller.setDisplayDate(addDays(_displayDate, 1));
     _schedulePostResizeNavRefresh();
   }
 
@@ -4816,12 +4790,7 @@ class MCalDayViewState extends State<MCalDayView> {
       '[DD] NavigatePrevious CALLED at=${DateTime.now().toIso8601String()} from=${StackTrace.current.toString().split('\n').skip(1).take(3).join(' | ')}',
     );
     _layoutCachedForDrag = false;
-    final previousDay = DateTime(
-      _displayDate.year,
-      _displayDate.month,
-      _displayDate.day - 1,
-    );
-    widget.controller.setDisplayDate(previousDay);
+    widget.controller.setDisplayDate(addDays(_displayDate, -1));
     _schedulePostNavLayoutRefresh();
   }
 
@@ -4830,12 +4799,7 @@ class MCalDayViewState extends State<MCalDayView> {
       '[DD] NavigateNext CALLED at=${DateTime.now().toIso8601String()} from=${StackTrace.current.toString().split('\n').skip(1).take(3).join(' | ')}',
     );
     _layoutCachedForDrag = false;
-    final nextDay = DateTime(
-      _displayDate.year,
-      _displayDate.month,
-      _displayDate.day + 1,
-    );
-    widget.controller.setDisplayDate(nextDay);
+    widget.controller.setDisplayDate(addDays(_displayDate, 1));
     _schedulePostNavLayoutRefresh();
   }
 
@@ -6157,23 +6121,13 @@ class _DayNavigator extends StatelessWidget {
   /// Check if we can navigate to the previous day.
   bool _canGoPrevious() {
     if (minDate == null) return true;
-    final previousDay = DateTime(
-      displayDate.year,
-      displayDate.month,
-      displayDate.day - 1,
-    );
-    return !previousDay.isBefore(minDate!);
+    return !addDays(displayDate, -1).isBefore(minDate!);
   }
 
   /// Check if we can navigate to the next day.
   bool _canGoNext() {
     if (maxDate == null) return true;
-    final nextDay = DateTime(
-      displayDate.year,
-      displayDate.month,
-      displayDate.day + 1,
-    );
-    return !nextDay.isAfter(maxDate!);
+    return !addDays(displayDate, 1).isAfter(maxDate!);
   }
 
   @override

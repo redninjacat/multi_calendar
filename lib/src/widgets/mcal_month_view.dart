@@ -9,6 +9,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
+import '../models/mcal_day_region.dart';
 import '../models/mcal_recurrence_exception.dart';
 import '../models/mcal_recurrence_rule.dart';
 import '../styles/mcal_theme.dart';
@@ -649,6 +650,51 @@ class MCalMonthView extends StatefulWidget {
   )?
   overflowIndicatorBuilder;
 
+  // ============ Day Regions ============
+
+  /// Day regions to display in this month view.
+  ///
+  /// Each [MCalDayRegion] marks one or more calendar days with a colored
+  /// overlay and optional label, and can optionally block drag-and-drop onto
+  /// those days.
+  ///
+  /// Regions with a [MCalDayRegion.recurrenceRule] are expanded automatically
+  /// so you can express patterns such as "every weekend" with a single entry:
+  ///
+  /// ```dart
+  /// dayRegions: [
+  ///   MCalDayRegion(
+  ///     id: 'weekends',
+  ///     date: DateTime(2026, 1, 3),       // any Saturday anchor
+  ///     recurrenceRule: 'FREQ=WEEKLY;BYDAY=SA,SU',
+  ///     color: Colors.grey.withValues(alpha: 0.15),
+  ///     blockInteraction: true,
+  ///   ),
+  /// ]
+  /// ```
+  ///
+  /// Regions are rendered as a background layer below the date label and
+  /// event tiles so they do not interfere with existing content.
+  ///
+  /// Defaults to an empty list (no regions).
+  final List<MCalDayRegion> dayRegions;
+
+  /// Builder callback for customizing how a day region is rendered.
+  ///
+  /// When provided, called for each [MCalDayRegion] that applies to a
+  /// visible cell.  The builder receives a [MCalDayRegionContext] describing
+  /// the region and the cell, plus the [defaultWidget] produced by the
+  /// built-in renderer (a semi-transparent colored container with optional
+  /// text and icon).  Return [defaultWidget] to keep the default appearance.
+  ///
+  /// If null, the built-in renderer is used for all regions.
+  final Widget Function(
+    BuildContext context,
+    MCalDayRegionContext regionContext,
+    Widget defaultWidget,
+  )?
+  dayRegionBuilder;
+
   // ============ Drag-and-Drop ============
 
   /// Whether drag-and-drop functionality is enabled for event tiles.
@@ -951,6 +997,9 @@ class MCalMonthView extends StatefulWidget {
     // Week layout customization
     this.weekLayoutBuilder,
     this.overflowIndicatorBuilder,
+    // Day regions
+    this.dayRegions = const [],
+    this.dayRegionBuilder,
     // Drag-and-drop
     this.enableDragToMove = false,
     this.showDropTargetTiles = true,
@@ -1723,6 +1772,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           // Keyboard selection state
           keyboardHighlightedEventId: _keyboardHighlightedEventId,
           keyboardSelectedEventId: _keyboardSelectedEventId,
+          // Day regions
+          dayRegions: widget.dayRegions,
+          dayRegionBuilder: widget.dayRegionBuilder,
         );
       },
     );
@@ -2118,32 +2170,16 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // On DST fall-back (e.g. Nov 2, 2025 US), Duration(days: 1) = 24h can
     // land on the same calendar day at 23:00 instead of the next day.
     if (key == LogicalKeyboardKey.arrowLeft) {
-      newFocusedDate = DateTime(
-        focusedDate.year,
-        focusedDate.month,
-        focusedDate.day + (-1 * rtlMult),
-      );
+      newFocusedDate = addDays(focusedDate, -1 * rtlMult);
       handled = true;
     } else if (key == LogicalKeyboardKey.arrowRight) {
-      newFocusedDate = DateTime(
-        focusedDate.year,
-        focusedDate.month,
-        focusedDate.day + (1 * rtlMult),
-      );
+      newFocusedDate = addDays(focusedDate, 1 * rtlMult);
       handled = true;
     } else if (key == LogicalKeyboardKey.arrowUp) {
-      newFocusedDate = DateTime(
-        focusedDate.year,
-        focusedDate.month,
-        focusedDate.day - 7,
-      );
+      newFocusedDate = addDays(focusedDate, -7);
       handled = true;
     } else if (key == LogicalKeyboardKey.arrowDown) {
-      newFocusedDate = DateTime(
-        focusedDate.year,
-        focusedDate.month,
-        focusedDate.day + 7,
-      );
+      newFocusedDate = addDays(focusedDate, 7);
       handled = true;
     }
     // Home - first day of current month
@@ -2478,12 +2514,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       }
 
       // Calculate new proposed date using DST-safe arithmetic
-      final currentProposed = _keyboardMoveProposedDate!;
-      final newProposed = DateTime(
-        currentProposed.year,
-        currentProposed.month,
-        currentProposed.day + dayDelta,
-      );
+      final newProposed = addDays(_keyboardMoveProposedDate!, dayDelta);
       _keyboardMoveProposedDate = newProposed;
 
       // Calculate event span duration in days (inclusive)
@@ -2502,15 +2533,30 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           ) +
           1;
 
-      final proposedEnd = DateTime(
-        newProposed.year,
-        newProposed.month,
-        newProposed.day + eventDurationDays - 1,
-      );
+      final proposedEnd = addDays(newProposed, eventDurationDays - 1);
 
-      // Validate via onDragWillAccept
+      // Validate against day regions first (library-level block).
+      // If any day in the proposed range is covered by a blocking region,
+      // reject the drop without calling onDragWillAccept.
+      // Calendar-day arithmetic avoids DST edge cases (24 h ≠ 1 calendar day).
       bool isValid = true;
-      if (widget.onDragWillAccept != null) {
+      if (widget.dayRegions.isNotEmpty) {
+        for (
+          DateTime d = newProposed;
+          !d.isAfter(proposedEnd);
+          d = addDays(d, 1)
+        ) {
+          if (widget.dayRegions.any(
+            (r) => r.blockInteraction && r.appliesTo(d),
+          )) {
+            isValid = false;
+            break;
+          }
+        }
+      }
+
+      // Only call consumer's onDragWillAccept when the library-level check passes.
+      if (isValid && widget.onDragWillAccept != null) {
         isValid = widget.onDragWillAccept!(
           context,
           MCalDragWillAcceptDetails(
@@ -2656,26 +2702,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final dayDelta = daysBetween(normalizedEventStart, proposedStart);
 
     // Calculate new dates preserving time components
-    final newStartDate = DateTime(
-      oldStartDate.year,
-      oldStartDate.month,
-      oldStartDate.day + dayDelta,
-      oldStartDate.hour,
-      oldStartDate.minute,
-      oldStartDate.second,
-      oldStartDate.millisecond,
-      oldStartDate.microsecond,
-    );
-    final newEndDate = DateTime(
-      oldEndDate.year,
-      oldEndDate.month,
-      oldEndDate.day + dayDelta,
-      oldEndDate.hour,
-      oldEndDate.minute,
-      oldEndDate.second,
-      oldEndDate.millisecond,
-      oldEndDate.microsecond,
-    );
+    final newStartDate = addDays(oldStartDate, dayDelta);
+    final newEndDate = addDays(oldEndDate, dayDelta);
 
     // Create updated event
     final updatedEvent = event.copyWith(start: newStartDate, end: newEndDate);
@@ -2869,36 +2897,18 @@ class _MCalMonthViewState extends State<MCalMonthView> {
 
     if (delta != 0) {
       if (_keyboardResizeEdge == MCalResizeEdge.end) {
-        final currentEnd = _keyboardResizeProposedEnd!;
-        final newEnd = DateTime(
-          currentEnd.year,
-          currentEnd.month,
-          currentEnd.day + delta,
-        );
+        final newEnd = addDays(_keyboardResizeProposedEnd!, delta);
         // Clamp: end cannot be before start (minimum 1 day)
         _keyboardResizeProposedEnd =
             newEnd.isBefore(_keyboardResizeProposedStart!)
-            ? DateTime(
-                _keyboardResizeProposedStart!.year,
-                _keyboardResizeProposedStart!.month,
-                _keyboardResizeProposedStart!.day,
-              )
+            ? dateOnly(_keyboardResizeProposedStart!)
             : newEnd;
       } else {
-        final currentStart = _keyboardResizeProposedStart!;
-        final newStart = DateTime(
-          currentStart.year,
-          currentStart.month,
-          currentStart.day + delta,
-        );
+        final newStart = addDays(_keyboardResizeProposedStart!, delta);
         // Clamp: start cannot be after end (minimum 1 day)
         _keyboardResizeProposedStart =
             newStart.isAfter(_keyboardResizeProposedEnd!)
-            ? DateTime(
-                _keyboardResizeProposedEnd!.year,
-                _keyboardResizeProposedEnd!.month,
-                _keyboardResizeProposedEnd!.day,
-              )
+            ? dateOnly(_keyboardResizeProposedEnd!)
             : newStart;
       }
 
@@ -3029,41 +3039,13 @@ class _MCalMonthViewState extends State<MCalMonthView> {
 
     if (edge == MCalResizeEdge.start) {
       // Start edge changed
-      final normalizedOriginalStart = DateTime(
-        originalStart.year,
-        originalStart.month,
-        originalStart.day,
-      );
-      final dayDelta = daysBetween(normalizedOriginalStart, proposedStart);
-      newStartDate = DateTime(
-        originalStart.year,
-        originalStart.month,
-        originalStart.day + dayDelta,
-        originalStart.hour,
-        originalStart.minute,
-        originalStart.second,
-        originalStart.millisecond,
-        originalStart.microsecond,
-      );
+      final dayDelta = daysBetween(dateOnly(originalStart), proposedStart);
+      newStartDate = addDays(originalStart, dayDelta);
       newEndDate = originalEnd;
     } else {
       // End edge changed
-      final normalizedOriginalEnd = DateTime(
-        originalEnd.year,
-        originalEnd.month,
-        originalEnd.day,
-      );
-      final dayDelta = daysBetween(normalizedOriginalEnd, proposedEnd);
-      newEndDate = DateTime(
-        originalEnd.year,
-        originalEnd.month,
-        originalEnd.day + dayDelta,
-        originalEnd.hour,
-        originalEnd.minute,
-        originalEnd.second,
-        originalEnd.millisecond,
-        originalEnd.microsecond,
-      );
+      final dayDelta = daysBetween(dateOnly(originalEnd), proposedEnd);
+      newEndDate = addDays(originalEnd, dayDelta);
       newStartDate = originalStart;
     }
 
@@ -3501,12 +3483,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       final d = dates[rawDayIndex];
       pointerDate = dateOnly(d);
     } else {
-      final firstDate = dates.first;
-      pointerDate = DateTime(
-        firstDate.year,
-        firstDate.month,
-        firstDate.day + rawDayIndex,
-      );
+      pointerDate = addDays(dates.first, rawDayIndex);
     }
 
     final originalStart = dragHandler.resizeOriginalStart!;
@@ -3695,40 +3672,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final DateTime newEndDate;
 
     if (edge == MCalResizeEdge.start) {
-      final normalizedOriginalStart = DateTime(
-        originalStart.year,
-        originalStart.month,
-        originalStart.day,
-      );
-      final dayDelta = daysBetween(normalizedOriginalStart, proposedStart);
-      newStartDate = DateTime(
-        originalStart.year,
-        originalStart.month,
-        originalStart.day + dayDelta,
-        originalStart.hour,
-        originalStart.minute,
-        originalStart.second,
-        originalStart.millisecond,
-        originalStart.microsecond,
-      );
+      final dayDelta = daysBetween(dateOnly(originalStart), proposedStart);
+      newStartDate = addDays(originalStart, dayDelta);
       newEndDate = originalEnd;
     } else {
-      final normalizedOriginalEnd = DateTime(
-        originalEnd.year,
-        originalEnd.month,
-        originalEnd.day,
-      );
-      final dayDelta = daysBetween(normalizedOriginalEnd, proposedEnd);
-      newEndDate = DateTime(
-        originalEnd.year,
-        originalEnd.month,
-        originalEnd.day + dayDelta,
-        originalEnd.hour,
-        originalEnd.minute,
-        originalEnd.second,
-        originalEnd.millisecond,
-        originalEnd.microsecond,
-      );
+      final dayDelta = daysBetween(dateOnly(originalEnd), proposedEnd);
+      newEndDate = addDays(originalEnd, dayDelta);
       newStartDate = originalStart;
     }
 
@@ -4052,6 +4001,13 @@ class _MonthPageWidget extends StatefulWidget {
   /// The event ID currently selected for keyboard move/resize.
   final String? keyboardSelectedEventId;
 
+  /// Day regions to render as cell overlays.
+  final List<MCalDayRegion> dayRegions;
+
+  /// Optional custom builder for day region overlays.
+  final Widget Function(BuildContext, MCalDayRegionContext, Widget)?
+  dayRegionBuilder;
+
   const _MonthPageWidget({
     required this.month,
     required this.currentDisplayMonth,
@@ -4120,6 +4076,9 @@ class _MonthPageWidget extends StatefulWidget {
     // Keyboard selection state
     this.keyboardHighlightedEventId,
     this.keyboardSelectedEventId,
+    // Day regions
+    this.dayRegions = const [],
+    this.dayRegionBuilder,
   });
 
   @override
@@ -4427,16 +4386,34 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
       totalWeekRows: _weeksInMonth,
       getWeekRowBounds: _getWeekRowBounds,
       getWeekDates: _getWeekDates,
-      validationCallback: widget.onDragWillAccept != null
-          ? (start, end) => widget.onDragWillAccept!(
-              context,
-              MCalDragWillAcceptDetails(
-                event: dragData.event,
-                proposedStartDate: start,
-                proposedEndDate: end,
-              ),
-            )
-          : null,
+      validationCallback: (start, end) {
+        // Library-level day region block check.
+        if (widget.dayRegions.isNotEmpty) {
+          for (
+            DateTime d = start;
+            !d.isAfter(end);
+            d = addDays(d, 1)
+          ) {
+            if (widget.dayRegions.any(
+              (r) => r.blockInteraction && r.appliesTo(d),
+            )) {
+              return false;
+            }
+          }
+        }
+        // Consumer validation.
+        if (widget.onDragWillAccept != null) {
+          return widget.onDragWillAccept!(
+            context,
+            MCalDragWillAcceptDetails(
+              event: dragData.event,
+              proposedStartDate: start,
+              proposedEndDate: end,
+            ),
+          );
+        }
+        return true;
+      },
     );
 
     // Handle edge proximity for month navigation
@@ -4538,35 +4515,10 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
       return;
     }
 
-    // Calculate new dates preserving time components.
-    // Use DST-safe daysBetween (not .difference().inDays) for day delta.
-    final normalizedEventStart = DateTime(
-      event.start.year,
-      event.start.month,
-      event.start.day,
-    );
-    final dayDelta = daysBetween(normalizedEventStart, proposedStart);
-
-    final newStartDate = DateTime(
-      event.start.year,
-      event.start.month,
-      event.start.day + dayDelta,
-      event.start.hour,
-      event.start.minute,
-      event.start.second,
-      event.start.millisecond,
-      event.start.microsecond,
-    );
-    final newEndDate = DateTime(
-      event.end.year,
-      event.end.month,
-      event.end.day + dayDelta,
-      event.end.hour,
-      event.end.minute,
-      event.end.second,
-      event.end.millisecond,
-      event.end.microsecond,
-    );
+    // Calculate new dates preserving time components (DST-safe).
+    final dayDelta = daysBetween(dateOnly(event.start), proposedStart);
+    final newStartDate = addDays(event.start, dayDelta);
+    final newEndDate = addDays(event.end, dayDelta);
 
     // Store old dates for potential revert
     final oldStartDate = event.start;
@@ -5229,6 +5181,9 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             // Keyboard selection state
             keyboardHighlightedEventId: widget.keyboardHighlightedEventId,
             keyboardSelectedEventId: widget.keyboardSelectedEventId,
+            // Day regions
+            dayRegions: widget.dayRegions,
+            dayRegionBuilder: widget.dayRegionBuilder,
           ),
         );
       }).toList(),
@@ -5598,6 +5553,13 @@ class _WeekRowWidget extends StatefulWidget {
   /// The event ID currently selected for keyboard move/resize.
   final String? keyboardSelectedEventId;
 
+  /// Day regions to render as cell overlays.
+  final List<MCalDayRegion> dayRegions;
+
+  /// Optional custom builder for day region overlays.
+  final Widget Function(BuildContext, MCalDayRegionContext, Widget)?
+  dayRegionBuilder;
+
   const _WeekRowWidget({
     required this.dates,
     required this.currentMonth,
@@ -5659,6 +5621,9 @@ class _WeekRowWidget extends StatefulWidget {
     // Keyboard selection state
     this.keyboardHighlightedEventId,
     this.keyboardSelectedEventId,
+    // Day regions
+    this.dayRegions = const [],
+    this.dayRegionBuilder,
   });
 
   @override
@@ -5817,6 +5782,8 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           resizeHandleBuilder: widget.resizeHandleBuilder,
           resizeHandleInset: widget.resizeHandleInset,
           onResizeHandlePointerDown: widget.onResizeHandlePointerDown,
+          dayRegions: widget.dayRegions,
+          dayRegionBuilder: widget.dayRegionBuilder,
         ),
       );
     }).toList();
@@ -6387,6 +6354,13 @@ class _DayCellWidget extends StatefulWidget {
   )?
   onResizeHandlePointerDown;
 
+  /// Day regions that may apply to this cell's date.
+  final List<MCalDayRegion> dayRegions;
+
+  /// Optional custom builder for day region overlays.
+  final Widget Function(BuildContext, MCalDayRegionContext, Widget)?
+  dayRegionBuilder;
+
   const _DayCellWidget({
     required this.date,
     required this.displayMonth,
@@ -6441,6 +6415,9 @@ class _DayCellWidget extends StatefulWidget {
     this.resizeHandleBuilder,
     this.resizeHandleInset,
     this.onResizeHandlePointerDown,
+    // Day regions
+    this.dayRegions = const [],
+    this.dayRegionBuilder,
   });
 
   @override
@@ -6539,39 +6516,53 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
         //   - Multi-day reserved spacer (full width, no padding)
         //   - Single-day event tiles (full width, no horizontal padding -
         //     tiles handle their own margins)
+        // Collect matching day regions for this cell.
+        final applicableRegions = widget.dayRegions
+            .where((r) => r.appliesTo(widget.date))
+            .toList();
+
+        Widget cellContent = Opacity(
+          opacity: isInteractive ? 1.0 : 0.5,
+          child: ClipRect(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (dateLabel != null)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: 4.0,
+                      top: 4.0,
+                      right: 4.0,
+                    ),
+                    child: dateLabel,
+                  ),
+                if (widget.multiDayReservedHeight > 0)
+                  SizedBox(height: widget.multiDayReservedHeight),
+                ...effectiveTiles,
+              ],
+            ),
+          ),
+        );
+
+        // Layer region overlays beneath cell content.
+        if (applicableRegions.isNotEmpty) {
+          cellContent = Stack(
+            fit: StackFit.expand,
+            children: [
+              // Region overlays (bottom layer).
+              for (final region in applicableRegions)
+                _buildRegionOverlay(context, region),
+              // Cell content on top.
+              cellContent,
+            ],
+          );
+        }
+
         return Container(
           decoration: decoration,
           clipBehavior: Clip.hardEdge,
-          child: Opacity(
-            opacity: isInteractive ? 1.0 : 0.5,
-            // ClipRect ensures nothing in the Column can overflow the cell
-            child: ClipRect(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment:
-                    CrossAxisAlignment.stretch, // Full width for tiles
-                children: [
-                  // Date label with padding (only if showDateLabel is true)
-                  if (dateLabel != null)
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        left: 4.0,
-                        top: 4.0,
-                        right: 4.0,
-                      ),
-                      child: dateLabel,
-                    ),
-                  // Spacer for multi-day events (if any reserved space)
-                  // No horizontal padding - aligns with multi-day overlay
-                  if (widget.multiDayReservedHeight > 0)
-                    SizedBox(height: widget.multiDayReservedHeight),
-                  // Single-day events - NO horizontal padding
-                  // Each tile handles its own 1px margin via the Padding wrapper
-                  ...effectiveTiles,
-                ],
-              ),
-            ),
-          ),
+          child: cellContent,
         );
       },
     );
@@ -6692,6 +6683,70 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
   /// Gets the cell decoration based on date type and theme.
   ///
   /// [isInteractive] parameter indicates if the cell is interactive.
+  /// Builds the overlay widget for a single [MCalDayRegion].
+  ///
+  /// Produces a default colored container (with optional text/icon) and then
+  /// delegates to [widget.dayRegionBuilder] when provided so the consumer can
+  /// override the appearance.
+  Widget _buildRegionOverlay(BuildContext context, MCalDayRegion region) {
+    final regionContext = MCalDayRegionContext(
+      region: region,
+      date: widget.date,
+      isCurrentMonth: widget.isCurrentMonth,
+      isToday: widget.isToday,
+    );
+
+    // Default rendering: semi-transparent color fill with optional text/icon.
+    Widget defaultWidget = Container(
+      color: region.color,
+      child: (region.text != null || region.icon != null)
+          ? Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 2.0),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (region.icon != null)
+                      Icon(
+                        region.icon,
+                        size: 9.0,
+                        color: (region.color ?? Colors.grey).withValues(
+                          alpha: 1.0,
+                        ),
+                      ),
+                    if (region.icon != null && region.text != null)
+                      const SizedBox(width: 2),
+                    if (region.text != null)
+                      Flexible(
+                        child: Text(
+                          region.text!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 8.0,
+                            color: (region.color ?? Colors.grey).withValues(
+                              alpha: 1.0,
+                            ),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            )
+          : null,
+    );
+
+    if (widget.dayRegionBuilder != null) {
+      defaultWidget = widget.dayRegionBuilder!(context, regionContext, defaultWidget);
+    }
+
+    return Positioned.fill(child: defaultWidget);
+  }
+
   /// Non-interactive cells may have reduced visual prominence.
   BoxDecoration _getCellDecoration([bool isInteractive = true]) {
     Color? backgroundColor;

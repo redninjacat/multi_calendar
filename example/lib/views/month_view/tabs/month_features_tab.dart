@@ -34,7 +34,6 @@ class MonthFeaturesTab extends StatefulWidget {
 
 class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
   late MCalEventController _controller;
-  DateTime _currentMonth = DateTime.now();
 
   // ============================================================
   // Navigation Settings
@@ -90,8 +89,8 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
   // Blackout Days Settings
   // ============================================================
   bool _enableBlackoutDays = false;
-  Set<int> _blackoutDaysOfWeek = {};
-  late Set<DateTime> _blackoutDates;
+  final Set<int> _blackoutDaysOfWeek = {};
+  late List<MCalDayRegion> _cachedDayRegions;
 
   // ============================================================
   // Status Label
@@ -103,7 +102,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
     super.initState();
     _controller = MCalEventController(firstDayOfWeek: _firstDayOfWeek);
     _controller.addEvents(createSampleEvents());
-    _blackoutDates = _computeBlackoutDates();
+    _cachedDayRegions = _buildDayRegions();
     // Async-update the first day of week from the current locale. The
     // controller starts with the default (Sunday) and is replaced once the
     // locale data resolves.
@@ -135,34 +134,34 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
     super.dispose();
   }
 
-  /// Computes blackout dates based on selected days of week for current and next month
-  Set<DateTime> _computeBlackoutDates() {
-    if (!_enableBlackoutDays || _blackoutDaysOfWeek.isEmpty) {
-      return {};
-    }
+  static const _rruleDayNames = {
+    DateTime.monday: 'MO',
+    DateTime.tuesday: 'TU',
+    DateTime.wednesday: 'WE',
+    DateTime.thursday: 'TH',
+    DateTime.friday: 'FR',
+    DateTime.saturday: 'SA',
+    DateTime.sunday: 'SU',
+  };
 
-    final dates = <DateTime>{};
-    final start = DateTime(_currentMonth.year, _currentMonth.month, 1);
-    final nextMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
-    final end = DateTime(nextMonth.year, nextMonth.month + 1, 0);
+  /// Builds the list of [MCalDayRegion]s for the currently selected blackout
+  /// days of week.  Each selected weekday becomes a recurring weekly region.
+  List<MCalDayRegion> _buildDayRegions() {
+    if (!_enableBlackoutDays || _blackoutDaysOfWeek.isEmpty) return [];
 
-    for (
-      var date = start;
-      date.isBefore(end) || date.isAtSameMomentAs(end);
-      date = date.add(const Duration(days: 1))
-    ) {
-      if (_blackoutDaysOfWeek.contains(date.weekday)) {
-        dates.add(DateTime(date.year, date.month, date.day));
-      }
-    }
-
-    return dates;
-  }
-
-  void _updateBlackoutDates() {
-    setState(() {
-      _blackoutDates = _computeBlackoutDates();
-    });
+    return _blackoutDaysOfWeek.map((weekday) {
+      final byDay = _rruleDayNames[weekday]!;
+      return MCalDayRegion(
+        id: 'blackout-$weekday',
+        // Anchor: 2025-01-01 is before any displayed month; BYDAY handles filtering.
+        date: DateTime(2025, 1, 1),
+        recurrenceRule: 'FREQ=WEEKLY;BYDAY=$byDay',
+        color: Colors.grey.withValues(alpha: 0.25),
+        text: 'Blocked',
+        icon: Icons.block,
+        blockInteraction: true,
+      );
+    }).toList();
   }
 
   void _setStatus(String message) {
@@ -207,172 +206,166 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
       child: Column(
         children: [
           _buildStatusLabel(context),
-          Expanded(child: MCalMonthView(
-        controller: _controller,
-        // Navigation
-        showNavigator: _showNavigator,
-        onDisplayDateChanged: (month) {
-          setState(() {
-            _currentMonth = month;
-            _blackoutDates = _computeBlackoutDates();
-          });
-        },
-        enableSwipeNavigation: _enableSwipeNavigation,
-        swipeNavigationDirection: _swipeNavigationDirection,
-        // Display
-        showWeekNumbers: _showWeekNumbers,
-        maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
-        // Drag & Drop
-        enableDragToMove: _enableDragToMove,
-        showDropTargetTiles: _showDropTargetTiles,
-        showDropTargetOverlay: _showDropTargetOverlay,
-        dropTargetTilesAboveOverlay: _dropTargetTilesAboveOverlay,
-        dragEdgeNavigationEnabled: _dragEdgeNavigationEnabled,
-        dragEdgeNavigationDelay: _dragEdgeNavigationDelay,
-        dragLongPressDelay: _dragLongPressDelay,
-        // Resize
-        enableDragToResize: _enableDragToResize,
-        // Animation
-        enableAnimations: _enableAnimations,
-        animationDuration: _animationDuration,
-        animationCurve: _animationCurve,
-        // Keyboard
-        enableKeyboardNavigation: _enableKeyboardNavigation,
-        autoFocusOnCellTap: _autoFocusOnCellTap,
-        // RTL Override
-        textDirection: _textDirectionOverride,
-        layoutDirection: _layoutDirectionOverride,
-        // Gesture handlers
-        onCellTap: (ctx, details) {
-          SnackBarHelper.show(
-            context,
-            l10n.snackbarCellTap(_formatDate(details.date, locale)),
-          );
-        },
-        onCellLongPress: (ctx, details) {
-          SnackBarHelper.show(
-            context,
-            l10n.snackbarCellLongPress(_formatDate(details.date, locale)),
-          );
-        },
-        onCellDoubleTap: (ctx, details) {
-          SnackBarHelper.show(
-            context,
-            l10n.snackbarCellDoubleTap(_formatDate(details.date, locale)),
-          );
-        },
-        onDateLabelTap: (ctx, details) {
-          SnackBarHelper.show(
-            context,
-            l10n.snackbarDateLabelTap(_formatDate(details.date, locale)),
-          );
-        },
-        onDateLabelLongPress: (ctx, details) {
-          SnackBarHelper.show(
-            context,
-            l10n.snackbarDateLabelLongPress(_formatDate(details.date, locale)),
-          );
-        },
-        onEventTap: (ctx, details) {
-          showEventDetailDialog(context, details.event, locale);
-        },
-        onEventLongPress: (ctx, details) {
-          SnackBarHelper.show(
-            context,
-            l10n.snackbarEventLongPress(details.event.title),
-          );
-        },
-        onEventDoubleTap: (ctx, details) {
-          SnackBarHelper.show(
-            context,
-            l10n.snackbarEventDoubleTap(details.event.title),
-          );
-        },
-        onOverflowTap: (ctx, details) {
-          showDayEventsBottomSheet(
-            context,
-            details.date,
-            details.allEvents,
-            locale,
-          );
-        },
-        onOverflowLongPress: (ctx, details) {
-          SnackBarHelper.show(
-            context,
-            l10n.snackbarOverflowLongPress(
-              _formatDate(details.date, locale),
-              details.hiddenEventCount,
+          Expanded(
+            child: MCalMonthView(
+              controller: _controller,
+              // Navigation
+              showNavigator: _showNavigator,
+              onDisplayDateChanged: null,
+              enableSwipeNavigation: _enableSwipeNavigation,
+              swipeNavigationDirection: _swipeNavigationDirection,
+              // Display
+              showWeekNumbers: _showWeekNumbers,
+              maxVisibleEventsPerDay: _maxVisibleEventsPerDay,
+              // Drag & Drop
+              enableDragToMove: _enableDragToMove,
+              showDropTargetTiles: _showDropTargetTiles,
+              showDropTargetOverlay: _showDropTargetOverlay,
+              dropTargetTilesAboveOverlay: _dropTargetTilesAboveOverlay,
+              dragEdgeNavigationEnabled: _dragEdgeNavigationEnabled,
+              dragEdgeNavigationDelay: _dragEdgeNavigationDelay,
+              dragLongPressDelay: _dragLongPressDelay,
+              // Resize
+              enableDragToResize: _enableDragToResize,
+              // Animation
+              enableAnimations: _enableAnimations,
+              animationDuration: _animationDuration,
+              animationCurve: _animationCurve,
+              // Keyboard
+              enableKeyboardNavigation: _enableKeyboardNavigation,
+              autoFocusOnCellTap: _autoFocusOnCellTap,
+              // RTL Override
+              textDirection: _textDirectionOverride,
+              layoutDirection: _layoutDirectionOverride,
+              // Day regions (blackout days)
+              dayRegions: _cachedDayRegions,
+              // Gesture handlers
+              onCellTap: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  l10n.snackbarCellTap(_formatDate(details.date, locale)),
+                );
+              },
+              onCellLongPress: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  l10n.snackbarCellLongPress(_formatDate(details.date, locale)),
+                );
+              },
+              onCellDoubleTap: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  l10n.snackbarCellDoubleTap(_formatDate(details.date, locale)),
+                );
+              },
+              onDateLabelTap: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  l10n.snackbarDateLabelTap(_formatDate(details.date, locale)),
+                );
+              },
+              onDateLabelLongPress: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  l10n.snackbarDateLabelLongPress(
+                    _formatDate(details.date, locale),
+                  ),
+                );
+              },
+              onEventTap: (ctx, details) {
+                showEventDetailDialog(context, details.event, locale);
+              },
+              onEventLongPress: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  l10n.snackbarEventLongPress(details.event.title),
+                );
+              },
+              onEventDoubleTap: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  l10n.snackbarEventDoubleTap(details.event.title),
+                );
+              },
+              onOverflowTap: (ctx, details) {
+                showDayEventsBottomSheet(
+                  context,
+                  details.date,
+                  details.allEvents,
+                  locale,
+                );
+              },
+              onOverflowLongPress: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  l10n.snackbarOverflowLongPress(
+                    _formatDate(details.date, locale),
+                    details.hiddenEventCount,
+                  ),
+                );
+              },
+              onHoverCell: (context, cellContext) {
+                if (cellContext != null) {
+                  _setStatus('Cell: ${_formatDate(cellContext.date, locale)}');
+                } else {
+                  _setStatus('—');
+                }
+              },
+              onHoverEvent: (context, eventContext) {
+                if (eventContext != null) {
+                  _setStatus('Event: ${eventContext.event.title}');
+                } else {
+                  _setStatus('—');
+                }
+              },
+              onDragWillAccept: (ctx, details) {
+                // Blocked days are rejected by the library before this callback is
+                // reached, so any date arriving here is already allowed.
+                _setStatus(
+                  'Drop → ${_formatDate(details.proposedStartDate, locale)} (${details.event.title})',
+                );
+                return true;
+              },
+              onEventDropped: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  l10n.snackbarEventDropped(
+                    details.event.title,
+                    _formatDate(details.newStartDate, locale),
+                  ),
+                );
+                return true;
+              },
+              onResizeWillAccept: (ctx, details) {
+                // Could add validation logic here
+                return true;
+              },
+              onEventResized: (ctx, details) {
+                final days =
+                    details.newEndDate.difference(details.newStartDate).inDays +
+                    1;
+                SnackBarHelper.show(
+                  context,
+                  l10n.snackbarEventResizedDays(details.event.title, days),
+                );
+                return true;
+              },
+              onFocusedDateChanged: (date) {
+                if (date != null) {
+                  SnackBarHelper.show(
+                    context,
+                    l10n.snackbarFocusedDateChanged(_formatDate(date, locale)),
+                  );
+                }
+              },
+              onSwipeNavigation: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  l10n.snackbarSwipeNavigation(details.direction.name),
+                );
+              },
             ),
-          );
-        },
-        onHoverCell: (context, cellContext) {
-          if (cellContext != null) {
-            _setStatus('Cell: ${_formatDate(cellContext.date, locale)}');
-          } else {
-            _setStatus('—');
-          }
-        },
-        onHoverEvent: (context, eventContext) {
-          if (eventContext != null) {
-            _setStatus('Event: ${eventContext.event.title}');
-          } else {
-            _setStatus('—');
-          }
-        },
-        onDragWillAccept: (ctx, details) {
-          // Validate against blackout days
-          if (_enableBlackoutDays &&
-              _blackoutDates.contains(details.proposedStartDate)) {
-            _setStatus(
-              l10n.snackbarDropRejected(
-                _formatDate(details.proposedStartDate, locale),
-              ),
-            );
-            return false;
-          }
-          _setStatus(
-            'Drop → ${_formatDate(details.proposedStartDate, locale)} (${details.event.title})',
-          );
-          return true;
-        },
-        onEventDropped: (ctx, details) {
-          SnackBarHelper.show(
-            context,
-            l10n.snackbarEventDropped(
-              details.event.title,
-              _formatDate(details.newStartDate, locale),
-            ),
-          );
-          return true;
-        },
-        onResizeWillAccept: (ctx, details) {
-          // Could add validation logic here
-          return true;
-        },
-        onEventResized: (ctx, details) {
-          final days =
-              details.newEndDate.difference(details.newStartDate).inDays + 1;
-          SnackBarHelper.show(
-            context,
-            l10n.snackbarEventResizedDays(details.event.title, days),
-          );
-          return true;
-        },
-        onFocusedDateChanged: (date) {
-          if (date != null) {
-            SnackBarHelper.show(
-              context,
-              l10n.snackbarFocusedDateChanged(_formatDate(date, locale)),
-            );
-          }
-        },
-        onSwipeNavigation: (ctx, details) {
-          SnackBarHelper.show(
-            context,
-            l10n.snackbarSwipeNavigation(details.direction.name),
-          );
-        },
-      )),
+          ),
         ],
       ),
     );
@@ -650,7 +643,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
               onChanged: (value) {
                 setState(() {
                   _enableBlackoutDays = value;
-                  _updateBlackoutDates();
+                  _cachedDayRegions = _buildDayRegions();
                 });
               },
             ),
@@ -703,7 +696,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
           } else {
             _blackoutDaysOfWeek.remove(weekday);
           }
-          _updateBlackoutDates();
+          _cachedDayRegions = _buildDayRegions();
         });
       },
     );

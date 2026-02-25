@@ -661,30 +661,14 @@ class MCalEventController extends ChangeNotifier {
         final periods = daysDiff ~/ rule.interval;
         // Keep one period of margin for safety.
         final safePeriods = (periods - 1).clamp(0, periods);
-        return DateTime(
-          dtStart.year,
-          dtStart.month,
-          dtStart.day + safePeriods * rule.interval,
-          dtStart.hour,
-          dtStart.minute,
-          dtStart.second,
-          dtStart.millisecond,
-        );
+        return addDays(dtStart, safePeriods * rule.interval);
 
       case MCalFrequency.weekly:
         final daysDiff = target.difference(dtStart).inDays;
         final weekPeriod = rule.interval * 7;
         final periods = daysDiff ~/ weekPeriod;
         final safePeriods = (periods - 1).clamp(0, periods);
-        return DateTime(
-          dtStart.year,
-          dtStart.month,
-          dtStart.day + safePeriods * weekPeriod,
-          dtStart.hour,
-          dtStart.minute,
-          dtStart.second,
-          dtStart.millisecond,
-        );
+        return addDays(dtStart, safePeriods * weekPeriod);
 
       // Monthly and yearly: return unchanged (see doc comment above).
       case MCalFrequency.monthly:
@@ -1001,12 +985,9 @@ class MCalEventController extends ChangeNotifier {
     switch (exception.type) {
       case MCalExceptionType.deleted:
       case MCalExceptionType.modified:
-        // Use calendar-day arithmetic (not Duration) to avoid DST issues.
-        // Duration(days: 1) = 24h can land on the same day at 23:00 on
-        // DST fall-back (e.g. Nov 2, 2025 US).
         return DateTimeRange(
           start: originalDay,
-          end: DateTime(originalDay.year, originalDay.month, originalDay.day + 1),
+          end: addDays(originalDay, 1),
         );
       case MCalExceptionType.rescheduled:
         final newDay = _normalizeDate(exception.newDate!);
@@ -1014,7 +995,7 @@ class MCalEventController extends ChangeNotifier {
         final end = originalDay.isBefore(newDay) ? newDay : originalDay;
         return DateTimeRange(
           start: start,
-          end: DateTime(end.year, end.month, end.day + 1),
+          end: addDays(end, 1),
         );
     }
   }
@@ -1270,8 +1251,7 @@ class MCalEventController extends ChangeNotifier {
     }
 
     // 1. Truncate original series to end before fromDate
-    // Use calendar-day arithmetic (not Duration) to avoid DST issues.
-    final dayBefore = DateTime(fromDate.year, fromDate.month, fromDate.day - 1);
+    final dayBefore = addDays(fromDate, -1);
     final truncatedRule = master.recurrenceRule!.copyWith(
       until: () => dayBefore,
       count: () => null, // clear count, use until instead

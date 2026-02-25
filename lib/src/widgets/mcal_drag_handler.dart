@@ -769,16 +769,8 @@ class MCalDragHandler extends ChangeNotifier {
     final baseDate = _pendingWeekDates.isNotEmpty
         ? _pendingWeekDates[0]
         : DateTime.now();
-    final proposedStartDate = DateTime(
-      baseDate.year,
-      baseDate.month,
-      baseDate.day + dropStartCellIndex,
-    );
-    final proposedEndDate = DateTime(
-      proposedStartDate.year,
-      proposedStartDate.month,
-      proposedStartDate.day + _cachedEventDurationDays - 1,
-    );
+    final proposedStartDate = addDays(baseDate, dropStartCellIndex);
+    final proposedEndDate = addDays(proposedStartDate, _cachedEventDurationDays - 1);
 
     // Validate if callback provided
     bool isValid = true;

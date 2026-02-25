@@ -445,4 +445,141 @@ void main() {
       }
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // addDays
+  // ---------------------------------------------------------------------------
+
+  group('addDays', () {
+    // -- Basic arithmetic -------------------------------------------------------
+
+    test('zero delta returns same date and time', () {
+      final d = DateTime(2026, 6, 15, 10, 30, 45, 123, 456);
+      expect(addDays(d, 0), d);
+    });
+
+    test('positive delta advances date', () {
+      expect(addDays(DateTime(2026, 6, 15), 3), DateTime(2026, 6, 18));
+    });
+
+    test('negative delta retreats date', () {
+      expect(addDays(DateTime(2026, 6, 15), -3), DateTime(2026, 6, 12));
+    });
+
+    // -- Month / year rollovers -------------------------------------------------
+
+    test('forward across month boundary', () {
+      expect(addDays(DateTime(2026, 1, 31), 1), DateTime(2026, 2, 1));
+    });
+
+    test('forward across year boundary', () {
+      expect(addDays(DateTime(2026, 12, 31), 1), DateTime(2027, 1, 1));
+    });
+
+    test('backward across month boundary', () {
+      expect(addDays(DateTime(2026, 3, 1), -1), DateTime(2026, 2, 28));
+    });
+
+    test('backward across year boundary', () {
+      expect(addDays(DateTime(2027, 1, 1), -1), DateTime(2026, 12, 31));
+    });
+
+    // -- Leap year handling -----------------------------------------------------
+
+    test('Feb 28 + 1 day in non-leap year → Mar 1', () {
+      expect(addDays(DateTime(2026, 2, 28), 1), DateTime(2026, 3, 1));
+    });
+
+    test('Feb 28 + 1 day in leap year → Feb 29', () {
+      expect(addDays(DateTime(2024, 2, 28), 1), DateTime(2024, 2, 29));
+    });
+
+    test('Feb 29 + 1 day in leap year → Mar 1', () {
+      expect(addDays(DateTime(2024, 2, 29), 1), DateTime(2024, 3, 1));
+    });
+
+    test('Mar 1 - 1 day in leap year → Feb 29', () {
+      expect(addDays(DateTime(2024, 3, 1), -1), DateTime(2024, 2, 29));
+    });
+
+    test('Mar 1 - 1 day in non-leap year → Feb 28', () {
+      expect(addDays(DateTime(2026, 3, 1), -1), DateTime(2026, 2, 28));
+    });
+
+    // -- Large deltas -----------------------------------------------------------
+
+    test('+ 365 days on non-leap year → same date next year', () {
+      expect(addDays(DateTime(2026, 6, 15), 365), DateTime(2027, 6, 15));
+    });
+
+    // Date is BEFORE the leap day (Feb 29), so the 366-day span includes it
+    // and lands on the same calendar date the following year.
+    test('+ 366 days starting before Feb 29 in leap year → same date next year', () {
+      expect(addDays(DateTime(2024, 1, 15), 366), DateTime(2025, 1, 15));
+    });
+
+    test('large negative delta', () {
+      expect(addDays(DateTime(2026, 1, 1), -365), DateTime(2025, 1, 1));
+    });
+
+    // -- Time component preservation --------------------------------------------
+
+    test('preserves hour and minute', () {
+      final d = DateTime(2026, 6, 15, 14, 30);
+      final result = addDays(d, 1);
+      expect(result.hour, 14);
+      expect(result.minute, 30);
+      expect(result.day, 16);
+    });
+
+    test('preserves all sub-day components including microseconds', () {
+      final d = DateTime(2026, 6, 15, 9, 5, 30, 250, 750);
+      final result = addDays(d, 7);
+      expect(result, DateTime(2026, 6, 22, 9, 5, 30, 250, 750));
+    });
+
+    test('date-only input (midnight) stays at midnight after shift', () {
+      final d = DateTime(2026, 6, 15); // implicit 00:00:00.000
+      final result = addDays(d, 1);
+      expect(result.hour, 0);
+      expect(result.minute, 0);
+      expect(result.second, 0);
+      expect(result.millisecond, 0);
+    });
+
+    // -- DST correctness (calendar-day semantics) --------------------------------
+    //
+    // We cannot trigger a real DST transition in a unit test because that
+    // depends on the runtime timezone.  Instead we verify the fundamental
+    // property that [addDays] is based on: the DateTime constructor form
+    // `DateTime(y, m, d + N, h, m, s, ms, us)` always returns the correct
+    // calendar date, even when the resulting local midnight falls during a
+    // DST gap or ambiguity window.
+    //
+    // We verify this by checking that:
+    //   addDays(date, N) == addDays(date, N-1) + one calendar day
+    // across every day in a full year — a property that Duration arithmetic
+    // would violate on DST transition days.
+
+    // Uses daysBetween() (UTC-based) to compare, because difference().inDays
+    // is DST-sensitive and would return 0 on a 23-hour "spring forward" day.
+    test('addDays(d, N) is always exactly one calendar day after addDays(d, N-1)', () {
+      final base = DateTime(2026, 1, 1);
+      for (int n = 1; n <= 400; n++) {
+        final byN = addDays(base, n);
+        final byNminus1 = addDays(base, n - 1);
+        expect(
+          daysBetween(byNminus1, byN),
+          1,
+          reason: 'addDays(base, $n) should be exactly one calendar day '
+              'after addDays(base, ${n - 1})',
+        );
+      }
+    });
+
+    test('addDays followed by negation returns original date', () {
+      final d = DateTime(2026, 8, 20, 11, 0);
+      expect(addDays(addDays(d, 30), -30), d);
+    });
+  });
 }
