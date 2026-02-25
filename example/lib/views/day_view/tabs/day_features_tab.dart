@@ -108,6 +108,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   // ============================================================
   bool _enableSpecialTimeRegions = true;
   bool _enableBlackoutTimes = true;
+  late List<MCalTimeRegion> _cachedTimeRegions;
 
   // ============================================================
   // Status Label
@@ -123,6 +124,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
       firstDayOfWeek: _firstDayOfWeek,
     );
     _eventController.addEvents(createDayViewSampleEvents(now));
+    _cachedTimeRegions = _buildTimeRegions();
     // Async-update the first day of week from the current locale.
     _syncFirstDayOfWeekFromLocale(widget.locale);
   }
@@ -184,9 +186,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   }
 
   List<MCalTimeRegion> _buildTimeRegions() {
-    final d = _eventController.displayDate;
     final regions = <MCalTimeRegion>[];
-
     if (_enableSpecialTimeRegions) {
       // Lunch break (special region)
       // NOTE: 'Lunch Break' is mock data for demonstration purposes
@@ -194,12 +194,13 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
       regions.add(
         MCalTimeRegion(
           id: 'lunch',
-          startTime: DateTime(d.year, d.month, d.day, 12, 0),
-          endTime: DateTime(d.year, d.month, d.day, 13, 0),
+          startTime: DateTime(2026, 1, 1, 12, 0),
+          endTime: DateTime(2026, 1, 1, 13, 0),
           color: Colors.amber.withValues(alpha: 0.2),
           text: 'Lunch Break',
           icon: Icons.restaurant,
           blockInteraction: false,
+          recurrenceRule: 'FREQ=DAILY',
         ),
       );
     }
@@ -211,12 +212,13 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
       regions.add(
         MCalTimeRegion(
           id: 'after-hours',
-          startTime: DateTime(d.year, d.month, d.day, 18, 0),
-          endTime: DateTime(d.year, d.month, d.day, 22, 0),
+          startTime: DateTime(2026, 1, 1, 18, 0),
+          endTime: DateTime(2026, 1, 1, 22, 0),
           color: Colors.red.withValues(alpha: 0.15),
           text: 'After Hours (blocked)',
           icon: Icons.block,
           blockInteraction: true,
+          recurrenceRule: 'FREQ=DAILY',
         ),
       );
     }
@@ -556,10 +558,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
           children: [
             ControlWidgets.rangeSlider(
               label: l10n.sectionTimeRange,
-              values: RangeValues(
-                _startHour.toDouble(),
-                _endHour.toDouble(),
-              ),
+              values: RangeValues(_startHour.toDouble(), _endHour.toDouble()),
               min: 0,
               max: 24,
               divisions: 24,
@@ -660,12 +659,18 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             ControlWidgets.toggle(
               label: l10n.settingEnableSpecialTimeRegions,
               value: _enableSpecialTimeRegions,
-              onChanged: (v) => setState(() => _enableSpecialTimeRegions = v),
+              onChanged: (v) => setState(() {
+                _enableSpecialTimeRegions = v;
+                _cachedTimeRegions = _buildTimeRegions();
+              }),
             ),
             ControlWidgets.toggle(
               label: l10n.settingEnableBlackoutTimes,
               value: _enableBlackoutTimes,
-              onChanged: (v) => setState(() => _enableBlackoutTimes = v),
+              onChanged: (v) => setState(() {
+                _enableBlackoutTimes = v;
+                _cachedTimeRegions = _buildTimeRegions();
+              }),
             ),
           ],
         ),
@@ -711,7 +716,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
           enableKeyboardNavigation: _enableKeyboardNavigation,
           autoFocusOnEventTap: _autoFocusOnEventTap,
           enableSwipeNavigation: _enableSwipeNavigation,
-          specialTimeRegions: _buildTimeRegions(),
+          specialTimeRegions: _cachedTimeRegions,
           locale: widget.locale,
           textDirection: _textDirectionOverride,
           layoutDirection: _layoutDirectionOverride,
@@ -836,17 +841,43 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             final span = end.difference(start);
             final useDate = span.inDays > 6;
             String _fmtDay(DateTime dt) {
-              final weekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][dt.weekday - 1];
-              final month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.month - 1];
+              final weekday = [
+                'Mon',
+                'Tue',
+                'Wed',
+                'Thu',
+                'Fri',
+                'Sat',
+                'Sun',
+              ][dt.weekday - 1];
+              final month = [
+                'Jan',
+                'Feb',
+                'Mar',
+                'Apr',
+                'May',
+                'Jun',
+                'Jul',
+                'Aug',
+                'Sep',
+                'Oct',
+                'Nov',
+                'Dec',
+              ][dt.month - 1];
               return useDate ? '$month ${dt.day}' : weekday;
             }
+
             String _fmtTime(DateTime dt) {
               final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
               final m = dt.minute.toString().padLeft(2, '0');
               final ampm = dt.hour < 12 ? 'AM' : 'PM';
               return m == '00' ? '$h $ampm' : '$h:$m $ampm';
             }
-            final isSameDay = start.year == end.year && start.month == end.month && start.day == end.day;
+
+            final isSameDay =
+                start.year == end.year &&
+                start.month == end.month &&
+                start.day == end.day;
             final label = isSameDay
                 ? '${_fmtTime(start)} – ${_fmtTime(end)}'
                 : '${_fmtDay(start)} ${_fmtTime(start)} – ${_fmtDay(end)} ${_fmtTime(end)}';

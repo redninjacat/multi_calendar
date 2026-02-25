@@ -1619,7 +1619,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     } else if (widget.enableSwipeNavigation) {
       // Use custom boundary physics with snappy (non-bouncy) page snapping
       physics = _MCalBoundaryScrollPhysics(
-        parent: const _MCalSnappyPageScrollPhysics(),
+        parent: const MCalSnappyPageScrollPhysics(),
         minPageIndex: _minPageIndex,
         maxPageIndex: _maxPageIndex,
       );
@@ -3914,88 +3914,7 @@ class _MCalBoundaryScrollPhysics extends ScrollPhysics {
       const SpringDescription(mass: 1.0, stiffness: 100.0, damping: 20.0);
 }
 
-/// Custom page scroll physics with snappy (non-bouncy) settling and
-/// lower threshold for page changes.
-///
-/// Extends [PageScrollPhysics] to provide page snapping behavior
-/// while using a critically-damped spring to eliminate oscillation.
-/// Also reduces the distance threshold needed to trigger a page change.
-class _MCalSnappyPageScrollPhysics extends PageScrollPhysics {
-  /// The fraction of the page width that must be dragged to trigger a page change.
-  /// Default PageScrollPhysics uses ~0.5 (50%). We use 0.3 (30%) for easier swiping.
-  static const double _pageChangeThreshold = 0.3;
-
-  const _MCalSnappyPageScrollPhysics({super.parent});
-
-  @override
-  _MCalSnappyPageScrollPhysics applyTo(ScrollPhysics? ancestor) {
-    return _MCalSnappyPageScrollPhysics(parent: buildParent(ancestor));
-  }
-
-  /// Uses a critically-damped spring for smooth, non-bouncy settling.
-  @override
-  SpringDescription get spring =>
-      const SpringDescription(mass: 1.0, stiffness: 100.0, damping: 20.0);
-
-  /// Lower the minimum fling velocity to make page changes easier with quick swipes.
-  @override
-  double get minFlingVelocity => 50.0; // Default is ~365
-
-  @override
-  Simulation? createBallisticSimulation(
-    ScrollMetrics position,
-    double velocity,
-  ) {
-    // If there's no viewport, use default behavior
-    if (position.viewportDimension == 0) {
-      return super.createBallisticSimulation(position, velocity);
-    }
-
-    final double pageSize = position.viewportDimension;
-    final double currentPage = position.pixels / pageSize;
-    final int currentPageFloor = currentPage.floor();
-
-    // Calculate how far into the current page we are (0.0 to 1.0)
-    final double pageFraction = currentPage - currentPageFloor;
-
-    // Determine target page based on velocity and position
-    int targetPage;
-
-    // If velocity is significant, use it to determine direction
-    if (velocity.abs() > minFlingVelocity) {
-      targetPage = velocity > 0 ? currentPageFloor + 1 : currentPageFloor;
-    } else {
-      // Use position-based threshold
-      if (pageFraction > (1.0 - _pageChangeThreshold)) {
-        // Crossed threshold to next page
-        targetPage = currentPageFloor + 1;
-      } else if (pageFraction < _pageChangeThreshold) {
-        // Still on current page
-        targetPage = currentPageFloor;
-      } else {
-        // In the middle - go to nearest page
-        targetPage = currentPage.round();
-      }
-    }
-
-    final double targetPixels = targetPage * pageSize;
-
-    // If we're already at the target, no simulation needed
-    final toleranceValue = toleranceFor(position);
-    if ((position.pixels - targetPixels).abs() < toleranceValue.distance) {
-      return null;
-    }
-
-    // Create a spring simulation to the target
-    return ScrollSpringSimulation(
-      spring,
-      position.pixels,
-      targetPixels,
-      velocity,
-      tolerance: toleranceValue,
-    );
-  }
-}
+// MCalSnappyPageScrollPhysics is defined in mcal_scroll_behavior.dart
 
 /// Widget for rendering a single month page in the PageView.
 ///

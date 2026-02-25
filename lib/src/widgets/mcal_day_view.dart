@@ -1451,6 +1451,10 @@ class MCalDayViewState extends State<MCalDayView> {
   ScrollController? _scrollController;
   bool _autoScrollDone = false;
 
+  /// Last known vertical scroll offset — kept in sync via a listener so that
+  /// adjacent pages in the PageView can start at the same position.
+  double _lastKnownScrollOffset = 0.0;
+
   // Vertical auto-scroll during drag/resize: when the user drags near the
   // top or bottom of the visible time grid, scroll the content automatically
   // so they can drop onto time slots outside the current viewport.
@@ -1565,6 +1569,11 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Flag to prevent recursive updates when programmatically changing pages.
   bool _isProgrammaticPageChange = false;
 
+  /// True while _onSwipePageChanged is calling controller.setDisplayDate().
+  /// Prevents _onControllerChanged from issuing a redundant jumpToPage that
+  /// would interrupt the ongoing user swipe gesture.
+  bool _isSwipeInitiatedChange = false;
+
   /// The initial page index for the PageView (center of the "infinite" scroll range).
   static const int _initialSwipePageIndex = 10000;
 
@@ -1591,7 +1600,9 @@ class MCalDayViewState extends State<MCalDayView> {
   void initState() {
     super.initState();
     _displayDate = dateOnly(widget.controller.displayDate);
-    _scrollController = widget.scrollController ?? ScrollController();
+    _scrollController =
+        widget.scrollController ?? _ResettableScrollController();
+    _scrollController!.addListener(_onScrollPositionChanged);
     _focusNode = FocusNode();
 
     // Initialize swipe navigation PageController if enabled (Task 8)
@@ -1618,6 +1629,7 @@ class MCalDayViewState extends State<MCalDayView> {
     _verticalScrollTimer?.cancel();
     _dragHandler?.dispose();
     _focusNode.dispose();
+    _scrollController?.removeListener(_onScrollPositionChanged);
     if (widget.scrollController == null) {
       _scrollController?.dispose();
     }
@@ -1641,10 +1653,16 @@ class MCalDayViewState extends State<MCalDayView> {
 
     // Update scroll controller if changed
     if (widget.scrollController != oldWidget.scrollController) {
+      _scrollController?.removeListener(_onScrollPositionChanged);
       if (oldWidget.scrollController == null) {
         _scrollController?.dispose();
       }
-      _scrollController = widget.scrollController ?? ScrollController();
+      _scrollController =
+          widget.scrollController ??
+          _ResettableScrollController(
+            initialScrollOffset: _lastKnownScrollOffset,
+          );
+      _scrollController!.addListener(_onScrollPositionChanged);
     }
 
     // Task 8: Handle swipe navigation parameter changes
@@ -1796,8 +1814,13 @@ class MCalDayViewState extends State<MCalDayView> {
         ? AxisDirection.left
         : AxisDirection.right;
 
-    // Update the controller's display date (this triggers _onControllerChanged)
+    // Update the controller's display date (this triggers _onControllerChanged).
+    // The flag tells _onControllerChanged that this change originated from a user
+    // swipe, so it should NOT call jumpToPage — the PageView is already animating
+    // to the correct page and interrupting it would steal the gesture from the user.
+    _isSwipeInitiatedChange = true;
     widget.controller.setDisplayDate(newDay);
+    _isSwipeInitiatedChange = false;
 
     // Fire the swipe navigation callback
     if (widget.onSwipeNavigation != null) {
@@ -1825,9 +1848,42 @@ class MCalDayViewState extends State<MCalDayView> {
       debugPrint(
         '[DD] ControllerChanged: date $oldDate → $normalizedControllerDate isDragActive=$_isDragActive isResizing=${_dragHandler?.isResizing}',
       );
+
+      // Snapshot the current scroll offset before the rebuild detaches the
+      // controller from the outgoing page.  _lastKnownScrollOffset is already
+      // up-to-date via the scroll listener, but a fresh read guarantees we
+      // capture any sub-frame changes.
+      if (_scrollController?.hasClients == true) {
+        _lastKnownScrollOffset = _scrollController!.offset;
+      }
+
+      // Tell _ResettableScrollController to use this offset when it is next
+      // attached to a new Scrollable (programmatic navigation via jumpToPage).
+      // For swipe-initiated changes the adjacent page's _DayPageScroller
+      // already starts at the correct offset, so this is a no-op in practice.
+      if (_scrollController is _ResettableScrollController) {
+        (_scrollController! as _ResettableScrollController).nextInitialOffset =
+            _lastKnownScrollOffset;
+      }
+
       setState(() {
         _displayDate = dateOnly(widget.controller.displayDate);
       });
+
+      // For user-provided controllers that we can't subclass, fall back to a
+      // post-frame jump so scroll position is still preserved (with a brief
+      // flash for that one frame).
+      if (_scrollController is! _ResettableScrollController &&
+          _lastKnownScrollOffset > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _scrollController == null) return;
+          if (!_scrollController!.hasClients) return;
+          final maxExtent = _scrollController!.position.maxScrollExtent;
+          _scrollController!.jumpTo(
+            _lastKnownScrollOffset.clamp(0.0, maxExtent),
+          );
+        });
+      }
 
       // Task 8: Update PageController when display date changes programmatically
       if (widget.enableSwipeNavigation &&
@@ -1837,14 +1893,23 @@ class MCalDayViewState extends State<MCalDayView> {
         final newPageIndex = _initialSwipePageIndex + dayOffset;
 
         if (_swipePageController!.hasClients) {
-          // Use flag to prevent _onSwipePageChanged from firing
-          _isProgrammaticPageChange = true;
-          debugPrint(
-            '[DD] ControllerChanged: jumpToPage($newPageIndex) isProgrammatic=true',
-          );
-          _swipePageController!.jumpToPage(newPageIndex);
-          _isProgrammaticPageChange = false;
-          debugPrint('[DD] ControllerChanged: isProgrammatic reset to false');
+          if (_isSwipeInitiatedChange) {
+            // The display date changed because the user swiped. The PageView is
+            // already animating to the correct page — don't interrupt the gesture.
+            debugPrint(
+              '[DD] ControllerChanged: swipe-initiated change — skipping jumpToPage',
+            );
+          } else {
+            // External change (e.g. button press, programmatic navigation).
+            // Jump the PageView to match the new date.
+            _isProgrammaticPageChange = true;
+            debugPrint(
+              '[DD] ControllerChanged: jumpToPage($newPageIndex) isProgrammatic=true',
+            );
+            _swipePageController!.jumpToPage(newPageIndex);
+            _isProgrammaticPageChange = false;
+            debugPrint('[DD] ControllerChanged: isProgrammatic reset to false');
+          }
         }
       }
 
@@ -2049,6 +2114,15 @@ class MCalDayViewState extends State<MCalDayView> {
         curve: widget.initialScrollCurve,
       );
     });
+  }
+
+  /// Keeps [_lastKnownScrollOffset] in sync with the current page's scroll
+  /// position.  Called by the listener attached to [_scrollController].
+  void _onScrollPositionChanged() {
+    final sc = _scrollController;
+    if (sc != null && sc.hasClients) {
+      _lastKnownScrollOffset = sc.offset;
+    }
   }
 
   // ============================================================================
@@ -5040,16 +5114,19 @@ class MCalDayViewState extends State<MCalDayView> {
     DateTime date,
     List<MCalCalendarEvent> timedEvents,
   ) {
-    // Only attach the shared scroll controller to the CURRENT page.
-    // PageView pre-renders adjacent pages; sharing one controller across
-    // multiple SingleChildScrollView instances causes detach/reattach cycles
-    // that reset the scroll offset to 0 on every setState rebuild.
+    // Each page gets its own scroll controller via _DayPageScroller:
+    //  - Current page: uses _scrollController (for API compat — scrollToTime,
+    //    drag handling, etc.).
+    //  - Adjacent pages: get a fresh controller initialised to
+    //    _lastKnownScrollOffset so the user sees the same vertical position
+    //    during a swipe, with no delayed jump.
     final isCurrentPage =
         date.year == _displayDate.year &&
         date.month == _displayDate.month &&
         date.day == _displayDate.day;
-    return SingleChildScrollView(
-      controller: isCurrentPage ? _scrollController : null,
+    return _DayPageScroller(
+      primaryController: isCurrentPage ? _scrollController : null,
+      initialOffset: _lastKnownScrollOffset,
       physics: widget.scrollPhysics,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -5903,7 +5980,9 @@ class MCalDayViewState extends State<MCalDayView> {
       dayViewContent = PageView.builder(
         controller: _swipePageController!,
         scrollDirection: Axis.horizontal,
-        physics: isResizing ? const NeverScrollableScrollPhysics() : null,
+        physics: isResizing
+            ? const NeverScrollableScrollPhysics()
+            : const MCalSnappyPageScrollPhysics(),
         // Never reverse: standard calendar convention (swipe left = next day,
         // swipe right = previous day) applies regardless of locale.
         reverse: false,
@@ -7555,10 +7634,14 @@ class _AllDayEventsSection extends StatelessWidget {
     // Wrap with MCalDraggableEventTile when drag-to-move is enabled
     if (enableDragToMove && onDragStarted != null) {
       final hSpacing = theme.eventTileHorizontalSpacing ?? 2.0;
+      // All-day tiles are intrinsically sized (minWidth: 80, maxWidth: 200).
+      // Pass maxWidth so the drag feedback matches the source tile instead of
+      // stretching to the full section width.
+      const allDayTileMaxWidth = 200.0;
       tile = MCalDraggableEventTile(
         event: event,
         sourceDate: displayDate,
-        dayWidth: sectionWidth,
+        dayWidth: allDayTileMaxWidth,
         horizontalSpacing: hSpacing,
         enabled: true,
         dragLongPressDelay: dragLongPressDelay,
@@ -8646,6 +8729,127 @@ class _TimeResizeHandle extends StatelessWidget {
       right: inset,
       height: handleSize,
       child: child,
+    );
+  }
+}
+
+// ============================================================================
+// _ResettableScrollController
+// ============================================================================
+
+/// A [ScrollController] whose initial offset can be updated between attach
+/// cycles.  When the controller detaches from one [Scrollable] and is later
+/// attached to another (e.g. after a page change in a [PageView]),
+/// [createScrollPosition] uses [_nextInitialOffset] instead of the value
+/// that was passed to the constructor.
+class _ResettableScrollController extends ScrollController {
+  double _nextInitialOffset;
+
+  _ResettableScrollController({super.initialScrollOffset = 0.0})
+      : _nextInitialOffset = initialScrollOffset;
+
+  set nextInitialOffset(double value) => _nextInitialOffset = value;
+
+  @override
+  ScrollPosition createScrollPosition(
+    ScrollPhysics physics,
+    ScrollContext context,
+    ScrollPosition? oldPosition,
+  ) {
+    return ScrollPositionWithSingleContext(
+      physics: physics,
+      context: context,
+      initialPixels: _nextInitialOffset,
+      keepScrollOffset: false,
+      oldPosition: oldPosition,
+      debugLabel: debugLabel,
+    );
+  }
+}
+
+// ============================================================================
+// _DayPageScroller
+// ============================================================================
+
+/// Wraps a [SingleChildScrollView] so that every page in the [PageView] can
+/// have the correct initial scroll offset without sharing a single controller.
+///
+/// * The **current** page receives [primaryController] (the one the rest of
+///   the Day View code reads/writes for drag handling, scrollToTime, etc.).
+/// * **Adjacent** pages ([primaryController] is null) get their own
+///   [ScrollController] initialised to [initialOffset], so they appear at the
+///   same vertical position as the current page during a swipe.
+///
+/// When a page transitions between current ↔ adjacent, the existing
+/// [ScrollPosition] is simply re-attached to the new controller — the pixel
+/// offset is preserved.
+class _DayPageScroller extends StatefulWidget {
+  const _DayPageScroller({
+    required this.primaryController,
+    required this.initialOffset,
+    required this.physics,
+    required this.child,
+  });
+
+  final ScrollController? primaryController;
+  final double initialOffset;
+  final ScrollPhysics? physics;
+  final Widget child;
+
+  @override
+  State<_DayPageScroller> createState() => _DayPageScrollerState();
+}
+
+class _DayPageScrollerState extends State<_DayPageScroller> {
+  ScrollController? _ownController;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.primaryController == null) {
+      _ownController = ScrollController(
+        initialScrollOffset: widget.initialOffset,
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(_DayPageScroller oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.primaryController != widget.primaryController) {
+      if (oldWidget.primaryController != null &&
+          widget.primaryController == null) {
+        // Page became adjacent — create own controller.  The existing
+        // ScrollPosition is re-attached by Scrollable.didUpdateWidget so the
+        // current pixel offset is preserved automatically.
+        _ownController = ScrollController(
+          initialScrollOffset: widget.initialOffset,
+        );
+      } else if (oldWidget.primaryController == null &&
+          widget.primaryController != null) {
+        // Page became current — switch to the primary controller.
+        // Defer disposal until after Scrollable detaches from it.
+        final old = _ownController;
+        _ownController = null;
+        if (old != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _ownController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: widget.primaryController ?? _ownController!,
+      physics: widget.physics,
+      child: widget.child,
     );
   }
 }
