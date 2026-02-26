@@ -33,8 +33,8 @@
   "year": "Year",
   "previousDay": "Previous day",
   "nextDay": "Next day",
-  "previousMonth": "previous month",
-  "nextMonth": "next month",
+  "previousMonth": "Previous month",
+  "nextMonth": "Next month",
   "currentTime": "Current time: {time}",
   "@currentTime": {
     "placeholders": {

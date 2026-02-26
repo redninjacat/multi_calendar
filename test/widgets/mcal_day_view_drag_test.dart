@@ -344,18 +344,22 @@ void main() {
       final gesture = await tester.startGesture(center);
       await tester.pump(const Duration(milliseconds: 200));
 
-      await gesture.moveBy(const Offset(0, -80));
+      // Move far enough upward to land inside the all-day section, which sits
+      // above the scrollable time grid viewport. The viewport starts at roughly
+      // Y=121 (all-day section height). Moving 380px up from ~Y=455 brings the
+      // pointer to ~Y=75, well inside the all-day zone.
+      await gesture.moveBy(const Offset(0, -380));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
       await gesture.up();
       await tester.pumpAndSettle();
 
-      if (capturedDetails != null) {
-        expect(capturedDetails!.typeConversion, 'timedToAllDay');
-        expect(capturedDetails!.newStartDate.hour, 0);
-        expect(capturedDetails!.newStartDate.minute, 0);
-      }
+      expect(capturedDetails, isNotNull,
+          reason: 'onEventDropped should have fired when dropping in the all-day area');
+      expect(capturedDetails!.typeConversion, 'timedToAllDay');
+      expect(capturedDetails!.newStartDate.hour, 0);
+      expect(capturedDetails!.newStartDate.minute, 0);
     });
 
     testWidgets('onDragWillAccept returning false prevents drop', (

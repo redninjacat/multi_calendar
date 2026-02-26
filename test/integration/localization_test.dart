@@ -469,7 +469,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('8 AM'), findsOneWidget);
+      expect(find.text('8:00 AM'), findsOneWidget);
       controller.dispose();
     });
 

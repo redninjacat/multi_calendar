@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'mcal_recurrence_rule.dart';
+
 /// Represents a special time region with custom styling and optional interaction blocking.
 ///
 /// Similar to month view's blockout dates, but time-based and with custom styling.
@@ -258,5 +260,106 @@ class MCalTimeRegion {
   /// ```
   bool overlaps(DateTime rangeStart, DateTime rangeEnd) {
     return startTime.isBefore(rangeEnd) && endTime.isAfter(rangeStart);
+  }
+
+  /// Returns a concrete [MCalTimeRegion] for [displayDate] if this region
+  /// applies to that date, or `null` if it does not.
+  ///
+  /// Non-recurring regions apply only when [startTime]'s calendar date equals
+  /// [displayDate]; in that case `this` is returned unchanged.
+  ///
+  /// Recurring regions use [MCalRecurrenceRule] — the same full RFC 5545
+  /// expansion engine used by calendar events — to determine whether
+  /// [displayDate] is an occurrence.  When it is, a new [MCalTimeRegion]
+  /// instance is returned whose [startTime] and [endTime] are set to the
+  /// occurrence's date (preserving the original time-of-day).  This ensures
+  /// that the plain [overlaps] method works correctly for validation and
+  /// rendering without any date-normalisation gymnastics.
+  ///
+  /// Example:
+  /// ```dart
+  /// final afterHours = MCalTimeRegion(
+  ///   id: 'after-hours',
+  ///   startTime: DateTime(2026, 1, 1, 18, 0), // anchor date is Jan 1
+  ///   endTime:   DateTime(2026, 1, 1, 22, 0),
+  ///   blockInteraction: true,
+  ///   recurrenceRule: 'FREQ=DAILY',
+  /// );
+  ///
+  /// final expanded = afterHours.expandedForDate(DateTime(2026, 2, 25));
+  /// // expanded.startTime == DateTime(2026, 2, 25, 18, 0)
+  /// // expanded.endTime   == DateTime(2026, 2, 25, 22, 0)
+  ///
+  /// // Now plain overlaps() works correctly:
+  /// expanded!.overlaps(
+  ///   DateTime(2026, 2, 25, 19, 0),
+  ///   DateTime(2026, 2, 25, 20, 0),
+  /// ); // true
+  /// ```
+  MCalTimeRegion? expandedForDate(DateTime displayDate) {
+    final displayDay =
+        DateTime(displayDate.year, displayDate.month, displayDate.day);
+    final regionDay =
+        DateTime(startTime.year, startTime.month, startTime.day);
+
+    if (recurrenceRule == null) {
+      // Non-recurring: applies only when the anchor date matches.
+      return regionDay == displayDay ? this : null;
+    }
+
+    // Recurring: delegate to the full RFC 5545 expansion engine.
+    try {
+      final rule = MCalRecurrenceRule.fromRruleString(recurrenceRule!);
+      // Exclusive upper bound: midnight of the day after displayDate.
+      final beforeDay =
+          DateTime(displayDate.year, displayDate.month, displayDate.day + 1);
+      // Always generate from 1 µs before the anchor (DTSTART) so that:
+      //   1. The anchor occurrence is included (teno_rrule.between is exclusive
+      //      on `after`, and anchor-date occurrences are at exact anchor time).
+      //   2. COUNT is respected — teno_rrule may seek past the COUNT ceiling
+      //      when `after` is far from DTSTART; starting from anchor forces it
+      //      to count correctly.  The raw.take(count) below adds a final guard.
+      final after = startTime.subtract(const Duration(microseconds: 1));
+      final raw = rule.getOccurrences(
+        start: startTime,
+        after: after,
+        before: beforeDay,
+      );
+      // teno_rrule may not respect COUNT in between() when the window extends
+      // past the count boundary (observed for FREQ=DAILY).  Taking at most
+      // rule.count results enforces the ceiling regardless of library behaviour.
+      final occurrences =
+          rule.count != null ? raw.take(rule.count!).toList() : raw;
+
+      // Find the occurrence whose calendar date matches displayDate.
+      // `occurrences` starts from the anchor and may contain many entries
+      // before reaching displayDate, so we must locate the matching one
+      // explicitly rather than using occurrences.first.
+      DateTime? occurrenceStart;
+      for (final d in occurrences) {
+        if (d.year == displayDate.year &&
+            d.month == displayDate.month &&
+            d.day == displayDate.day) {
+          occurrenceStart = d;
+          break;
+        }
+      }
+      if (occurrenceStart == null) return null;
+      final duration = endTime.difference(startTime);
+      return MCalTimeRegion(
+        id: '${id}_${displayDay.toIso8601String().split('T')[0]}',
+        startTime: occurrenceStart,
+        endTime: occurrenceStart.add(duration),
+        color: color,
+        text: text,
+        blockInteraction: blockInteraction,
+        icon: icon,
+        customData: customData,
+        // recurrenceRule is omitted — the expanded instance represents a
+        // single concrete occurrence, not the recurring series.
+      );
+    } catch (_) {
+      return null;
+    }
   }
 }

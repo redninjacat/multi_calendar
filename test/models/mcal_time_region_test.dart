@@ -269,6 +269,166 @@ void main() {
       });
     });
 
+    group('expandedForDate', () {
+      test('non-recurring region on its own date returns itself', () {
+        final region = MCalTimeRegion(
+          id: 'lunch',
+          startTime: DateTime(2026, 2, 14, 12, 0),
+          endTime: DateTime(2026, 2, 14, 13, 0),
+        );
+
+        final expanded = region.expandedForDate(DateTime(2026, 2, 14));
+        expect(expanded, same(region));
+      });
+
+      test('non-recurring region on a different date returns null', () {
+        final region = MCalTimeRegion(
+          id: 'lunch',
+          startTime: DateTime(2026, 2, 14, 12, 0),
+          endTime: DateTime(2026, 2, 14, 13, 0),
+        );
+
+        expect(region.expandedForDate(DateTime(2026, 2, 15)), isNull);
+        expect(region.expandedForDate(DateTime(2026, 2, 13)), isNull);
+      });
+
+      test('daily recurring region applies to the anchor date', () {
+        final region = MCalTimeRegion(
+          id: 'after-hours',
+          startTime: DateTime(2026, 1, 1, 18, 0),
+          endTime: DateTime(2026, 1, 1, 22, 0),
+          recurrenceRule: 'FREQ=DAILY',
+          blockInteraction: true,
+        );
+
+        final expanded = region.expandedForDate(DateTime(2026, 1, 1));
+        expect(expanded, isNotNull);
+        expect(expanded!.startTime, DateTime(2026, 1, 1, 18, 0));
+        expect(expanded.endTime, DateTime(2026, 1, 1, 22, 0));
+        expect(expanded.blockInteraction, isTrue);
+      });
+
+      test('daily recurring region expands to a later date', () {
+        final region = MCalTimeRegion(
+          id: 'after-hours',
+          startTime: DateTime(2026, 1, 1, 18, 0),
+          endTime: DateTime(2026, 1, 1, 22, 0),
+          recurrenceRule: 'FREQ=DAILY',
+          blockInteraction: true,
+          color: Colors.grey,
+          text: 'After Hours',
+          icon: Icons.block,
+        );
+
+        final expanded = region.expandedForDate(DateTime(2026, 2, 25));
+        expect(expanded, isNotNull);
+        expect(expanded!.startTime, DateTime(2026, 2, 25, 18, 0));
+        expect(expanded.endTime, DateTime(2026, 2, 25, 22, 0));
+        expect(expanded.blockInteraction, isTrue);
+        expect(expanded.color, Colors.grey);
+        expect(expanded.text, 'After Hours');
+        expect(expanded.icon, Icons.block);
+        // Expanded instance has no recurrence rule
+        expect(expanded.recurrenceRule, isNull);
+      });
+
+      test('daily recurring region with COUNT does not apply beyond limit', () {
+        // Anchored 2026-01-01, COUNT=3 → applies Jan 1, 2, 3 only
+        final region = MCalTimeRegion(
+          id: 'focus',
+          startTime: DateTime(2026, 1, 1, 9, 0),
+          endTime: DateTime(2026, 1, 1, 10, 0),
+          recurrenceRule: 'FREQ=DAILY;COUNT=3',
+        );
+
+        expect(region.expandedForDate(DateTime(2026, 1, 1)), isNotNull);
+        expect(region.expandedForDate(DateTime(2026, 1, 2)), isNotNull);
+        expect(region.expandedForDate(DateTime(2026, 1, 3)), isNotNull);
+        expect(region.expandedForDate(DateTime(2026, 1, 4)), isNull);
+      });
+
+      test('weekly recurring region applies only on matching weekday', () {
+        // Anchor 2026-01-05 is a Monday; BYDAY=MO → every Monday
+        final region = MCalTimeRegion(
+          id: 'standup',
+          startTime: DateTime(2026, 1, 5, 9, 0),
+          endTime: DateTime(2026, 1, 5, 9, 30),
+          recurrenceRule: 'FREQ=WEEKLY;BYDAY=MO',
+        );
+
+        // 2026-02-16 is a Monday
+        final monday = region.expandedForDate(DateTime(2026, 2, 16));
+        expect(monday, isNotNull);
+        expect(monday!.startTime.weekday, DateTime.monday);
+
+        // 2026-02-17 is a Tuesday
+        expect(region.expandedForDate(DateTime(2026, 2, 17)), isNull);
+        // 2026-02-15 is a Sunday
+        expect(region.expandedForDate(DateTime(2026, 2, 15)), isNull);
+      });
+
+      test('date before anchor returns null for recurring region', () {
+        final region = MCalTimeRegion(
+          id: 'after-hours',
+          startTime: DateTime(2026, 3, 1, 18, 0),
+          endTime: DateTime(2026, 3, 1, 22, 0),
+          recurrenceRule: 'FREQ=DAILY',
+        );
+
+        expect(region.expandedForDate(DateTime(2026, 2, 28)), isNull);
+      });
+
+      test(
+          'expanded region overlaps correctly on the display date for '
+          'drop-blocking validation', () {
+        // Simulate the exact bug that was reported:
+        // region anchored on Jan 1, drop attempted on Feb 25
+        final afterHours = MCalTimeRegion(
+          id: 'after-hours',
+          startTime: DateTime(2026, 1, 1, 18, 0),
+          endTime: DateTime(2026, 1, 1, 22, 0),
+          recurrenceRule: 'FREQ=DAILY',
+          blockInteraction: true,
+        );
+
+        final displayDate = DateTime(2026, 2, 25);
+        final expanded = afterHours.expandedForDate(displayDate);
+        expect(expanded, isNotNull,
+            reason: 'Region should apply on Feb 25 via FREQ=DAILY');
+
+        // A drop at 19:00–20:00 on Feb 25 should be blocked
+        expect(
+          expanded!.overlaps(
+            DateTime(2026, 2, 25, 19, 0),
+            DateTime(2026, 2, 25, 20, 0),
+          ),
+          isTrue,
+          reason: 'Expanded region should block a 19:00–20:00 drop on Feb 25',
+        );
+
+        // A drop at 08:00–09:00 on Feb 25 should NOT be blocked
+        expect(
+          expanded.overlaps(
+            DateTime(2026, 2, 25, 8, 0),
+            DateTime(2026, 2, 25, 9, 0),
+          ),
+          isFalse,
+          reason: 'Expanded region should not block a morning drop',
+        );
+      });
+
+      test('invalid recurrence rule returns null gracefully', () {
+        final region = MCalTimeRegion(
+          id: 'bad-rule',
+          startTime: DateTime(2026, 1, 1, 9, 0),
+          endTime: DateTime(2026, 1, 1, 10, 0),
+          recurrenceRule: 'FREQ=INVALID;GARBAGE',
+        );
+
+        expect(region.expandedForDate(DateTime(2026, 2, 1)), isNull);
+      });
+    });
+
     group('edge cases and validation', () {
       test('handles multi-day region', () {
         final region = MCalTimeRegion(

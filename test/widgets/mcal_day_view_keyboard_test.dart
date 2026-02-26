@@ -676,7 +676,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap on time legend first - no event focused, Delete should not fire
-      await tester.tap(find.text('8 AM'));
+      await tester.tap(find.text('8:00 AM'));
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(LogicalKeyboardKey.delete);
       await tester.pumpAndSettle();

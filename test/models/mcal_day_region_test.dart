@@ -387,16 +387,17 @@ void main() {
         expect(region.appliesTo(DateTime(2026, 6, 15)), isFalse);
       });
 
-      test('malformed UNTIL value is ignored; no UNTIL applied', () {
+      test('malformed UNTIL value causes the rule to be rejected safely', () {
         final region = MCalDayRegion(
           id: 'bad-until',
           date: DateTime(2026, 1, 1),
           recurrenceRule: 'FREQ=DAILY;UNTIL=NOTADATE',
         );
 
-        // With a malformed UNTIL, the region should still match (no upper bound)
-        expect(region.appliesTo(DateTime(2026, 6, 15)), isTrue);
-        expect(region.appliesTo(DateTime(2030, 1, 1)), isTrue);
+        // teno_rrule cannot parse a malformed UNTIL value; the rule is rejected
+        // and appliesTo returns false rather than throwing.
+        expect(() => region.appliesTo(DateTime(2026, 6, 15)), returnsNormally);
+        expect(region.appliesTo(DateTime(2026, 6, 15)), isFalse);
       });
 
       test('empty recurrenceRule string returns false', () {

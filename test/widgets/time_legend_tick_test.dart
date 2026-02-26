@@ -80,7 +80,7 @@ void main() {
       // Day View should still render
       expect(find.byType(MCalDayView), findsOneWidget);
       // Time labels should still be present
-      expect(find.text('8 AM'), findsOneWidget);
+      expect(find.text('8:00 AM'), findsOneWidget);
 
       controller.dispose();
     });
@@ -116,9 +116,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(MCalDayView), findsOneWidget);
-      expect(find.text('9 AM'), findsOneWidget);
-      expect(find.text('10 AM'), findsOneWidget);
-      expect(find.text('11 AM'), findsOneWidget);
+      expect(find.text('9:00 AM'), findsOneWidget);
+      expect(find.text('10:00 AM'), findsOneWidget);
+      expect(find.text('11:00 AM'), findsOneWidget);
 
       controller.dispose();
     });
@@ -277,7 +277,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(MCalDayView), findsOneWidget);
-      expect(find.text('8 AM'), findsOneWidget);
+      expect(find.text('8:00 AM'), findsOneWidget);
 
       controller.dispose();
     });
@@ -309,7 +309,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(MCalDayView), findsOneWidget);
-      expect(find.text('8 AM'), findsOneWidget);
+      expect(find.text('8:00 AM'), findsOneWidget);
 
       controller.dispose();
     });

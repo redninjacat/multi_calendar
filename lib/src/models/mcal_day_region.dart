@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'mcal_recurrence_rule.dart';
+
 /// Represents a special day region in Month View with custom styling and
 /// optional interaction blocking.
 ///
@@ -156,14 +158,63 @@ class MCalDayRegion {
   /// Returns `true` when this region applies to [queryDate].
   ///
   /// For non-recurring regions, delegates to [_matchesDate].
-  /// For recurring regions, expands occurrences and checks membership.
+  /// For recurring regions, delegates to [MCalRecurrenceRule] for full
+  /// RFC 5545 RRULE expansion — the same engine used by calendar events.
+  ///
+  /// ### `after` and COUNT handling
+  ///
+  /// We always generate from 1 µs before the anchor (DTSTART) so that:
+  ///
+  /// 1. The anchor occurrence itself is included — `teno_rrule.between` treats
+  ///    `after` as exclusive, and day-region occurrences fall exactly at
+  ///    midnight, so a naive `after = queryDay` would miss the occurrence.
+  /// 2. COUNT is respected — when `after` is positioned far ahead of DTSTART,
+  ///    `teno_rrule` may seek there efficiently, bypassing the COUNT ceiling and
+  ///    returning occurrences that should already be exhausted.  Starting from
+  ///    the anchor forces the engine to count correctly from the beginning.
+  ///
+  /// The `raw.take(count)` guard enforces COUNT for rules where `teno_rrule`
+  /// still escapes the ceiling for FREQ=DAILY patterns.
   bool appliesTo(DateTime queryDate) {
     if (recurrenceRule == null) {
       return _matchesDate(date, queryDate);
     }
-    return _expandedOccurrences(queryDate).any(
-      (d) => _matchesDate(d, queryDate),
-    );
+    try {
+      final rule = MCalRecurrenceRule.fromRruleString(recurrenceRule!);
+      final anchor = DateTime(date.year, date.month, date.day);
+      final queryDay = DateTime(queryDate.year, queryDate.month, queryDate.day);
+      // Exclusive upper bound: midnight of the day after queryDate.
+      final beforeDay =
+          DateTime(queryDate.year, queryDate.month, queryDate.day + 1);
+      // Always start from just before the anchor so both the anchor occurrence
+      // and COUNT are handled correctly (see docstring above).
+      final after = anchor.subtract(const Duration(microseconds: 1));
+      // teno_rrule treats endDate (UNTIL) as exclusive, but RFC 5545 defines
+      // UNTIL as inclusive.  We enforce UNTIL manually:
+      //   1. Parse UNTIL directly from the raw rule string (bypasses timezone
+      //      conversion issues in teno_rrule's RecurrenceRule.endDate).
+      //   2. Short-circuit if queryDate is past UNTIL.
+      //   3. Strip UNTIL from the expansion rule so teno_rrule's exclusive
+      //      boundary does not discard the UNTIL-date occurrence.
+      //      The `before = queryDay + 1` bound already limits the results to
+      //      queryDate, so removing UNTIL is safe.
+      final untilDay = _parseUntilDay(recurrenceRule!);
+      if (untilDay != null && queryDay.isAfter(untilDay)) return false;
+      final expansionRule =
+          untilDay != null ? rule.copyWith(until: () => null) : rule;
+      final raw = expansionRule.getOccurrences(
+        start: anchor,
+        after: after,
+        before: beforeDay,
+      );
+      // Guard against teno_rrule ignoring COUNT in between() (observed for
+      // FREQ=DAILY): take only the first COUNT occurrences.
+      final occurrences =
+          rule.count != null ? raw.take(rule.count!).toList() : raw;
+      return occurrences.any((d) => _matchesDate(d, queryDate));
+    } catch (_) {
+      return false;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -177,161 +228,27 @@ class MCalDayRegion {
         candidate.day == query.day;
   }
 
-  /// Expands recurring occurrences that could fall on [queryDate].
+  /// Parses the UNTIL date from an RFC 5545 RRULE string, or returns `null` if
+  /// no UNTIL clause is present or the value cannot be parsed.
   ///
-  /// This is a simplified RRULE interpreter that handles the patterns most
-  /// relevant for day regions:
-  ///
-  /// - `FREQ=DAILY`
-  /// - `FREQ=WEEKLY` (with optional `BYDAY=MO,TU,...`)
-  /// - `FREQ=MONTHLY` (with optional `BYMONTHDAY=`)
-  /// - `FREQ=YEARLY` (with optional `BYMONTH=` and `BYMONTHDAY=`)
-  ///
-  /// For complex rules that are not supported here the region will silently
-  /// not match.  Consumers needing full RFC 5545 expansion should pre-compute
-  /// the list of dates and pass one [MCalDayRegion] per date.
-  List<DateTime> _expandedOccurrences(DateTime queryDate) {
-    final rule = recurrenceRule!.toUpperCase();
-    final parts = _parseRuleParts(rule);
-    final freq = parts['FREQ'] ?? '';
-    final anchor = DateTime(date.year, date.month, date.day);
-    final query = DateTime(queryDate.year, queryDate.month, queryDate.day);
-
-    // Honour UNTIL / COUNT limits
-    final until = _parseUntil(parts['UNTIL']);
-    final count = int.tryParse(parts['COUNT'] ?? '');
-
-    // For most patterns we only need to check if queryDate is a valid
-    // occurrence — we don't need to enumerate all of them.
-    switch (freq) {
-      case 'DAILY':
-        if (query.isBefore(anchor)) return [];
-        if (until != null && query.isAfter(until)) return [];
-        final diff = query.difference(anchor).inDays;
-        final interval = int.tryParse(parts['INTERVAL'] ?? '1') ?? 1;
-        if (diff % interval != 0) return [];
-        if (count != null && diff ~/ interval >= count) return [];
-        return [query];
-
-      case 'WEEKLY':
-        if (query.isBefore(anchor)) return [];
-        if (until != null && query.isAfter(until)) return [];
-        final byDay = _parseByDay(parts['BYDAY'] ?? '');
-        if (byDay.isNotEmpty && !byDay.contains(query.weekday)) return [];
-        final interval = int.tryParse(parts['INTERVAL'] ?? '1') ?? 1;
-        // Check that query falls on a matching week offset from anchor week
-        final anchorWeekStart = anchor.subtract(
-          Duration(days: (anchor.weekday - 1) % 7),
-        );
-        final queryWeekStart = query.subtract(
-          Duration(days: (query.weekday - 1) % 7),
-        );
-        final weeksDiff =
-            queryWeekStart.difference(anchorWeekStart).inDays ~/ 7;
-        if (weeksDiff < 0 || weeksDiff % interval != 0) return [];
-        if (count != null) {
-          // Approximate: count occurrences up to query
-          int occurrences = 0;
-          DateTime cur = anchor;
-          while (!cur.isAfter(query)) {
-            final wStart = cur.subtract(Duration(days: (cur.weekday - 1) % 7));
-            final wEnd = wStart.add(const Duration(days: 6));
-            for (
-              DateTime d = wStart;
-              !d.isAfter(wEnd);
-              d = d.add(const Duration(days: 1))
-            ) {
-              if (!d.isBefore(anchor) &&
-                  (byDay.isEmpty || byDay.contains(d.weekday))) {
-                occurrences++;
-              }
-            }
-            cur = cur.add(Duration(days: 7 * interval));
-          }
-          if (occurrences > count) return [];
-        }
-        return [query];
-
-      case 'MONTHLY':
-        if (query.isBefore(anchor)) return [];
-        if (until != null && query.isAfter(until)) return [];
-        final byMonthDay = int.tryParse(parts['BYMONTHDAY'] ?? '');
-        if (byMonthDay != null && query.day != byMonthDay) return [];
-        if (byMonthDay == null && query.day != anchor.day) return [];
-        final interval = int.tryParse(parts['INTERVAL'] ?? '1') ?? 1;
-        final monthsDiff =
-            (query.year - anchor.year) * 12 + (query.month - anchor.month);
-        if (monthsDiff % interval != 0) return [];
-        if (count != null && monthsDiff ~/ interval >= count) return [];
-        return [query];
-
-      case 'YEARLY':
-        if (query.isBefore(anchor)) return [];
-        if (until != null && query.isAfter(until)) return [];
-        final byMonth = int.tryParse(parts['BYMONTH'] ?? '');
-        final byMonthDay = int.tryParse(parts['BYMONTHDAY'] ?? '');
-        if (byMonth != null && query.month != byMonth) return [];
-        if (byMonth == null && query.month != anchor.month) return [];
-        if (byMonthDay != null && query.day != byMonthDay) return [];
-        if (byMonthDay == null && query.day != anchor.day) return [];
-        final interval = int.tryParse(parts['INTERVAL'] ?? '1') ?? 1;
-        final yearsDiff = query.year - anchor.year;
-        if (yearsDiff % interval != 0) return [];
-        if (count != null && yearsDiff ~/ interval >= count) return [];
-        return [query];
-
-      default:
-        return [];
-    }
-  }
-
-  /// Parses `KEY=VALUE;KEY=VALUE` rule string into a map.
-  static Map<String, String> _parseRuleParts(String rule) {
-    final map = <String, String>{};
-    for (final part in rule.split(';')) {
-      final eq = part.indexOf('=');
-      if (eq > 0) {
-        map[part.substring(0, eq).trim()] = part.substring(eq + 1).trim();
-      }
-    }
-    return map;
-  }
-
-  /// Parses `BYDAY=MO,TU,WE` into a set of [DateTime] weekday constants.
-  static Set<int> _parseByDay(String byDay) {
-    if (byDay.isEmpty) return {};
-    const dayMap = {
-      'MO': DateTime.monday,
-      'TU': DateTime.tuesday,
-      'WE': DateTime.wednesday,
-      'TH': DateTime.thursday,
-      'FR': DateTime.friday,
-      'SA': DateTime.saturday,
-      'SU': DateTime.sunday,
-    };
-    final result = <int>{};
-    for (final token in byDay.split(',')) {
-      final key = token.trim().replaceAll(RegExp(r'[+-]\d+'), '');
-      final day = dayMap[key];
-      if (day != null) result.add(day);
-    }
-    return result;
-  }
-
-  /// Parses an RRULE UNTIL value (basic ISO 8601 date or datetime).
-  static DateTime? _parseUntil(String? until) {
-    if (until == null || until.isEmpty) return null;
+  /// Only the YYYYMMDD (date-only) form is extracted.  Parsing from the raw
+  /// string avoids timezone-conversion side-effects that can arise when
+  /// reading [MCalRecurrenceRule.until] (which passes through teno_rrule's
+  /// internal UTC normalisation).
+  static DateTime? _parseUntilDay(String ruleString) {
+    final match =
+        RegExp(r'UNTIL=(\d{8})', caseSensitive: false).firstMatch(ruleString);
+    if (match == null) return null;
     try {
-      // Accept YYYYMMDD or YYYYMMDDTHHMMSSZ
-      final s = until.replaceAll('T', '').replaceAll('Z', '');
-      if (s.length >= 8) {
-        final y = int.parse(s.substring(0, 4));
-        final m = int.parse(s.substring(4, 6));
-        final d = int.parse(s.substring(6, 8));
-        return DateTime(y, m, d);
-      }
-    } catch (_) {}
-    return null;
+      final s = match.group(1)!;
+      return DateTime(
+        int.parse(s.substring(0, 4)),
+        int.parse(s.substring(4, 6)),
+        int.parse(s.substring(6, 8)),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 }
 

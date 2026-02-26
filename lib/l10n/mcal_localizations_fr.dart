@@ -108,10 +108,10 @@ class MCalLocalizationsFr extends MCalLocalizations {
   String get nextDay => 'Jour suivant';
 
   @override
-  String get previousMonth => 'mois précédent';
+  String get previousMonth => 'Mois précédent';
 
   @override
-  String get nextMonth => 'mois suivant';
+  String get nextMonth => 'Mois suivant';
 
   @override
   String currentTime(Object time) {

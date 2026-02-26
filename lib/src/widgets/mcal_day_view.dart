@@ -2593,8 +2593,9 @@ class MCalDayViewState extends State<MCalDayView> {
       }
     }
     for (final region in widget.specialTimeRegions) {
-      if (region.blockInteraction &&
-          region.overlaps(proposedStart, proposedEnd)) {
+      if (!region.blockInteraction) continue;
+      final expanded = region.expandedForDate(_displayDate);
+      if (expanded != null && expanded.overlaps(proposedStart, proposedEnd)) {
         return false;
       }
     }
@@ -3535,9 +3536,13 @@ class MCalDayViewState extends State<MCalDayView> {
     final localY = cursorGlobalY - _cachedDayContentOffset.dy;
 
     // --- Region detection ---
-    // Everything above _cachedTimeGridTopInDayContent is the all-day area.
-    // Everything at or below is the scrollable time grid.
-    final bool isInTimeGrid = localY >= _cachedTimeGridTopInDayContent;
+    // _cachedTimeGridTopInDayContent is the global Y of midnight in the
+    // scrollable content (which can be far off-screen above when scrolled).
+    // Adding _cachedScrollOffset gives the Y of the viewport's visible top,
+    // i.e. the boundary between the all-day section and the time grid.
+    final double timeGridViewportTopInDayContent =
+        _cachedTimeGridTopInDayContent + _cachedScrollOffset;
+    final bool isInTimeGrid = localY >= timeGridViewportTopInDayContent;
 
     // For drop-target time calculation, compute the feedback widget's
     // position within the time grid's content coordinate system.
@@ -4319,10 +4324,14 @@ class MCalDayViewState extends State<MCalDayView> {
       }
     }
 
-    // Check overlap with blocked time regions
+    // Check overlap with blocked time regions.
+    // Expand each region to a concrete instance for _displayDate first so that
+    // plain overlaps() compares matching dates (regions often carry an anchor
+    // date such as 2026-01-01 and recur via recurrenceRule).
     for (final region in widget.specialTimeRegions) {
-      if (region.blockInteraction &&
-          region.overlaps(proposedStart, proposedEnd)) {
+      if (!region.blockInteraction) continue;
+      final expanded = region.expandedForDate(_displayDate);
+      if (expanded != null && expanded.overlaps(proposedStart, proposedEnd)) {
         return false;
       }
     }
@@ -4933,22 +4942,39 @@ class MCalDayViewState extends State<MCalDayView> {
       dropValid: dragHandler.isProposedDropValid,
     );
 
+    final isValid = dragHandler.isProposedDropValid;
     final defaultTile = Opacity(
-      opacity: 0.5,
+      opacity: isValid ? 0.6 : 0.45,
       child: Container(
         decoration: BoxDecoration(
-          color: (event.color ?? Colors.blue).withValues(alpha: 0.3),
+          // Invalid: red wash; valid: event colour at low opacity.
+          color: isValid
+              ? (event.color ?? Colors.blue).withValues(alpha: 0.3)
+              : Colors.red.withValues(alpha: 0.25),
           border: Border.all(
-            color: dragHandler.isProposedDropValid ? Colors.blue : Colors.red,
-            width: 2,
+            color: isValid ? Colors.blue : Colors.red,
+            width: isValid ? 2 : 2.5,
           ),
           borderRadius: BorderRadius.circular(8),
         ),
         padding: const EdgeInsets.all(4),
-        child: Text(
-          event.title,
-          style: const TextStyle(fontSize: 12),
-          overflow: TextOverflow.ellipsis,
+        child: Row(
+          children: [
+            if (!isValid) ...[
+              const Icon(Icons.block, size: 12, color: Colors.red),
+              const SizedBox(width: 4),
+            ],
+            Expanded(
+              child: Text(
+                event.title,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isValid ? null : Colors.red,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -5706,9 +5732,9 @@ class MCalDayViewState extends State<MCalDayView> {
           onHover: widget.onHoverDayHeader,
         ),
 
-        // All-Day Events Section
-        if (pageEvents.allDay.isNotEmpty)
-          _AllDayEventsSection(
+        // All-Day Events Section — always rendered so timed→all-day drag targets
+        // are available even when no all-day events exist.
+        _AllDayEventsSection(
             events: pageEvents.allDay,
             displayDate: date,
             maxRows: widget.allDaySectionMaxRows,
@@ -7020,103 +7046,20 @@ class _TimeRegionsLayer extends StatelessWidget {
     );
   }
 
-  /// Filters and returns regions that apply to the display date.
+  /// Filters and returns regions that apply to [displayDate], each expanded
+  /// to a concrete (non-recurring) instance for that date.
   ///
-  /// For non-recurring regions, checks if the region's date matches displayDate.
-  /// For recurring regions, expands occurrences for the display date.
+  /// Delegates to [MCalTimeRegion.expandedForDate] which uses the full
+  /// RFC 5545 [MCalRecurrenceRule] engine — the same engine used for calendar
+  /// events.  Regions that do not apply to [displayDate] are omitted.
   List<MCalTimeRegion> _getApplicableRegions() {
     final result = <MCalTimeRegion>[];
-
     for (final region in regions) {
-      // Check if non-recurring region applies to displayDate
-      if (region.recurrenceRule == null &&
-          _regionAppliesToDate(region, displayDate)) {
-        result.add(region);
-      }
-
-      // If region has recurrence rule, expand occurrences
-      // Note: Full RRULE expansion would use similar logic to event controller's
-      // recurrence expansion. For now, we implement basic recurring region support.
-      if (region.recurrenceRule != null) {
-        final occurrences = _expandRecurringRegion(region, displayDate);
-        result.addAll(occurrences);
+      final expanded = region.expandedForDate(displayDate);
+      if (expanded != null) {
+        result.add(expanded);
       }
     }
-
-    return result;
-  }
-
-  /// Checks if a non-recurring region applies to the given date.
-  ///
-  /// Returns true if the region's start date matches the display date (ignoring time).
-  bool _regionAppliesToDate(MCalTimeRegion region, DateTime date) {
-    // Check if region's date matches displayDate
-    return region.startTime.year == date.year &&
-        region.startTime.month == date.month &&
-        region.startTime.day == date.day;
-  }
-
-  /// Expands recurring regions for the display date.
-  ///
-  /// This is a simplified implementation. Full RRULE support would use the
-  /// same recurrence expansion logic as the event controller.
-  ///
-  /// For now, we support basic daily recurrence patterns.
-  List<MCalTimeRegion> _expandRecurringRegion(
-    MCalTimeRegion region,
-    DateTime date,
-  ) {
-    final result = <MCalTimeRegion>[];
-
-    // Basic implementation: Check if this date is within the recurrence range
-    // A full implementation would parse and evaluate the RRULE string
-    //
-    // For now, we'll create a region for the display date if it matches
-    // the recurrence pattern (simplified: just create occurrence on displayDate)
-    //
-    // In a production implementation, this would use the same RRULE parser
-    // as MCalRecurrenceRule.getOccurrences()
-
-    // Simple check: if the display date is >= start date, create an occurrence
-    // with the same time-of-day as the original region
-    if (!date.isBefore(
-      DateTime(
-        region.startTime.year,
-        region.startTime.month,
-        region.startTime.day,
-      ),
-    )) {
-      // Calculate the duration of the region
-      final duration = region.endTime.difference(region.startTime);
-
-      // Create occurrence for the display date with same time-of-day
-      final occurrenceStart = DateTime(
-        date.year,
-        date.month,
-        date.day,
-        region.startTime.hour,
-        region.startTime.minute,
-        region.startTime.second,
-      );
-
-      final occurrenceEnd = occurrenceStart.add(duration);
-
-      // Create a new region instance for this occurrence
-      result.add(
-        MCalTimeRegion(
-          id: '${region.id}_${date.toIso8601String().split('T')[0]}',
-          startTime: occurrenceStart,
-          endTime: occurrenceEnd,
-          color: region.color,
-          text: region.text,
-          blockInteraction: region.blockInteraction,
-          icon: region.icon,
-          customData: region.customData,
-          // Don't include recurrenceRule in the expanded occurrence
-        ),
-      );
-    }
-
     return result;
   }
 
@@ -7529,16 +7472,21 @@ class _AllDayEventsSection extends StatelessWidget {
                       ),
                 ),
               ),
-              // Wrap layout for events
-              Wrap(
-                spacing: 4.0,
-                runSpacing: 4.0,
-                children: [
-                  for (final event in visibleEvents)
-                    _buildEventTile(context, event, sectionWidth),
-                  if (hasOverflow)
-                    _buildOverflowIndicator(context, overflowCount),
-                ],
+              // Wrap layout for events. ConstrainedBox ensures the row area
+              // is at least as tall as one tile even when there are no events,
+              // keeping the section a consistent height for drag-drop targets.
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 24.0),
+                child: Wrap(
+                  spacing: 4.0,
+                  runSpacing: 4.0,
+                  children: [
+                    for (final event in visibleEvents)
+                      _buildEventTile(context, event, sectionWidth),
+                    if (hasOverflow)
+                      _buildOverflowIndicator(context, overflowCount),
+                  ],
+                ),
               ),
             ],
           ),

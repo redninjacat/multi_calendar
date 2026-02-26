@@ -56,12 +56,12 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Time legend shows hour labels - default format for en_US is "9 AM", "10 AM", etc.
-      expect(find.text('8 AM'), findsOneWidget);
-      expect(find.text('9 AM'), findsOneWidget);
-      expect(find.text('10 AM'), findsOneWidget);
-      expect(find.text('11 AM'), findsOneWidget);
-      expect(find.text('12 PM'), findsOneWidget);
+      // Time legend shows hour labels - default format for en_US is "9:00 AM", "10:00 AM", etc.
+      expect(find.text('8:00 AM'), findsOneWidget);
+      expect(find.text('9:00 AM'), findsOneWidget);
+      expect(find.text('10:00 AM'), findsOneWidget);
+      expect(find.text('11:00 AM'), findsOneWidget);
+      expect(find.text('12:00 PM'), findsOneWidget);
     });
 
     testWidgets('gridlines render at correct positions', (tester) async {
@@ -185,7 +185,7 @@ void main() {
       expect(find.byType(MCalDayView), findsOneWidget);
     });
 
-    testWidgets('does not show all-day section when no all-day events', (
+    testWidgets('shows all-day section even when no all-day events exist', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -201,9 +201,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // With no all-day events, the all-day section is not rendered
-      // (design: only shows when _allDayEvents.isNotEmpty)
+      // All-day section is always rendered (with a minimum height) so that
+      // timed → all-day drag-drop targets are always available.
       expect(find.byType(MCalDayView), findsOneWidget);
+      expect(find.text('All-day'), findsOneWidget);
     });
   });
 
@@ -341,7 +342,7 @@ void main() {
               child: MCalDayView(
                 controller: controller,
                 startHour: 12,
-                endHour: 12,
+                endHour: 13,
               ),
             ),
           ),
