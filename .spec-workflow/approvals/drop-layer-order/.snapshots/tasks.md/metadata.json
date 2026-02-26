@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/drop-layer-order/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T02:54:37.725Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770864877720_vuafysrga",
+      "approvalTitle": "Tasks: Drop Layer Order"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T03:06:54.764Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770864877720_vuafysrga",
+      "approvalTitle": "Tasks: Drop Layer Order"
+    }
+  ]
+}

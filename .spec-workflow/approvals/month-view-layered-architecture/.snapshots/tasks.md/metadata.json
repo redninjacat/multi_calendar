@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/month-view-layered-architecture/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-04T00:21:00.840Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770164460836_z7uhhxlag",
+      "approvalTitle": "Month View Layered Architecture - Tasks"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-04T00:22:20.723Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770164460836_z7uhhxlag",
+      "approvalTitle": "Month View Layered Architecture - Tasks"
+    }
+  ]
+}

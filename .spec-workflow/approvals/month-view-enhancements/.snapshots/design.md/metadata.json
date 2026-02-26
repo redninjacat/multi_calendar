@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/month-view-enhancements/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-01T02:02:56.238Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769911376234_zorfyds8o",
+      "approvalTitle": "Month View Enhancements Design - Controller Architecture & Components"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-01T02:08:12.056Z",
+      "trigger": "approved",
+      "approvalId": "approval_1769911376234_zorfyds8o",
+      "approvalTitle": "Month View Enhancements Design - Controller Architecture & Components"
+    }
+  ]
+}

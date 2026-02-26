@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/drop-layer-order/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T02:37:50.112Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770863870107_fkusscdga",
+      "approvalTitle": "Requirements: Drop Layer Order"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T02:41:59.401Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770863870107_fkusscdga",
+      "approvalTitle": "Requirements: Drop Layer Order"
+    }
+  ]
+}

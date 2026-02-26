@@ -1,0 +1,38 @@
+{
+  "filePath": ".spec-workflow/specs/day-view/design.md",
+  "currentVersion": 4,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-14T06:26:27.390Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771050387386_ctfiq1bne",
+      "approvalTitle": "Day View Design Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-14T06:59:14.792Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771050387386_ctfiq1bne",
+      "approvalTitle": "Day View Design Document"
+    },
+    {
+      "version": 3,
+      "filename": "snapshot-003.json",
+      "timestamp": "2026-02-14T06:59:15.732Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771050943980_2qvs4c432",
+      "approvalTitle": "Day View Design (updated with gridline interval enhancements)"
+    },
+    {
+      "version": 4,
+      "filename": "snapshot-004.json",
+      "timestamp": "2026-02-14T07:04:45.718Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771052669751_u8egmq1cy",
+      "approvalTitle": "Day View Design (updated with Month View architecture replication)"
+    }
+  ]
+}

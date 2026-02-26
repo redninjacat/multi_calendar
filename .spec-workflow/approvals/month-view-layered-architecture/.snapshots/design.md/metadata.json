@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/month-view-layered-architecture/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-04T00:15:58.955Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770164158951_lqkrq2onk",
+      "approvalTitle": "Month View Layered Architecture - Design"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-04T00:17:50.139Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770164158951_lqkrq2onk",
+      "approvalTitle": "Month View Layered Architecture - Design"
+    }
+  ]
+}

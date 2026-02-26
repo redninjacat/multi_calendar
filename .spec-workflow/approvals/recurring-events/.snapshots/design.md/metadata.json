@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/recurring-events/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T04:38:29.223Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770871109218_pmz5ajymb",
+      "approvalTitle": "Design: Recurring Events"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T04:40:25.136Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770871109218_pmz5ajymb",
+      "approvalTitle": "Design: Recurring Events"
+    }
+  ]
+}

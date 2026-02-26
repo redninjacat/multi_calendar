@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/month-view-enhancements-part-2/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-02T01:41:30.553Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769996490549_l4i5n9e7q",
+      "approvalTitle": "Month View Enhancements Part 2 - Requirements"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-02T01:55:58.053Z",
+      "trigger": "approved",
+      "approvalId": "approval_1769996490549_l4i5n9e7q",
+      "approvalTitle": "Month View Enhancements Part 2 - Requirements"
+    }
+  ]
+}

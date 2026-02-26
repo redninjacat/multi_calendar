@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/drag-target-tiles/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-10T22:00:31.872Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770760831863_11vrtuiul",
+      "approvalTitle": "Requirements: Drag Target Tiles (Layer 3)"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-10T22:53:58.401Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770760831863_11vrtuiul",
+      "approvalTitle": "Requirements: Drag Target Tiles (Layer 3)"
+    }
+  ]
+}

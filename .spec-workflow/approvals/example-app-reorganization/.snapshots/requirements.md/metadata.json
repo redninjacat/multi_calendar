@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/example-app-reorganization/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-16T02:33:11.203Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771209191191_edw5jondo",
+      "approvalTitle": "Requirements: Example App Reorganization"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-16T02:40:23.696Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771209191191_edw5jondo",
+      "approvalTitle": "Requirements: Example App Reorganization"
+    }
+  ]
+}

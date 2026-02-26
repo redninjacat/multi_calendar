@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/month-view-enhancements-part-2/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-02T02:10:45.970Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769998245967_o91y3egwm",
+      "approvalTitle": "Month View Enhancements Part 2 - Tasks"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-02T02:15:53.226Z",
+      "trigger": "approved",
+      "approvalId": "approval_1769998245967_o91y3egwm",
+      "approvalTitle": "Month View Enhancements Part 2 - Tasks"
+    }
+  ]
+}

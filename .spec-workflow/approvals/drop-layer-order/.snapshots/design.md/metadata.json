@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/drop-layer-order/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T02:43:13.331Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770864193327_b8pemclkk",
+      "approvalTitle": "Design: Drop Layer Order"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T02:52:57.485Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770864193327_b8pemclkk",
+      "approvalTitle": "Design: Drop Layer Order"
+    }
+  ]
+}

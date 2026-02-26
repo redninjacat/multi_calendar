@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/steering/structure.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-29T04:12:05.605Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769659925601_62t69xq2v",
+      "approvalTitle": "Structure Steering Document - Multi Calendar Package"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-01-30T15:52:11.103Z",
+      "trigger": "approved",
+      "approvalId": "approval_1769659925601_62t69xq2v",
+      "approvalTitle": "Structure Steering Document - Multi Calendar Package"
+    }
+  ]
+}

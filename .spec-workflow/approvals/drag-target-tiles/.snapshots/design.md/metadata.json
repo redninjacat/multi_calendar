@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/drag-target-tiles/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-10T22:55:46.372Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770764146367_op5cytb4p",
+      "approvalTitle": "Design: Drop Target Tiles (Layer 3)"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-10T23:19:32.752Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770764146367_op5cytb4p",
+      "approvalTitle": "Design: Drop Target Tiles (Layer 3)"
+    }
+  ]
+}

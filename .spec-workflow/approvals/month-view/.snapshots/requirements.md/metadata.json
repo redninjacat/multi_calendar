@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/month-view/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-30T17:21:42.457Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769793702450_mf82647ys",
+      "approvalTitle": "MonthView Requirements - Multi Calendar Package"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-01-30T20:06:02.921Z",
+      "trigger": "approved",
+      "approvalId": "approval_1769793702450_mf82647ys",
+      "approvalTitle": "MonthView Requirements - Multi Calendar Package"
+    }
+  ]
+}

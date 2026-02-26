@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/day-view/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-14T07:23:27.164Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771053807159_up5tgxt92",
+      "approvalTitle": "Day View Tasks - 62 tasks across 20 phases"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-14T07:25:46.864Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771053807159_up5tgxt92",
+      "approvalTitle": "Day View Tasks - 62 tasks across 20 phases"
+    }
+  ]
+}

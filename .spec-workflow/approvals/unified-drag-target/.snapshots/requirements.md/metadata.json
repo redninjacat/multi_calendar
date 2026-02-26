@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/unified-drag-target/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-07T22:50:13.202Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770504613187_xtefmuj3n",
+      "approvalTitle": "Requirements: Unified Drag Target Architecture"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-07T23:00:48.933Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770504613187_xtefmuj3n",
+      "approvalTitle": "Requirements: Unified Drag Target Architecture"
+    }
+  ]
+}
