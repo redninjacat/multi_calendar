@@ -1,0 +1,62 @@
+# Requirements Document: Drop Layer Order
+
+## Introduction
+
+This specification adds a boolean property to MCalMonthView that controls the rendering order of the two drop-target layers during drag-and-drop: the **drop target tiles** (preview tiles showing where an event would land) and the **drop target overlay** (colored cell highlights). By default, tiles render below the overlay (the current behavior from the drag-target-tiles spec). When the new property is enabled, the order is reversed so tiles render above the overlay. This gives developers full control over the visual stacking of drop feedback.
+
+As part of this change, internal method names that embed layer numbers (`_buildLayer3DropTargetTiles`, `_buildLayer4HighlightOverlay`, `_buildDropTargetTileBuilderForLayer3`, `_buildLayer3DateLabelPlaceholder`) are renamed to number-free names. Comments and dartdoc may continue to reference "Layer 3" and "Layer 4" as the default conceptual order, but identifiers SHALL NOT contain layer numbers.
+
+## Alignment with Product Vision
+
+* **Customization First**: Developers already control whether each layer is shown independently (`showDropTargetTiles`, `showDropTargetOverlay`). This adds control over their stacking order for full visual customization.
+* **Developer-Friendly**: A single boolean with a clear default (tiles below overlay) keeps the API simple while enabling advanced use cases.
+* **Performance Conscious**: No additional rendering work — only the insertion order in the Stack changes.
+
+## Requirements
+
+### Requirement 1: New Property — dropTargetTilesAboveOverlay
+
+**User Story:** As a developer, I want to control whether drop target tiles render above or below the drop target overlay, so that I can choose which visual feedback is most prominent during drag.
+
+#### Acceptance Criteria
+
+1. WHEN configuring MCalMonthView THEN the system SHALL provide a boolean property `dropTargetTilesAboveOverlay` (default `false`) that controls the rendering order of the drop target tile layer and the drop target overlay layer during drag.
+2. WHEN `dropTargetTilesAboveOverlay` is `false` (default) THEN the system SHALL render the drop target tiles layer below the drop target overlay layer (current behavior: tiles under overlay).
+3. WHEN `dropTargetTilesAboveOverlay` is `true` THEN the system SHALL render the drop target tiles layer above the drop target overlay layer (reversed: tiles over overlay).
+4. WHEN either `showDropTargetTiles` or `showDropTargetOverlay` is `false` THEN `dropTargetTilesAboveOverlay` SHALL have no visible effect (only one or neither layer is shown); the property SHALL be accepted without error regardless of the other toggles.
+5. The property SHALL be passed through the widget tree to `_MonthPageWidget` where the Stack children order is determined.
+
+### Requirement 2: Rename Layer-Numbered Identifiers
+
+**User Story:** As a maintainer, I want internal method and function names to be free of hard-coded layer numbers, so that the stacking order is a runtime choice rather than baked into names.
+
+#### Acceptance Criteria
+
+1. The system SHALL rename all internal identifiers that contain "Layer3" or "Layer4" to descriptive, number-free names. At minimum:
+   - `_buildLayer3DropTargetTiles` → `_buildDropTargetTilesLayer`
+   - `_buildLayer4HighlightOverlay` → `_buildDropTargetOverlayLayer`
+   - `_buildDropTargetTileBuilderForLayer3` → `_buildDropTargetTileEventBuilder`
+   - `_buildLayer3DateLabelPlaceholder` → `_buildDropTargetDateLabelPlaceholder`
+2. Comments and dartdoc MAY continue to reference "Layer 3" and "Layer 4" as the default conceptual order (e.g. "By default, drop target tiles are Layer 3 and the overlay is Layer 4").
+3. The system SHALL update all call sites and internal references to use the new names.
+4. No public API names are affected (public names already use `showDropTargetTiles`, `showDropTargetOverlay`, `dropTargetTileBuilder`, etc.).
+
+## Non-Functional Requirements
+
+### Code Architecture and Modularity
+
+* The Stack children order in `_MonthPageWidget` SHALL be determined by `dropTargetTilesAboveOverlay` at build time; no additional state or layout logic is needed.
+* Rename scope is limited to private identifiers in `mcal_month_view.dart` and the top-level helper `_buildLayer3DateLabelPlaceholder` (also in mcal_month_view.dart). No other files should be affected.
+
+### Performance
+
+* No performance impact — only the insertion order of two existing `Positioned.fill` children in the Stack changes. No additional widgets or layout passes.
+
+### Reliability
+
+* Default behavior (`dropTargetTilesAboveOverlay: false`) SHALL be identical to the current behavior. Existing code that does not set the property SHALL see no change.
+
+### Usability
+
+* The property name `dropTargetTilesAboveOverlay` clearly communicates intent: when `true`, tiles are above the overlay; when `false`, they are below.
+* Dartdoc SHALL document the default order and the effect of setting the property to `true`.

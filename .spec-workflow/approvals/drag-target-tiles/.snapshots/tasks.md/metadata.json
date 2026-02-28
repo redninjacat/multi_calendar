@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/drag-target-tiles/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-10T23:21:42.665Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770765702661_kji7721mz",
+      "approvalTitle": "Approve tasks document for drag-target-tiles spec"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-10T23:48:33.491Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770765702661_kji7721mz",
+      "approvalTitle": "Approve tasks document for drag-target-tiles spec"
+    }
+  ]
+}

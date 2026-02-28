@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/month-view-layered-architecture/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-03T21:51:53.327Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770155513317_ah25td2vq",
+      "approvalTitle": "Month View Layered Architecture - Requirements"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-04T00:13:28.640Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770155513317_ah25td2vq",
+      "approvalTitle": "Month View Layered Architecture - Requirements"
+    }
+  ]
+}

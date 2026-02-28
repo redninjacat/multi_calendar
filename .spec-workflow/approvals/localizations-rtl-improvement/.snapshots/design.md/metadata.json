@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/localizations-rtl-improvement/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-16T05:05:38.202Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771218338185_78521ovgp",
+      "approvalTitle": "Design: Localizations & RTL Improvement"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-16T05:07:34.152Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771218338185_78521ovgp",
+      "approvalTitle": "Design: Localizations & RTL Improvement"
+    }
+  ]
+}

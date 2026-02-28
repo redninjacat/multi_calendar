@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/recurring-events/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T04:43:19.965Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770871399959_6qkoyg417",
+      "approvalTitle": "Tasks: Recurring Events"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T04:47:41.588Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770871399959_6qkoyg417",
+      "approvalTitle": "Tasks: Recurring Events"
+    }
+  ]
+}

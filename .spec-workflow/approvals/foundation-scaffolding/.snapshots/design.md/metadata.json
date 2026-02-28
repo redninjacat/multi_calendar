@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/foundation-scaffolding/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-01-30T16:52:22.370Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769791942367_n71idxloq",
+      "approvalTitle": "Foundation Scaffolding Design - Multi Calendar Package"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-01-30T16:52:46.549Z",
+      "trigger": "approved",
+      "approvalId": "approval_1769791942367_n71idxloq",
+      "approvalTitle": "Foundation Scaffolding Design - Multi Calendar Package"
+    }
+  ]
+}

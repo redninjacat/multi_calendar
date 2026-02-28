@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/post-alignment-improvements/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-25T21:33:12.692Z",
+      "trigger": "initial",
+      "approvalId": "approval_1772055192671_tdvv8vgmc",
+      "approvalTitle": "Requirements: post-alignment-improvements"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-25T21:37:50.383Z",
+      "trigger": "approved",
+      "approvalId": "approval_1772055192671_tdvv8vgmc",
+      "approvalTitle": "Requirements: post-alignment-improvements"
+    }
+  ]
+}

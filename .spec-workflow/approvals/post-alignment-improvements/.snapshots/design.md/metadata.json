@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/post-alignment-improvements/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-25T21:39:58.222Z",
+      "trigger": "initial",
+      "approvalId": "approval_1772055598211_5hw3oqoye",
+      "approvalTitle": "Design: post-alignment-improvements"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-25T21:41:06.627Z",
+      "trigger": "approved",
+      "approvalId": "approval_1772055598211_5hw3oqoye",
+      "approvalTitle": "Design: post-alignment-improvements"
+    }
+  ]
+}

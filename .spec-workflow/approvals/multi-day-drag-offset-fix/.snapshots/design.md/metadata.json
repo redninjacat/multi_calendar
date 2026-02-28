@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/multi-day-drag-offset-fix/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-06T04:01:48.932Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770350508928_u28v3uq1t",
+      "approvalTitle": "Multi-Day Drag Offset Fix - Design"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-06T04:02:24.864Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770350508928_u28v3uq1t",
+      "approvalTitle": "Multi-Day Drag Offset Fix - Design"
+    }
+  ]
+}

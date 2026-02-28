@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/multi-day-drag-offset-fix/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-06T04:04:11.111Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770350651107_xiqi9cot4",
+      "approvalTitle": "Multi-Day Drag Offset Fix - Tasks (All Complete)"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-06T04:04:42.108Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770350651107_xiqi9cot4",
+      "approvalTitle": "Multi-Day Drag Offset Fix - Tasks (All Complete)"
+    }
+  ]
+}

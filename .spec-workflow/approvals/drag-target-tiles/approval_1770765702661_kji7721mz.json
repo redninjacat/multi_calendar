@@ -1,0 +1,12 @@
+{
+  "id": "approval_1770765702661_kji7721mz",
+  "title": "Approve tasks document for drag-target-tiles spec",
+  "filePath": ".spec-workflow/specs/drag-target-tiles/tasks.md",
+  "type": "document",
+  "status": "approved",
+  "createdAt": "2026-02-10T23:21:42.661Z",
+  "category": "spec",
+  "categoryName": "drag-target-tiles",
+  "response": "Approved via dashboard",
+  "respondedAt": "2026-02-10T23:48:33.494Z"
+}

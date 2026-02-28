@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/month-view-enhancements-part-2/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-02T01:58:54.895Z",
+      "trigger": "initial",
+      "approvalId": "approval_1769997534891_n63g0oex4",
+      "approvalTitle": "Month View Enhancements Part 2 - Design"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-02T02:05:31.077Z",
+      "trigger": "approved",
+      "approvalId": "approval_1769997534891_n63g0oex4",
+      "approvalTitle": "Month View Enhancements Part 2 - Design"
+    }
+  ]
+}

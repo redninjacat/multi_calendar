@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/month-day-view-api-alignment/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-17T19:12:44.515Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771355564497_brk69rrf1",
+      "approvalTitle": "Design: Month/Day View API Alignment"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-17T19:24:10.981Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771355564497_brk69rrf1",
+      "approvalTitle": "Design: Month/Day View API Alignment"
+    }
+  ]
+}

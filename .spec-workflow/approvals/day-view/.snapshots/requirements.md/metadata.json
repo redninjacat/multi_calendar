@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/day-view/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-14T06:05:47.853Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771049147847_wvrg6pgvn",
+      "approvalTitle": "Day View Requirements Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-14T06:21:34.113Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771049147847_wvrg6pgvn",
+      "approvalTitle": "Day View Requirements Document"
+    }
+  ]
+}

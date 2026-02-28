@@ -1,0 +1,485 @@
+# Tasks Document
+
+- [x] 1. Create McCalendarThemeData Theme Extension ✅
+  - File: lib/src/styles/mc_calendar_theme.dart
+  - Create the `McCalendarThemeData` class extending `ThemeExtension&lt;McCalendarThemeData&gt;`
+  - Include all theme properties for month view: cell styling (background colors, borders, text styles), current day indicator styling, leading/trailing date styling, day header styling, event tile styling, and navigator styling
+  - Implement `copyWith`, `lerp`, and `fromTheme` methods
+  - Support both light and dark themes
+  - Purpose: Provide calendar-specific theme extension that integrates with Flutter's ThemeData system
+  - _Leverage: Flutter ThemeExtension pattern, Flutter ThemeData_
+  - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in theming and ThemeExtension | Task: Create McCalendarThemeData class extending ThemeExtension&lt;McCalendarThemeData&gt; at lib/src/styles/mc_calendar_theme.dart following requirements 4.1-4.7. Include all theme properties for month view: cell styling (background colors, borders, text styles), current day indicator styling, leading/trailing date styling, day header styling, event tile styling, and navigator styling. Implement copyWith method for creating modified instances, lerp method for theme transitions, and fromTheme static method to create defaults from Flutter ThemeData. Support both light and dark themes. All properties should be nullable for optional customization. | Restrictions: Extend ThemeExtension correctly, implement all required methods, ensure proper type safety, follow Flutter theme patterns | Success: McCalendarThemeData compiles without errors, extends ThemeExtension correctly, all methods implemented, supports light and dark themes, integrates with Flutter ThemeData_
+
+- [x] 2. Create Context Classes ✅
+  - File: lib/src/widgets/month_view_contexts.dart
+  - Create all public context classes with "Mc" prefix: `McDayCellContext`, `McEventTileContext`, `McDayHeaderContext`, `McNavigatorContext`, and `McDateLabelContext`
+  - Each class should be immutable with `const` constructor
+  - Include all necessary data for builder callbacks
+  - Add proper dartdoc comments for each class and field
+  - Purpose: Provide immutable context objects for builder callbacks with all necessary data
+  - _Leverage: Design document context class specifications_
+  - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Dart Developer specializing in immutable data classes and builder patterns | Task: Create all five context classes (McDayCellContext, McEventTileContext, McDayHeaderContext, McNavigatorContext, McDateLabelContext) at lib/src/widgets/month_view_contexts.dart following requirements 5.1-5.5 and design document. Each class should be immutable with const constructor and contain all necessary data for builder callbacks. McDayCellContext should include date, isCurrentMonth, isToday, isSelectable, events list, and theme. McEventTileContext should include event, displayDate, isAllDay, and theme. McDayHeaderContext should include dayOfWeek, dayName, and theme. McNavigatorContext should include currentMonth, navigation callbacks, canGoPrevious/Next flags, and locale. McDateLabelContext should include date, isCurrentMonth, isToday, defaultFormattedString, and locale. Include comprehensive dartdoc comments. | Restrictions: All classes must use "Mc" prefix, be immutable with final fields only, have const constructors, include proper dartdoc | Success: All context classes compile without errors, are immutable, can be used in const expressions, have complete dartdoc comments, exported from main package file_
+
+- [x] 3. Create McMonthView Widget Structure ✅
+  - File: lib/src/widgets/mc_month_view.dart
+  - Create the `McMonthView` StatefulWidget with all required and optional parameters
+  - Include McEventController (required), date configuration (initialDate, minDate, maxDate, firstDayOfWeek), navigation options (showNavigator, enableSwipeNavigation, swipeNavigationDirection), theme, all builder callbacks, interactivity callbacks, and localization options
+  - Add proper dartdoc comments for widget and all parameters
+  - Export from main package file
+  - Purpose: Create the public API for the month view widget
+  - _Leverage: Design document McMonthView specification, Flutter StatefulWidget patterns_
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Widget Developer specializing in StatefulWidget architecture | Task: Create McMonthView StatefulWidget at lib/src/widgets/mc_month_view.dart following requirements 1.1-1.6 and design document. Include required McEventController parameter. Add optional parameters: initialDate, minDate, maxDate, firstDayOfWeek, showNavigator, enableSwipeNavigation, swipeNavigationDirection, theme, dayCellBuilder, eventTileBuilder, dayHeaderBuilder, navigatorBuilder, dateLabelBuilder, cellInteractivityCallback, onCellTap, onCellLongPress, onEventTap, onEventLongPress, onSwipeNavigation, dateFormat, locale. Add comprehensive dartdoc comments for widget and all parameters. Export from lib/multi_calendar.dart. | Restrictions: Required controller must not be nullable, all optional parameters properly typed, follow Flutter widget patterns, maintain clean API | Success: McMonthView compiles without errors, accepts all parameters correctly, has complete dartdoc comments, exported from main package file_
+
+- [x] 4. Implement McMonthViewState Basic Structure ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 3)
+  - Create `_McMonthViewState` class extending `State&lt;McMonthView&gt;`
+  - Implement `initState` to initialize current month, subscribe to McEventController, and load initial events
+  - Implement `dispose` to clean up McEventController listener
+  - Add state variables for current month, events list, and loading state
+  - Implement basic `build` method that returns a placeholder
+  - Purpose: Establish state management foundation for month view
+  - _Leverage: Flutter StatefulWidget lifecycle, McEventController, Design document state management_
+  - _Requirements: 7.1, 7.2, 7.3_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in state management and widget lifecycle | Task: Create _McMonthViewState class extending `State&lt;McMonthView&gt;` in mc_month_view.dart following requirements 7.1-7.3. Implement initState to initialize _currentMonth from widget.initialDate or DateTime.now(), subscribe to widget.controller with addListener(_onControllerChanged), and call _loadEvents(). Implement dispose to remove listener with widget.controller.removeListener(_onControllerChanged). Add state variables: late DateTime _currentMonth, List&lt;McCalendarEvent&gt; _events = [], bool _isLoadingEvents = false. Implement basic build method returning placeholder Container. | Restrictions: Properly manage listener lifecycle, initialize state correctly, follow Flutter state management patterns | Success: State class compiles without errors, initState and dispose work correctly, listener is added and removed properly, state variables are correctly typed_
+
+- [x] 5. Implement Date Range Calculation Utilities ✅
+  - File: lib/src/utils/date_utils.dart (create or extend if exists)
+  - Create `_getMonthRange(DateTime month)` function that returns `DateTimeRange` for a month
+  - Create `_getPreviousMonthRange(DateTime month)` function that returns range for previous month
+  - Create `_getNextMonthRange(DateTime month)` function that returns range for next month
+  - Create `_generateMonthDates(DateTime month, int firstDayOfWeek)` function that generates list of 42 DateTime objects for the calendar grid including leading/trailing dates
+  - Handle month boundaries correctly (year rollover)
+  - Purpose: Provide date calculation utilities for month grid generation
+  - _Leverage: Dart DateTime class, Design document date calculation algorithm_
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Dart Developer specializing in date/time calculations | Task: Create date utility functions in lib/src/utils/date_utils.dart following requirements 2.1-2.7. Implement _getMonthRange(DateTime month) returning `DateTimeRange` from first day to last day of month. Implement _getPreviousMonthRange(DateTime month) returning range for previous month (handle year boundaries). Implement _getNextMonthRange(DateTime month) returning range for next month (handle year boundaries). Implement _generateMonthDates(DateTime month, int firstDayOfWeek) generating exactly 42 DateTime objects for calendar grid. Calculate first day of grid considering firstDayOfWeek offset, include leading dates from previous month and trailing dates from next month. Handle edge cases: February, leap years, year boundaries. | Restrictions: Generate exactly 42 dates, respect firstDayOfWeek parameter, handle all edge cases correctly, use efficient date calculations | Success: All date utility functions work correctly, generateMonthDates produces 42 dates, handles year boundaries, respects firstDayOfWeek, edge cases tested_
+
+- [x] 6. Implement Event Loading and Controller Integration ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 4)
+  - Implement `_loadEvents()` method that requests events for current + previous + next month from McEventController
+  - Implement `_onControllerChanged()` callback that filters events for current month and updates state
+  - Implement `_getEventsForMonth(DateTime month)` helper method
+  - Handle async event loading with loading state management
+  - Purpose: Integrate with McEventController for efficient event loading and caching
+  - _Leverage: McEventController, Design document event loading strategy_
+  - _Requirements: 7.1, 7.2, 7.6, 7.7, 7.11, 7.12, 7.13_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in async state management and controller integration | Task: In _McMonthViewState, implement _loadEvents() method following requirements 7.6, 7.11, 7.13. Request events for current month + previous month + next month using widget.controller.loadEvents() with date ranges from _getMonthRange, _getPreviousMonthRange, _getNextMonthRange. Set _isLoadingEvents = true before loading, false after. Implement _onControllerChanged() callback that filters events for current month using _getEventsForMonth(_currentMonth) and calls setState(). Implement _getEventsForMonth(DateTime month) helper that gets month range and filters events from controller. Handle async loading properly. | Restrictions: Request events for 3-month range, filter only current month events for state, manage loading state correctly, handle async properly | Success: Events requested for correct date range, events update when controller notifies, only current month events stored in state, loading state managed correctly_
+
+- [x] 7. Implement Month Grid Layout ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 4)
+  - Implement `_buildMonthGrid()` method that creates a 7-column grid layout
+  - Use `Table` or `Row`/`Column` widgets for grid structure
+  - Generate dates using `_generateMonthDates` function
+  - Create `_WeekRowWidget` for each week (5-6 rows)
+  - Make grid responsive using `Expanded` or `Flexible` widgets
+  - Purpose: Render the calendar month grid with proper layout
+  - _Leverage: Flutter Table/Row/Column widgets, date utilities from task 5_
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter UI Developer specializing in grid layouts and responsive design | Task: In _McMonthViewState, implement _buildMonthGrid() method following requirements 2.1-2.7. Create 7-column grid using Table widget or Row/Column structure. Generate dates using _generateMonthDates(_currentMonth, widget.firstDayOfWeek ?? _getDefaultFirstDayOfWeek()). Create _WeekRowWidget for each week (5-6 rows depending on month). Use Expanded or Flexible widgets for responsive sizing. Grid should display 7 columns (one per weekday) and 5-6 rows (weeks). Include leading/trailing dates from previous/next month. | Restrictions: Grid must have exactly 7 columns, display 5-6 rows, include leading/trailing dates, use responsive sizing, respect firstDayOfWeek | Success: Grid displays correctly with 7 columns and 5-6 rows, includes leading/trailing dates, uses responsive sizing, respects firstDayOfWeek_
+
+- [x] 8. Implement Weekday Header Row ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 7)
+  - Create `_WeekdayHeaderRowWidget` that displays weekday names (Sun, Mon, Tue, etc.) in a row
+  - Use localized day names from `CalendarLocalizations`
+  - Apply theme styling from `McCalendarThemeData`
+  - Support `dayHeaderBuilder` callback
+  - Respect RTL layout direction
+  - Purpose: Display weekday headers with localization and theming
+  - _Leverage: CalendarLocalizations utility, McCalendarThemeData, Design document header specification_
+  - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter UI Developer specializing in localization and RTL support | Task: Create _WeekdayHeaderRowWidget StatelessWidget following requirements 9.1-9.8. Display 7 weekday names in a row using localized strings from CalendarLocalizations.getLocalizedString(). Day names should respect firstDayOfWeek order. Apply theme styling from resolved McCalendarThemeData (weekdayHeaderTextStyle, weekdayHeaderBackgroundColor). Support dayHeaderBuilder callback - if provided, use it with McDayHeaderContext, otherwise use default rendering. Respect RTL layout using CalendarLocalizations.isRTL() or Directionality widget. | Restrictions: Display exactly 7 day names, use localized strings, respect firstDayOfWeek order, apply theme styling, support builder callback, handle RTL | Success: Header displays 7 localized day names, order respects firstDayOfWeek, theme styling applied, builder callback works, RTL layout supported_
+
+- [x] 9. Implement Day Cell Widget ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 7)
+  - Create `_DayCellWidget` StatelessWidget that renders a single day cell
+  - Display date label, apply appropriate styling (current month vs leading/trailing, today indicator), handle cell decoration, support `dayCellBuilder` callback, implement tap and long-press gestures, add semantic labels for accessibility
+  - Purpose: Render individual day cells with proper styling, interactivity, and accessibility
+  - _Leverage: McCalendarThemeData, GestureDetector, Semantics widget, Design document day cell specification_
+  - _Requirements: 5.1, 5.2, 5.7, 5.8, 12.1, 12.2, 12.3, 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 15.7, 16.1, 16.2, 16.3, 16.4, 16.5, 16.6, 16.7_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Widget Developer specializing in custom widgets and accessibility | Task: Create _DayCellWidget StatelessWidget following requirements 5.1-5.8, 12.1-12.3, 15.1-15.7, 16.1-16.7. Widget should accept date, isCurrentMonth, isToday, isSelectable, events list, theme, dayCellBuilder callback, cellInteractivityCallback, onCellTap, onCellLongPress. Display date label with appropriate styling (different for current month vs leading/trailing, today indicator). Apply cell decoration from theme (cellBackgroundColor, cellBorderColor, cellTextStyle, todayBackgroundColor, todayTextStyle, leadingDatesTextStyle, trailingDatesTextStyle). Support dayCellBuilder callback - if provided, use it with McDayCellContext, otherwise use default rendering. Check cellInteractivityCallback to determine if cell is interactive. Wrap in GestureDetector for tap/long-press. Wrap in Semantics widget with descriptive label including date, whether today, whether in current month, event count. | Restrictions: Apply correct styling based on date type, support builder callback, handle interactivity callback, implement gestures, include semantic labels | Success: Day cell displays correctly with proper styling, builder callback works, interactivity callback respected, gestures work, semantic labels included_
+
+- [x] 10. Implement Date Label Rendering ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 9)
+  - In `_DayCellWidget`, implement date label rendering with support for `dateFormat` parameter and `dateLabelBuilder` callback
+  - Use `CalendarLocalizations` for default formatting
+  - Format should respect locale and show appropriate styling for current month vs leading/trailing dates
+  - Purpose: Provide flexible date label formatting with localization support
+  - _Leverage: CalendarLocalizations utility, intl package DateFormat, Design document date formatting_
+  - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in localization and date formatting | Task: In _DayCellWidget, implement date label rendering following requirements 9.1-9.8. If dateLabelBuilder callback provided, use it with McDateLabelContext containing date, isCurrentMonth, isToday, defaultFormattedString, locale. Otherwise, if dateFormat parameter provided, use DateFormat(dateFormat) to format date. If neither provided, use CalendarLocalizations.formatDate() with locale. Apply appropriate text style from theme based on isCurrentMonth and isToday. | Restrictions: Support dateFormat parameter, support dateLabelBuilder callback, use CalendarLocalizations for defaults, respect locale, apply correct styling | Success: Date label formatted correctly, dateFormat parameter works, dateLabelBuilder callback used when provided, default formatting is localized, styling differs for current/leading/trailing dates_
+
+- [x] 11. Implement Event Tile Widget ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 9)
+  - Create `_EventTileWidget` StatelessWidget that renders a single event tile within a day cell
+  - Display event title, apply theme styling, support `eventTileBuilder` callback, handle tap and long-press gestures, add semantic labels, distinguish all-day vs timed events
+  - Purpose: Render individual event tiles with proper styling and interactivity
+  - _Leverage: McCalendarThemeData, GestureDetector, Semantics widget, Design document event tile specification_
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 15.5, 15.6, 20.1, 20.2, 20.3, 20.4, 24.1, 24.2, 24.3_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Widget Developer specializing in event rendering and interactivity | Task: Create _EventTileWidget StatelessWidget following requirements 3.1-3.9, 15.5-15.6, 20.1-20.4, 24.1-24.3. Widget should accept event, displayDate, isAllDay, theme, eventTileBuilder callback, onEventTap, onEventLongPress. Display event title with theme styling (eventTileBackgroundColor, eventTileTextStyle). Determine if event is all-day by checking if start and end times are at midnight and span full days. Support eventTileBuilder callback - if provided, use it with McEventTileContext, otherwise use default rendering. Wrap in GestureDetector for tap (onEventTap) and long-press (onEventLongPress). Wrap in Semantics widget with label including event title, time, and date context. | Restrictions: Display event title, apply theme styling, support builder callback, handle gestures, include semantic labels, distinguish all-day vs timed | Success: Event tile displays title correctly, theme styling applied, builder callback works, tap/long-press gestures work, semantic labels include event details_
+
+- [x] 12. Implement Event Display in Day Cells ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 9)
+  - In `_DayCellWidget`, implement event display logic
+  - Show event tiles for events on that day, handle multiple events (display up to max, then "+N more" indicator), handle event overflow gracefully, support multi-day events that span across cells
+  - Purpose: Display events within day cells with proper overflow handling
+  - _Leverage: _EventTileWidget from task 11, Design document event display specification_
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 19.7_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter UI Developer specializing in event layout and overflow handling | Task: In _DayCellWidget, implement event display logic following requirements 3.1-3.9, 19.7. Filter events list to show only events that occur on the cell's date. Display event tiles using _EventTileWidget. If multiple events exist, display up to a maximum (e.g., 3-4 visible), then show "+N more" indicator for overflow. Handle overflow gracefully with proper styling. For multi-day events, calculate which portion of the event appears in this cell and render accordingly. Events should be clickable and trigger onEventTap/onEventLongPress. | Restrictions: Display events in correct cells, handle multiple events, show overflow indicator when needed, handle multi-day events, make tiles interactive | Success: Events displayed in correct day cells, multiple events handled correctly, overflow indicator appears when needed, multi-day events span correctly, event tiles are clickable_
+
+- [x] 13. Implement Multi-Day Event Spanning ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 12)
+  - Implement logic to render multi-day events that span across multiple day cells
+  - Calculate which days an event spans, render event tile across those days, handle event tile width calculation, ensure visual continuity
+  - Purpose: Render multi-day events that visually span across multiple cells
+  - _Leverage: Date utilities, _EventTileWidget, Design document multi-day event specification_
+  - _Requirements: 3.3, 3.4_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter UI Developer specializing in complex layouts and event rendering | Task: Implement multi-day event spanning logic following requirements 3.3-3.4. For events that span multiple days, calculate the date range the event covers. In each day cell where the event appears, render a portion of the event tile. Calculate tile width based on number of days spanned. Ensure visual continuity - event should appear as continuous across cells. Handle edge cases: events spanning month boundaries, events spanning year boundaries. Each portion should be clickable and show correct event information. | Restrictions: Multi-day events span correct number of days, tile width calculated correctly, visual continuity maintained, appears in all relevant cells, handles edge cases | Success: Multi-day events span correctly across cells, tile width is accurate, visual continuity maintained, edge cases handled (month/year boundaries)_
+
+- [x] 14. Implement Swipe Gesture Detection ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 7)
+  - In `_McMonthViewState`, wrap the month grid in a `GestureDetector` with `onHorizontalDragEnd` and `onVerticalDragEnd` handlers
+  - Detect swipe gestures based on `enableSwipeNavigation` and `swipeNavigationDirection`
+  - Use velocity threshold (500) to determine swipe direction
+  - Navigate to next/previous month on swipe
+  - Respect minDate/maxDate restrictions
+  - Call `onSwipeNavigation` callback if provided
+  - Purpose: Enable swipe gesture navigation between months
+  - _Leverage: Flutter GestureDetector, Design document swipe gesture specification_
+  - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7, 14.8, 14.9, 14.10, 14.11, 14.12, 14.13, 14.14, 14.15, 14.16, 14.17, 14.18, 14.19, 14.20_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in gesture detection and navigation | Task: In _McMonthViewState, wrap _buildMonthGrid() in GestureDetector following requirements 14.1-14.20. If widget.enableSwipeNavigation is true and widget.swipeNavigationDirection is horizontal, implement onHorizontalDragEnd handler. If enableSwipeNavigation is true and swipeNavigationDirection is vertical, implement onVerticalDragEnd handler. Check details.primaryVelocity - if less than -500, navigate to next month; if greater than 500, navigate to previous month. Before navigating, check minDate/maxDate restrictions. If navigation occurs, call widget.onSwipeNavigation callback with new month, previous month, and swipe direction. Use pre-loaded events from controller for instant navigation. | Restrictions: Respect enableSwipeNavigation flag, use correct direction handler, velocity threshold 500, respect minDate/maxDate, call callback, use pre-loaded events | Success: Horizontal swipe detection works, vertical swipe detection works, velocity threshold prevents accidental swipes, navigation respects minDate/maxDate, callback called correctly, swipe disabled when flag is false_
+
+- [x] 15. Implement Month Navigation Methods ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 4)
+  - Implement `_navigateToNextMonth()`, `_navigateToPreviousMonth()`, `_navigateToMonth(DateTime month)`, and `_navigateToToday()` methods
+  - Each should update `_currentMonth`, notify McEventController of new visible range, load events for new month, and respect minDate/maxDate restrictions
+  - Purpose: Provide programmatic month navigation with proper event loading
+  - _Leverage: McEventController, date utilities, Design document navigation specification_
+  - _Requirements: 7.1, 7.4, 7.5, 7.11, 7.12, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in navigation and state management | Task: In _McMonthViewState, implement navigation methods following requirements 7.1, 7.4-7.5, 7.11-7.12, 11.1-11.7. _navigateToNextMonth() should calculate next month, check maxDate restriction, update _currentMonth, notify controller via setVisibleDateRange, call _loadEvents(). _navigateToPreviousMonth() should calculate previous month, check minDate restriction, update _currentMonth, notify controller, call _loadEvents(). _navigateToMonth(DateTime month) should validate month is within minDate/maxDate range, update _currentMonth, notify controller, call _loadEvents(). _navigateToToday() should navigate to current month using _navigateToMonth(DateTime.now()). All methods should respect minDate/maxDate. | Restrictions: All methods respect minDate/maxDate, notify controller correctly, load events for new month, update state properly | Success: Navigation methods work correctly, respect minDate/maxDate restrictions, EventController notified correctly, events loaded for new month_
+
+- [x] 16. Create Navigator Widget ✅
+  - File: lib/src/widgets/navigator.dart (create or extend if exists)
+  - Create `McMonthNavigatorWidget` (or `_MonthNavigatorWidget` if internal) that displays current month/year (localized), previous/next buttons, optional today button
+  - Support `navigatorBuilder` callback
+  - Respect minDate/maxDate for button states
+  - Handle RTL layout
+  - Purpose: Provide optional month navigation UI component
+  - _Leverage: CalendarLocalizations, McCalendarThemeData, Design document navigator specification_
+  - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 17.3, 17.4, 17.5_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter UI Developer specializing in navigation components | Task: Create McMonthNavigatorWidget (or _MonthNavigatorWidget) at lib/src/widgets/navigator.dart following requirements 8.1-8.7, 17.3-17.5. Widget should display current month/year using localized formatting from CalendarLocalizations. Display previous month button (IconButton with chevron_left), next month button (IconButton with chevron_right), and optional today button. Buttons should be disabled when canGoPrevious/canGoNext are false (at minDate/maxDate boundaries). Support navigatorBuilder callback - if provided, use it with McNavigatorContext, otherwise use default rendering. Apply theme styling (navigatorTextStyle, navigatorBackgroundColor). Handle RTL layout using Directionality widget. | Restrictions: Display localized month/year, buttons work correctly, disabled at boundaries, support builder callback, RTL layout supported | Success: Navigator displays correctly, buttons trigger navigation, buttons disabled at boundaries, builder callback used when provided, RTL layout works_
+
+- [x] 17. Integrate Navigator into McMonthView ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 4)
+  - Conditionally display navigator widget when `showNavigator` is true
+  - Place navigator above the month grid
+  - Connect navigator callbacks to navigation methods
+  - Pass required context to navigator
+  - Purpose: Integrate optional navigator widget into month view
+  - _Leverage: Navigator widget from task 16, navigation methods from task 15_
+  - _Requirements: 8.1, 8.2, 8.6, 8.7_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in widget composition | Task: In _McMonthViewState build method, conditionally display navigator following requirements 8.1-8.2, 8.6-8.7. If widget.showNavigator is true, create Column with navigator widget above _buildMonthGrid(). Pass currentMonth: _currentMonth, onPrevious: _navigateToPreviousMonth, onNext: _navigateToNextMonth, onToday: _navigateToToday, canGoPrevious: _canGoPrevious(), canGoNext: _canGoNext(), locale: Localizations.localeOf(context), builder: widget.navigatorBuilder. If showNavigator is false, don't render navigator. | Restrictions: Navigator shown when flag is true, positioned above grid, callbacks connected correctly, hidden when flag is false | Success: Navigator displayed when showNavigator is true, positioned above grid, callbacks work correctly, hidden when flag is false_
+
+- [x] 18. Implement Cell Interactivity Callback ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 9)
+  - In `_DayCellWidget`, implement `cellInteractivityCallback` support
+  - Call callback to determine if cell is interactive
+  - Disable tap/long-press when callback returns false
+  - Apply visual styling to indicate non-interactive state
+  - Purpose: Allow disabling interactivity for specific cells (e.g., blackout days)
+  - _Leverage: cellInteractivityCallback parameter, Design document interactivity specification_
+  - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in conditional interactivity | Task: In _DayCellWidget, implement cellInteractivityCallback support following requirements 6.1-6.6. Call widget.cellInteractivityCallback with date, isCurrentMonth, isSelectable parameters. If callback returns false, set isInteractive = false. When isInteractive is false, don't pass onTap/onLongPress to GestureDetector. Apply visual styling to indicate non-interactive state (e.g., reduced opacity, different background color from theme). If callback not provided, default to true (all cells interactive within min/max range). | Restrictions: Callback called with correct parameters, tap/long-press disabled when false, visual styling indicates non-interactive state, default behavior when callback not provided | Success: Callback called correctly, non-interactive cells don't respond to gestures, visual styling applied correctly, default behavior works_
+
+- [x] 19. Implement Cell Tap and Long-Press Callbacks ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 9)
+  - In `_DayCellWidget`, implement `onCellTap` and `onCellLongPress` callbacks
+  - Pass DateTime, list of events, and isCurrentMonth flag to callbacks
+  - Only trigger when cell is interactive
+  - Separate from event tile taps
+  - Purpose: Provide date-aware tap and long-press callbacks for day cells
+  - _Leverage: GestureDetector, Design document interaction specification_
+  - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 15.7_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in gesture handling | Task: In _DayCellWidget, implement onCellTap and onCellLongPress callbacks following requirements 15.1-15.7. In GestureDetector, set onTap to () { if (isInteractive && widget.onCellTap != null) widget.onCellTap!(date, events, isCurrentMonth); }. Set onLongPress to () { if (isInteractive && widget.onCellLongPress != null) widget.onCellLongPress!(date, events, isCurrentMonth); }. Ensure these are separate from event tile taps (event tiles have their own GestureDetector). Only trigger callbacks when cell is interactive (from cellInteractivityCallback). | Restrictions: Callbacks receive correct parameters, only trigger when interactive, separate from event tile taps | Success: onCellTap called with correct parameters, onCellLongPress called with correct parameters, callbacks don't trigger when non-interactive, separate from event tile taps_
+
+- [x] 20. Implement Event Tile Tap and Long-Press Callbacks ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 11)
+  - In `_EventTileWidget`, implement `onEventTap` and `onEventLongPress` callbacks
+  - Pass McCalendarEvent and DateTime context to callbacks
+  - Ensure these are separate from cell taps
+  - Purpose: Provide event-specific tap and long-press callbacks
+  - _Leverage: GestureDetector, Design document event interaction specification_
+  - _Requirements: 3.6, 3.7, 15.5, 15.6, 20.1, 20.2, 20.3, 20.4_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in event interaction handling | Task: In _EventTileWidget, implement onEventTap and onEventLongPress callbacks following requirements 3.6-3.7, 15.5-15.6, 20.1-20.4. In GestureDetector wrapping event tile, set onTap to () { if (widget.onEventTap != null) widget.onEventTap!(event, displayDate); }. Set onLongPress to () { if (widget.onEventLongPress != null) widget.onEventLongPress!(event, displayDate); }. Ensure event tile GestureDetector doesn't propagate to cell GestureDetector (use proper gesture handling). Pass event and displayDate to callbacks. | Restrictions: Callbacks receive McCalendarEvent and DateTime, separate from cell taps, proper gesture handling | Success: onEventTap called with correct parameters, onEventLongPress called with correct parameters, separate from cell taps_
+
+- [x] 21. Implement Localization Support ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 8)
+  - In `_McMonthViewState`, implement localization support
+  - Use `CalendarLocalizations` for date formatting
+  - Respect locale from widget tree
+  - Localize day names, month names, and date formats
+  - Use `dateFormat` parameter when provided
+  - Purpose: Provide full localization support for month view
+  - _Leverage: CalendarLocalizations utility, intl package, Design document localization specification_
+  - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in localization and internationalization | Task: In _McMonthViewState, implement localization support following requirements 9.1-9.8. Get locale from widget.locale ?? Localizations.localeOf(context). Use CalendarLocalizations.getLocalizedString() for day names and month names. Use CalendarLocalizations.formatDate() and formatTime() for date formatting, or use widget.dateFormat if provided with DateFormat(widget.dateFormat). Apply localization throughout: weekday headers, month/year labels, date labels. Ensure all text respects the locale. | Restrictions: Day names localized, month names localized, date formats localized, locale respected from widget tree, dateFormat parameter works | Success: Day names localized correctly, month names localized correctly, date formats localized correctly, multiple locales tested_
+
+- [x] 22. Implement RTL Layout Support ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 7)
+  - In `_McMonthViewState`, detect RTL using `CalendarLocalizations.isRTL`
+  - Wrap grid in `Directionality` widget with appropriate text direction
+  - Ensure grid layout flips correctly
+  - Ensure navigator buttons positioned correctly
+  - Ensure swipe directions remain logically consistent
+  - Purpose: Support right-to-left languages properly
+  - _Leverage: CalendarLocalizations.isRTL, Flutter Directionality widget, Design document RTL specification_
+  - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in RTL and internationalization | Task: In _McMonthViewState, implement RTL layout support following requirements 17.1-17.5. Detect RTL using CalendarLocalizations.isRTL(Localizations.localeOf(context)). Wrap _buildMonthGrid() in Directionality widget with textDirection: _isRTL(context) ? TextDirection.rtl : TextDirection.ltr. Ensure grid layout automatically flips in RTL (Flutter handles this). Ensure navigator buttons are positioned correctly in RTL. Ensure swipe directions remain logically consistent (left = forward in time, right = backward in time) regardless of RTL. | Restrictions: RTL detected correctly, grid layout flips in RTL, navigator buttons positioned correctly, swipe directions logically consistent, day headers ordered correctly | Success: RTL layout works correctly, grid flips in RTL, navigator positioned correctly, swipe directions consistent, day headers ordered correctly_
+
+- [x] 23. Implement Semantic Labels for Day Cells ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 9)
+  - In `_DayCellWidget`, wrap cell in `Semantics` widget with descriptive label including date, whether it's today, whether it's in current month, and number of events
+  - Include hint for leading/trailing dates
+  - Purpose: Provide accessibility support for screen readers
+  - _Leverage: Flutter Semantics widget, Design document accessibility specification_
+  - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in accessibility and screen readers | Task: In _DayCellWidget, wrap cell content in Semantics widget following requirements 16.1-16.6. Set label to formatted string including: formatted date, "today" if isToday, "current month" or "previous month" or "next month" based on isCurrentMonth, "${events.length} events" if events exist. Set hint to additional context like "Date from previous month" for leading dates or "Date from next month" for trailing dates. Ensure label is descriptive and helpful for screen readers. | Restrictions: Semantic labels include date, indicate if today, indicate if in current month, include event count, hints for leading/trailing dates | Success: Semantic labels are correct, labels include all required information, screen reader announces correctly_
+
+- [x] 24. Implement Semantic Labels for Event Tiles ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 11)
+  - In `_EventTileWidget`, wrap tile in `Semantics` widget with descriptive label including event title, time, and date context
+  - Purpose: Provide accessibility support for event tiles
+  - _Leverage: Flutter Semantics widget, Design document accessibility specification_
+  - _Requirements: 16.2, 24.1, 24.2, 24.3_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in accessibility | Task: In _EventTileWidget, wrap tile content in Semantics widget following requirements 16.2, 24.1-24.3. Set label to formatted string including: event.title, formatted event time (if not all-day), date context. For example: "${event.title}, ${_formatEventTime(event)}, ${_formatDate(displayDate)}". Ensure label provides complete information about the event for screen readers. | Restrictions: Semantic labels include event title, include event time, include date context | Success: Semantic labels are correct, screen reader announces event details_
+
+- [x] 25. Implement Accessibility for Navigator ✅
+  - File: lib/src/widgets/navigator.dart (continue from task 16)
+  - In navigator widget, add semantic labels for navigation buttons
+  - Announce month/year changes
+  - Ensure buttons are accessible
+  - Purpose: Provide accessibility support for navigator component
+  - _Leverage: Flutter Semantics widget, Design document accessibility specification_
+  - _Requirements: 16.4, 25.1, 25.2, 25.3_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in accessibility | Task: In navigator widget, add semantic labels following requirements 16.4, 25.1-25.3. Wrap IconButtons in Semantics widgets with labels: "Previous month" for previous button, "Next month" for next button, "Go to today" for today button. When month changes, ensure screen reader can announce the change (may require LiveRegion or similar). Ensure all buttons are accessible and have proper labels. | Restrictions: Navigation buttons have semantic labels, month/year changes announced, buttons accessible | Success: Semantic labels correct, navigation announced correctly_
+
+- [x] 26. Implement Theme Resolution ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 4)
+  - In `_McMonthViewState`, implement `_resolveTheme()` method that resolves `McCalendarThemeData` from widget parameter, ThemeData extension, or creates defaults from ThemeData
+  - Use resolved theme throughout widget tree
+  - Purpose: Provide flexible theme resolution with sensible defaults
+  - _Leverage: Flutter ThemeData, ThemeExtension pattern, Design document theme specification_
+  - _Requirements: 4.1, 4.2, 4.5, 4.6_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in theming | Task: In _McMonthViewState, implement _resolveTheme(BuildContext context) method following requirements 4.1-4.2, 4.5-4.6. Check widget.theme first - if provided, use it. Otherwise, check Theme.of(context).extension`McCalendarThemeData`() - if exists, use it. Otherwise, use McCalendarThemeData.fromTheme(Theme.of(context)) to create defaults. Return resolved theme. Use this method throughout widget tree to get consistent theme. | Restrictions: Theme resolved from widget parameter first, falls back to ThemeData extension, falls back to defaults from ThemeData, theme used throughout widget tree | Success: Theme resolution priority correct, theme applied correctly, defaults work when no theme provided_
+
+- [x] 27. Apply Theme Styling Throughout Widget ✅
+  - File: lib/src/widgets/mc_month_view.dart (continue from task 26)
+  - Apply `McCalendarThemeData` styling to all components: day cells, event tiles, headers, navigator, current day indicator, leading/trailing dates
+  - Ensure theme properties are used consistently
+  - Purpose: Apply consistent theming throughout the month view
+  - _Leverage: Resolved theme from task 26, Design document theme specification_
+  - _Requirements: 4.1, 4.2, 4.3, 4.4, 12.1, 12.2, 12.3, 12.4, 12.5, 13.1, 13.2, 13.3, 13.4, 13.5_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter UI Developer specializing in consistent theming | Task: Apply McCalendarThemeData styling throughout widget following requirements 4.1-4.4, 12.1-12.5, 13.1-13.5. Use resolved theme from _resolveTheme() in all components. Apply cell styling (cellBackgroundColor, cellBorderColor, cellTextStyle) to day cells. Apply today styling (todayBackgroundColor, todayTextStyle) to today cells. Apply leading/trailing styling (leadingDatesTextStyle, trailingDatesTextStyle, leadingDatesBackgroundColor, trailingDatesBackgroundColor) to appropriate cells. Apply event tile styling (eventTileBackgroundColor, eventTileTextStyle) to event tiles. Apply header styling (weekdayHeaderTextStyle, weekdayHeaderBackgroundColor) to weekday headers. Apply navigator styling (navigatorTextStyle, navigatorBackgroundColor) to navigator. Ensure all theme properties are used consistently. | Restrictions: Theme applied to day cells, event tiles, headers, navigator, current day, leading/trailing dates | Success: Theme applied correctly to all components, theme changes update widget_
+
+- [x] 28. Create Unit Tests for Date Utilities ✅
+  - File: test/utils/date_utils_test.dart
+  - Create comprehensive unit tests for all date utility functions
+  - Test edge cases: month boundaries, year boundaries, leap years, different firstDayOfWeek values
+  - Purpose: Ensure date calculation utilities are reliable and correct
+  - _Leverage: flutter_test framework, date utilities from task 5_
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in unit testing and date/time logic | Task: Create comprehensive unit tests in test/utils/date_utils_test.dart following requirements 2.1-2.7. Test _getMonthRange for various months including edge cases (January, February, December, leap years). Test _getPreviousMonthRange handles year boundaries correctly. Test _getNextMonthRange handles year boundaries correctly. Test _generateMonthDates generates exactly 42 dates, includes leading/trailing dates, respects firstDayOfWeek with different values (0-6), handles month boundaries correctly. Cover edge cases: February, leap years, year boundaries, different firstDayOfWeek values. | Restrictions: Unit tests for all date utility functions, edge cases covered, test coverage > 90% | Success: All unit tests pass, edge cases tested, coverage meets threshold_
+
+- [x] 29. Create Unit Tests for Context Classes ✅
+  - File: test/widgets/month_view_contexts_test.dart
+  - Create unit tests for all context classes
+  - Test instantiation, immutability, const constructors
+  - Purpose: Ensure context classes are correctly implemented
+  - _Leverage: flutter_test framework, context classes from task 2_
+  - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in data class testing | Task: Create unit tests in test/widgets/month_view_contexts_test.dart following requirements 5.1-5.5. Test each context class (McDayCellContext, McEventTileContext, McDayHeaderContext, McNavigatorContext, McDateLabelContext) can be instantiated with required parameters. Test immutability - verify no setters exist, fields are final. Test const constructors - verify classes can be used in const expressions. Test all fields are accessible and correctly typed. | Restrictions: Unit tests for all context classes, immutability tests, const constructor tests | Success: All unit tests pass_
+
+- [x] 30. Create Unit Tests for McCalendarThemeData ✅
+  - File: test/styles/mc_calendar_theme_test.dart
+  - Create unit tests for `McCalendarThemeData`
+  - Test `copyWith`, `lerp`, `fromTheme`, light/dark themes
+  - Purpose: Ensure theme extension works correctly
+  - _Leverage: flutter_test framework, McCalendarThemeData from task 1_
+  - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in theme testing | Task: Create unit tests in test/styles/mc_calendar_theme_test.dart following requirements 4.1-4.7. Test copyWith creates new instance with updated values - create theme, call copyWith with some properties, verify new instance has updated values and original unchanged. Test lerp interpolates between themes correctly - create two themes, call lerp with different t values (0.0, 0.5, 1.0), verify interpolation. Test fromTheme creates sensible defaults from Flutter ThemeData - create ThemeData, call fromTheme, verify defaults are reasonable. Test light and dark themes work correctly. | Restrictions: Unit tests for copyWith, lerp, fromTheme, light/dark theme tests | Success: All unit tests pass_
+
+- [x] 31. Create Widget Tests for McMonthView ✅
+  - File: test/widgets/mc_month_view_test.dart
+  - Create comprehensive widget tests for McMonthView
+  - Test widget instantiation, parameter handling, basic rendering, theme application, builder callbacks, navigation, swipe gestures, interactions, localization, RTL, accessibility
+  - Purpose: Ensure widget works correctly in all scenarios
+  - _Leverage: flutter_test framework, widget_test utilities, Design document test strategy_
+  - _Requirements: All requirements_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in Flutter widget testing | Task: Create comprehensive widget tests in test/widgets/mc_month_view_test.dart covering all requirements. Test widget instantiation with required McEventController. Test all optional parameters are accepted. Test basic rendering - grid displays, cells render, headers display. Test theme application - theme from widget, theme from ThemeData extension, default theme. Test builder callbacks - dayCellBuilder, eventTileBuilder, dayHeaderBuilder, navigatorBuilder, dateLabelBuilder all work when provided. Test navigation - programmatic navigation methods work, respects minDate/maxDate. Test swipe gestures - horizontal and vertical swipes work, respect enableSwipeNavigation flag, respect minDate/maxDate. Test interactions - cell taps, long-presses, event taps work correctly. Test localization - day names, month names localized. Test RTL layout works. Test accessibility - semantic labels present. | Restrictions: Widget tests for instantiation, parameters, rendering, theme, builders, navigation, swipe gestures, interactions, localization, RTL, accessibility, test coverage > 80% | Success: All widget tests pass, coverage meets threshold_
+
+- [x] 32. Create Integration Tests ✅
+  - File: test/integration/mc_month_view_integration_test.dart
+  - Create integration tests for McEventController integration, event loading, event display, navigation with events, swipe navigation with pre-loaded events
+  - Purpose: Ensure widget integrates correctly with controller and events
+  - _Leverage: flutter_test framework, McEventController, Design document integration test strategy_
+  - _Requirements: 7.1, 7.2, 7.3, 7.6, 7.7, 7.11, 7.12, 7.13, 14.13, 14.14_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in integration testing | Task: Create integration tests in test/integration/mc_month_view_integration_test.dart following requirements 7.1-7.3, 7.6-7.7, 7.11-7.13, 14.13-14.14. Test McEventController integration - create controller, create McMonthView with controller, verify events are requested. Test event loading - mock controller loadEvents, verify events are loaded for correct date range. Test event display - add events to controller, verify events appear in correct day cells. Test navigation with events - navigate to different month, verify events load for new month. Test swipe navigation with pre-loaded events - pre-load events for adjacent months, swipe to next month, verify instant display without loading delay. | Restrictions: Integration tests for EventController, event loading, event display, navigation, swipe navigation | Success: All integration tests pass_
+
+- [x] 33. Create Accessibility Tests ✅
+  - File: test/accessibility/mc_month_view_accessibility_test.dart
+  - Create accessibility tests for semantic labels, screen reader announcements, keyboard navigation (if applicable), focus management
+  - Purpose: Ensure widget is accessible to all users
+  - _Leverage: flutter_test framework, SemanticsTester, Design document accessibility specification_
+  - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in accessibility testing | Task: Create accessibility tests in test/accessibility/mc_month_view_accessibility_test.dart following requirements 16.1-16.6. Test semantic labels - use SemanticsTester to verify day cells have correct labels including date, today indicator, month indicator, event count. Test event tiles have labels with event title and time. Test navigator buttons have labels. Test screen reader announcements - verify labels are announced correctly. Test keyboard navigation if applicable. Test focus management. | Restrictions: Accessibility tests for semantic labels, screen reader, keyboard navigation, focus management | Success: All accessibility tests pass_
+
+- [x] 34. Run Full Test Suite and Fix Issues ✅
+  - Files: All test files
+  - Run `flutter test` and fix any failing tests
+  - Ensure all tests pass
+  - Check test coverage
+  - Fix any linting issues
+  - Purpose: Ensure all tests pass and code quality is maintained
+  - _Leverage: flutter_test, flutter analyze, test coverage tools_
+  - _Requirements: All requirements_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer and Developer specializing in test maintenance and code quality | Task: Run flutter test and fix any failing tests. Ensure all tests pass. Check test coverage using coverage tools. Run flutter analyze and fix any linting issues. Verify test coverage meets thresholds (unit tests > 90%, widget tests > 80%). Fix any compilation errors, test failures, or linting issues. | Restrictions: All tests pass, test coverage meets thresholds, no linting errors, flutter analyze passes | Success: All tests pass, coverage reports reviewed_
+
+- [x] 35. Update Package README ✅
+  - File: README.md
+  - Update README to include McMonthView documentation
+  - Add usage examples, parameter descriptions, builder callback examples, theme customization examples, localization examples, accessibility notes
+  - Include code examples for common use cases
+  - Purpose: Provide comprehensive documentation for users
+  - _Leverage: Existing README.md structure, Design document API specification_
+  - _Requirements: All requirements_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Technical Writer specializing in Flutter package documentation | Task: Update README.md following all requirements. Add McMonthView section with comprehensive documentation. Include basic usage example showing McMonthView with McEventController. Add parameter descriptions for all parameters. Include examples for builder callbacks (dayCellBuilder, eventTileBuilder, etc.). Show theme customization examples with McCalendarThemeData. Include localization examples showing English and Spanish. Add accessibility notes. Include code examples for common use cases: basic usage, theme customization, custom builders, navigation, swipe gestures. Ensure all code examples are complete and runnable. | Restrictions: README includes McMonthView section, usage examples provided, parameter descriptions included, builder callback examples included, theme customization examples included, localization examples included, accessibility notes included, code examples are complete and runnable | Success: README reviewed for completeness, code examples verified_
+
+- [x] 36. Add API Documentation ✅
+  - File: lib/src/widgets/mc_month_view.dart (and other public files)
+  - Add comprehensive dartdoc comments to `McMonthView` widget, all context classes, `McCalendarThemeData`, and public methods
+  - Include parameter descriptions, return values, examples, and usage notes
+  - Purpose: Provide inline API documentation for developers
+  - _Leverage: Dart dartdoc system, Design document API specification_
+  - _Requirements: All requirements_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Technical Writer specializing in API documentation | Task: Add comprehensive dartdoc comments following all requirements. Add dartdoc to McMonthView widget class describing purpose and usage. Add dartdoc to all parameters explaining what they do and when to use them. Add dartdoc to all context classes (McDayCellContext, etc.) explaining their purpose and fields. Add dartdoc to McCalendarThemeData class and properties. Add dartdoc to public methods. Include examples in dartdoc where helpful. Include usage notes. Ensure dart doc generates documentation successfully. | Restrictions: All public APIs have dartdoc comments, parameter descriptions complete, examples included where helpful, usage notes included | Success: dart doc generates documentation successfully, documentation reviewed for completeness_
+
+- [x] 37. Update Example App to Use McMonthView ✅
+  - File: example/lib/main.dart
+  - Update example app to demonstrate McMonthView usage
+  - Create comprehensive example showing: basic usage, theme customization, builder callbacks, navigation, swipe gestures, localization (English and Spanish), accessibility features
+  - Include multiple examples or tabs to show different features
+  - Purpose: Demonstrate all features of McMonthView in a working app
+  - _Leverage: Existing example app structure, Design document example specification_
+  - _Requirements: All requirements_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in example applications | Task: Update example/lib/main.dart following all requirements. Create comprehensive example demonstrating McMonthView. Show basic usage with McEventController. Demonstrate theme customization with McCalendarThemeData. Show builder callbacks (dayCellBuilder, eventTileBuilder, etc.). Demonstrate navigation (programmatic and swipe gestures). Show localization with English and Spanish. Demonstrate accessibility features. Consider using tabs or pages to organize different examples. Ensure example app runs successfully on all platforms. | Restrictions: Example app uses McMonthView, basic usage demonstrated, theme customization shown, builder callbacks demonstrated, navigation shown, swipe gestures demonstrated, localization shown (English/Spanish), accessibility features demonstrated, example app runs successfully | Success: Example app runs on all platforms, all features demonstrated work correctly_
+
+- [x] 38. Add Example App Documentation ✅
+  - File: example/README.md
+  - Update example README to document the McMonthView examples
+  - Explain what each example demonstrates, how to run the examples, and what features are shown
+  - Purpose: Help users understand and run the examples
+  - _Leverage: Existing example/README.md structure_
+  - _Requirements: All requirements_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Technical Writer specializing in example documentation | Task: Update example/README.md following all requirements. Document the McMonthView examples. Explain what each example demonstrates (basic usage, theme customization, builders, navigation, localization, accessibility). Include instructions on how to run the examples (flutter run). Explain what features are shown in each example. Make it easy for users to understand and try the examples. | Restrictions: Example README updated, examples explained, running instructions included, features documented | Success: README reviewed for completeness_
+
+- [x] 39. Run Flutter Analyze and Fix Issues ✅
+  - Files: All source files
+  - Run `flutter analyze` and fix any analysis issues
+  - Ensure code follows Flutter style guidelines
+  - Fix any warnings or errors
+  - Purpose: Ensure code quality and style compliance
+  - _Leverage: flutter analyze tool, Flutter style guide_
+  - _Requirements: All requirements_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Code Quality Engineer specializing in static analysis | Task: Run flutter analyze and fix any analysis issues following all requirements. Ensure code follows Flutter style guidelines. Fix any warnings or errors. Address any linting issues. Ensure code is clean and follows best practices. Verify no analysis errors remain. | Restrictions: flutter analyze passes with no errors, no warnings (or warnings are acceptable), code follows style guidelines | Success: Analysis passes_
+
+- [x] 40. Verify Example App Runs Successfully ✅
+  - Files: example/lib/main.dart and related files
+  - Run the example app on iOS, Android, Web, and Desktop (if available)
+  - Verify all features work correctly
+  - Test swipe gestures, navigation, interactions, localization, RTL, accessibility
+  - Purpose: Ensure example app works on all platforms
+  - _Leverage: Flutter platform support, example app from task 37_
+  - _Requirements: All requirements_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in cross-platform testing | Task: Run the example app on iOS, Android, Web, and Desktop (if available) following all requirements. Verify all features work correctly: swipe gestures work, navigation works, interactions work (tap, long-press), localization works (English/Spanish), RTL layout works, accessibility works. Test on all platforms. Verify no runtime errors. Ensure smooth performance. | Restrictions: Example app runs on iOS, Android, Web, Desktop (if available), all features work correctly, no runtime errors | Success: Example app tested on all platforms, all features verified_
+
+- [x] 41. Rename Package Prefixes from "Mc" to "MCal" ✅
+  - Files: All source files, test files, example files, and documentation
+  - Rename all public class prefixes from "Mc" to "MCal" (e.g., McMonthView → MCalMonthView)
+  - Rename all public file prefixes from "mc_" to "mcal_" (e.g., mc_month_view.dart → mcal_month_view.dart)
+  - Rename CalendarLocalizations to MCalLocalizations
+  - Update all imports and references throughout the codebase
+  - Update documentation files (README.md, CHANGELOG.md, example/README.md)
+  - Verify no old prefixes remain using grep/analysis tools
+  - Purpose: Change naming convention to avoid confusion with popular fast food chain branding
+  - _Leverage: Existing codebase structure, grep/search tools for verification_
+  - _Requirements: Naming convention consistency_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Refactoring Specialist | Task: Rename all package prefixes from "Mc"/"mc_" to "MCal"/"mcal_" throughout the entire codebase. Update all class names (McMonthView → MCalMonthView, McEventController → MCalEventController, etc.), all file names (mc_month_view.dart → mcal_month_view.dart, etc.), and all references in code, tests, examples, and documentation. Also rename CalendarLocalizations to MCalLocalizations. Use grep to verify no old prefixes remain. Ensure flutter analyze passes after refactoring. | Restrictions: All prefixes must be updated consistently, no old prefixes should remain, all imports must be updated, documentation must be updated | Success: All prefixes renamed, no old prefixes found via grep, flutter analyze passes, all files compile correctly_
+
+- [x] 42. Simplify Class Names: MCalCalendarLocalizations → MCalLocalizations, MCalCalendarThemeData → MCalThemeData ✅
+  - Files: All source files, test files, example files, and documentation
+  - Rename MCalCalendarLocalizations to MCalLocalizations
+  - Rename MCalCalendarThemeData to MCalThemeData
+  - Rename mcal_calendar_theme.dart to mcal_theme.dart
+  - Update all imports and references throughout the codebase
+  - Update documentation files (README.md, CHANGELOG.md, example/README.md)
+  - Verify no old names remain using grep/analysis tools
+  - Purpose: Simplify class names by removing redundant "Calendar" prefix
+  - _Leverage: Existing codebase structure, grep/search tools for verification_
+  - _Requirements: Naming convention consistency_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Refactoring Specialist | Task: Rename MCalCalendarLocalizations to MCalLocalizations and MCalCalendarThemeData to MCalThemeData throughout the entire codebase. Also rename mcal_calendar_theme.dart to mcal_theme.dart. Update all class names, file names, imports, and references in code, tests, examples, and documentation. Use grep to verify no old names remain. Ensure flutter analyze passes after refactoring. | Restrictions: All names must be updated consistently, no old names should remain, all imports must be updated, documentation must be updated | Success: All names renamed, no old names found via grep, flutter analyze passes, all files compile correctly_
+
+- [x] 43. Add isAllDay Field to MCalCalendarEvent Model ✅
+  - File: lib/src/models/mcal_calendar_event.dart
+  - Add boolean `isAllDay` field to `MCalCalendarEvent` class
+  - Field defaults to false for backward compatibility
+  - When `isAllDay` is true, time components of start and end dates should be ignored
+  - Update constructor, toString, equality operator, and hashCode to include isAllDay
+  - Add comprehensive dartdoc comments explaining the field's purpose
+  - Purpose: Provide explicit all-day event indication for future Day/Multi-Day view header display
+  - _Leverage: Existing MCalCalendarEvent model structure_
+  - _Requirements: Model consistency, backward compatibility_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Dart Developer specializing in data models | Task: Add boolean `isAllDay` field to MCalCalendarEvent class at lib/src/models/mcal_calendar_event.dart. Field should default to false for backward compatibility. When isAllDay is true, time components of start and end dates are ignored. Update constructor to include isAllDay parameter with default value false. Update toString method to include isAllDay. Update equality operator (==) to compare isAllDay field. Update hashCode to include isAllDay. Add comprehensive dartdoc comments explaining that all-day events will be displayed in header sections of Day and Multi-Day views. | Restrictions: Field must default to false, must be included in equality and hashCode, must have proper documentation | Success: isAllDay field added, defaults to false, included in equality/hashCode, documented, model compiles correctly_
+
+- [x] 44. Update Month View to Use isAllDay Field ✅
+  - File: lib/src/widgets/mcal_month_view.dart
+  - Remove `_isAllDayEvent` helper method
+  - Update event tile rendering to use `event.isAllDay` directly instead of calling helper method
+  - Ensure all-day events are properly displayed and styled in month view
+  - Purpose: Use explicit isAllDay field instead of inferring from time components
+  - _Leverage: MCalCalendarEvent.isAllDay field from task 43_
+  - _Requirements: Event display consistency_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in widget refactoring | Task: In lib/src/widgets/mcal_month_view.dart, remove the _isAllDayEvent helper method. Update _buildEventTiles method to use event.isAllDay directly instead of calling _isAllDayEvent(event). Ensure event tiles properly display and style all-day events based on the isAllDay field. Verify that all-day events are visually distinct from timed events in the month view. | Restrictions: Remove helper method completely, use event.isAllDay field directly, maintain existing visual styling for all-day events | Success: Helper method removed, event.isAllDay used directly, all-day events display correctly_
+
+- [x] 45. Update Example App with All-Day Events ✅
+  - Files: example/lib/utils/sample_events.dart and related example files
+  - Add sample all-day events to demonstrate the isAllDay field
+  - Include examples of single-day and multi-day all-day events
+  - Update event creation to explicitly set isAllDay field
+  - Ensure all-day events are properly displayed in example app
+  - Purpose: Demonstrate all-day event functionality in example app
+  - _Leverage: MCalCalendarEvent.isAllDay field, existing example app structure_
+  - _Requirements: Example completeness_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Flutter Developer specializing in example applications | Task: Update example/lib/utils/sample_events.dart to include sample all-day events. Add at least 2-3 all-day events including both single-day and multi-day examples. Set isAllDay: true for these events. Ensure start and end dates for all-day events use midnight (00:00:00) times. Update any example code that creates events to demonstrate the isAllDay field. Verify all-day events display correctly in the example app. | Restrictions: Include both single-day and multi-day all-day events, use midnight times, set isAllDay explicitly | Success: Example app includes all-day events, events display correctly, demonstrates isAllDay field usage_
+
+- [x] 46. Update Tests for isAllDay Field ✅
+  - Files: test/models/mcal_calendar_event_test.dart and other relevant test files
+  - Add unit tests for isAllDay field: default value, equality, hashCode, toString
+  - Update existing tests to account for isAllDay field
+  - Add tests for all-day event creation and validation
+  - Purpose: Ensure isAllDay field is properly tested
+  - _Leverage: Existing test structure, MCalCalendarEvent.isAllDay field_
+  - _Requirements: Test coverage for new field_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Engineer specializing in unit testing | Task: Update test/models/mcal_calendar_event_test.dart to add comprehensive tests for isAllDay field. Test that isAllDay defaults to false. Test equality operator with different isAllDay values. Test hashCode includes isAllDay. Test toString includes isAllDay. Add test for creating all-day events with isAllDay: true. Update existing tests to account for isAllDay field in equality comparisons. Ensure all tests pass. | Restrictions: Test default value, equality, hashCode, toString, all-day event creation | Success: All tests pass, isAllDay field fully tested_
+
+- [x] 47. Update Documentation for isAllDay Field ✅
+  - Files: README.md, lib/multi_calendar.dart, example/README.md
+  - Update README.md to document isAllDay field in MCalCalendarEvent
+  - Update main package documentation (lib/multi_calendar.dart) to mention isAllDay
+  - Update example/README.md to document all-day event examples
+  - Add code examples showing how to create all-day events
+  - Purpose: Document the new isAllDay field for users
+  - _Leverage: Existing documentation structure, MCalCalendarEvent.isAllDay field_
+  - _Requirements: Documentation completeness_
+  - _Prompt: Implement the task for spec month-view, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Technical Writer specializing in API documentation | Task: Update README.md to document the isAllDay field in MCalCalendarEvent. Explain that when isAllDay is true, time components are ignored. Mention that all-day events will be displayed in header sections of Day and Multi-Day views. Add code examples showing how to create all-day events. Update lib/multi_calendar.dart dartdoc to mention isAllDay. Update example/README.md to document all-day event examples. | Restrictions: Document isAllDay field clearly, include code examples, explain behavior | Success: Documentation updated, code examples included, isAllDay field explained_

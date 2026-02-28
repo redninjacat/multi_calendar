@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/day-view-improvements-and-localization/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-16T00:05:44.755Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771200344747_fs3lkn43l",
+      "approvalTitle": "Tasks Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-16T00:06:38.174Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771200344747_fs3lkn43l",
+      "approvalTitle": "Tasks Document"
+    }
+  ]
+}
