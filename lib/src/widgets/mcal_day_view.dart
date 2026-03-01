@@ -8,7 +8,6 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
 import '../models/mcal_region.dart';
-import '../models/mcal_time_region.dart';
 import '../styles/mcal_theme.dart';
 import '../utils/date_utils.dart';
 import '../utils/mcal_date_format_utils.dart';
@@ -215,9 +214,6 @@ class MCalDayView extends StatefulWidget {
     this.snapToOtherEvents = true,
     this.snapToCurrentTime = true,
     this.snapRange = const Duration(minutes: 5),
-
-    // Special time regions
-    this.specialTimeRegions = const [],
 
     // Keyboard
     this.enableKeyboardNavigation = true,
@@ -686,31 +682,6 @@ class MCalDayView extends StatefulWidget {
   ///
   /// Defaults to 5 minutes.
   final Duration snapRange;
-
-  // ============================================================================
-  // Special Time Regions
-  // ============================================================================
-
-  /// A list of special time regions to display.
-  ///
-  /// Time regions can represent blocked time, lunch breaks, non-working hours, etc.
-  /// They are rendered as colored overlays in the time grid.
-  ///
-  /// Supports recurring regions via RRULE.
-  ///
-  /// Example:
-  /// ```dart
-  /// specialTimeRegions: [
-  ///   MCalTimeRegion(
-  ///     id: 'lunch',
-  ///     startTime: DateTime(2026, 2, 14, 12, 0),
-  ///     endTime: DateTime(2026, 2, 14, 13, 0),
-  ///     color: Colors.grey.shade300,
-  ///     text: 'Lunch Break',
-  ///   ),
-  /// ]
-  /// ```
-  final List<MCalTimeRegion> specialTimeRegions;
 
   // ============================================================================
   // Keyboard Navigation

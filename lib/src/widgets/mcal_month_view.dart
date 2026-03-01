@@ -9,7 +9,6 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
-import '../models/mcal_day_region.dart';
 import '../models/mcal_recurrence_exception.dart';
 import '../models/mcal_region.dart';
 import '../models/mcal_recurrence_rule.dart';
@@ -653,45 +652,20 @@ class MCalMonthView extends StatefulWidget {
 
   // ============ Day Regions ============
 
-  /// Day regions to display in this month view.
+  /// Builder callback for customizing how a day region overlay is rendered.
   ///
-  /// Each [MCalDayRegion] marks one or more calendar days with a colored
-  /// overlay and optional label, and can optionally block drag-and-drop onto
-  /// those days.
+  /// When provided, called for each [MCalRegion] (with `isAllDay: true`) that
+  /// applies to a visible cell. The builder receives a [MCalRegionContext]
+  /// describing the region and the cell, plus the [defaultWidget] produced by
+  /// the built-in renderer. Return [defaultWidget] to keep the default
+  /// appearance.
   ///
-  /// Regions with a [MCalDayRegion.recurrenceRule] are expanded automatically
-  /// so you can express patterns such as "every weekend" with a single entry:
-  ///
-  /// ```dart
-  /// dayRegions: [
-  ///   MCalDayRegion(
-  ///     id: 'weekends',
-  ///     date: DateTime(2026, 1, 3),       // any Saturday anchor
-  ///     recurrenceRule: 'FREQ=WEEKLY;BYDAY=SA,SU',
-  ///     color: Colors.grey.withValues(alpha: 0.15),
-  ///     blockInteraction: true,
-  ///   ),
-  /// ]
-  /// ```
-  ///
-  /// Regions are rendered as a background layer below the date label and
-  /// event tiles so they do not interfere with existing content.
-  ///
-  /// Defaults to an empty list (no regions).
-  final List<MCalDayRegion> dayRegions;
-
-  /// Builder callback for customizing how a day region is rendered.
-  ///
-  /// When provided, called for each [MCalDayRegion] that applies to a
-  /// visible cell.  The builder receives a [MCalDayRegionContext] describing
-  /// the region and the cell, plus the [defaultWidget] produced by the
-  /// built-in renderer (a semi-transparent colored container with optional
-  /// text and icon).  Return [defaultWidget] to keep the default appearance.
+  /// Regions are added to the controller via [MCalEventController.addRegions].
   ///
   /// If null, the built-in renderer is used for all regions.
   final Widget Function(
     BuildContext context,
-    MCalDayRegionContext regionContext,
+    MCalRegionContext regionContext,
     Widget defaultWidget,
   )?
   dayRegionBuilder;
@@ -999,7 +973,6 @@ class MCalMonthView extends StatefulWidget {
     this.weekLayoutBuilder,
     this.overflowIndicatorBuilder,
     // Day regions
-    this.dayRegions = const [],
     this.dayRegionBuilder,
     // Drag-and-drop
     this.enableDragToMove = false,
@@ -1774,7 +1747,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           keyboardHighlightedEventId: _keyboardHighlightedEventId,
           keyboardSelectedEventId: _keyboardSelectedEventId,
           // Day regions
-          dayRegions: widget.dayRegions,
           dayRegionBuilder: widget.dayRegionBuilder,
         );
       },
@@ -4014,11 +3986,8 @@ class _MonthPageWidget extends StatefulWidget {
   /// The event ID currently selected for keyboard move/resize.
   final String? keyboardSelectedEventId;
 
-  /// Day regions to render as cell overlays.
-  final List<MCalDayRegion> dayRegions;
-
   /// Optional custom builder for day region overlays.
-  final Widget Function(BuildContext, MCalDayRegionContext, Widget)?
+  final Widget Function(BuildContext, MCalRegionContext, Widget)?
   dayRegionBuilder;
 
   const _MonthPageWidget({
@@ -4090,7 +4059,6 @@ class _MonthPageWidget extends StatefulWidget {
     this.keyboardHighlightedEventId,
     this.keyboardSelectedEventId,
     // Day regions
-    this.dayRegions = const [],
     this.dayRegionBuilder,
   });
 
@@ -5207,7 +5175,6 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             keyboardHighlightedEventId: widget.keyboardHighlightedEventId,
             keyboardSelectedEventId: widget.keyboardSelectedEventId,
             // Day regions
-            dayRegions: widget.dayRegions,
             dayRegionBuilder: widget.dayRegionBuilder,
           ),
         );
@@ -5578,11 +5545,8 @@ class _WeekRowWidget extends StatefulWidget {
   /// The event ID currently selected for keyboard move/resize.
   final String? keyboardSelectedEventId;
 
-  /// Day regions to render as cell overlays.
-  final List<MCalDayRegion> dayRegions;
-
   /// Optional custom builder for day region overlays.
-  final Widget Function(BuildContext, MCalDayRegionContext, Widget)?
+  final Widget Function(BuildContext, MCalRegionContext, Widget)?
   dayRegionBuilder;
 
   const _WeekRowWidget({
@@ -5647,7 +5611,6 @@ class _WeekRowWidget extends StatefulWidget {
     this.keyboardHighlightedEventId,
     this.keyboardSelectedEventId,
     // Day regions
-    this.dayRegions = const [],
     this.dayRegionBuilder,
   });
 
@@ -5807,7 +5770,6 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           resizeHandleBuilder: widget.resizeHandleBuilder,
           resizeHandleInset: widget.resizeHandleInset,
           onResizeHandlePointerDown: widget.onResizeHandlePointerDown,
-          dayRegions: widget.dayRegions,
           dayRegionBuilder: widget.dayRegionBuilder,
         ),
       );
@@ -6381,11 +6343,8 @@ class _DayCellWidget extends StatefulWidget {
   )?
   onResizeHandlePointerDown;
 
-  /// Day regions that may apply to this cell's date.
-  final List<MCalDayRegion> dayRegions;
-
   /// Optional custom builder for day region overlays.
-  final Widget Function(BuildContext, MCalDayRegionContext, Widget)?
+  final Widget Function(BuildContext, MCalRegionContext, Widget)?
   dayRegionBuilder;
 
   const _DayCellWidget({
@@ -6443,7 +6402,6 @@ class _DayCellWidget extends StatefulWidget {
     this.resizeHandleInset,
     this.onResizeHandlePointerDown,
     // Day regions
-    this.dayRegions = const [],
     this.dayRegionBuilder,
   });
 
@@ -6712,21 +6670,14 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
   /// Gets the cell decoration based on date type and theme.
   ///
   /// [isInteractive] parameter indicates if the cell is interactive.
-  /// Builds the overlay widget for a single [MCalDayRegion].
+  /// Builds the overlay widget for a single [MCalRegion].
   ///
   /// Produces a default colored container (with optional text/icon) and then
   /// delegates to [widget.dayRegionBuilder] when provided so the consumer can
   /// override the appearance.
   Widget _buildRegionOverlay(BuildContext context, MCalRegion region) {
-    final regionContext = MCalDayRegionContext(
-      region: MCalDayRegion(
-        id: region.id,
-        date: region.start,
-        color: region.color,
-        text: region.text,
-        icon: region.icon,
-        blockInteraction: region.blockInteraction,
-      ),
+    final regionContext = MCalRegionContext(
+      region: region,
       date: widget.date,
       isCurrentMonth: widget.isCurrentMonth,
       isToday: widget.isToday,

@@ -512,3 +512,30 @@ class MCalResizeHandleContext {
     this.isDropTargetPreview = false,
   });
 }
+
+/// Context passed to [MCalMonthView.dayRegionBuilder] when rendering a day
+/// region overlay inside a month cell.
+///
+/// Replaces the former `MCalDayRegionContext` (which was defined in the now
+/// deleted `mcal_day_region.dart`). Uses [MCalRegion] instead of the old
+/// `MCalDayRegion`.
+class MCalRegionContext {
+  /// The region being rendered.
+  final MCalRegion region;
+
+  /// The calendar date this cell represents.
+  final DateTime date;
+
+  /// `true` when [date] belongs to the currently displayed month.
+  final bool isCurrentMonth;
+
+  /// `true` when [date] is today.
+  final bool isToday;
+
+  const MCalRegionContext({
+    required this.region,
+    required this.date,
+    required this.isCurrentMonth,
+    required this.isToday,
+  });
+}
