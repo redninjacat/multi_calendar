@@ -206,20 +206,22 @@ controller.addEvents(_getDataSource().map((m) => MCalCalendarEvent(
   color: m.background,
 )).toList());
 
+// Regions are managed on the controller
+controller.addRegions([
+  MCalRegion(
+    id: 'after-hours',
+    start: DateTime(2026, 2, 14, 16, 0),
+    end: DateTime(2026, 2, 14, 23, 59),
+    isAllDay: false,
+    color: Colors.grey.withValues(alpha: 0.5),
+    blockInteraction: true,
+  ),
+]);
+
 MCalDayView(
   controller: controller,
   startHour: 9,
   endHour: 16,
-  specialTimeRegions: [
-    // After-hours: gray out and block drops (like non-working time)
-    MCalTimeRegion(
-      id: 'after-hours',
-      startTime: DateTime(2026, 2, 14, 16, 0),
-      endTime: DateTime(2026, 2, 14, 23, 59),
-      color: Colors.grey.withValues(alpha: 0.5),
-      blockInteraction: true,
-    ),
-  ],
 );
 ```
 
