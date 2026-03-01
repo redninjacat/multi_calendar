@@ -7,6 +7,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
+import '../models/mcal_region.dart';
 import '../models/mcal_time_region.dart';
 import '../styles/mcal_theme.dart';
 import '../utils/date_utils.dart';
@@ -2592,12 +2593,11 @@ class MCalDayViewState extends State<MCalDayView> {
         return false;
       }
     }
-    for (final region in widget.specialTimeRegions) {
-      if (!region.blockInteraction) continue;
-      final expanded = region.expandedForDate(_displayDate);
-      if (expanded != null && expanded.overlaps(proposedStart, proposedEnd)) {
-        return false;
-      }
+    if (widget.controller.isTimeRangeBlocked(proposedStart, proposedEnd)) {
+      return false;
+    }
+    if (widget.controller.isDateBlocked(_displayDate)) {
+      return false;
     }
     if (widget.minDate != null) {
       final minDate = DateTime(
@@ -4324,16 +4324,11 @@ class MCalDayViewState extends State<MCalDayView> {
       }
     }
 
-    // Check overlap with blocked time regions.
-    // Expand each region to a concrete instance for _displayDate first so that
-    // plain overlaps() compares matching dates (regions often carry an anchor
-    // date such as 2026-01-01 and recur via recurrenceRule).
-    for (final region in widget.specialTimeRegions) {
-      if (!region.blockInteraction) continue;
-      final expanded = region.expandedForDate(_displayDate);
-      if (expanded != null && expanded.overlaps(proposedStart, proposedEnd)) {
-        return false;
-      }
+    if (widget.controller.isTimeRangeBlocked(proposedStart, proposedEnd)) {
+      return false;
+    }
+    if (widget.controller.isDateBlocked(_displayDate)) {
+      return false;
     }
 
     // Check minDate boundary
@@ -4940,6 +4935,7 @@ class MCalDayViewState extends State<MCalDayView> {
       endTime: proposedEnd,
       isDropTargetPreview: true,
       dropValid: dragHandler.isProposedDropValid,
+      regions: widget.controller.getRegionsForDate(_displayDate),
     );
 
     final isValid = dragHandler.isProposedDropValid;
@@ -5177,6 +5173,9 @@ class MCalDayViewState extends State<MCalDayView> {
     final contentHeight =
         (widget.endHour - widget.startHour).clamp(0, 24) * hourHeight;
 
+    final regionsForDate = widget.controller.getRegionsForDate(date);
+    final timedRegions = regionsForDate.where((r) => !r.isAllDay).toList();
+
     // Layer 1+2: Main content (gridlines + regions + events + current time)
     // Wrap gridlines in IgnorePointer when empty slot callbacks exist so taps
     // pass through to the GestureDetector for onTimeSlotTap/onTimeSlotLongPress.
@@ -5195,6 +5194,7 @@ class MCalDayViewState extends State<MCalDayView> {
               theme: _resolveTheme(context),
               locale: locale,
               gridlineBuilder: widget.gridlineBuilder,
+              regions: regionsForDate,
             ),
           )
         : _GridlinesLayer(
@@ -5206,6 +5206,7 @@ class MCalDayViewState extends State<MCalDayView> {
             theme: _resolveTheme(context),
             locale: locale,
             gridlineBuilder: widget.gridlineBuilder,
+            regions: regionsForDate,
           );
     final mainContent = Stack(
       children: [
@@ -5220,9 +5221,9 @@ class MCalDayViewState extends State<MCalDayView> {
             displayDate: date,
             interactivityCallback: widget.timeSlotInteractivityCallback!,
           ),
-        if (widget.specialTimeRegions.isNotEmpty)
+        if (timedRegions.isNotEmpty)
           _TimeRegionsLayer(
-            regions: widget.specialTimeRegions,
+            regions: timedRegions,
             displayDate: date,
             startHour: widget.startHour,
             endHour: widget.endHour,
@@ -5258,6 +5259,7 @@ class MCalDayViewState extends State<MCalDayView> {
           onResizeUpdate: _handleResizeUpdate,
           onResizeEnd: _handleResizeEnd,
           onResizeCancel: _handleResizeCancel,
+          regions: regionsForDate,
         ),
         if (widget.showCurrentTimeIndicator && isToday(date))
           _CurrentTimeIndicator(
@@ -5425,6 +5427,7 @@ class MCalDayViewState extends State<MCalDayView> {
       minute: tappedTime.minute,
       offset: localPosition.dy,
       isAllDayArea: false,
+      regions: widget.controller.getRegionsForDate(_displayDate),
     );
 
     widget.onTimeSlotTap!(context, slotContext);
@@ -5472,6 +5475,7 @@ class MCalDayViewState extends State<MCalDayView> {
       minute: tappedTime.minute,
       offset: localPosition.dy,
       isAllDayArea: false,
+      regions: widget.controller.getRegionsForDate(_displayDate),
     );
 
     widget.onTimeSlotLongPress!(context, slotContext);
@@ -5526,6 +5530,7 @@ class MCalDayViewState extends State<MCalDayView> {
       minute: tappedTime.minute,
       offset: localPosition.dy,
       isAllDayArea: false,
+      regions: widget.controller.getRegionsForDate(_displayDate),
     );
 
     widget.onTimeSlotDoubleTap!(context, slotContext);
@@ -5756,6 +5761,7 @@ class MCalDayViewState extends State<MCalDayView> {
             onDragStarted: _handleDragStarted,
             onDragEnded: _handleDragEnded,
             onDragCancelled: _handleDragCancelled,
+            regions: widget.controller.getRegionsForDate(date),
             draggedTileBuilder: widget.draggedTileBuilder,
             dragSourceTileBuilder: widget.dragSourceTileBuilder,
             dragLongPressDelay: widget.dragLongPressDelay,
@@ -7024,7 +7030,7 @@ class _TimeRegionsLayer extends StatelessWidget {
     this.timeRegionBuilder,
   });
 
-  final List<MCalTimeRegion> regions;
+  final List<MCalRegion> regions;
   final DateTime displayDate;
   final int startHour;
   final int endHour;
@@ -7049,11 +7055,11 @@ class _TimeRegionsLayer extends StatelessWidget {
   /// Filters and returns regions that apply to [displayDate], each expanded
   /// to a concrete (non-recurring) instance for that date.
   ///
-  /// Delegates to [MCalTimeRegion.expandedForDate] which uses the full
+  /// Delegates to [MCalRegion.expandedForDate] which uses the full
   /// RFC 5545 [MCalRecurrenceRule] engine — the same engine used for calendar
   /// events.  Regions that do not apply to [displayDate] are omitted.
-  List<MCalTimeRegion> _getApplicableRegions() {
-    final result = <MCalTimeRegion>[];
+  List<MCalRegion> _getApplicableRegions() {
+    final result = <MCalRegion>[];
     for (final region in regions) {
       final expanded = region.expandedForDate(displayDate);
       if (expanded != null) {
@@ -7064,10 +7070,10 @@ class _TimeRegionsLayer extends StatelessWidget {
   }
 
   /// Builds a positioned widget for a single time region.
-  Widget _buildTimeRegion(BuildContext context, MCalTimeRegion region) {
+  Widget _buildTimeRegion(BuildContext context, MCalRegion region) {
     // Calculate vertical position and height
-    final startOffset = _timeToOffset(region.startTime);
-    final endOffset = _timeToOffset(region.endTime);
+    final startOffset = _timeToOffset(region.start);
+    final endOffset = _timeToOffset(region.end);
     final height = endOffset - startOffset;
 
     // Skip regions with invalid height
@@ -7182,6 +7188,7 @@ class _GridlinesLayer extends StatelessWidget {
     required this.theme,
     required this.locale,
     this.gridlineBuilder,
+    this.regions = const [],
   });
 
   final int startHour;
@@ -7193,6 +7200,7 @@ class _GridlinesLayer extends StatelessWidget {
   final Locale locale;
   final Widget Function(BuildContext, MCalGridlineContext, Widget)?
   gridlineBuilder;
+  final List<MCalRegion> regions;
 
   @override
   Widget build(BuildContext context) {
@@ -7319,6 +7327,7 @@ class _GridlinesLayer extends StatelessWidget {
             offset: offset,
             type: type,
             intervalMinutes: intervalMinutes,
+            regions: regions,
           ),
         );
       }
@@ -7370,6 +7379,7 @@ class _AllDayEventsSection extends StatelessWidget {
     this.onTimeSlotLongPress,
     this.onDragStarted,
     this.onDragEnded,
+    this.regions = const [],
     this.onDragCancelled,
     this.draggedTileBuilder,
     this.dragSourceTileBuilder,
@@ -7421,6 +7431,7 @@ class _AllDayEventsSection extends StatelessWidget {
   )?
   dragSourceTileBuilder;
   final Duration dragLongPressDelay;
+  final List<MCalRegion> regions;
 
   @override
   Widget build(BuildContext context) {
@@ -7504,6 +7515,7 @@ class _AllDayEventsSection extends StatelessWidget {
     final tileContext = MCalAllDayEventTileContext(
       event: event,
       displayDate: displayDate,
+      regions: regions,
     );
 
     // Build the tile content
@@ -7957,6 +7969,7 @@ class _TimeGridEventsLayer extends StatelessWidget {
     this.onResizeUpdate,
     this.onResizeEnd,
     this.onResizeCancel,
+    this.regions = const [],
   });
 
   final List<MCalCalendarEvent> events;
@@ -8014,6 +8027,7 @@ class _TimeGridEventsLayer extends StatelessWidget {
   onResizeUpdate;
   final VoidCallback? onResizeEnd;
   final VoidCallback? onResizeCancel;
+  final List<MCalRegion> regions;
 
   Widget _buildDefaultLayout(BuildContext context) {
     if (events.isEmpty) {
@@ -8127,6 +8141,7 @@ class _TimeGridEventsLayer extends StatelessWidget {
       endTime: effectiveEnd,
       isStartOnDisplayDate: isStartOnDisplayDate,
       isEndOnDisplayDate: isEndOnDisplayDate,
+      regions: regions,
     );
 
     // Build the tile content
