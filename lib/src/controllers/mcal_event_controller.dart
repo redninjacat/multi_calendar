@@ -87,6 +87,14 @@ class MCalEventController extends ChangeNotifier {
   /// Regions stored by their ID for efficient lookup.
   final Map<String, MCalRegion> _regionsById = {};
 
+  /// Region expansion cache: date (normalized to midnight) -> expanded regions.
+  ///
+  /// Invalidated when regions are added, removed, or cleared.
+  /// Prevents redundant recurrence expansion when multiple call sites
+  /// (rendering, drag validation, builder contexts) query the same date
+  /// within a single frame.
+  final Map<DateTime, List<MCalRegion>> _expandedRegionsByDate = {};
+
   // ============================================================
   // Task 1: Display and Focus Date State
   // ============================================================
@@ -619,6 +627,7 @@ class MCalEventController extends ChangeNotifier {
     for (final region in regions) {
       _regionsById[region.id] = region;
     }
+    _expandedRegionsByDate.clear();
     notifyListeners();
   }
 
@@ -629,6 +638,7 @@ class MCalEventController extends ChangeNotifier {
     for (final id in regionIds) {
       _regionsById.remove(id);
     }
+    _expandedRegionsByDate.clear();
     notifyListeners();
   }
 
@@ -637,6 +647,7 @@ class MCalEventController extends ChangeNotifier {
   /// Notifies listeners after clearing.
   void clearRegions() {
     _regionsById.clear();
+    _expandedRegionsByDate.clear();
     notifyListeners();
   }
 
@@ -648,10 +659,19 @@ class MCalEventController extends ChangeNotifier {
   /// Returns all regions (both all-day and timed) that apply to [date],
   /// with recurrence expansion.
   ///
+  /// Results are cached by normalized date so that multiple calls within
+  /// a single frame (rendering, drag validation, builder contexts) don't
+  /// re-expand recurring regions. The cache is invalidated whenever regions
+  /// are added, removed, or cleared.
+  ///
   /// Each returned [MCalRegion] is expanded for [date] — its [start] and
   /// [end] are adjusted to the occurrence date. Views filter by
   /// [MCalRegion.isAllDay] as needed.
   List<MCalRegion> getRegionsForDate(DateTime date) {
+    final dateKey = DateTime(date.year, date.month, date.day);
+    final cached = _expandedRegionsByDate[dateKey];
+    if (cached != null) return cached;
+
     final results = <MCalRegion>[];
     for (final region in _regionsById.values) {
       final expanded = region.expandedForDate(date);
@@ -659,35 +679,28 @@ class MCalEventController extends ChangeNotifier {
         results.add(expanded);
       }
     }
+    _expandedRegionsByDate[dateKey] = results;
     return results;
   }
 
   /// Returns `true` if any all-day region with [MCalRegion.blockInteraction]
   /// set to `true` applies to [date].
+  ///
+  /// Leverages [getRegionsForDate] cache to avoid redundant expansion.
   bool isDateBlocked(DateTime date) {
-    for (final region in _regionsById.values) {
-      if (region.isAllDay && region.blockInteraction && region.appliesTo(date)) {
-        return true;
-      }
-    }
-    return false;
+    final regions = getRegionsForDate(date);
+    return regions.any((r) => r.isAllDay && r.blockInteraction);
   }
 
   /// Returns `true` if any timed region with [MCalRegion.blockInteraction]
   /// set to `true` overlaps with the range from [start] to [end].
   ///
-  /// The region is first expanded for the date of [start] to get concrete
-  /// times, then checked for overlap.
+  /// Leverages [getRegionsForDate] cache to avoid redundant expansion.
   bool isTimeRangeBlocked(DateTime start, DateTime end) {
-    for (final region in _regionsById.values) {
-      if (!region.isAllDay && region.blockInteraction) {
-        final expanded = region.expandedForDate(start);
-        if (expanded != null && expanded.overlaps(start, end)) {
-          return true;
-        }
-      }
-    }
-    return false;
+    final regions = getRegionsForDate(start);
+    return regions.any(
+      (r) => !r.isAllDay && r.blockInteraction && r.overlaps(start, end),
+    );
   }
 
   /// Gets the currently visible date range.

@@ -257,36 +257,8 @@ class MCalRegion {
     try {
       final queryDay =
           DateTime(queryDate.year, queryDate.month, queryDate.day);
-      final anchor = isAllDay
-          ? DateTime(start.year, start.month, start.day)
-          : start;
-      final beforeDay =
-          DateTime(queryDate.year, queryDate.month, queryDate.day + 1);
-      final after = anchor.subtract(const Duration(microseconds: 1));
-
-      final untilDay = recurrenceRule!.until;
-      MCalRecurrenceRule expansionRule = recurrenceRule!;
-      if (untilDay != null) {
-        final untilDayOnly =
-            DateTime(untilDay.year, untilDay.month, untilDay.day);
-        if (queryDay.isAfter(untilDayOnly)) return false;
-        expansionRule = recurrenceRule!.copyWith(until: () => null);
-      }
-
-      final raw = expansionRule.getOccurrences(
-        start: anchor,
-        after: after,
-        before: beforeDay,
-      );
-      final occurrences = recurrenceRule!.count != null
-          ? raw.take(recurrenceRule!.count!).toList()
-          : raw;
-
-      if (isAllDay) {
-        return occurrences.any((d) => _matchesDate(d, queryDate));
-      } else {
-        return occurrences.any((d) => _matchesDate(d, queryDate));
-      }
+      final occurrences = _getOccurrencesForDay(queryDay);
+      return occurrences.any((d) => _matchesDate(d, queryDate));
     } catch (_) {
       return false;
     }
@@ -308,30 +280,7 @@ class MCalRegion {
 
   MCalRegion? _expandRecurring(DateTime displayDay, DateTime displayDate) {
     try {
-      final anchor = isAllDay
-          ? DateTime(start.year, start.month, start.day)
-          : start;
-      final beforeDay =
-          DateTime(displayDate.year, displayDate.month, displayDate.day + 1);
-      final after = anchor.subtract(const Duration(microseconds: 1));
-
-      final untilDay = recurrenceRule!.until;
-      MCalRecurrenceRule expansionRule = recurrenceRule!;
-      if (untilDay != null) {
-        final untilDayOnly =
-            DateTime(untilDay.year, untilDay.month, untilDay.day);
-        if (displayDay.isAfter(untilDayOnly)) return null;
-        expansionRule = recurrenceRule!.copyWith(until: () => null);
-      }
-
-      final raw = expansionRule.getOccurrences(
-        start: anchor,
-        after: after,
-        before: beforeDay,
-      );
-      final occurrences = recurrenceRule!.count != null
-          ? raw.take(recurrenceRule!.count!).toList()
-          : raw;
+      final occurrences = _getOccurrencesForDay(displayDay);
 
       DateTime? occurrenceStart;
       for (final d in occurrences) {
@@ -357,11 +306,27 @@ class MCalRegion {
           customData: customData,
         );
       } else {
-        final duration = end.difference(start);
+        // DST-safe end time: use calendar-day arithmetic to preserve
+        // local time across DST boundaries, consistent with event expansion
+        // in MCalEventController._getExpandedOccurrences.
+        final daySpan = DateTime(end.year, end.month, end.day)
+            .difference(DateTime(start.year, start.month, start.day))
+            .inDays;
+        final newEnd = DateTime(
+          occurrenceStart.year,
+          occurrenceStart.month,
+          occurrenceStart.day + daySpan,
+          occurrenceStart.hour + (end.hour - start.hour),
+          occurrenceStart.minute + (end.minute - start.minute),
+          occurrenceStart.second + (end.second - start.second),
+          occurrenceStart.millisecond + (end.millisecond - start.millisecond),
+          occurrenceStart.microsecond + (end.microsecond - start.microsecond),
+        );
+
         return MCalRegion(
           id: '${id}_${displayDay.toIso8601String().split('T')[0]}',
           start: occurrenceStart,
-          end: occurrenceStart.add(duration),
+          end: newEnd,
           color: color,
           text: text,
           icon: icon,
@@ -372,6 +337,99 @@ class MCalRegion {
       }
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Core recurrence expansion for a single day. Shared by [_appliesToRecurring]
+  /// and [_expandRecurring] to avoid duplicating expansion logic.
+  ///
+  /// Uses DTSTART optimization for daily/weekly rules (consistent with
+  /// [MCalEventController._advanceDtStart]) and handles COUNT/UNTIL edge cases.
+  List<DateTime> _getOccurrencesForDay(DateTime queryDay) {
+    final anchor = isAllDay
+        ? DateTime(start.year, start.month, start.day)
+        : start;
+    final beforeDay =
+        DateTime(queryDay.year, queryDay.month, queryDay.day + 1);
+
+    // UNTIL check: short-circuit if past the end date.
+    final untilDay = recurrenceRule!.until;
+    MCalRecurrenceRule expansionRule = recurrenceRule!;
+    if (untilDay != null) {
+      final untilDayOnly =
+          DateTime(untilDay.year, untilDay.month, untilDay.day);
+      if (queryDay.isAfter(untilDayOnly)) return const [];
+      expansionRule = recurrenceRule!.copyWith(until: () => null);
+    }
+
+    // DTSTART optimization: advance the start close to the query window
+    // for daily/weekly rules to avoid a linear walk from anchors that may
+    // be years in the past. Only safe when there is no COUNT — count-based
+    // rules must iterate from the real start to count correctly.
+    // Consistent with MCalEventController._advanceDtStart.
+    final optimizedStart = recurrenceRule!.count == null
+        ? _advanceDtStart(anchor, expansionRule, queryDay)
+        : anchor;
+
+    final after = optimizedStart.subtract(const Duration(microseconds: 1));
+
+    final raw = expansionRule.getOccurrences(
+      start: optimizedStart,
+      after: after,
+      before: beforeDay,
+    );
+
+    // Guard against teno_rrule ignoring COUNT in between().
+    return recurrenceRule!.count != null
+        ? raw.take(recurrenceRule!.count!).toList()
+        : raw;
+  }
+
+  /// Advances [dtStart] close to [target] for daily/weekly rules to avoid
+  /// iterating from a distant anchor. Monthly/yearly are left unchanged
+  /// because their occurrence dates depend on month length and day-of-month.
+  ///
+  /// Consistent with [MCalEventController._advanceDtStart].
+  static DateTime _advanceDtStart(
+    DateTime dtStart,
+    MCalRecurrenceRule rule,
+    DateTime target,
+  ) {
+    if (!target.isAfter(dtStart)) return dtStart;
+
+    switch (rule.frequency) {
+      case MCalFrequency.daily:
+        final daysDiff = target.difference(dtStart).inDays;
+        final periods = daysDiff ~/ rule.interval;
+        final safePeriods = (periods - 1).clamp(0, periods);
+        return DateTime(
+          dtStart.year,
+          dtStart.month,
+          dtStart.day + safePeriods * rule.interval,
+          dtStart.hour,
+          dtStart.minute,
+          dtStart.second,
+          dtStart.millisecond,
+          dtStart.microsecond,
+        );
+      case MCalFrequency.weekly:
+        final daysDiff = target.difference(dtStart).inDays;
+        final weekPeriod = rule.interval * 7;
+        final periods = daysDiff ~/ weekPeriod;
+        final safePeriods = (periods - 1).clamp(0, periods);
+        return DateTime(
+          dtStart.year,
+          dtStart.month,
+          dtStart.day + safePeriods * weekPeriod,
+          dtStart.hour,
+          dtStart.minute,
+          dtStart.second,
+          dtStart.millisecond,
+          dtStart.microsecond,
+        );
+      case MCalFrequency.monthly:
+      case MCalFrequency.yearly:
+        return dtStart;
     }
   }
 
