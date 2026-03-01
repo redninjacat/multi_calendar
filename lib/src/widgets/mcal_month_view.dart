@@ -11,6 +11,7 @@ import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
 import '../models/mcal_day_region.dart';
 import '../models/mcal_recurrence_exception.dart';
+import '../models/mcal_region.dart';
 import '../models/mcal_recurrence_rule.dart';
 import '../styles/mcal_theme.dart';
 import '../utils/color_utils.dart';
@@ -2535,23 +2536,35 @@ class _MCalMonthViewState extends State<MCalMonthView> {
 
       final proposedEnd = addDays(newProposed, eventDurationDays - 1);
 
-      // Validate against day regions first (library-level block).
+      // Validate against regions via controller (library-level block).
       // If any day in the proposed range is covered by a blocking region,
       // reject the drop without calling onDragWillAccept.
       // Calendar-day arithmetic avoids DST edge cases (24 h ≠ 1 calendar day).
       bool isValid = true;
-      if (widget.dayRegions.isNotEmpty) {
-        for (
-          DateTime d = newProposed;
-          !d.isAfter(proposedEnd);
-          d = addDays(d, 1)
-        ) {
-          if (widget.dayRegions.any(
-            (r) => r.blockInteraction && r.appliesTo(d),
-          )) {
-            isValid = false;
-            break;
-          }
+      for (
+        DateTime d = newProposed;
+        !d.isAfter(proposedEnd);
+        d = addDays(d, 1)
+      ) {
+        if (widget.controller.isDateBlocked(d)) {
+          isValid = false;
+          break;
+        }
+      }
+
+      // Cross-view enforcement: check timed regions for non-all-day events.
+      if (isValid && !moveEvent.isAllDay) {
+        final eventDuration = moveEvent.end.difference(moveEvent.start);
+        final projectedStart = DateTime(
+          newProposed.year,
+          newProposed.month,
+          newProposed.day,
+          moveEvent.start.hour,
+          moveEvent.start.minute,
+        );
+        final projectedEnd = projectedStart.add(eventDuration);
+        if (widget.controller.isTimeRangeBlocked(projectedStart, projectedEnd)) {
+          isValid = false;
         }
       }
 
@@ -4387,18 +4400,29 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
       getWeekRowBounds: _getWeekRowBounds,
       getWeekDates: _getWeekDates,
       validationCallback: (start, end) {
-        // Library-level day region block check.
-        if (widget.dayRegions.isNotEmpty) {
-          for (
-            DateTime d = start;
-            !d.isAfter(end);
-            d = addDays(d, 1)
-          ) {
-            if (widget.dayRegions.any(
-              (r) => r.blockInteraction && r.appliesTo(d),
-            )) {
-              return false;
-            }
+        // Library-level region block check via controller.
+        for (
+          DateTime d = start;
+          !d.isAfter(end);
+          d = addDays(d, 1)
+        ) {
+          if (widget.controller.isDateBlocked(d)) {
+            return false;
+          }
+        }
+        // Cross-view enforcement: check timed regions for non-all-day events.
+        if (!dragData.event.isAllDay) {
+          final eventDuration = dragData.event.end.difference(dragData.event.start);
+          final projectedStart = DateTime(
+            start.year,
+            start.month,
+            start.day,
+            dragData.event.start.hour,
+            dragData.event.start.minute,
+          );
+          final projectedEnd = projectedStart.add(eventDuration);
+          if (widget.controller.isTimeRangeBlocked(projectedStart, projectedEnd)) {
+            return false;
           }
         }
         // Consumer validation.
@@ -4717,6 +4741,7 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
         recurrenceRule: meta.recurrenceRule,
         masterEvent: meta.masterEvent,
         isException: meta.isException,
+        regions: widget.controller.getRegionsForDate(tileContext.displayDate),
       );
       if (customBuilder != null) return customBuilder(context, newContext);
       return _buildDefaultDropTargetTile(context, newContext);
@@ -5896,6 +5921,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           hasLeadingResizeHandle: segment.isFirstSegment,
           hasTrailingResizeHandle: segment.isLastSegment,
           keyboardState: tileCtx.keyboardState,
+          regions: tileCtx.regions,
         );
         final tileWithPadding = wrappedEventTileBuilder(
           ctx,
@@ -5985,6 +6011,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
             hasLeadingResizeHandle: tileCtx.hasLeadingResizeHandle,
             hasTrailingResizeHandle: tileCtx.hasTrailingResizeHandle,
             keyboardState: state,
+            regions: tileCtx.regions,
           );
           return finalEventTileBuilder(ctx, enriched);
         }
@@ -6465,6 +6492,11 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
     // Build date label (only if showDateLabel is true - Layer 2 handles labels now)
     final dateLabel = widget.showDateLabel ? _buildDateLabel(context) : null;
 
+    // Collect matching regions from controller for this cell (used for
+    // overlays and context objects).
+    final allRegions = widget.controller.getRegionsForDate(widget.date);
+    final allDayRegions = allRegions.where((r) => r.isAllDay).toList();
+
     // Build the cell widget with clip to prevent overflow on small screens
     // The LayoutBuilder dynamically calculates how many events fit
     Widget cell = LayoutBuilder(
@@ -6516,11 +6548,6 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
         //   - Multi-day reserved spacer (full width, no padding)
         //   - Single-day event tiles (full width, no horizontal padding -
         //     tiles handle their own margins)
-        // Collect matching day regions for this cell.
-        final applicableRegions = widget.dayRegions
-            .where((r) => r.appliesTo(widget.date))
-            .toList();
-
         Widget cellContent = Opacity(
           opacity: isInteractive ? 1.0 : 0.5,
           child: ClipRect(
@@ -6546,12 +6573,12 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
         );
 
         // Layer region overlays beneath cell content.
-        if (applicableRegions.isNotEmpty) {
+        if (allDayRegions.isNotEmpty) {
           cellContent = Stack(
             fit: StackFit.expand,
             children: [
               // Region overlays (bottom layer).
-              for (final region in applicableRegions)
+              for (final region in allDayRegions)
                 _buildRegionOverlay(context, region),
               // Cell content on top.
               cellContent,
@@ -6576,6 +6603,7 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
         isSelectable: widget.isSelectable,
         isFocused: widget.isFocused,
         events: widget.events,
+        regions: allRegions,
         dateLabelBuilder: wrappedDateLabelBuilder,
       );
       cell = widget.dayCellBuilder!(context, contextObj, cell);
@@ -6643,6 +6671,7 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
             isSelectable: widget.isSelectable,
             isFocused: widget.isFocused,
             events: widget.events,
+            regions: allRegions,
             dateLabelBuilder: wrappedDateLabelBuilder,
           );
           widget.onHoverCell!(context, contextObj);
@@ -6688,9 +6717,16 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
   /// Produces a default colored container (with optional text/icon) and then
   /// delegates to [widget.dayRegionBuilder] when provided so the consumer can
   /// override the appearance.
-  Widget _buildRegionOverlay(BuildContext context, MCalDayRegion region) {
+  Widget _buildRegionOverlay(BuildContext context, MCalRegion region) {
     final regionContext = MCalDayRegionContext(
-      region: region,
+      region: MCalDayRegion(
+        id: region.id,
+        date: region.start,
+        color: region.color,
+        text: region.text,
+        icon: region.icon,
+        blockInteraction: region.blockInteraction,
+      ),
       date: widget.date,
       isCurrentMonth: widget.isCurrentMonth,
       isToday: widget.isToday,
@@ -7414,6 +7450,7 @@ class _EventTileWidgetState extends State<_EventTileWidget> {
         recurrenceRule: meta.recurrenceRule,
         masterEvent: meta.masterEvent,
         isException: meta.isException,
+        regions: widget.controller.getRegionsForDate(widget.displayDate),
       );
       tile = widget.eventTileBuilder!(context, contextObj, tile);
     }
@@ -7463,6 +7500,7 @@ class _EventTileWidgetState extends State<_EventTileWidget> {
             recurrenceRule: meta.recurrenceRule,
             masterEvent: meta.masterEvent,
             isException: meta.isException,
+            regions: widget.controller.getRegionsForDate(widget.displayDate),
           );
           widget.onHoverEvent!(context, contextObj);
         },

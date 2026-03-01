@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/mcal_calendar_event.dart';
 import '../models/mcal_recurrence_rule.dart';
+import '../models/mcal_region.dart';
 import 'mcal_callback_details.dart';
 import 'mcal_month_week_layout_contexts.dart';
 
@@ -71,6 +72,9 @@ class MCalDayCellContext {
   /// List of events occurring on this date.
   final List<MCalCalendarEvent> events;
 
+  /// All regions (both all-day and timed) that apply to this cell's date.
+  final List<MCalRegion> regions;
+
   /// Builder for rendering date labels within the cell.
   ///
   /// This builder is pre-wrapped with tap handlers (if configured) so the
@@ -107,6 +111,7 @@ class MCalDayCellContext {
     required this.isSelectable,
     this.isFocused = false,
     required this.events,
+    this.regions = const [],
     this.dateLabelBuilder,
   });
 }
@@ -226,6 +231,9 @@ class MCalEventTileContext {
   /// wish.
   final MCalEventKeyboardState keyboardState;
 
+  /// All regions (both all-day and timed) that apply to this event's display date.
+  final List<MCalRegion> regions;
+
   /// Creates a new [MCalEventTileContext] instance.
   const MCalEventTileContext({
     required this.event,
@@ -246,6 +254,7 @@ class MCalEventTileContext {
     this.hasLeadingResizeHandle = false,
     this.hasTrailingResizeHandle = false,
     this.keyboardState = MCalEventKeyboardState.none,
+    this.regions = const [],
   });
 }
 
