@@ -108,7 +108,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   // ============================================================
   bool _enableSpecialTimeRegions = true;
   bool _enableBlackoutTimes = true;
-  late List<MCalTimeRegion> _cachedTimeRegions;
+  late List<MCalRegion> _cachedTimeRegions;
 
   // ============================================================
   // Status Label
@@ -125,6 +125,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
     );
     _eventController.addEvents(createDayViewSampleEvents(now));
     _cachedTimeRegions = _buildTimeRegions();
+    _eventController.addRegions(_cachedTimeRegions);
     // Async-update the first day of week from the current locale.
     _syncFirstDayOfWeekFromLocale(widget.locale);
   }
@@ -185,40 +186,36 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
     );
   }
 
-  List<MCalTimeRegion> _buildTimeRegions() {
-    final regions = <MCalTimeRegion>[];
+  List<MCalRegion> _buildTimeRegions() {
+    final regions = <MCalRegion>[];
     if (_enableSpecialTimeRegions) {
-      // Lunch break (special region)
-      // NOTE: 'Lunch Break' is mock data for demonstration purposes
-      // Missing ARB key: timeRegionLunchBreak (needs to be added in task 10)
       regions.add(
-        MCalTimeRegion(
+        MCalRegion(
           id: 'lunch',
-          startTime: DateTime(2026, 1, 1, 12, 0),
-          endTime: DateTime(2026, 1, 1, 13, 0),
+          start: DateTime(2026, 1, 1, 12, 0),
+          end: DateTime(2026, 1, 1, 13, 0),
           color: Colors.amber.withValues(alpha: 0.2),
           text: 'Lunch Break',
           icon: Icons.restaurant,
           blockInteraction: false,
-          recurrenceRule: 'FREQ=DAILY',
+          isAllDay: false,
+          recurrenceRule: MCalRecurrenceRule(frequency: MCalFrequency.daily),
         ),
       );
     }
 
     if (_enableBlackoutTimes) {
-      // After-hours (blocked region)
-      // NOTE: 'After Hours (blocked)' is mock data for demonstration purposes
-      // Missing ARB key: timeRegionAfterHoursBlocked (needs to be added in task 10)
       regions.add(
-        MCalTimeRegion(
+        MCalRegion(
           id: 'after-hours',
-          startTime: DateTime(2026, 1, 1, 18, 0),
-          endTime: DateTime(2026, 1, 1, 22, 0),
+          start: DateTime(2026, 1, 1, 18, 0),
+          end: DateTime(2026, 1, 1, 22, 0),
           color: Colors.red.withValues(alpha: 0.15),
           text: 'After Hours (blocked)',
           icon: Icons.block,
           blockInteraction: true,
-          recurrenceRule: 'FREQ=DAILY',
+          isAllDay: false,
+          recurrenceRule: MCalRecurrenceRule(frequency: MCalFrequency.daily),
         ),
       );
     }
@@ -662,6 +659,8 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               onChanged: (v) => setState(() {
                 _enableSpecialTimeRegions = v;
                 _cachedTimeRegions = _buildTimeRegions();
+                _eventController.clearRegions();
+                _eventController.addRegions(_cachedTimeRegions);
               }),
             ),
             ControlWidgets.toggle(
@@ -670,6 +669,8 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               onChanged: (v) => setState(() {
                 _enableBlackoutTimes = v;
                 _cachedTimeRegions = _buildTimeRegions();
+                _eventController.clearRegions();
+                _eventController.addRegions(_cachedTimeRegions);
               }),
             ),
           ],
@@ -716,7 +717,6 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
           enableKeyboardNavigation: _enableKeyboardNavigation,
           autoFocusOnEventTap: _autoFocusOnEventTap,
           enableSwipeNavigation: _enableSwipeNavigation,
-          specialTimeRegions: _cachedTimeRegions,
           locale: widget.locale,
           textDirection: _textDirectionOverride,
           layoutDirection: _layoutDirectionOverride,

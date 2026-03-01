@@ -90,7 +90,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
   // ============================================================
   bool _enableBlackoutDays = false;
   final Set<int> _blackoutDaysOfWeek = {};
-  late List<MCalDayRegion> _cachedDayRegions;
+  late List<MCalRegion> _cachedDayRegions;
 
   // ============================================================
   // Status Label
@@ -103,6 +103,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
     _controller = MCalEventController(firstDayOfWeek: _firstDayOfWeek);
     _controller.addEvents(createSampleEvents());
     _cachedDayRegions = _buildDayRegions();
+    _controller.addRegions(_cachedDayRegions);
     // Async-update the first day of week from the current locale. The
     // controller starts with the default (Sunday) and is replaced once the
     // locale data resolves.
@@ -134,28 +135,21 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
     super.dispose();
   }
 
-  static const _rruleDayNames = {
-    DateTime.monday: 'MO',
-    DateTime.tuesday: 'TU',
-    DateTime.wednesday: 'WE',
-    DateTime.thursday: 'TH',
-    DateTime.friday: 'FR',
-    DateTime.saturday: 'SA',
-    DateTime.sunday: 'SU',
-  };
-
-  /// Builds the list of [MCalDayRegion]s for the currently selected blackout
+  /// Builds the list of [MCalRegion]s for the currently selected blackout
   /// days of week.  Each selected weekday becomes a recurring weekly region.
-  List<MCalDayRegion> _buildDayRegions() {
+  List<MCalRegion> _buildDayRegions() {
     if (!_enableBlackoutDays || _blackoutDaysOfWeek.isEmpty) return [];
 
     return _blackoutDaysOfWeek.map((weekday) {
-      final byDay = _rruleDayNames[weekday]!;
-      return MCalDayRegion(
+      return MCalRegion(
         id: 'blackout-$weekday',
-        // Anchor: 2025-01-01 is before any displayed month; BYDAY handles filtering.
-        date: DateTime(2025, 1, 1),
-        recurrenceRule: 'FREQ=WEEKLY;BYDAY=$byDay',
+        start: DateTime(2025, 1, 1),
+        end: DateTime(2025, 1, 1),
+        isAllDay: true,
+        recurrenceRule: MCalRecurrenceRule(
+          frequency: MCalFrequency.weekly,
+          byWeekDays: {MCalWeekDay.every(weekday)},
+        ),
         color: Colors.grey.withValues(alpha: 0.25),
         text: 'Blocked',
         icon: Icons.block,
@@ -237,8 +231,6 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
               // RTL Override
               textDirection: _textDirectionOverride,
               layoutDirection: _layoutDirectionOverride,
-              // Day regions (blackout days)
-              dayRegions: _cachedDayRegions,
               // Gesture handlers
               onCellTap: (ctx, details) {
                 SnackBarHelper.show(
@@ -644,6 +636,8 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
                 setState(() {
                   _enableBlackoutDays = value;
                   _cachedDayRegions = _buildDayRegions();
+                  _controller.clearRegions();
+                  _controller.addRegions(_cachedDayRegions);
                 });
               },
             ),
@@ -697,6 +691,8 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
             _blackoutDaysOfWeek.remove(weekday);
           }
           _cachedDayRegions = _buildDayRegions();
+          _controller.clearRegions();
+          _controller.addRegions(_cachedDayRegions);
         });
       },
     );
