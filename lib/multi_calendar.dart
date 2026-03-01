@@ -64,6 +64,7 @@ export 'src/models/mcal_day_region.dart';
 export 'src/models/mcal_event_change_info.dart';
 export 'src/models/mcal_recurrence_exception.dart';
 export 'src/models/mcal_recurrence_rule.dart';
+export 'src/models/mcal_region.dart';
 export 'src/models/mcal_time_region.dart';
 // Export styles
 export 'src/styles/mcal_day_theme_data.dart';
