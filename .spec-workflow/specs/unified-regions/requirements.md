@@ -66,12 +66,10 @@ Currently, regions are view-local: `MCalDayView` receives `specialTimeRegions` (
 2. `MCalEventController` SHALL provide a `removeRegions(List<String> regionIds)` method.
 3. `MCalEventController` SHALL provide a `clearRegions()` method.
 4. `MCalEventController` SHALL provide a `List<MCalRegion> get regions` getter that returns the current list of regions.
-5. `MCalEventController` SHALL provide a `getRegionsForDate(DateTime date)` method that returns all regions (both all-day and timed) that apply to the given date, with recurrence expansion.
-6. `MCalEventController` SHALL provide a `getTimedRegionsForDate(DateTime date)` method that returns only timed regions (where `isAllDay == false`) expanded for the given date.
-7. `MCalEventController` SHALL provide a `getAllDayRegionsForDate(DateTime date)` method that returns only all-day regions (where `isAllDay == true`) that apply to the given date.
-8. WHEN regions are added, removed, or cleared THEN the controller SHALL call `notifyListeners()` to trigger view rebuilds.
-9. `MCalEventController` SHALL provide an `isDateBlocked(DateTime date)` method that returns `true` if any all-day region with `blockInteraction == true` applies to that date.
-10. `MCalEventController` SHALL provide an `isTimeRangeBlocked(DateTime start, DateTime end)` method that returns `true` if any timed region with `blockInteraction == true` overlaps with the given range.
+5. `MCalEventController` SHALL provide a `getRegionsForDate(DateTime date)` method that returns all regions (both all-day and timed) that apply to the given date, with recurrence expansion. Views filter by `isAllDay` themselves as needed.
+6. WHEN regions are added, removed, or cleared THEN the controller SHALL call `notifyListeners()` to trigger view rebuilds.
+7. `MCalEventController` SHALL provide an `isDateBlocked(DateTime date)` method that returns `true` if any all-day region with `blockInteraction == true` applies to that date.
+8. `MCalEventController` SHALL provide an `isTimeRangeBlocked(DateTime start, DateTime end)` method that returns `true` if any timed region with `blockInteraction == true` overlaps with the given range.
 
 ### Requirement 4: Cross-View Drag Validation
 
@@ -86,18 +84,23 @@ Currently, regions are view-local: `MCalDayView` receives `specialTimeRegions` (
 5. WHEN a blocking region rejects a drop THEN the consumer's `onDragWillAccept` callback SHALL NOT be called (the library short-circuits before reaching it), consistent with existing behavior.
 6. The validation order SHALL be: library-level region block check → consumer's `onDragWillAccept` callback.
 
-### Requirement 5: View Updates
+### Requirement 5: View Updates and Region Exposure to Builders
 
-**User Story:** As a developer, I want the views to read regions from the controller and render them appropriately, while still supporting view-specific region builders.
+**User Story:** As a developer, I want both views to read all regions from the controller and pass them to builder callbacks, so that I can implement custom rendering based on region context (e.g., custom cell colors when a timed blocking region exists, custom event tile rendering when an event overlaps a blocked region).
 
 #### Acceptance Criteria
 
-1. `MCalDayView` SHALL read timed regions from the controller via `getTimedRegionsForDate()` for rendering time region overlays.
-2. `MCalMonthView` SHALL read all-day regions from the controller via `getAllDayRegionsForDate()` for rendering day cell overlays.
-3. `MCalDayView` SHALL continue to support the `timeRegionBuilder` callback for custom rendering of timed regions.
-4. `MCalMonthView` SHALL continue to support the `dayRegionBuilder` callback for custom rendering of day regions.
-5. `MCalDayView` SHALL also check all-day blocking regions (via `isDateBlocked()`) when validating day-level drops (e.g., dropping an all-day event onto a blocked day in the all-day section).
-6. Both views SHALL continue to support a `regionBuilder` callback (renamed/unified where appropriate) with a context object providing region metadata.
+1. Both views SHALL read all regions for the displayed date via `controller.getRegionsForDate()` and filter by `isAllDay` as needed for their specific rendering.
+2. `MCalDayView` SHALL render timed regions as time-slot overlays and SHALL also be aware of all-day regions for drag validation.
+3. `MCalMonthView` SHALL render all-day regions as cell overlays and SHALL also be aware of timed regions for cross-view drag validation of timed events.
+4. `MCalDayView` SHALL support a `timeRegionBuilder` callback for custom rendering of timed region overlays, receiving an updated context that uses `MCalRegion`.
+5. `MCalMonthView` SHALL support a `dayRegionBuilder` callback for custom rendering of day region overlays, receiving an updated context that uses `MCalRegion`.
+6. The `MCalDayCellContext` (Month View cell builder context) SHALL include a `List<MCalRegion> regions` field containing all regions (both all-day and timed) that apply to that cell's date, so consumers can customize cell appearance based on region presence.
+7. The `MCalEventTileContext` (Month View event tile builder context) SHALL include a `List<MCalRegion> regions` field containing all regions that apply to the event's display date, so consumers can customize event tile rendering when an event falls within a region.
+8. The `MCalTimedEventTileContext` (Day View timed event tile builder context) SHALL include a `List<MCalRegion> regions` field containing all regions that apply to the event's display date, so consumers can customize event tile rendering based on overlapping regions.
+9. The `MCalAllDayEventTileContext` (Day View all-day event tile builder context) SHALL include a `List<MCalRegion> regions` field containing all regions that apply to the event's display date.
+10. The `MCalGridlineContext` (Day View gridline builder context) SHALL include a `List<MCalRegion> regions` field containing all timed regions expanded for the display date, so consumers can customize gridline rendering within region time ranges.
+11. The `MCalTimeSlotContext` (Day View time slot tap context) SHALL include a `List<MCalRegion> regions` field containing all regions that apply to the tapped time slot's date.
 
 ### Requirement 6: Removal of Old Region Classes and Parameters
 

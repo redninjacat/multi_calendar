@@ -59,51 +59,71 @@
 
 - [ ] 6. Add region query methods to `MCalEventController`
   - File: `lib/src/controllers/mcal_event_controller.dart` (continue from Task 5)
-  - Implement `getRegionsForDate(DateTime date)` — returns all regions (all-day and timed) that apply to the date
-  - Implement `getTimedRegionsForDate(DateTime date)` — returns timed regions expanded for the date
-  - Implement `getAllDayRegionsForDate(DateTime date)` — returns all-day regions that apply to the date
+  - Implement `getRegionsForDate(DateTime date)` — returns all regions (both all-day and timed) that apply to the date, with recurrence expansion via `expandedForDate()`. Returns expanded `MCalRegion` instances (not the original recurring definitions). Views filter by `isAllDay` themselves as needed.
   - Implement `isDateBlocked(DateTime date)` — true if any all-day region with `blockInteraction` applies
   - Implement `isTimeRangeBlocked(DateTime start, DateTime end)` — true if any timed region with `blockInteraction` overlaps the range (expanded for the date)
   - Purpose: Query interface for views and drag validation
   - _Leverage: `MCalRegion.appliesTo()`, `MCalRegion.expandedForDate()`, `MCalRegion.overlaps()` from Task 2_
-  - _Requirements: 3.5, 3.6, 3.7, 3.9, 3.10_
-  - _Prompt: Role: Flutter Developer | Task: Add region query methods to `MCalEventController`. `getRegionsForDate(date)` filters `_regions` using `appliesTo(date)`. `getTimedRegionsForDate(date)` filters for `!isAllDay`, calls `expandedForDate(date)`, returns non-null results. `getAllDayRegionsForDate(date)` filters for `isAllDay` and `appliesTo(date)`. `isDateBlocked(date)` checks if any all-day region with `blockInteraction == true` applies. `isTimeRangeBlocked(start, end)` iterates timed regions with `blockInteraction == true`, calls `expandedForDate(start)` on each, checks `overlaps(start, end)` on expanded result. | Restrictions: Methods must handle empty region list efficiently. | Success: `dart analyze` clean, correct results for mixed all-day and timed regions._
+  - _Requirements: 3.5, 3.7, 3.8_
+  - _Prompt: Role: Flutter Developer | Task: Add region query methods to `MCalEventController`. `getRegionsForDate(date)` iterates `_regions`, calls `expandedForDate(date)` on each, and returns the non-null expanded results as a list. This single method returns both all-day and timed regions — views filter by `isAllDay` as needed. `isDateBlocked(date)` checks if any all-day region with `blockInteraction == true` applies (can use `appliesTo` for efficiency since it doesn't need the expanded instance). `isTimeRangeBlocked(start, end)` iterates timed regions with `blockInteraction == true`, calls `expandedForDate(start)` on each, checks `overlaps(start, end)` on the expanded result. | Restrictions: Methods must handle empty region list efficiently. | Success: `dart analyze` clean, correct results for mixed all-day and timed regions._
 
 - [ ] 7. Create controller region tests
   - File: `test/controllers/mcal_event_controller_region_test.dart` (NEW)
   - Test `addRegions`, `removeRegions`, `clearRegions` with listener notification verification
   - Test upsert semantics for `addRegions` (replace by ID)
-  - Test all query methods with mixed all-day and timed regions, with and without recurrence
+  - Test `getRegionsForDate` with mixed all-day and timed regions, with and without recurrence. Verify it returns both types. Verify consumer can filter by `isAllDay`.
   - Test `isDateBlocked` and `isTimeRangeBlocked` with blocking and non-blocking regions
   - Test cross-view scenario: timed blocking region on specific weekday, verify `isTimeRangeBlocked` returns true for overlapping time range on that day
   - Purpose: Verify controller region management and query correctness
   - _Leverage: Existing controller tests in `test/controllers/` for test patterns_
-  - _Requirements: 3.1–3.10_
-  - _Prompt: Role: QA Engineer | Task: Create controller region tests in `test/controllers/mcal_event_controller_region_test.dart`. Test all CRUD operations (add, remove, clear) with listener notification count verification. Test upsert: add region, add region with same ID but different data, verify replacement. Test all query methods with a mix of all-day and timed regions (some blocking, some not, some recurring). Key test: add a timed blocking region for Mondays 2-5 PM, verify `isTimeRangeBlocked(monday3pm, monday4pm)` returns true and `isTimeRangeBlocked(tuesday3pm, tuesday4pm)` returns false. Test `isDateBlocked` with all-day blocking region. | Restrictions: Do NOT modify existing test files. | Success: All tests pass with `flutter test test/controllers/mcal_event_controller_region_test.dart`._
+  - _Requirements: 3.1–3.8_
+  - _Prompt: Role: QA Engineer | Task: Create controller region tests in `test/controllers/mcal_event_controller_region_test.dart`. Test all CRUD operations (add, remove, clear) with listener notification count verification. Test upsert: add region, add region with same ID but different data, verify replacement. Test `getRegionsForDate` with a mix of all-day and timed regions (some blocking, some not, some recurring) — verify it returns both types and that filtering by `isAllDay` works. Key test: add a timed blocking region for Mondays 2-5 PM, verify `isTimeRangeBlocked(monday3pm, monday4pm)` returns true and `isTimeRangeBlocked(tuesday3pm, tuesday4pm)` returns false. Test `isDateBlocked` with all-day blocking region. | Restrictions: Do NOT modify existing test files. | Success: All tests pass with `flutter test test/controllers/mcal_event_controller_region_test.dart`._
 
-## Phase 3: View Integration
+## Phase 3: View Integration and Builder Context Enrichment
 
-- [ ] 8. Update `MCalDayView` to read regions from controller
+- [ ] 8. Update `MCalDayView` to read regions from controller and pass to builders
   - File: `lib/src/widgets/mcal_day_view.dart` (modify existing)
-  - Update `_TimeRegionsLayer` to read from controller: `widget.controller.getTimedRegionsForDate(displayDate)` instead of `widget.specialTimeRegions`. The `specialTimeRegions` parameter remains temporarily during this phase (removed in Phase 6).
+  - File: `lib/src/widgets/mcal_day_view_contexts.dart` (modify existing)
+  - Update `_TimeRegionsLayer` to read timed regions from controller via `controller.getRegionsForDate(displayDate)` filtered to `!isAllDay`, instead of `widget.specialTimeRegions`. The `specialTimeRegions` parameter remains temporarily (removed in Phase 6).
   - Update `_validateDrop()` to query `widget.controller.isTimeRangeBlocked(proposedStart, proposedEnd)` and `widget.controller.isDateBlocked(displayDate)` instead of iterating `widget.specialTimeRegions`.
   - Update keyboard move validation similarly.
-  - Purpose: Day View reads regions from controller
-  - _Leverage: Existing `_TimeRegionsLayer` and `_validateDrop` in `mcal_day_view.dart`_
-  - _Requirements: 4.3, 4.4, 4.5, 4.6, 5.1, 5.3, 5.5_
-  - _Prompt: Role: Flutter Developer | Task: Update `MCalDayView` in `lib/src/widgets/mcal_day_view.dart` to read regions from the controller instead of `specialTimeRegions`. Update `_TimeRegionsLayer` to get regions via `widget.controller.getTimedRegionsForDate(displayDate)`. Update `_validateDrop` and keyboard validation to check `controller.isTimeRangeBlocked` and `controller.isDateBlocked` instead of iterating `widget.specialTimeRegions`. Maintain the existing check order: library block check → consumer `onDragWillAccept`. The old `specialTimeRegions` parameter will be removed in a later cleanup task — for now just stop using it internally. | Restrictions: Do NOT change builder callback signatures. | Success: `dart analyze` clean, controller regions render correctly, drag validation enforces blocking via controller._
+  - Update `MCalTimeRegionContext` to reference `MCalRegion` instead of `MCalTimeRegion`.
+  - Add `List<MCalRegion> regions` field to `MCalTimedEventTileContext` — all regions for the event's display date.
+  - Add `List<MCalRegion> regions` field to `MCalAllDayEventTileContext` — all regions for the event's display date.
+  - Add `List<MCalRegion> regions` field to `MCalGridlineContext` — timed regions expanded for display date.
+  - Add `List<MCalRegion> regions` field to `MCalTimeSlotContext` — all regions for the time slot's date.
+  - Populate these fields when constructing context objects in the view.
+  - Purpose: Day View reads regions from controller and exposes them to all builder callbacks
+  - _Leverage: Existing `_TimeRegionsLayer`, `_validateDrop`, and context construction in `mcal_day_view.dart` and `mcal_day_view_contexts.dart`_
+  - _Requirements: 4.3, 4.4, 4.5, 4.6, 5.1, 5.2, 5.4, 5.8, 5.9, 5.10, 5.11_
+  - _Prompt: Role: Flutter Developer | Task: Update `MCalDayView` to read regions from the controller and pass them to builder contexts. (1) Update `_TimeRegionsLayer` to get regions via `controller.getRegionsForDate(displayDate)` filtered to `!r.isAllDay`. (2) Update `_validateDrop` and keyboard validation to use `controller.isTimeRangeBlocked` and `controller.isDateBlocked`. (3) Update `MCalTimeRegionContext` in `mcal_day_view_contexts.dart` to use `MCalRegion` instead of `MCalTimeRegion`. (4) Add `List<MCalRegion> regions` field to `MCalTimedEventTileContext`, `MCalAllDayEventTileContext`, `MCalGridlineContext`, and `MCalTimeSlotContext`. (5) Populate these fields where the contexts are constructed — call `controller.getRegionsForDate(displayDate)` once per build and pass the result through. Maintain check order: library block check → consumer `onDragWillAccept`. | Restrictions: The `specialTimeRegions` parameter stays for now (removed in Phase 6). Do NOT change builder callback signatures (only context class fields change). | Success: `dart analyze` clean, regions flow through to all builder contexts, drag validation works via controller._
 
-- [ ] 9. Update `MCalMonthView` to read regions from controller
+- [ ] 9. Update `MCalMonthView` to read regions from controller and pass to builders
   - File: `lib/src/widgets/mcal_month_view.dart` (modify existing)
-  - Update cell overlay rendering to read from controller: `widget.controller.getAllDayRegionsForDate(date)` instead of `widget.dayRegions`. The `dayRegions` parameter remains temporarily during this phase (removed in Phase 6).
+  - File: `lib/src/widgets/mcal_month_view_contexts.dart` (modify existing)
+  - Update cell overlay rendering to read all-day regions from controller via `controller.getRegionsForDate(date)` filtered to `isAllDay`, instead of `widget.dayRegions`. The `dayRegions` parameter remains temporarily (removed in Phase 6).
   - Update drag validation to check `widget.controller.isDateBlocked(date)` instead of iterating `widget.dayRegions`. For timed events being dragged, also check `widget.controller.isTimeRangeBlocked(eventStart, eventEnd)` where the times are projected onto the target date. This is the key cross-view enforcement.
   - Update keyboard move validation similarly.
-  - Purpose: Month View reads regions from controller with cross-view enforcement
-  - _Leverage: Existing region rendering and drag validation in `mcal_month_view.dart`_
-  - _Requirements: 4.1, 4.2, 4.5, 4.6, 5.2, 5.4, 5.6_
-  - _Prompt: Role: Flutter Developer | Task: Update `MCalMonthView` in `lib/src/widgets/mcal_month_view.dart` to read regions from the controller. Update cell overlay rendering to use `widget.controller.getAllDayRegionsForDate(date)`. Critical change: update drag validation to check `controller.isDateBlocked(date)` and also `controller.isTimeRangeBlocked()` for timed events — when a timed event (e.g., 3-4 PM) is dragged to a target date, project the event's time range onto the target date and check for blocking timed regions. This is the key cross-view enforcement. Maintain check order: library block → consumer `onDragWillAccept`. The old `dayRegions` parameter will be removed in a later cleanup task — for now just stop using it internally. | Restrictions: Do NOT change builder callback signatures. | Success: `dart analyze` clean, controller regions render correctly, timed blocking regions block drops of overlapping timed events in Month View._
+  - Add `List<MCalRegion> regions` field to `MCalDayCellContext` — all regions (both all-day and timed) for the cell's date.
+  - Add `List<MCalRegion> regions` field to `MCalEventTileContext` — all regions for the event's display date.
+  - Populate these fields when constructing context objects in the view.
+  - Purpose: Month View reads regions from controller, exposes them to builders, and enforces cross-view blocking
+  - _Leverage: Existing region rendering, drag validation, and context construction in `mcal_month_view.dart` and `mcal_month_view_contexts.dart`_
+  - _Requirements: 4.1, 4.2, 4.5, 4.6, 5.1, 5.2, 5.3, 5.5, 5.6, 5.7_
+  - _Prompt: Role: Flutter Developer | Task: Update `MCalMonthView` to read regions from the controller and pass them to builder contexts. (1) Update cell overlay rendering to use `controller.getRegionsForDate(date)` filtered to `r.isAllDay`. (2) Update drag validation to use `controller.isDateBlocked(date)` and, critically, `controller.isTimeRangeBlocked(eventStart, eventEnd)` for timed events — project the dragged event's time range onto the target date. This is the key cross-view enforcement. (3) Add `List<MCalRegion> regions` field to `MCalDayCellContext` in `mcal_month_view_contexts.dart` containing ALL regions for that date (both all-day and timed). (4) Add `List<MCalRegion> regions` field to `MCalEventTileContext` containing all regions for the event's display date. (5) Populate these fields where contexts are constructed — call `controller.getRegionsForDate(date)` and pass the result. Maintain check order: library block → consumer `onDragWillAccept`. | Restrictions: The `dayRegions` parameter stays for now (removed in Phase 6). Do NOT change builder callback signatures (only context class fields change). | Success: `dart analyze` clean, regions flow through to cell and event tile builder contexts, timed blocking regions block drops of overlapping timed events in Month View._
 
-## Phase 4: Widget Testing
+- [ ] 10. Verify `MCalRegion` is accessible from all builder contexts
+  - File: `test/widgets/mcal_day_view_regions_test.dart` (extend or new section)
+  - File: `test/widgets/mcal_month_day_region_test.dart` (extend or new section)
+  - Test: Day View `MCalTimedEventTileContext.regions` is populated when controller has regions
+  - Test: Day View `MCalGridlineContext.regions` contains timed regions
+  - Test: Month View `MCalDayCellContext.regions` contains both all-day and timed regions
+  - Test: Month View `MCalEventTileContext.regions` is populated when controller has regions
+  - Purpose: Verify regions flow through to all builder contexts
+  - _Requirements: 5.6, 5.7, 5.8, 5.9, 5.10, 5.11_
+  - _Prompt: Role: QA Engineer | Task: Write tests verifying that `MCalRegion` data flows through to builder contexts. For Day View: add regions to controller, build the view, verify that builder contexts (`MCalTimedEventTileContext`, `MCalGridlineContext`) contain the expected regions. For Month View: add mixed all-day and timed regions to controller, build the view, verify `MCalDayCellContext.regions` and `MCalEventTileContext.regions` contain the expected regions. | Restrictions: Do NOT remove existing tests. | Success: All tests pass._
+
+## Phase 4: Drag Validation Widget Testing
 
 - [ ] 11. Add Day View region integration tests
   - File: `test/widgets/mcal_day_view_regions_test.dart` (modify existing or create new section)

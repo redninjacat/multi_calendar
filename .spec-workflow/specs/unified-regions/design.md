@@ -51,11 +51,15 @@ MCalEventController.addRegions([...])
 Controller stores regions, calls notifyListeners()
         │
         ├──► MCalMonthView rebuilds
-        │    ├── Queries controller.getAllDayRegionsForDate(date) for cell overlays
+        │    ├── Queries controller.getRegionsForDate(date)
+        │    │   ├── Filters isAllDay for cell overlay rendering
+        │    │   └── Passes ALL regions to MCalDayCellContext and MCalEventTileContext
         │    └── Queries controller.isDateBlocked(date) + controller.isTimeRangeBlocked(start, end) for drag validation
         │
         └──► MCalDayView rebuilds
-             ├── Queries controller.getTimedRegionsForDate(date) for time region overlays
+             ├── Queries controller.getRegionsForDate(date)
+             │   ├── Filters !isAllDay for time region overlay rendering
+             │   └── Passes ALL regions to MCalTimedEventTileContext, MCalAllDayEventTileContext, MCalGridlineContext, MCalTimeSlotContext
              └── Queries controller.isTimeRangeBlocked(start, end) + controller.isDateBlocked(date) for drag validation
 ```
 
@@ -97,24 +101,41 @@ When a user drags a timed event (e.g., 3–4 PM) from Tuesday to Monday in Month
   - `void removeRegions(List<String> regionIds)`
   - `void clearRegions()`
   - `List<MCalRegion> get regions`
-  - `List<MCalRegion> getRegionsForDate(DateTime date)`
-  - `List<MCalRegion> getTimedRegionsForDate(DateTime date)`
-  - `List<MCalRegion> getAllDayRegionsForDate(DateTime date)`
+  - `List<MCalRegion> getRegionsForDate(DateTime date)` — returns all regions (all-day + timed) that apply, with recurrence expansion. Views filter by `isAllDay` as needed.
   - `bool isDateBlocked(DateTime date)`
   - `bool isTimeRangeBlocked(DateTime start, DateTime end)`
 - **Internal Storage:** `final List<MCalRegion> _regions = [];`
 
 ### View Updates
 
+Both views read all regions via `controller.getRegionsForDate(date)` and filter by `isAllDay` for their specific rendering needs. Both views also pass regions into builder contexts so consumers can implement custom rendering.
+
 - **MCalDayView** (`lib/src/widgets/mcal_day_view.dart`):
-  - `_TimeRegionsLayer` reads from `widget.controller.getTimedRegionsForDate(displayDate)` instead of `widget.specialTimeRegions`
+  - `_TimeRegionsLayer` reads timed regions from controller via `getRegionsForDate(displayDate)` filtered to `!isAllDay`
   - `_validateDrop()` queries `widget.controller.isTimeRangeBlocked()` and `widget.controller.isDateBlocked()`
   - `specialTimeRegions` parameter removed (old code removed in final cleanup phase)
+  - Regions passed to: `MCalTimedEventTileContext`, `MCalAllDayEventTileContext`, `MCalGridlineContext`, `MCalTimeSlotContext`
 
 - **MCalMonthView** (`lib/src/widgets/mcal_month_view.dart`):
-  - `_buildRegionOverlay` reads from `widget.controller.getAllDayRegionsForDate(date)` instead of `widget.dayRegions`
+  - Cell overlay rendering reads all-day regions from controller via `getRegionsForDate(date)` filtered to `isAllDay`
   - Drag validation queries `widget.controller.isDateBlocked()` and `widget.controller.isTimeRangeBlocked()`
   - `dayRegions` parameter removed (old code removed in final cleanup phase)
+  - Regions passed to: `MCalDayCellContext`, `MCalEventTileContext`
+
+### Builder Context Enrichment
+
+The following existing context classes gain a `List<MCalRegion> regions` field:
+
+| Context Class | View | Contains | Purpose |
+|---------------|------|----------|---------|
+| `MCalDayCellContext` | Month | All regions for the cell's date | Custom cell background/styling based on regions |
+| `MCalEventTileContext` | Month | All regions for the event's display date | Custom event rendering when event overlaps a region |
+| `MCalTimedEventTileContext` | Day | All regions for the event's display date | Custom timed event rendering in region context |
+| `MCalAllDayEventTileContext` | Day | All regions for the event's display date | Custom all-day event rendering in region context |
+| `MCalGridlineContext` | Day | Timed regions expanded for display date | Custom gridline rendering within regions |
+| `MCalTimeSlotContext` | Day | All regions for the time slot's date | Context-aware time slot tap handling |
+
+The region builder contexts (`MCalTimeRegionContext`, `MCalDayRegionContext`) are updated to use `MCalRegion` instead of the old classes.
 
 ## Data Models
 
