@@ -99,18 +99,19 @@ Currently, regions are view-local: `MCalDayView` receives `specialTimeRegions` (
 5. `MCalDayView` SHALL also check all-day blocking regions (via `isDateBlocked()`) when validating day-level drops (e.g., dropping an all-day event onto a blocked day in the all-day section).
 6. Both views SHALL continue to support a `regionBuilder` callback (renamed/unified where appropriate) with a context object providing region metadata.
 
-### Requirement 6: Deprecation of Old Region Classes and Parameters
+### Requirement 6: Removal of Old Region Classes and Parameters
 
-**User Story:** As a developer, I want a clear migration path from the old region classes to the new unified class, so that I can update my code incrementally.
+**User Story:** As a developer, I want the old region classes and view-level parameters removed so that the codebase has a single, clean region API.
 
 #### Acceptance Criteria
 
-1. `MCalTimeRegion` SHALL be deprecated with a message pointing to `MCalRegion`.
-2. `MCalDayRegion` SHALL be deprecated with a message pointing to `MCalRegion`.
-3. `MCalDayView.specialTimeRegions` parameter SHALL be deprecated with a message indicating regions should be added to the controller instead.
-4. `MCalMonthView.dayRegions` parameter SHALL be deprecated with a message indicating regions should be added to the controller instead.
-5. WHEN the deprecated view-level parameters are provided THEN the views SHALL still function using those parameters for backward compatibility, combining them with any controller-level regions.
-6. The deprecated classes and parameters SHALL remain functional for at least one release cycle before removal.
+1. `MCalTimeRegion` class and its file (`lib/src/models/mcal_time_region.dart`) SHALL be removed.
+2. `MCalDayRegion` class, `MCalDayRegionContext` class, and their file (`lib/src/models/mcal_day_region.dart`) SHALL be removed.
+3. `MCalDayView.specialTimeRegions` parameter SHALL be removed.
+4. `MCalMonthView.dayRegions` parameter SHALL be removed.
+5. All exports of the removed classes SHALL be removed from `lib/multi_calendar.dart`.
+6. All imports and usages of the removed classes in test files, example app, and views SHALL be updated to use `MCalRegion` and controller-based APIs.
+7. Removal SHALL happen in a dedicated final phase, after all new `MCalRegion` code is implemented, integrated into views, and verified with passing tests.
 
 ### Requirement 7: Recurrence Rule as Typed Object
 
@@ -133,6 +134,6 @@ Currently, regions are view-local: `MCalDayView` receives `specialTimeRegions` (
 - Region lookups during drag validation must not cause frame drops. With typical region counts (<50), O(n) scans are acceptable.
 - Recurrence expansion for regions should be cached or lazily computed per visible date range, consistent with event expansion patterns.
 
-### Backward Compatibility
-- Existing code using `MCalTimeRegion`, `MCalDayRegion`, `specialTimeRegions`, and `dayRegions` must continue to work with deprecation warnings.
-- No breaking changes in the public API during the deprecation period.
+### Clean Removal
+- Old region classes (`MCalTimeRegion`, `MCalDayRegion`) and view-level parameters (`specialTimeRegions`, `dayRegions`) are removed entirely — no deprecation period.
+- Removal happens in a final phase after all new code is implemented and tested, so the agent has working references during development.

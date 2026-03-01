@@ -85,34 +85,23 @@
 
 - [ ] 8. Update `MCalDayView` to read regions from controller
   - File: `lib/src/widgets/mcal_day_view.dart` (modify existing)
-  - Mark `specialTimeRegions` parameter as `@Deprecated('Use MCalEventController.addRegions() instead.')`
-  - Update `_TimeRegionsLayer` to read from controller: `widget.controller.getTimedRegionsForDate(displayDate)`. If deprecated `specialTimeRegions` is also provided, combine both lists (deprecated first, then controller regions).
-  - Update `_validateDrop()` to query `widget.controller.isTimeRangeBlocked(proposedStart, proposedEnd)` and `widget.controller.isDateBlocked(displayDate)`. If deprecated `specialTimeRegions` is also provided, check those too (existing logic).
+  - Update `_TimeRegionsLayer` to read from controller: `widget.controller.getTimedRegionsForDate(displayDate)` instead of `widget.specialTimeRegions`. The `specialTimeRegions` parameter remains temporarily during this phase (removed in Phase 6).
+  - Update `_validateDrop()` to query `widget.controller.isTimeRangeBlocked(proposedStart, proposedEnd)` and `widget.controller.isDateBlocked(displayDate)` instead of iterating `widget.specialTimeRegions`.
   - Update keyboard move validation similarly.
-  - Purpose: Day View reads regions from controller with backward compatibility
+  - Purpose: Day View reads regions from controller
   - _Leverage: Existing `_TimeRegionsLayer` and `_validateDrop` in `mcal_day_view.dart`_
-  - _Requirements: 4.3, 4.4, 4.5, 4.6, 5.1, 5.3, 5.5, 6.3, 6.5_
-  - _Prompt: Role: Flutter Developer | Task: Update `MCalDayView` in `lib/src/widgets/mcal_day_view.dart` to read regions from the controller instead of (or in addition to) `specialTimeRegions`. Mark `specialTimeRegions` as `@Deprecated`. Update `_TimeRegionsLayer` to combine deprecated regions with controller regions. Update `_validateDrop` and keyboard validation to also check `controller.isTimeRangeBlocked` and `controller.isDateBlocked`. Maintain the existing check order: library block check → consumer `onDragWillAccept`. | Restrictions: Must maintain full backward compatibility — existing code using `specialTimeRegions` must continue to work. Do NOT change builder callback signatures. | Success: `dart analyze` clean, deprecated parameter works, controller regions work, combined mode works, drag validation enforces blocking._
+  - _Requirements: 4.3, 4.4, 4.5, 4.6, 5.1, 5.3, 5.5_
+  - _Prompt: Role: Flutter Developer | Task: Update `MCalDayView` in `lib/src/widgets/mcal_day_view.dart` to read regions from the controller instead of `specialTimeRegions`. Update `_TimeRegionsLayer` to get regions via `widget.controller.getTimedRegionsForDate(displayDate)`. Update `_validateDrop` and keyboard validation to check `controller.isTimeRangeBlocked` and `controller.isDateBlocked` instead of iterating `widget.specialTimeRegions`. Maintain the existing check order: library block check → consumer `onDragWillAccept`. The old `specialTimeRegions` parameter will be removed in a later cleanup task — for now just stop using it internally. | Restrictions: Do NOT change builder callback signatures. | Success: `dart analyze` clean, controller regions render correctly, drag validation enforces blocking via controller._
 
 - [ ] 9. Update `MCalMonthView` to read regions from controller
   - File: `lib/src/widgets/mcal_month_view.dart` (modify existing)
-  - Mark `dayRegions` parameter as `@Deprecated('Use MCalEventController.addRegions() instead.')`
-  - Update cell overlay rendering to read from controller: `widget.controller.getAllDayRegionsForDate(date)`. If deprecated `dayRegions` is also provided, combine both lists.
-  - Update drag validation to also check `widget.controller.isDateBlocked(date)`. For timed events being dragged, also check `widget.controller.isTimeRangeBlocked(eventStart, eventEnd)` where the times are projected onto the target date. If deprecated `dayRegions` is also provided, check those too.
+  - Update cell overlay rendering to read from controller: `widget.controller.getAllDayRegionsForDate(date)` instead of `widget.dayRegions`. The `dayRegions` parameter remains temporarily during this phase (removed in Phase 6).
+  - Update drag validation to check `widget.controller.isDateBlocked(date)` instead of iterating `widget.dayRegions`. For timed events being dragged, also check `widget.controller.isTimeRangeBlocked(eventStart, eventEnd)` where the times are projected onto the target date. This is the key cross-view enforcement.
   - Update keyboard move validation similarly.
-  - Purpose: Month View reads regions from controller with backward compatibility and cross-view enforcement
+  - Purpose: Month View reads regions from controller with cross-view enforcement
   - _Leverage: Existing region rendering and drag validation in `mcal_month_view.dart`_
-  - _Requirements: 4.1, 4.2, 4.5, 4.6, 5.2, 5.4, 5.6, 6.4, 6.5_
-  - _Prompt: Role: Flutter Developer | Task: Update `MCalMonthView` in `lib/src/widgets/mcal_month_view.dart` to read regions from the controller. Mark `dayRegions` as `@Deprecated`. Update cell overlay rendering to combine deprecated regions with controller all-day regions. Critical change: update drag validation to also check `controller.isTimeRangeBlocked()` for timed events — when a timed event (e.g., 3-4 PM) is dragged to a target date, project the event's time range onto the target date and check for blocking timed regions. This is the key cross-view enforcement. Maintain check order: library block → consumer `onDragWillAccept`. | Restrictions: Must maintain full backward compatibility. Do NOT change builder callback signatures. | Success: `dart analyze` clean, deprecated parameter works, controller regions work, timed blocking regions block drops of overlapping timed events in Month View._
-
-- [ ] 10. Deprecate `MCalTimeRegion` and `MCalDayRegion`
-  - File: `lib/src/models/mcal_time_region.dart` (modify existing)
-  - File: `lib/src/models/mcal_day_region.dart` (modify existing)
-  - Add `@Deprecated('Use MCalRegion instead. See migration guide in design doc.')` to both classes
-  - Add `@Deprecated` to `MCalDayRegionContext` with message pointing to the new unified context
-  - Purpose: Signal migration path to developers
-  - _Requirements: 6.1, 6.2, 6.6_
-  - _Prompt: Role: Dart Developer | Task: Add `@Deprecated` annotations to `MCalTimeRegion` class in `lib/src/models/mcal_time_region.dart` and `MCalDayRegion` class and `MCalDayRegionContext` in `lib/src/models/mcal_day_region.dart`. Use descriptive deprecation messages pointing to `MCalRegion` and the migration mapping in the design doc. | Restrictions: Do NOT remove any code. Do NOT change behavior. Classes must remain fully functional. | Success: `dart analyze` shows deprecation warnings but no errors._
+  - _Requirements: 4.1, 4.2, 4.5, 4.6, 5.2, 5.4, 5.6_
+  - _Prompt: Role: Flutter Developer | Task: Update `MCalMonthView` in `lib/src/widgets/mcal_month_view.dart` to read regions from the controller. Update cell overlay rendering to use `widget.controller.getAllDayRegionsForDate(date)`. Critical change: update drag validation to check `controller.isDateBlocked(date)` and also `controller.isTimeRangeBlocked()` for timed events — when a timed event (e.g., 3-4 PM) is dragged to a target date, project the event's time range onto the target date and check for blocking timed regions. This is the key cross-view enforcement. Maintain check order: library block → consumer `onDragWillAccept`. The old `dayRegions` parameter will be removed in a later cleanup task — for now just stop using it internally. | Restrictions: Do NOT change builder callback signatures. | Success: `dart analyze` clean, controller regions render correctly, timed blocking regions block drops of overlapping timed events in Month View._
 
 ## Phase 4: Widget Testing
 
@@ -121,44 +110,69 @@
   - Test: Day View renders timed regions from controller
   - Test: Day View drag validation rejects drops on controller-level blocked timed regions
   - Test: Day View drag validation rejects drops on controller-level blocked all-day regions
-  - Test: Deprecated `specialTimeRegions` parameter still works
-  - Test: Combined deprecated + controller regions both applied
   - Purpose: Verify Day View integration with controller regions
   - _Leverage: Existing tests in `test/widgets/mcal_day_view_regions_test.dart`_
-  - _Requirements: 4.3, 4.4, 5.1, 5.3, 5.5, 6.5_
-  - _Prompt: Role: QA Engineer | Task: Add or extend tests in `test/widgets/mcal_day_view_regions_test.dart` for controller-based regions. Test that Day View renders regions added to the controller. Test drag validation with controller blocking regions (both timed and all-day). Test backward compatibility with deprecated `specialTimeRegions`. Test combined mode. | Restrictions: Do NOT remove existing tests. | Success: All tests pass._
+  - _Requirements: 4.3, 4.4, 5.1, 5.3, 5.5_
+  - _Prompt: Role: QA Engineer | Task: Add or extend tests in `test/widgets/mcal_day_view_regions_test.dart` for controller-based regions. Test that Day View renders regions added to the controller via `controller.addRegions()`. Test drag validation with controller blocking regions (both timed and all-day). Use `MCalRegion` exclusively — do not use old `MCalTimeRegion`. | Restrictions: Do NOT remove existing tests yet (they are cleaned up in Phase 6). | Success: All tests pass._
 
 - [ ] 12. Add Month View region integration tests
   - File: `test/widgets/mcal_month_day_region_test.dart` (modify existing or create new section)
   - Test: Month View renders all-day regions from controller
   - Test: Month View drag validation rejects drops on controller-level blocked all-day regions
   - Test: Month View drag validation rejects drops of timed events on dates with controller-level blocking timed regions (cross-view enforcement)
-  - Test: Deprecated `dayRegions` parameter still works
-  - Test: Combined deprecated + controller regions both applied
   - Purpose: Verify Month View integration with controller regions, especially cross-view enforcement
   - _Leverage: Existing tests in `test/widgets/mcal_month_day_region_test.dart`_
-  - _Requirements: 4.1, 4.2, 4.5, 4.6, 5.2, 5.4, 6.5_
-  - _Prompt: Role: QA Engineer | Task: Add or extend tests in `test/widgets/mcal_month_day_region_test.dart` for controller-based regions. Critical test: create a timed blocking region for Mondays 2-5 PM, create a timed event 3-4 PM on Tuesday, drag it to Monday in Month View → verify drop is rejected. Test all-day blocking regions from controller. Test backward compatibility. Test combined mode. | Restrictions: Do NOT remove existing tests. | Success: All tests pass, cross-view enforcement test passes._
+  - _Requirements: 4.1, 4.2, 4.5, 4.6, 5.2, 5.4_
+  - _Prompt: Role: QA Engineer | Task: Add or extend tests in `test/widgets/mcal_month_day_region_test.dart` for controller-based regions. Critical test: create a timed blocking region for Mondays 2-5 PM via `controller.addRegions()`, create a timed event 3-4 PM on Tuesday, drag it to Monday in Month View → verify drop is rejected. Test all-day blocking regions from controller. Use `MCalRegion` exclusively — do not use old `MCalDayRegion`. | Restrictions: Do NOT remove existing tests yet (they are cleaned up in Phase 6). | Success: All tests pass, cross-view enforcement test passes._
 
-## Phase 5: Example App and Documentation
+## Phase 5: Example App
 
 - [ ] 13. Update example app to use `MCalRegion` on controller
   - File: `example/lib/views/day_view/tabs/day_features_tab.dart` (modify existing)
   - File: `example/lib/views/month_view/tabs/month_features_tab.dart` (modify existing)
   - Migrate `_buildTimeRegions()` to create `MCalRegion` instances with `isAllDay: false` and add to controller
   - Migrate `_buildDayRegions()` to create `MCalRegion` instances with `isAllDay: true` and add to controller
-  - Remove usage of deprecated `specialTimeRegions` and `dayRegions` parameters
+  - Remove usage of `specialTimeRegions` and `dayRegions` view parameters
   - Add UI demo showing cross-view region enforcement (e.g., timed blocking region visible in Day View also blocks in Month View)
   - Purpose: Demonstrate unified region API and cross-view enforcement
   - _Leverage: Existing region creation code in both feature tabs_
   - _Requirements: All_
-  - _Prompt: Role: Flutter Developer | Task: Update the example app to use `MCalRegion` with the controller instead of the deprecated view-level parameters. In `day_features_tab.dart`, convert `_buildTimeRegions()` to create `MCalRegion(isAllDay: false, recurrenceRule: MCalRecurrenceRule.fromRruleString(...))` instances and add them via `controller.addRegions()`. In `month_features_tab.dart`, convert `_buildDayRegions()` similarly with `isAllDay: true`. Remove the deprecated `specialTimeRegions` and `dayRegions` parameters from view constructors. | Restrictions: Preserve existing UI toggles and behavior. | Success: Example app compiles and runs, regions display correctly in both views, blocking works cross-view._
+  - _Prompt: Role: Flutter Developer | Task: Update the example app to use `MCalRegion` with the controller instead of the old view-level parameters. In `day_features_tab.dart`, convert `_buildTimeRegions()` to create `MCalRegion(isAllDay: false, recurrenceRule: MCalRecurrenceRule.fromRruleString(...))` instances and add them via `controller.addRegions()`. In `month_features_tab.dart`, convert `_buildDayRegions()` similarly with `isAllDay: true`. Remove the `specialTimeRegions` and `dayRegions` parameters from view constructors in the example app. | Restrictions: Preserve existing UI toggles and behavior. | Success: Example app compiles and runs, regions display correctly in both views, blocking works cross-view._
 
-- [ ] 14. Update README and documentation
+## Phase 6: Cleanup — Remove Old Region Code
+
+**Important:** This phase runs AFTER all new code is implemented, tested, and verified in Phases 1–5.
+
+- [ ] 14. Remove `MCalTimeRegion`, `MCalDayRegion`, and old view parameters
+  - Files to delete:
+    - `lib/src/models/mcal_time_region.dart`
+    - `lib/src/models/mcal_day_region.dart`
+  - Files to modify:
+    - `lib/multi_calendar.dart` — remove exports for `mcal_time_region.dart` and `mcal_day_region.dart`
+    - `lib/src/widgets/mcal_day_view.dart` — remove `specialTimeRegions` parameter, remove import of `mcal_time_region.dart`, remove any remaining references to `MCalTimeRegion`
+    - `lib/src/widgets/mcal_day_view_contexts.dart` — remove or update `MCalTimeRegionContext` if it references `MCalTimeRegion`
+    - `lib/src/widgets/mcal_month_view.dart` — remove `dayRegions` parameter, remove import of `mcal_day_region.dart`, remove any remaining references to `MCalDayRegion` and `MCalDayRegionContext`
+  - Purpose: Clean removal of superseded region classes and parameters
+  - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+  - _Prompt: Role: Dart Developer | Task: Remove the old region classes and view parameters that have been replaced by `MCalRegion`. Delete `lib/src/models/mcal_time_region.dart` and `lib/src/models/mcal_day_region.dart`. Remove their exports from `lib/multi_calendar.dart`. Remove the `specialTimeRegions` parameter from `MCalDayView` and the `dayRegions` parameter from `MCalMonthView`. Remove or update `MCalTimeRegionContext` and `MCalDayRegionContext`. Search for ALL remaining references to `MCalTimeRegion`, `MCalDayRegion`, `MCalDayRegionContext`, `MCalTimeRegionContext`, `specialTimeRegions`, and `dayRegions` across the entire `lib/` directory and remove/replace them. | Restrictions: Do NOT remove new `MCalRegion` code. Ensure `dart analyze` is clean after removal. | Success: `dart analyze` clean, no references to old classes remain in `lib/`._
+
+- [ ] 15. Update old region tests to use `MCalRegion`
+  - Files to modify or replace:
+    - `test/models/mcal_time_region_test.dart` — remove or rewrite tests to use `MCalRegion`
+    - `test/models/mcal_day_region_test.dart` — remove or rewrite tests to use `MCalRegion`
+    - `test/widgets/mcal_day_view_regions_test.dart` — update to use only `MCalRegion` and controller APIs
+    - `test/widgets/mcal_month_day_region_test.dart` — update to use only `MCalRegion` and controller APIs
+  - Search all test files for remaining references to `MCalTimeRegion`, `MCalDayRegion`, `specialTimeRegions`, `dayRegions` and update
+  - Purpose: Complete migration of test suite to unified region API
+  - _Requirements: 6.6_
+  - _Prompt: Role: QA Engineer | Task: Update all test files to remove references to old region classes. The model test files (`mcal_time_region_test.dart`, `mcal_day_region_test.dart`) can be deleted since `mcal_region_test.dart` (Task 3) covers the new class. Update widget test files to use `MCalRegion` and controller APIs exclusively. Search ALL test files for `MCalTimeRegion`, `MCalDayRegion`, `MCalDayRegionContext`, `MCalTimeRegionContext`, `specialTimeRegions`, `dayRegions` and update/remove. | Restrictions: Do NOT remove tests added in Tasks 3, 7, 11, 12. | Success: `flutter test` passes with no references to old classes._
+
+- [ ] 16. Update README and documentation
   - File: `README.md` (modify existing)
+  - Replace any references to `MCalTimeRegion` and `MCalDayRegion` with `MCalRegion`
   - Add section on unified regions with examples for both all-day and timed usage
-  - Add migration notes from `MCalTimeRegion`/`MCalDayRegion` to `MCalRegion`
   - Show cross-view blocking example
-  - Purpose: Developer documentation for the new API
+  - Update any docs files that reference old region classes
+  - Purpose: Documentation reflects the current API
   - _Requirements: All_
-  - _Prompt: Role: Technical Writer | Task: Update `README.md` to document the unified `MCalRegion` class. Add examples showing: 1) All-day blocking region (weekend blackout), 2) Timed blocking region (after-hours), 3) Adding regions to controller, 4) Cross-view enforcement scenario. Add a migration section mapping old classes to new. | Restrictions: Do NOT remove existing documentation. Add new sections in appropriate locations. | Success: README accurately describes the new API with working code examples._
+  - _Prompt: Role: Technical Writer | Task: Update `README.md` to replace all references to `MCalTimeRegion` and `MCalDayRegion` with `MCalRegion`. Add examples showing: 1) All-day blocking region (weekend blackout), 2) Timed blocking region (after-hours), 3) Adding regions to controller, 4) Cross-view enforcement scenario. Check `docs/` directory for any files referencing old region classes and update them. | Restrictions: Do NOT remove unrelated documentation. | Success: README and docs accurately describe the unified `MCalRegion` API with no references to removed classes._

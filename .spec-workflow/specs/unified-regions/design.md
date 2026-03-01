@@ -109,14 +109,12 @@ When a user drags a timed event (e.g., 3–4 PM) from Tuesday to Monday in Month
 - **MCalDayView** (`lib/src/widgets/mcal_day_view.dart`):
   - `_TimeRegionsLayer` reads from `widget.controller.getTimedRegionsForDate(displayDate)` instead of `widget.specialTimeRegions`
   - `_validateDrop()` queries `widget.controller.isTimeRangeBlocked()` and `widget.controller.isDateBlocked()`
-  - `specialTimeRegions` parameter marked `@Deprecated`
-  - When both deprecated `specialTimeRegions` and controller regions exist, combine them (deprecated regions take precedence for backward compatibility)
+  - `specialTimeRegions` parameter removed (old code removed in final cleanup phase)
 
 - **MCalMonthView** (`lib/src/widgets/mcal_month_view.dart`):
   - `_buildRegionOverlay` reads from `widget.controller.getAllDayRegionsForDate(date)` instead of `widget.dayRegions`
   - Drag validation queries `widget.controller.isDateBlocked()` and `widget.controller.isTimeRangeBlocked()`
-  - `dayRegions` parameter marked `@Deprecated`
-  - When both deprecated `dayRegions` and controller regions exist, combine them
+  - `dayRegions` parameter removed (old code removed in final cleanup phase)
 
 ## Data Models
 
@@ -155,6 +153,16 @@ class MCalRegion {
 | `MCalTimeRegion(id, startTime, endTime, ...)` | `MCalRegion(id, start: startTime, end: endTime, isAllDay: false, ...)` |
 | `MCalDayRegion.recurrenceRule` (String?) | `MCalRegion.recurrenceRule` (MCalRecurrenceRule?) |
 | `MCalTimeRegion.recurrenceRule` (String?) | `MCalRegion.recurrenceRule` (MCalRecurrenceRule?) |
+
+## Migration Strategy
+
+Old classes (`MCalTimeRegion`, `MCalDayRegion`) and view-level parameters (`specialTimeRegions`, `dayRegions`) are removed entirely — no deprecation period. To help the implementing agent, removal is deferred to a final cleanup phase after all new code is implemented and tested. During development, the old classes remain as reference material.
+
+### Phasing
+
+1. **Phases 1–4**: Implement `MCalRegion`, controller methods, view integration, and all tests. Old classes and parameters remain in the codebase but are not used by the new code paths.
+2. **Phase 5**: Update example app to use `MCalRegion` on controller.
+3. **Phase 6 (Cleanup)**: Remove `MCalTimeRegion`, `MCalDayRegion`, `MCalDayRegionContext`, `MCalTimeRegionContext`, the `specialTimeRegions` parameter, the `dayRegions` parameter, their exports, their test files, and all references. Update documentation.
 
 ## Error Handling
 
