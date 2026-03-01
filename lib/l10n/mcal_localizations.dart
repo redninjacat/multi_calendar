@@ -305,13 +305,13 @@ abstract class MCalLocalizations {
   /// No description provided for @previousMonth.
   ///
   /// In en, this message translates to:
-  /// **'previous month'**
+  /// **'Previous month'**
   String get previousMonth;
 
   /// No description provided for @nextMonth.
   ///
   /// In en, this message translates to:
-  /// **'next month'**
+  /// **'Next month'**
   String get nextMonth;
 
   /// No description provided for @currentTime.
