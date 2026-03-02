@@ -230,6 +230,7 @@ class McEventController extends ChangeNotifier {
 - Well-tested
 - Reusable across views
 - Date/time formatting via intl package
+- DST-safe date arithmetic via `date_utils.dart` — `addDays()`, `dateOnly()`, `daysBetween()`. All calendar-day arithmetic MUST use these utilities instead of `Duration`-based arithmetic.
 - Accessibility helpers for semantic labels
 - RTL-aware layout utilities
 - Date/time formatting utility via `MCalDateFormatUtils` class (`lib/src/utils/mcal_date_format_utils.dart`):

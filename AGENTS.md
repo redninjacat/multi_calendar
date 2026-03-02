@@ -126,3 +126,22 @@ These are the most important standards from the steering documents that apply to
 - **Dual localization** — package uses `MCalLocalizations.of(context)` (gen-l10n from `lib/l10n/`); example app uses separate `AppLocalizations.of(context)` (gen-l10n from `example/lib/l10n/`)
 - **Code size limits** — max 500 lines/file, 50 lines/function, 4 levels of nesting
 - **Performance targets** — 60fps rendering, <100ms startup, <50ms touch response, O(log n) event lookups
+- **DST-safe date arithmetic** — see section below
+
+### DST-safe date/time arithmetic
+
+All date arithmetic MUST use the DST-safe utilities in `lib/src/utils/date_utils.dart` instead of `Duration`-based arithmetic. This is critical because `Duration(days: 1)` adds exactly 24 wall-clock hours, which lands on the wrong calendar day at DST boundaries.
+
+**Required utilities** (from `date_utils.dart`):
+
+| Utility | Use instead of | Why |
+|---------|---------------|-----|
+| `addDays(date, n)` | `date.add(Duration(days: n))` | Calendar-day shift preserving time-of-day across DST |
+| `dateOnly(date)` | `DateTime(d.year, d.month, d.day)` | Consistent date-only extraction |
+| `daysBetween(from, to)` | `to.difference(from).inDays` | UTC-based day count, not affected by DST |
+
+**Rules:**
+- NEVER use `date.add(Duration(days: n))` for shifting by calendar days — use `addDays(date, n)`
+- NEVER use `a.difference(b).inDays` to count calendar days — use `daysBetween(a, b)`
+- For computing end times of expanded recurring events/regions, use calendar-day constructor arithmetic: `DateTime(start.year, start.month, start.day + daySpan, start.hour + hourDelta, ...)` — the `DateTime` constructor handles overflow correctly
+- Import as `import '../utils/date_utils.dart' as date_utils;` when in `lib/src/` subdirectories (the prefix avoids conflicts with `dart:core`)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'mcal_recurrence_rule.dart';
+import '../utils/date_utils.dart' as date_utils;
 
 /// Sentinel value used by [MCalRegion.copyWith] to distinguish between
 /// "not passed" and "explicitly passed as null" for nullable fields.
@@ -228,8 +229,7 @@ class MCalRegion {
   /// For all-day regions, the returned region has [start] and [end] set to
   /// the occurrence date.
   MCalRegion? expandedForDate(DateTime displayDate) {
-    final displayDay =
-        DateTime(displayDate.year, displayDate.month, displayDate.day);
+    final displayDay = date_utils.dateOnly(displayDate);
 
     if (recurrenceRule == null) {
       return _expandNonRecurring(displayDay, displayDate);
@@ -242,23 +242,23 @@ class MCalRegion {
   // ---------------------------------------------------------------------------
 
   bool _appliesToNonRecurring(DateTime queryDate) {
-    final queryDay =
-        DateTime(queryDate.year, queryDate.month, queryDate.day);
+    final queryDay = date_utils.dateOnly(queryDate);
     if (isAllDay) {
-      final startDay = DateTime(start.year, start.month, start.day);
-      final endDay = DateTime(end.year, end.month, end.day);
+      final startDay = date_utils.dateOnly(start);
+      final endDay = date_utils.dateOnly(end);
       return !queryDay.isBefore(startDay) && !queryDay.isAfter(endDay);
     } else {
-      return _matchesDate(start, queryDate);
+      return date_utils.dateOnly(start) == queryDay;
     }
   }
 
   bool _appliesToRecurring(DateTime queryDate) {
     try {
-      final queryDay =
-          DateTime(queryDate.year, queryDate.month, queryDate.day);
+      final queryDay = date_utils.dateOnly(queryDate);
       final occurrences = _getOccurrencesForDay(queryDay);
-      return occurrences.any((d) => _matchesDate(d, queryDate));
+      return occurrences.any(
+        (d) => date_utils.dateOnly(d) == queryDay,
+      );
     } catch (_) {
       return false;
     }
@@ -266,15 +266,14 @@ class MCalRegion {
 
   MCalRegion? _expandNonRecurring(DateTime displayDay, DateTime displayDate) {
     if (isAllDay) {
-      final startDay = DateTime(start.year, start.month, start.day);
-      final endDay = DateTime(end.year, end.month, end.day);
+      final startDay = date_utils.dateOnly(start);
+      final endDay = date_utils.dateOnly(end);
       if (!displayDay.isBefore(startDay) && !displayDay.isAfter(endDay)) {
         return this;
       }
       return null;
     } else {
-      final regionDay = DateTime(start.year, start.month, start.day);
-      return regionDay == displayDay ? this : null;
+      return date_utils.dateOnly(start) == displayDay ? this : null;
     }
   }
 
@@ -284,18 +283,18 @@ class MCalRegion {
 
       DateTime? occurrenceStart;
       for (final d in occurrences) {
-        if (d.year == displayDate.year &&
-            d.month == displayDate.month &&
-            d.day == displayDate.day) {
+        if (date_utils.dateOnly(d) == displayDay) {
           occurrenceStart = d;
           break;
         }
       }
       if (occurrenceStart == null) return null;
 
+      final dayId = displayDay.toIso8601String().split('T')[0];
+
       if (isAllDay) {
         return MCalRegion(
-          id: '${id}_${displayDay.toIso8601String().split('T')[0]}',
+          id: '${id}_$dayId',
           start: displayDay,
           end: displayDay,
           color: color,
@@ -306,12 +305,10 @@ class MCalRegion {
           customData: customData,
         );
       } else {
-        // DST-safe end time: use calendar-day arithmetic to preserve
-        // local time across DST boundaries, consistent with event expansion
-        // in MCalEventController._getExpandedOccurrences.
-        final daySpan = DateTime(end.year, end.month, end.day)
-            .difference(DateTime(start.year, start.month, start.day))
-            .inDays;
+        // DST-safe end time: use daysBetween (UTC-based) for the day span
+        // and calendar-day constructor arithmetic for the result, consistent
+        // with MCalEventController._getExpandedOccurrences.
+        final daySpan = date_utils.daysBetween(start, end);
         final newEnd = DateTime(
           occurrenceStart.year,
           occurrenceStart.month,
@@ -324,7 +321,7 @@ class MCalRegion {
         );
 
         return MCalRegion(
-          id: '${id}_${displayDay.toIso8601String().split('T')[0]}',
+          id: '${id}_$dayId',
           start: occurrenceStart,
           end: newEnd,
           color: color,
@@ -346,18 +343,14 @@ class MCalRegion {
   /// Uses DTSTART optimization for daily/weekly rules (consistent with
   /// [MCalEventController._advanceDtStart]) and handles COUNT/UNTIL edge cases.
   List<DateTime> _getOccurrencesForDay(DateTime queryDay) {
-    final anchor = isAllDay
-        ? DateTime(start.year, start.month, start.day)
-        : start;
-    final beforeDay =
-        DateTime(queryDay.year, queryDay.month, queryDay.day + 1);
+    final anchor = isAllDay ? date_utils.dateOnly(start) : start;
+    final beforeDay = date_utils.addDays(queryDay, 1);
 
     // UNTIL check: short-circuit if past the end date.
     final untilDay = recurrenceRule!.until;
     MCalRecurrenceRule expansionRule = recurrenceRule!;
     if (untilDay != null) {
-      final untilDayOnly =
-          DateTime(untilDay.year, untilDay.month, untilDay.day);
+      final untilDayOnly = date_utils.dateOnly(untilDay);
       if (queryDay.isAfter(untilDayOnly)) return const [];
       expansionRule = recurrenceRule!.copyWith(until: () => null);
     }
@@ -389,6 +382,9 @@ class MCalRegion {
   /// iterating from a distant anchor. Monthly/yearly are left unchanged
   /// because their occurrence dates depend on month length and day-of-month.
   ///
+  /// Uses [date_utils.daysBetween] for DST-safe day counting and
+  /// [date_utils.addDays] for DST-safe day shifting.
+  ///
   /// Consistent with [MCalEventController._advanceDtStart].
   static DateTime _advanceDtStart(
     DateTime dtStart,
@@ -399,44 +395,20 @@ class MCalRegion {
 
     switch (rule.frequency) {
       case MCalFrequency.daily:
-        final daysDiff = target.difference(dtStart).inDays;
+        final daysDiff = date_utils.daysBetween(dtStart, target);
         final periods = daysDiff ~/ rule.interval;
         final safePeriods = (periods - 1).clamp(0, periods);
-        return DateTime(
-          dtStart.year,
-          dtStart.month,
-          dtStart.day + safePeriods * rule.interval,
-          dtStart.hour,
-          dtStart.minute,
-          dtStart.second,
-          dtStart.millisecond,
-          dtStart.microsecond,
-        );
+        return date_utils.addDays(dtStart, safePeriods * rule.interval);
       case MCalFrequency.weekly:
-        final daysDiff = target.difference(dtStart).inDays;
+        final daysDiff = date_utils.daysBetween(dtStart, target);
         final weekPeriod = rule.interval * 7;
         final periods = daysDiff ~/ weekPeriod;
         final safePeriods = (periods - 1).clamp(0, periods);
-        return DateTime(
-          dtStart.year,
-          dtStart.month,
-          dtStart.day + safePeriods * weekPeriod,
-          dtStart.hour,
-          dtStart.minute,
-          dtStart.second,
-          dtStart.millisecond,
-          dtStart.microsecond,
-        );
+        return date_utils.addDays(dtStart, safePeriods * weekPeriod);
       case MCalFrequency.monthly:
       case MCalFrequency.yearly:
         return dtStart;
     }
-  }
-
-  static bool _matchesDate(DateTime candidate, DateTime query) {
-    return candidate.year == query.year &&
-        candidate.month == query.month &&
-        candidate.day == query.day;
   }
 
   @override

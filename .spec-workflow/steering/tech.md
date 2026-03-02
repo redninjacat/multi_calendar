@@ -22,6 +22,7 @@ Flutter package/library for displaying calendar views with event support. Publis
 * **intl**: Internationalization and localization (`^0.20.2`)
 * **coverage**: Test coverage reporting (`^1.15.0`)
 * **Date/Time handling**: Dart's built-in `DateTime` class, `intl` package for localization and formatting
+* **DST-safe date arithmetic**: All calendar-day arithmetic MUST use the utilities in `lib/src/utils/date_utils.dart` instead of `Duration`-based arithmetic. `addDays(date, n)` for shifting by calendar days (not `date.add(Duration(days: n))`), `daysBetween(from, to)` for counting calendar days (not `to.difference(from).inDays`), `dateOnly(date)` for stripping time. `Duration(days: 1)` adds exactly 24 wall-clock hours which lands on the wrong calendar day at DST boundaries. For computing end times of expanded recurring events/regions, use calendar-day constructor arithmetic: `DateTime(y, m, d + daySpan, h + hourDelta, ...)` — the constructor handles overflow correctly.
 * **Localization**: Two separate `gen-l10n` systems — one for the package, one for the example app:
   * **Package-level** (`lib/l10n/`, configured via root `l10n.yaml` with `synthetic-package: false`):
     * ARB files: `app_en.arb`, `app_es.arb`, `app_fr.arb`, `app_ar.arb`, `app_he.arb` (5 locales)
