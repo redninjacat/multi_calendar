@@ -804,8 +804,8 @@ class MCalMonthView extends StatefulWidget {
   /// When `true`, resize is enabled regardless of platform.
   /// When `false`, resize is disabled regardless of platform.
   ///
-  /// Event resize requires [enableDragToMove] to be `true` as well,
-  /// since it uses the same drag infrastructure.
+  /// Resize is independent of [enableDragToMove] — events can have resize
+  /// handles without drag-to-move being enabled.
   final bool? enableDragToResize;
 
   /// Called during a resize operation to validate whether the proposed
@@ -1431,18 +1431,15 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Resolves whether event resizing should be enabled based on the
   /// [MCalMonthView.enableDragToResize] setting and platform detection.
   ///
-  /// - Resize requires [MCalMonthView.enableDragToMove] to be `true`,
-  ///   since resize uses the same drag infrastructure.
   /// - If [MCalMonthView.enableDragToResize] is explicitly `true` or `false`,
-  ///   that value is returned directly (developer override), subject to the
-  ///   drag-and-drop requirement.
+  ///   that value is returned directly (developer override).
   /// - If `null` (the default), auto-detection enables resize on web,
   ///   desktop (macOS, Windows, Linux), and tablets (shortest side >= 600dp),
   ///   but disables it on phones.
+  ///
+  /// Consistent with [MCalDayView._resolveDragToResize], which also resolves
+  /// independently of drag-to-move.
   bool _resolveDragToResize(BuildContext context) {
-    // Resize requires drag-and-drop infrastructure
-    if (!widget.enableDragToMove) return false;
-
     // Explicit override takes precedence
     if (widget.enableDragToResize != null) return widget.enableDragToResize!;
 
