@@ -2545,6 +2545,10 @@ class MCalDayViewState extends State<MCalDayView> {
       case LogicalKeyboardKey.arrowDown:
         _keyboardResizeBySlots(1);
         return KeyEventResult.handled;
+      case LogicalKeyboardKey.arrowLeft:
+      case LogicalKeyboardKey.arrowRight:
+        // Consume these keys in resize mode to prevent fall-through to move handler
+        return KeyEventResult.handled;
       default:
         return null;
     }
@@ -2604,6 +2608,14 @@ class MCalDayViewState extends State<MCalDayView> {
     DateTime proposedStart,
     DateTime proposedEnd,
   ) {
+    // Check library-level region blocks first
+    if (widget.controller.isTimeRangeBlocked(proposedStart, proposedEnd)) {
+      return false;
+    }
+    if (widget.controller.isDateBlocked(_displayDate)) {
+      return false;
+    }
+    // Check consumer validation callback after library-level checks
     if (widget.onDragWillAccept != null) {
       final dropDetails = MCalEventDroppedDetails(
         event: event,
@@ -2624,12 +2636,6 @@ class MCalDayViewState extends State<MCalDayView> {
           other.start.isBefore(proposedEnd)) {
         return false;
       }
-    }
-    if (widget.controller.isTimeRangeBlocked(proposedStart, proposedEnd)) {
-      return false;
-    }
-    if (widget.controller.isDateBlocked(_displayDate)) {
-      return false;
     }
     if (widget.minDate != null) {
       final minDate = DateTime(
@@ -4306,7 +4312,15 @@ class MCalDayViewState extends State<MCalDayView> {
     final dragData = _latestDragDetails?.data;
     if (dragData == null) return false;
 
-    // Check user validation callback if provided
+    // Check library-level region blocks first
+    if (widget.controller.isTimeRangeBlocked(proposedStart, proposedEnd)) {
+      return false;
+    }
+    if (widget.controller.isDateBlocked(_displayDate)) {
+      return false;
+    }
+
+    // Check user validation callback after library-level checks
     if (widget.onDragWillAccept != null) {
       // Build a temporary drop details for validation
       final event = dragData.event;
@@ -4335,13 +4349,6 @@ class MCalDayViewState extends State<MCalDayView> {
       if (!widget.onDragWillAccept!(details)) {
         return false;
       }
-    }
-
-    if (widget.controller.isTimeRangeBlocked(proposedStart, proposedEnd)) {
-      return false;
-    }
-    if (widget.controller.isDateBlocked(_displayDate)) {
-      return false;
     }
 
     // Check minDate boundary

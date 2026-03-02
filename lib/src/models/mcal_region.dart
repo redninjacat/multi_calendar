@@ -446,7 +446,15 @@ class MCalRegion {
       blockInteraction,
       isAllDay,
       recurrenceRule,
-      customData != null ? Object.hashAll(customData!.entries) : null,
+      customData != null ? _hashMap(customData!) : null,
+    );
+  }
+
+  static int _hashMap(Map<String, dynamic> map) {
+    // Sort keys to ensure consistent hashing regardless of map iteration order
+    final sortedKeys = map.keys.toList()..sort();
+    return Object.hashAll(
+      sortedKeys.expand((key) => [key, map[key]]),
     );
   }
 
