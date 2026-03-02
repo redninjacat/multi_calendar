@@ -9,6 +9,7 @@ A flexible Flutter package for displaying calendar views with full RFC 5545 RRUL
 - [Package Structure](#package-structure)
 - [MCalMonthView](#mcalmonthview)
 - [MCalDayView](#mcaldayview)
+- [Regions](#regions)
 - [Example](#example)
 - [Requirements](#requirements)
 - [Contributing](#contributing)
@@ -16,7 +17,7 @@ A flexible Flutter package for displaying calendar views with full RFC 5545 RRUL
 ## Features
 
 - **Multiple Calendar Views**: Separate widgets for Day, Multi-day (configurable day count), and Month views
-- **Day View**: Time-based vertical layout with hour markers, all-day events, overlap detection, drag-and-drop, resize, keyboard navigation, and special time regions
+- **Day View**: Time-based vertical layout with hour markers, all-day events, overlap detection, drag-and-drop, resize, keyboard navigation, and regions
 - **RFC 5545 RRULE Support**: Full support for recurring event rules with exception handling
 - **Flexible Time Ranges**: Configurable time ranges for Day and Multi-day views (e.g., 8am-8pm)
 - **Event Controller Pattern**: Single controller that dynamically loads events based on visible date range
@@ -568,20 +569,22 @@ The calendar grid, navigator buttons, and weekday headers automatically flip for
 
 ### Keyboard Navigation
 
-`MCalMonthView` supports full keyboard navigation when focused:
+Both `MCalMonthView` and `MCalDayView` support full keyboard navigation with consistent shortcuts across views.
 
-**Cell Navigation:**
+**Cell/Date Navigation:**
 
-| Key | Action |
-|-----|--------|
-| `←` `→` `↑` `↓` | Navigate between cells |
-| `Enter` / `Space` | Select the focused cell (or enter event selection mode if drag-and-drop is enabled) |
-| `Home` | Jump to first day of month |
-| `End` | Jump to last day of month |
-| `Page Up` | Previous month |
-| `Page Down` | Next month |
+| Key | Month View | Day View |
+|-----|------------|----------|
+| `←` `→` | Navigate by 1 day (RTL-aware) | Navigate to previous/next day (RTL-aware) |
+| `↑` `↓` | Navigate by 1 week | Scroll by 1 time slot |
+| `Enter` / `Space` | Select cell or enter event selection mode | Select cell or enter event selection mode |
+| `Home` | First day of month | Scroll to top of time grid |
+| `End` | Last day of month | Scroll to bottom of time grid |
+| `Page Up` | Previous month | Scroll up by viewport height |
+| `Page Down` | Next month | Scroll down by viewport height |
+| `Tab` | — | Cycle focus between all-day and timed event sections |
 
-**Keyboard Event Moving** (when `enableDragToMove` is `true`):
+**Event Selection and Moving** (when `enableDragToMove` is `true`):
 
 | Key | Action |
 |-----|--------|
@@ -589,23 +592,24 @@ The calendar grid, navigator buttons, and weekday headers automatically flip for
 | `Tab` / `Shift+Tab` | Cycle through events when multiple exist on a cell |
 | `Enter` | Confirm event selection, then confirm move |
 | `←` `→` | Move the selected event by 1 day |
-| `↑` `↓` | Move the selected event by 1 week |
+| `↑` `↓` | Move the selected event by 1 week (Month View) or 1 time slot (Day View) |
+| `R` | Enter resize mode (if resize is enabled) |
 | `Escape` | Cancel the move |
 
-**Keyboard Event Resizing** (when both `enableDragToMove` and `enableDragToResize` are enabled):
+**Event Resizing** (when `enableDragToResize` is enabled):
 
 | Key | Action |
 |-----|--------|
-| `R` | Enter resize mode (from event selection/move mode) |
+| `R` | Enter resize mode (from move mode) |
 | `S` | Switch to resizing the start edge |
 | `E` | Switch to resizing the end edge |
-| `←` `→` | Adjust the active edge by 1 day |
-| `↑` `↓` | Adjust the active edge by 1 week |
+| `←` `→` | Adjust the active edge by 1 day (Month View) or — (Day View) |
+| `↑` `↓` | Adjust the active edge by 1 week (Month View) or 1 time slot (Day View) |
 | `M` | Return to move mode |
 | `Enter` | Confirm the resize |
-| `Escape` | Cancel the resize |
+| `Escape` | Cancel the resize (returns to move mode) |
 
-Screen reader announcements are provided at every step of both keyboard move and resize interactions.
+Screen reader announcements are provided at every step of both keyboard move and resize interactions. All announcements are localized.
 
 ```dart
 MCalMonthView(
@@ -1071,7 +1075,7 @@ When you navigate in one view, all views sharing the controller update together.
 | **Events** | Positioned by start/end time; overlap detection | Tiles in day cells; multi-day spanning |
 | **Use case** | Scheduling, meetings, time-blocking | Month-at-a-glance, planning |
 | **Time range** | Configurable (e.g., 8am–6pm) | Full day cells |
-| **Special regions** | Time regions (lunch, blocked hours) | N/A |
+| **Regions** | Unified `MCalRegion` for blocked time, lunch breaks, weekends | Unified `MCalRegion` for all-day regions (weekends, holidays) |
 
 ### Quick Start
 
@@ -1112,7 +1116,7 @@ MCalDayView(
 - **Timed events** — Positioned by start/end time with automatic overlap detection
 - **Drag and drop** — Move events within day, across days, or convert all-day ↔ timed
 - **Resize** — Drag event edges to change duration
-- **Time regions** — Blocked time, lunch breaks, non-working hours
+- **Regions** — Blocked time, lunch breaks, non-working hours, weekend blackouts via unified `MCalRegion`
 - **Current time indicator** — Live-updating line marking current time
 - **Keyboard navigation** — Full keyboard support for accessibility
 
@@ -1120,11 +1124,82 @@ MCalDayView(
 
 For complete Day View documentation, including configuration options, builders, theming, and troubleshooting, see [Day View documentation](docs/day_view.md).
 
+## Regions
+
+`MCalRegion` provides a unified way to mark calendar regions (time ranges or full days) with custom styling and optional interaction blocking. Regions are managed on the `MCalEventController` and automatically available to all views.
+
+### All-Day Region (Weekend Blackout)
+
+```dart
+controller.addRegions([
+  MCalRegion(
+    id: 'weekends',
+    start: DateTime(2026, 1, 3),
+    end: DateTime(2026, 1, 3),
+    isAllDay: true,
+    recurrenceRule: MCalRecurrenceRule(
+      frequency: MCalFrequency.weekly,
+      byWeekDays: {
+        MCalWeekDay.every(DateTime.saturday),
+        MCalWeekDay.every(DateTime.sunday),
+      },
+    ),
+    color: Colors.grey.withValues(alpha: 0.15),
+    blockInteraction: true,
+    text: 'Weekend',
+  ),
+]);
+```
+
+### Timed Region (After Hours)
+
+```dart
+controller.addRegions([
+  MCalRegion(
+    id: 'after-hours',
+    start: DateTime(2026, 1, 1, 18, 0),
+    end: DateTime(2026, 1, 1, 22, 0),
+    isAllDay: false,
+    recurrenceRule: MCalRecurrenceRule(frequency: MCalFrequency.daily),
+    color: Colors.red.withValues(alpha: 0.15),
+    blockInteraction: true,
+    text: 'After Hours',
+    icon: Icons.block,
+  ),
+]);
+```
+
+### Cross-View Enforcement
+
+Regions on the controller are enforced across all views. A timed blocking region (e.g., Mondays 2–5 PM) automatically prevents dropping a 3–4 PM event onto Monday in both Day View and Month View.
+
+### Region Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `String` | Unique identifier |
+| `start` | `DateTime` | Start date/time (date-only for all-day) |
+| `end` | `DateTime` | End date/time (date-only for all-day) |
+| `color` | `Color?` | Background color |
+| `text` | `String?` | Label text |
+| `icon` | `IconData?` | Display icon |
+| `blockInteraction` | `bool` | Block drag/drop/tap (default: false) |
+| `isAllDay` | `bool` | All-day region (default: false) |
+| `recurrenceRule` | `MCalRecurrenceRule?` | Typed recurrence rule |
+| `customData` | `Map<String, dynamic>?` | Custom metadata for builders |
+
+### Region Builder Contexts
+
+Both views pass regions to builder contexts so consumers can customize rendering:
+
+- **Month View**: `MCalDayCellContext.regions` and `MCalEventTileContext.regions` contain all regions for the cell/event date
+- **Day View**: `MCalTimedEventTileContext.regions`, `MCalAllDayEventTileContext.regions`, `MCalGridlineContext.regions`, and `MCalTimeSlotContext.regions`
+
 ## Example
 
 See the [example](example/) directory for a complete example application demonstrating package usage, including:
 - **Features Demo**: Interactive showcase of keyboard navigation, hover feedback, week numbers, animations, event resizing, keyboard move/resize shortcuts, multi-view sync, and loading/error states
-- **Day View**: Time-based layout with hour markers, all-day events, overlap detection, drag-and-drop, and time regions
+- **Day View**: Time-based layout with hour markers, all-day events, overlap detection, drag-and-drop, and regions
 - **Multi-Day Events**: Contiguous tile rendering across cells and weeks
 - **Drag-and-Drop**: Move events between dates with visual feedback
 - **Event Resizing**: Drag event edges to change duration, with validation and keyboard alternatives

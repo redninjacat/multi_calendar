@@ -4,6 +4,7 @@ import '../models/mcal_event_change_info.dart';
 import '../utils/date_utils.dart';
 import '../models/mcal_recurrence_exception.dart';
 import '../models/mcal_recurrence_rule.dart';
+import '../models/mcal_region.dart';
 
 /// Controller for managing calendar events, recurring event expansion, and
 /// view state.
@@ -82,6 +83,17 @@ class MCalEventController extends ChangeNotifier {
 
   /// Cached events indexed by their ID for efficient lookup.
   final Map<String, MCalCalendarEvent> _eventsById = {};
+
+  /// Regions stored by their ID for efficient lookup.
+  final Map<String, MCalRegion> _regionsById = {};
+
+  /// Region expansion cache: date (normalized to midnight) -> expanded regions.
+  ///
+  /// Invalidated when regions are added, removed, or cleared.
+  /// Prevents redundant recurrence expansion when multiple call sites
+  /// (rendering, drag validation, builder contexts) query the same date
+  /// within a single frame.
+  final Map<DateTime, List<MCalRegion>> _expandedRegionsByDate = {};
 
   // ============================================================
   // Task 1: Display and Focus Date State
@@ -599,6 +611,96 @@ class MCalEventController extends ChangeNotifier {
     final dayStart = dateOnly(date);
     final dayEnd = DateTime(date.year, date.month, date.day, 23, 59, 59, 999);
     return getEventsForRange(DateTimeRange(start: dayStart, end: dayEnd));
+  }
+
+  // ============================================================
+  // Region Management
+  // ============================================================
+
+  /// Adds regions to the controller.
+  ///
+  /// Uses upsert semantics: if a region with the same ID already exists,
+  /// it is replaced with the new definition.
+  ///
+  /// Notifies listeners after adding regions.
+  void addRegions(List<MCalRegion> regions) {
+    for (final region in regions) {
+      _regionsById[region.id] = region;
+    }
+    _expandedRegionsByDate.clear();
+    notifyListeners();
+  }
+
+  /// Removes regions by their IDs.
+  ///
+  /// Notifies listeners after removing regions.
+  void removeRegions(List<String> regionIds) {
+    for (final id in regionIds) {
+      _regionsById.remove(id);
+    }
+    _expandedRegionsByDate.clear();
+    notifyListeners();
+  }
+
+  /// Clears all regions from the controller.
+  ///
+  /// Notifies listeners after clearing.
+  void clearRegions() {
+    _regionsById.clear();
+    _expandedRegionsByDate.clear();
+    notifyListeners();
+  }
+
+  /// Gets all regions currently stored in the controller.
+  ///
+  /// Returns an unmodifiable list.
+  List<MCalRegion> get regions => List.unmodifiable(_regionsById.values);
+
+  /// Returns all regions (both all-day and timed) that apply to [date],
+  /// with recurrence expansion.
+  ///
+  /// Results are cached by normalized date so that multiple calls within
+  /// a single frame (rendering, drag validation, builder contexts) don't
+  /// re-expand recurring regions. The cache is invalidated whenever regions
+  /// are added, removed, or cleared.
+  ///
+  /// Each returned [MCalRegion] is expanded for [date] — its [start] and
+  /// [end] are adjusted to the occurrence date. Views filter by
+  /// [MCalRegion.isAllDay] as needed.
+  List<MCalRegion> getRegionsForDate(DateTime date) {
+    final dateKey = DateTime(date.year, date.month, date.day);
+    final cached = _expandedRegionsByDate[dateKey];
+    if (cached != null) return cached;
+
+    final results = <MCalRegion>[];
+    for (final region in _regionsById.values) {
+      final expanded = region.expandedForDate(date);
+      if (expanded != null) {
+        results.add(expanded);
+      }
+    }
+    _expandedRegionsByDate[dateKey] = results;
+    return results;
+  }
+
+  /// Returns `true` if any all-day region with [MCalRegion.blockInteraction]
+  /// set to `true` applies to [date].
+  ///
+  /// Leverages [getRegionsForDate] cache to avoid redundant expansion.
+  bool isDateBlocked(DateTime date) {
+    final regions = getRegionsForDate(date);
+    return regions.any((r) => r.isAllDay && r.blockInteraction);
+  }
+
+  /// Returns `true` if any timed region with [MCalRegion.blockInteraction]
+  /// set to `true` overlaps with the range from [start] to [end].
+  ///
+  /// Leverages [getRegionsForDate] cache to avoid redundant expansion.
+  bool isTimeRangeBlocked(DateTime start, DateTime end) {
+    final regions = getRegionsForDate(start);
+    return regions.any(
+      (r) => !r.isAllDay && r.blockInteraction && r.overlaps(start, end),
+    );
   }
 
   /// Gets the currently visible date range.

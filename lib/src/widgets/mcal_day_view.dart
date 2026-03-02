@@ -7,7 +7,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
-import '../models/mcal_time_region.dart';
+import '../models/mcal_region.dart';
 import '../styles/mcal_theme.dart';
 import '../utils/date_utils.dart';
 import '../utils/mcal_date_format_utils.dart';
@@ -214,9 +214,6 @@ class MCalDayView extends StatefulWidget {
     this.snapToOtherEvents = true,
     this.snapToCurrentTime = true,
     this.snapRange = const Duration(minutes: 5),
-
-    // Special time regions
-    this.specialTimeRegions = const [],
 
     // Keyboard
     this.enableKeyboardNavigation = true,
@@ -685,31 +682,6 @@ class MCalDayView extends StatefulWidget {
   ///
   /// Defaults to 5 minutes.
   final Duration snapRange;
-
-  // ============================================================================
-  // Special Time Regions
-  // ============================================================================
-
-  /// A list of special time regions to display.
-  ///
-  /// Time regions can represent blocked time, lunch breaks, non-working hours, etc.
-  /// They are rendered as colored overlays in the time grid.
-  ///
-  /// Supports recurring regions via RRULE.
-  ///
-  /// Example:
-  /// ```dart
-  /// specialTimeRegions: [
-  ///   MCalTimeRegion(
-  ///     id: 'lunch',
-  ///     startTime: DateTime(2026, 2, 14, 12, 0),
-  ///     endTime: DateTime(2026, 2, 14, 13, 0),
-  ///     color: Colors.grey.shade300,
-  ///     text: 'Lunch Break',
-  ///   ),
-  /// ]
-  /// ```
-  final List<MCalTimeRegion> specialTimeRegions;
 
   // ============================================================================
   // Keyboard Navigation
@@ -2368,20 +2340,42 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Escape cancels. When in keyboard resize mode (Ctrl+R): arrow keys adjust
   /// time, Tab switches edge, Enter confirms, Escape cancels.
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    if (!widget.enableKeyboardNavigation) return KeyEventResult.ignored;
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
 
-    // Handle keyboard move mode (Task 32)
-    if (_isKeyboardMoveMode) {
-      final result = _handleKeyboardMoveKey(event);
+    // Handle Escape key — works even if keyboard navigation is disabled.
+    // Priority: keyboard resize mode > keyboard move mode > pointer drag.
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      if (_isKeyboardResizeMode) {
+        _ensureDragHandler.cancelResize();
+        _exitKeyboardResizeMode(cancel: true);
+        setState(() {});
+        return KeyEventResult.handled;
+      }
+      if (_isKeyboardMoveMode) {
+        _exitKeyboardMoveMode(cancel: true);
+        setState(() {});
+        return KeyEventResult.handled;
+      }
+      // Cancel pointer drag if active
+      if (widget.enableDragToMove && _isDragActive) {
+        _handleDragCancelled();
+        return KeyEventResult.handled;
+      }
+    }
+
+    if (!widget.enableKeyboardNavigation) return KeyEventResult.ignored;
+
+    // Handle keyboard resize mode (sub-mode of move, checked first)
+    if (_isKeyboardResizeMode) {
+      final result = _handleKeyboardResizeKey(event);
       if (result != null) return result;
     }
 
-    // Handle keyboard resize mode (Task 33)
-    if (_isKeyboardResizeMode) {
-      final result = _handleKeyboardResizeKey(event);
+    // Handle keyboard move mode
+    if (_isKeyboardMoveMode) {
+      final result = _handleKeyboardMoveKey(event);
       if (result != null) return result;
     }
 
@@ -2470,11 +2464,8 @@ class MCalDayViewState extends State<MCalDayView> {
     final rtlMult = isLayoutRTL ? -1 : 1;
 
     switch (event.logicalKey) {
-      case LogicalKeyboardKey.escape:
-        _exitKeyboardMoveMode(cancel: true);
-        return KeyEventResult.handled;
       case LogicalKeyboardKey.enter:
-      case LogicalKeyboardKey.space:
+      case LogicalKeyboardKey.numpadEnter:
         _confirmKeyboardMove();
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowUp:
@@ -2489,6 +2480,14 @@ class MCalDayViewState extends State<MCalDayView> {
       case LogicalKeyboardKey.arrowRight:
         _keyboardMoveByDays(1 * rtlMult);
         return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyR:
+        if (_resolveDragToResize()) {
+          if (_ensureDragHandler.isDragging) {
+            _ensureDragHandler.cancelDrag();
+          }
+          _enterKeyboardResizeMode();
+        }
+        return KeyEventResult.handled;
       default:
         return null;
     }
@@ -2496,16 +2495,49 @@ class MCalDayViewState extends State<MCalDayView> {
 
   /// Handles key events when in keyboard resize mode.
   KeyEventResult? _handleKeyboardResizeKey(KeyEvent event) {
+    final l10n = mcalL10n(context);
+
     switch (event.logicalKey) {
-      case LogicalKeyboardKey.escape:
-        _exitKeyboardResizeMode(cancel: true);
-        return KeyEventResult.handled;
       case LogicalKeyboardKey.enter:
-      case LogicalKeyboardKey.space:
+      case LogicalKeyboardKey.numpadEnter:
         _confirmKeyboardResize();
         return KeyEventResult.handled;
-      case LogicalKeyboardKey.tab:
-        _keyboardResizeSwitchEdge();
+      case LogicalKeyboardKey.keyS:
+        _keyboardResizeEdge = MCalResizeEdge.start;
+        _ensureDragHandler.cancelResize();
+        _ensureDragHandler.startResize(_focusedEvent!, MCalResizeEdge.start);
+        _updateKeyboardResizePreview();
+        if (mounted) {
+          SemanticsService.sendAnnouncement(
+            View.of(context),
+            l10n.announcementResizingStartEdge,
+            Directionality.of(context),
+          );
+        }
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyE:
+        _keyboardResizeEdge = MCalResizeEdge.end;
+        _ensureDragHandler.cancelResize();
+        _ensureDragHandler.startResize(_focusedEvent!, MCalResizeEdge.end);
+        _updateKeyboardResizePreview();
+        if (mounted) {
+          SemanticsService.sendAnnouncement(
+            View.of(context),
+            l10n.announcementResizingEndEdge,
+            Directionality.of(context),
+          );
+        }
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyM:
+        _ensureDragHandler.cancelResize();
+        _exitKeyboardResizeMode(cancel: true);
+        if (mounted) {
+          SemanticsService.sendAnnouncement(
+            View.of(context),
+            l10n.announcementMoveMode,
+            Directionality.of(context),
+          );
+        }
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowUp:
         _keyboardResizeBySlots(-1);
@@ -2539,9 +2571,10 @@ class MCalDayViewState extends State<MCalDayView> {
     _updateKeyboardMovePreview();
 
     if (mounted) {
+      final l10n = mcalL10n(context);
       _announceScreenReader(
         context,
-        'Move mode. Use arrow keys to move ${event.title}. Enter to confirm, Escape to cancel.',
+        l10n.announcementEventSelected(event.title),
       );
     }
     setState(() {});
@@ -2592,12 +2625,11 @@ class MCalDayViewState extends State<MCalDayView> {
         return false;
       }
     }
-    for (final region in widget.specialTimeRegions) {
-      if (!region.blockInteraction) continue;
-      final expanded = region.expandedForDate(_displayDate);
-      if (expanded != null && expanded.overlaps(proposedStart, proposedEnd)) {
-        return false;
-      }
+    if (widget.controller.isTimeRangeBlocked(proposedStart, proposedEnd)) {
+      return false;
+    }
+    if (widget.controller.isDateBlocked(_displayDate)) {
+      return false;
     }
     if (widget.minDate != null) {
       final minDate = DateTime(
@@ -2682,11 +2714,15 @@ class MCalDayViewState extends State<MCalDayView> {
     );
     _updateKeyboardMovePreview();
     if (mounted) {
+      final l10n = mcalL10n(context);
       final locale = widget.locale ?? Localizations.localeOf(context);
       final timeStr = DateFormat.Hm(
         locale.toString(),
       ).format(_keyboardMoveProposedStart!);
-      _announceScreenReader(context, 'Moved to $timeStr');
+      _announceScreenReader(
+        context,
+        l10n.announcementMovingEvent(ev.title, timeStr),
+      );
     }
     setState(() {});
   }
@@ -2707,9 +2743,13 @@ class MCalDayViewState extends State<MCalDayView> {
 
     _updateKeyboardMovePreview();
     if (mounted) {
+      final l10n = mcalL10n(context);
       final locale = widget.locale ?? Localizations.localeOf(context);
       final dateStr = DateFormat.yMMMMEEEEd(locale.toString()).format(start);
-      _announceScreenReader(context, 'Moved to $dateStr');
+      _announceScreenReader(
+        context,
+        l10n.announcementMovingEvent(ev.title, dateStr),
+      );
     }
     setState(() {});
   }
@@ -2724,7 +2764,8 @@ class MCalDayViewState extends State<MCalDayView> {
     final isValid = _validateDropForEvent(ev, proposedStart, proposedEnd);
     if (!isValid) {
       if (mounted) {
-        _announceScreenReader(context, 'Invalid drop position');
+        final l10n = mcalL10n(context);
+        _announceScreenReader(context, l10n.announcementMoveInvalidTarget);
       }
       return;
     }
@@ -2762,6 +2803,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
   /// Exits keyboard move mode.
   void _exitKeyboardMoveMode({required bool cancel}) {
+    final title = _keyboardMoveEvent?.title ?? 'event';
     _isKeyboardMoveMode = false;
     _keyboardMoveEvent = null;
     _keyboardMoveOriginalStart = null;
@@ -2770,7 +2812,8 @@ class MCalDayViewState extends State<MCalDayView> {
     _keyboardMoveProposedEnd = null;
     _ensureDragHandler.cancelDrag();
     if (mounted && cancel) {
-      _announceScreenReader(context, 'Move cancelled');
+      final l10n = mcalL10n(context);
+      _announceScreenReader(context, l10n.announcementMoveCancelled(title));
     }
     setState(() {});
   }
@@ -2794,10 +2837,8 @@ class MCalDayViewState extends State<MCalDayView> {
     _updateKeyboardResizePreview();
 
     if (mounted) {
-      _announceScreenReader(
-        context,
-        'Resize mode. Adjusting end time. Arrow Up/Down to change. Tab to switch edge. Enter to confirm, Escape to cancel.',
-      );
+      final l10n = mcalL10n(context);
+      _announceScreenReader(context, l10n.announcementResizeModeEntered);
     }
     setState(() {});
   }
@@ -2889,43 +2930,14 @@ class MCalDayViewState extends State<MCalDayView> {
     setState(() {});
   }
 
-  /// Switches keyboard resize edge (Tab).
-  void _keyboardResizeSwitchEdge() {
-    final dragHandler = _dragHandler;
-    if (dragHandler == null || !dragHandler.isResizing) return;
-
-    final event = dragHandler.resizingEvent!;
-    final edge = _keyboardResizeEdge ?? MCalResizeEdge.end;
-    final newEdge = edge == MCalResizeEdge.start
-        ? MCalResizeEdge.end
-        : MCalResizeEdge.start;
-    _keyboardResizeEdge = newEdge;
-    _ensureDragHandler.cancelResize();
-    _ensureDragHandler.startResize(event, newEdge);
-    _keyboardResizeEdgeOffset = timeToOffset(
-      time: newEdge == MCalResizeEdge.start
-          ? dragHandler.resizeOriginalStart!
-          : dragHandler.resizeOriginalEnd!,
-      startHour: widget.startHour,
-      hourHeight: _cachedHourHeight > 0
-          ? _cachedHourHeight
-          : (widget.hourHeight ?? 80.0),
-    );
-    _updateKeyboardResizePreview();
-    if (mounted) {
-      final edgeLabel = newEdge == MCalResizeEdge.start ? 'start' : 'end';
-      _announceScreenReader(context, 'Now adjusting $edgeLabel time');
-    }
-    setState(() {});
-  }
-
   /// Confirms the keyboard resize (Enter).
   void _confirmKeyboardResize() {
     final dragHandler = _dragHandler;
     if (dragHandler == null || !dragHandler.isResizing) return;
     if (!dragHandler.isProposedDropValid) {
       if (mounted) {
-        _announceScreenReader(context, 'Invalid resize');
+        final l10n = mcalL10n(context);
+        _announceScreenReader(context, l10n.announcementResizeInvalid);
       }
       return;
     }
@@ -2939,7 +2951,8 @@ class MCalDayViewState extends State<MCalDayView> {
     _keyboardResizeEdge = null;
     _ensureDragHandler.cancelResize();
     if (mounted && cancel) {
-      _announceScreenReader(context, 'Resize cancelled');
+      final l10n = mcalL10n(context);
+      _announceScreenReader(context, l10n.announcementResizeCancelled);
     }
     setState(() {});
   }
@@ -4324,16 +4337,11 @@ class MCalDayViewState extends State<MCalDayView> {
       }
     }
 
-    // Check overlap with blocked time regions.
-    // Expand each region to a concrete instance for _displayDate first so that
-    // plain overlaps() compares matching dates (regions often carry an anchor
-    // date such as 2026-01-01 and recur via recurrenceRule).
-    for (final region in widget.specialTimeRegions) {
-      if (!region.blockInteraction) continue;
-      final expanded = region.expandedForDate(_displayDate);
-      if (expanded != null && expanded.overlaps(proposedStart, proposedEnd)) {
-        return false;
-      }
+    if (widget.controller.isTimeRangeBlocked(proposedStart, proposedEnd)) {
+      return false;
+    }
+    if (widget.controller.isDateBlocked(_displayDate)) {
+      return false;
     }
 
     // Check minDate boundary
@@ -4940,6 +4948,7 @@ class MCalDayViewState extends State<MCalDayView> {
       endTime: proposedEnd,
       isDropTargetPreview: true,
       dropValid: dragHandler.isProposedDropValid,
+      regions: widget.controller.getRegionsForDate(_displayDate),
     );
 
     final isValid = dragHandler.isProposedDropValid;
@@ -5177,6 +5186,9 @@ class MCalDayViewState extends State<MCalDayView> {
     final contentHeight =
         (widget.endHour - widget.startHour).clamp(0, 24) * hourHeight;
 
+    final regionsForDate = widget.controller.getRegionsForDate(date);
+    final timedRegions = regionsForDate.where((r) => !r.isAllDay).toList();
+
     // Layer 1+2: Main content (gridlines + regions + events + current time)
     // Wrap gridlines in IgnorePointer when empty slot callbacks exist so taps
     // pass through to the GestureDetector for onTimeSlotTap/onTimeSlotLongPress.
@@ -5195,6 +5207,7 @@ class MCalDayViewState extends State<MCalDayView> {
               theme: _resolveTheme(context),
               locale: locale,
               gridlineBuilder: widget.gridlineBuilder,
+              regions: regionsForDate,
             ),
           )
         : _GridlinesLayer(
@@ -5206,6 +5219,7 @@ class MCalDayViewState extends State<MCalDayView> {
             theme: _resolveTheme(context),
             locale: locale,
             gridlineBuilder: widget.gridlineBuilder,
+            regions: regionsForDate,
           );
     final mainContent = Stack(
       children: [
@@ -5220,9 +5234,9 @@ class MCalDayViewState extends State<MCalDayView> {
             displayDate: date,
             interactivityCallback: widget.timeSlotInteractivityCallback!,
           ),
-        if (widget.specialTimeRegions.isNotEmpty)
+        if (timedRegions.isNotEmpty)
           _TimeRegionsLayer(
-            regions: widget.specialTimeRegions,
+            regions: timedRegions,
             displayDate: date,
             startHour: widget.startHour,
             endHour: widget.endHour,
@@ -5258,6 +5272,7 @@ class MCalDayViewState extends State<MCalDayView> {
           onResizeUpdate: _handleResizeUpdate,
           onResizeEnd: _handleResizeEnd,
           onResizeCancel: _handleResizeCancel,
+          regions: regionsForDate,
         ),
         if (widget.showCurrentTimeIndicator && isToday(date))
           _CurrentTimeIndicator(
@@ -5425,6 +5440,7 @@ class MCalDayViewState extends State<MCalDayView> {
       minute: tappedTime.minute,
       offset: localPosition.dy,
       isAllDayArea: false,
+      regions: widget.controller.getRegionsForDate(_displayDate),
     );
 
     widget.onTimeSlotTap!(context, slotContext);
@@ -5472,6 +5488,7 @@ class MCalDayViewState extends State<MCalDayView> {
       minute: tappedTime.minute,
       offset: localPosition.dy,
       isAllDayArea: false,
+      regions: widget.controller.getRegionsForDate(_displayDate),
     );
 
     widget.onTimeSlotLongPress!(context, slotContext);
@@ -5526,6 +5543,7 @@ class MCalDayViewState extends State<MCalDayView> {
       minute: tappedTime.minute,
       offset: localPosition.dy,
       isAllDayArea: false,
+      regions: widget.controller.getRegionsForDate(_displayDate),
     );
 
     widget.onTimeSlotDoubleTap!(context, slotContext);
@@ -5756,6 +5774,7 @@ class MCalDayViewState extends State<MCalDayView> {
             onDragStarted: _handleDragStarted,
             onDragEnded: _handleDragEnded,
             onDragCancelled: _handleDragCancelled,
+            regions: widget.controller.getRegionsForDate(date),
             draggedTileBuilder: widget.draggedTileBuilder,
             dragSourceTileBuilder: widget.dragSourceTileBuilder,
             dragLongPressDelay: widget.dragLongPressDelay,
@@ -7024,7 +7043,7 @@ class _TimeRegionsLayer extends StatelessWidget {
     this.timeRegionBuilder,
   });
 
-  final List<MCalTimeRegion> regions;
+  final List<MCalRegion> regions;
   final DateTime displayDate;
   final int startHour;
   final int endHour;
@@ -7049,11 +7068,11 @@ class _TimeRegionsLayer extends StatelessWidget {
   /// Filters and returns regions that apply to [displayDate], each expanded
   /// to a concrete (non-recurring) instance for that date.
   ///
-  /// Delegates to [MCalTimeRegion.expandedForDate] which uses the full
+  /// Delegates to [MCalRegion.expandedForDate] which uses the full
   /// RFC 5545 [MCalRecurrenceRule] engine — the same engine used for calendar
   /// events.  Regions that do not apply to [displayDate] are omitted.
-  List<MCalTimeRegion> _getApplicableRegions() {
-    final result = <MCalTimeRegion>[];
+  List<MCalRegion> _getApplicableRegions() {
+    final result = <MCalRegion>[];
     for (final region in regions) {
       final expanded = region.expandedForDate(displayDate);
       if (expanded != null) {
@@ -7064,10 +7083,10 @@ class _TimeRegionsLayer extends StatelessWidget {
   }
 
   /// Builds a positioned widget for a single time region.
-  Widget _buildTimeRegion(BuildContext context, MCalTimeRegion region) {
+  Widget _buildTimeRegion(BuildContext context, MCalRegion region) {
     // Calculate vertical position and height
-    final startOffset = _timeToOffset(region.startTime);
-    final endOffset = _timeToOffset(region.endTime);
+    final startOffset = _timeToOffset(region.start);
+    final endOffset = _timeToOffset(region.end);
     final height = endOffset - startOffset;
 
     // Skip regions with invalid height
@@ -7182,6 +7201,7 @@ class _GridlinesLayer extends StatelessWidget {
     required this.theme,
     required this.locale,
     this.gridlineBuilder,
+    this.regions = const [],
   });
 
   final int startHour;
@@ -7193,6 +7213,7 @@ class _GridlinesLayer extends StatelessWidget {
   final Locale locale;
   final Widget Function(BuildContext, MCalGridlineContext, Widget)?
   gridlineBuilder;
+  final List<MCalRegion> regions;
 
   @override
   Widget build(BuildContext context) {
@@ -7319,6 +7340,7 @@ class _GridlinesLayer extends StatelessWidget {
             offset: offset,
             type: type,
             intervalMinutes: intervalMinutes,
+            regions: regions,
           ),
         );
       }
@@ -7370,6 +7392,7 @@ class _AllDayEventsSection extends StatelessWidget {
     this.onTimeSlotLongPress,
     this.onDragStarted,
     this.onDragEnded,
+    this.regions = const [],
     this.onDragCancelled,
     this.draggedTileBuilder,
     this.dragSourceTileBuilder,
@@ -7421,6 +7444,7 @@ class _AllDayEventsSection extends StatelessWidget {
   )?
   dragSourceTileBuilder;
   final Duration dragLongPressDelay;
+  final List<MCalRegion> regions;
 
   @override
   Widget build(BuildContext context) {
@@ -7504,6 +7528,7 @@ class _AllDayEventsSection extends StatelessWidget {
     final tileContext = MCalAllDayEventTileContext(
       event: event,
       displayDate: displayDate,
+      regions: regions,
     );
 
     // Build the tile content
@@ -7957,6 +7982,7 @@ class _TimeGridEventsLayer extends StatelessWidget {
     this.onResizeUpdate,
     this.onResizeEnd,
     this.onResizeCancel,
+    this.regions = const [],
   });
 
   final List<MCalCalendarEvent> events;
@@ -8014,6 +8040,7 @@ class _TimeGridEventsLayer extends StatelessWidget {
   onResizeUpdate;
   final VoidCallback? onResizeEnd;
   final VoidCallback? onResizeCancel;
+  final List<MCalRegion> regions;
 
   Widget _buildDefaultLayout(BuildContext context) {
     if (events.isEmpty) {
@@ -8127,6 +8154,7 @@ class _TimeGridEventsLayer extends StatelessWidget {
       endTime: effectiveEnd,
       isStartOnDisplayDate: isStartOnDisplayDate,
       isEndOnDisplayDate: isEndOnDisplayDate,
+      regions: regions,
     );
 
     // Build the tile content

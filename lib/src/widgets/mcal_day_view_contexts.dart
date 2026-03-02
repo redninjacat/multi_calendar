@@ -1,5 +1,5 @@
 import '../models/mcal_calendar_event.dart';
-import '../models/mcal_time_region.dart';
+import '../models/mcal_region.dart';
 
 /// Position of time labels relative to hour gridlines in Day View.
 ///
@@ -224,6 +224,9 @@ class MCalGridlineContext {
   /// This is the spacing between gridlines (e.g., 15 for 15-minute intervals).
   final int intervalMinutes;
 
+  /// Regions applicable to the display date.
+  final List<MCalRegion> regions;
+
   /// Creates a new [MCalGridlineContext] instance.
   const MCalGridlineContext({
     required this.hour,
@@ -231,6 +234,7 @@ class MCalGridlineContext {
     required this.offset,
     required this.type,
     required this.intervalMinutes,
+    this.regions = const [],
   });
 
   /// True if this is an hour gridline (minute == 0).
@@ -335,6 +339,9 @@ class MCalTimedEventTileContext {
   /// the preview differently for valid vs invalid drops.
   final bool? dropValid;
 
+  /// Regions applicable to the display date.
+  final List<MCalRegion> regions;
+
   /// Creates a new [MCalTimedEventTileContext] instance.
   const MCalTimedEventTileContext({
     required this.event,
@@ -347,6 +354,7 @@ class MCalTimedEventTileContext {
     this.isEndOnDisplayDate = true,
     this.isDropTargetPreview,
     this.dropValid,
+    this.regions = const [],
   });
 }
 
@@ -402,12 +410,16 @@ class MCalAllDayEventTileContext {
   /// the preview differently for valid vs invalid drops.
   final bool? dropValid;
 
+  /// Regions applicable to the display date.
+  final List<MCalRegion> regions;
+
   /// Creates a new [MCalAllDayEventTileContext] instance.
   const MCalAllDayEventTileContext({
     required this.event,
     required this.displayDate,
     this.isDropTargetPreview,
     this.dropValid,
+    this.regions = const [],
   });
 }
 
@@ -514,6 +526,9 @@ class MCalTimeSlotContext {
   /// When true, [hour] and [minute] are null and [offset] is 0.0.
   final bool isAllDayArea;
 
+  /// Regions applicable to the display date.
+  final List<MCalRegion> regions;
+
   /// Creates a new [MCalTimeSlotContext] instance.
   const MCalTimeSlotContext({
     required this.displayDate,
@@ -521,6 +536,7 @@ class MCalTimeSlotContext {
     required this.minute,
     required this.offset,
     required this.isAllDayArea,
+    this.regions = const [],
   });
 }
 
@@ -558,7 +574,7 @@ class MCalTimeSlotContext {
 /// ```
 class MCalTimeRegionContext {
   /// The time region being rendered.
-  final MCalTimeRegion region;
+  final MCalRegion region;
 
   /// The date this region is being rendered for.
   ///
@@ -589,10 +605,10 @@ class MCalTimeRegionContext {
   bool get isBlocked => region.blockInteraction;
 
   /// Start time for this region occurrence on [displayDate].
-  DateTime get startTime => region.startTime;
+  DateTime get startTime => region.start;
 
   /// End time for this region occurrence on [displayDate].
-  DateTime get endTime => region.endTime;
+  DateTime get endTime => region.end;
 }
 
 /// Context object for custom day layout builder callbacks in Day View.

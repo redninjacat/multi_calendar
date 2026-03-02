@@ -306,7 +306,7 @@ MCalDayView(
 | Timed events | Overlap detection, side-by-side layout |
 | Drag and drop | Move within day, across days, all-day ↔ timed conversion |
 | Resize | Drag event edges to change duration |
-| Time regions | `MCalTimeRegion` for blocked time, lunch breaks |
+| Regions | `MCalRegion` for blocked time, lunch breaks, weekends (managed on controller) |
 | Keyboard navigation | Tab, arrows, Enter, Cmd+N/E/D |
 | Custom builders | `eventTileBuilder`, `timeRegionBuilder`, `gridlineBuilder`, etc. |
 

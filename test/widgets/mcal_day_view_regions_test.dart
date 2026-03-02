@@ -33,11 +33,16 @@ void main() {
 
     Widget buildDayView({
       List<MCalCalendarEvent>? events,
-      List<MCalTimeRegion> specialTimeRegions = const [],
-      Widget Function(BuildContext, MCalTimeRegionContext, Widget)? timeRegionBuilder,
+      List<MCalRegion> regions = const [],
+      Widget Function(BuildContext, MCalTimeRegionContext, Widget)?
+          timeRegionBuilder,
     }) {
       if (events != null) {
         controller.setMockEvents(events);
+      }
+      controller.clearRegions();
+      if (regions.isNotEmpty) {
+        controller.addRegions(regions);
       }
       return MaterialApp(
         home: Scaffold(
@@ -51,7 +56,6 @@ void main() {
               hourHeight: 80,
               showNavigator: false,
               showCurrentTimeIndicator: false,
-              specialTimeRegions: specialTimeRegions,
               timeRegionBuilder: timeRegionBuilder,
             ),
           ),
@@ -59,21 +63,22 @@ void main() {
       );
     }
 
-    group('MCalTimeRegion rendering', () {
+    group('MCalRegion rendering', () {
       testWidgets('region renders at correct position with text', (
         tester,
       ) async {
         final regions = [
-          MCalTimeRegion(
+          MCalRegion(
             id: 'lunch',
-            startTime: DateTime(2026, 2, 14, 12, 0),
-            endTime: DateTime(2026, 2, 14, 13, 0),
+            start: DateTime(2026, 2, 14, 12, 0),
+            end: DateTime(2026, 2, 14, 13, 0),
+            isAllDay: false,
             text: 'Lunch Break',
             color: Colors.amber.withValues(alpha: 0.3),
           ),
         ];
 
-        await tester.pumpWidget(buildDayView(specialTimeRegions: regions));
+        await tester.pumpWidget(buildDayView(regions: regions));
         await tester.pumpAndSettle();
 
         expect(find.text('Lunch Break'), findsOneWidget);
@@ -81,17 +86,18 @@ void main() {
 
       testWidgets('region renders with icon and text', (tester) async {
         final regions = [
-          MCalTimeRegion(
+          MCalRegion(
             id: 'focus',
-            startTime: DateTime(2026, 2, 14, 9, 0),
-            endTime: DateTime(2026, 2, 14, 10, 0),
+            start: DateTime(2026, 2, 14, 9, 0),
+            end: DateTime(2026, 2, 14, 10, 0),
+            isAllDay: false,
             text: 'Focus Time',
             icon: Icons.work,
             color: Colors.blue.withValues(alpha: 0.2),
           ),
         ];
 
-        await tester.pumpWidget(buildDayView(specialTimeRegions: regions));
+        await tester.pumpWidget(buildDayView(regions: regions));
         await tester.pumpAndSettle();
 
         expect(find.text('Focus Time'), findsOneWidget);
@@ -100,21 +106,23 @@ void main() {
 
       testWidgets('multiple regions render', (tester) async {
         final regions = [
-          MCalTimeRegion(
+          MCalRegion(
             id: 'morning',
-            startTime: DateTime(2026, 2, 14, 9, 0),
-            endTime: DateTime(2026, 2, 14, 10, 0),
+            start: DateTime(2026, 2, 14, 9, 0),
+            end: DateTime(2026, 2, 14, 10, 0),
+            isAllDay: false,
             text: 'Morning Block',
           ),
-          MCalTimeRegion(
+          MCalRegion(
             id: 'lunch',
-            startTime: DateTime(2026, 2, 14, 12, 0),
-            endTime: DateTime(2026, 2, 14, 13, 0),
+            start: DateTime(2026, 2, 14, 12, 0),
+            end: DateTime(2026, 2, 14, 13, 0),
+            isAllDay: false,
             text: 'Lunch',
           ),
         ];
 
-        await tester.pumpWidget(buildDayView(specialTimeRegions: regions));
+        await tester.pumpWidget(buildDayView(regions: regions));
         await tester.pumpAndSettle();
 
         expect(find.text('Morning Block'), findsOneWidget);
@@ -125,24 +133,20 @@ void main() {
         tester,
       ) async {
         final regions = [
-          MCalTimeRegion(
+          MCalRegion(
             id: 'late',
-            startTime: DateTime(2026, 2, 14, 22, 0),
-            endTime: DateTime(2026, 2, 14, 23, 0),
+            start: DateTime(2026, 2, 14, 22, 0),
+            end: DateTime(2026, 2, 14, 23, 0),
+            isAllDay: false,
             text: 'Late Night',
           ),
         ];
 
         await tester.pumpWidget(
-          buildDayView(specialTimeRegions: regions),
+          buildDayView(regions: regions),
         );
         await tester.pumpAndSettle();
 
-        // Day view shows 8-18, so 22:00 is outside - region may not be visible
-        // The region is filtered by _getApplicableRegions - it still applies
-        // to display date but is outside startHour-endHour. The _TimeRegionsLayer
-        // builds all applicable regions; positioning may place it off-screen.
-        // Verify widget builds without error.
         expect(find.byType(MCalDayView), findsOneWidget);
       });
     });
@@ -157,15 +161,19 @@ void main() {
           start: DateTime(2026, 2, 14, 10, 0),
           end: DateTime(2026, 2, 14, 11, 0),
         );
-        controller.setMockEvents([event]);
 
-        final blockedRegion = MCalTimeRegion(
+        final blockedRegion = MCalRegion(
           id: 'blocked',
-          startTime: DateTime(2026, 2, 14, 12, 0),
-          endTime: DateTime(2026, 2, 14, 13, 0),
+          start: DateTime(2026, 2, 14, 12, 0),
+          end: DateTime(2026, 2, 14, 13, 0),
+          isAllDay: false,
           text: 'Blocked Time',
           blockInteraction: true,
         );
+
+        final testController = MockMCalEventController(initialDate: testDate);
+        testController.setMockEvents([event]);
+        testController.addRegions([blockedRegion]);
 
         var dropCalled = false;
         await tester.pumpWidget(
@@ -174,11 +182,10 @@ void main() {
               body: SizedBox(
                 height: 800,
                 child: MCalDayView(
-                  controller: controller,
+                  controller: testController,
                   startHour: 8,
                   endHour: 18,
                   hourHeight: 80,
-                  specialTimeRegions: [blockedRegion],
                   enableDragToMove: true,
                   onEventDropped: (_, __) {
                     dropCalled = true;
@@ -200,7 +207,6 @@ void main() {
         final gesture = await tester.startGesture(center);
         await tester.pump(const Duration(milliseconds: 200));
 
-        // Move down to 12:00-13:00 (blocked region) - ~2 hours = 160px
         await gesture.moveBy(const Offset(0, 160));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
@@ -208,8 +214,9 @@ void main() {
         await gesture.up();
         await tester.pumpAndSettle();
 
-        // Drop should be rejected - event stays at original position
         expect(dropCalled, isFalse);
+
+        testController.dispose();
       });
 
       testWidgets('non-blocked region allows drop', (tester) async {
@@ -219,15 +226,19 @@ void main() {
           start: DateTime(2026, 2, 14, 10, 0),
           end: DateTime(2026, 2, 14, 11, 0),
         );
-        controller.setMockEvents([event]);
 
-        final visualRegion = MCalTimeRegion(
+        final visualRegion = MCalRegion(
           id: 'visual',
-          startTime: DateTime(2026, 2, 14, 12, 0),
-          endTime: DateTime(2026, 2, 14, 13, 0),
+          start: DateTime(2026, 2, 14, 12, 0),
+          end: DateTime(2026, 2, 14, 13, 0),
+          isAllDay: false,
           text: 'Visual Only',
           blockInteraction: false,
         );
+
+        final testController = MockMCalEventController(initialDate: testDate);
+        testController.setMockEvents([event]);
+        testController.addRegions([visualRegion]);
 
         MCalEventDroppedDetails? capturedDetails;
         await tester.pumpWidget(
@@ -236,11 +247,10 @@ void main() {
               body: SizedBox(
                 height: 800,
                 child: MCalDayView(
-                  controller: controller,
+                  controller: testController,
                   startHour: 8,
                   endHour: 18,
                   hourHeight: 80,
-                  specialTimeRegions: [visualRegion],
                   enableDragToMove: true,
                   onEventDropped: (_, d) {
                     capturedDetails = d;
@@ -256,7 +266,8 @@ void main() {
         await tester.pumpAndSettle();
 
         final eventFinder = find.text('Drop Allowed');
-        final gesture = await tester.startGesture(tester.getCenter(eventFinder));
+        final gesture =
+            await tester.startGesture(tester.getCenter(eventFinder));
         await tester.pump(const Duration(milliseconds: 200));
         await gesture.moveBy(const Offset(0, 160));
         await tester.pump();
@@ -264,12 +275,12 @@ void main() {
         await gesture.up();
         await tester.pumpAndSettle();
 
-        // Non-blocked region should not prevent drop - widget remains stable.
-        // (Drop callback may or may not fire depending on drag target hit testing)
         expect(find.byType(MCalDayView), findsOneWidget);
         if (capturedDetails != null) {
           expect(capturedDetails!.event.id, 'drag-2');
         }
+
+        testController.dispose();
       });
     });
 
@@ -278,16 +289,17 @@ void main() {
         tester,
       ) async {
         final regions = [
-          MCalTimeRegion(
+          MCalRegion(
             id: 'blocked',
-            startTime: DateTime(2026, 2, 14, 12, 0),
-            endTime: DateTime(2026, 2, 14, 13, 0),
+            start: DateTime(2026, 2, 14, 12, 0),
+            end: DateTime(2026, 2, 14, 13, 0),
+            isAllDay: false,
             blockInteraction: true,
             text: 'Blocked',
           ),
         ];
 
-        await tester.pumpWidget(buildDayView(specialTimeRegions: regions));
+        await tester.pumpWidget(buildDayView(regions: regions));
         await tester.pumpAndSettle();
 
         expect(find.text('Blocked'), findsOneWidget);
@@ -295,35 +307,40 @@ void main() {
 
       testWidgets('region with custom color renders', (tester) async {
         final regions = [
-          MCalTimeRegion(
+          MCalRegion(
             id: 'custom',
-            startTime: DateTime(2026, 2, 14, 12, 0),
-            endTime: DateTime(2026, 2, 14, 13, 0),
+            start: DateTime(2026, 2, 14, 12, 0),
+            end: DateTime(2026, 2, 14, 13, 0),
+            isAllDay: false,
             color: Colors.red.withValues(alpha: 0.5),
             text: 'Custom Color',
           ),
         ];
 
-        await tester.pumpWidget(buildDayView(specialTimeRegions: regions));
+        await tester.pumpWidget(buildDayView(regions: regions));
         await tester.pumpAndSettle();
 
         expect(find.text('Custom Color'), findsOneWidget);
       });
     });
 
-    group('recurring regions with RRULE', () {
+    group('recurring regions with MCalRecurrenceRule', () {
       testWidgets('recurring region expands for display date', (tester) async {
         final regions = [
-          MCalTimeRegion(
+          MCalRegion(
             id: 'focus-time',
-            startTime: DateTime(2026, 2, 14, 9, 0),
-            endTime: DateTime(2026, 2, 14, 10, 0),
-            recurrenceRule: 'FREQ=DAILY;COUNT=30',
+            start: DateTime(2026, 2, 14, 9, 0),
+            end: DateTime(2026, 2, 14, 10, 0),
+            isAllDay: false,
+            recurrenceRule: MCalRecurrenceRule(
+              frequency: MCalFrequency.daily,
+              count: 30,
+            ),
             text: 'Focus Time',
           ),
         ];
 
-        await tester.pumpWidget(buildDayView(specialTimeRegions: regions));
+        await tester.pumpWidget(buildDayView(regions: regions));
         await tester.pumpAndSettle();
 
         expect(find.text('Focus Time'), findsOneWidget);
@@ -333,16 +350,20 @@ void main() {
         tester,
       ) async {
         final regions = [
-          MCalTimeRegion(
+          MCalRegion(
             id: 'daily-lunch',
-            startTime: DateTime(2026, 2, 10, 12, 0),
-            endTime: DateTime(2026, 2, 10, 13, 0),
-            recurrenceRule: 'FREQ=DAILY;COUNT=10',
+            start: DateTime(2026, 2, 10, 12, 0),
+            end: DateTime(2026, 2, 10, 13, 0),
+            isAllDay: false,
+            recurrenceRule: MCalRecurrenceRule(
+              frequency: MCalFrequency.daily,
+              count: 10,
+            ),
             text: 'Daily Lunch',
           ),
         ];
 
-        await tester.pumpWidget(buildDayView(specialTimeRegions: regions));
+        await tester.pumpWidget(buildDayView(regions: regions));
         await tester.pumpAndSettle();
 
         expect(find.text('Daily Lunch'), findsOneWidget);
@@ -362,16 +383,17 @@ void main() {
           ),
         ];
         final regions = [
-          MCalTimeRegion(
+          MCalRegion(
             id: 'lunch',
-            startTime: DateTime(2026, 2, 14, 12, 0),
-            endTime: DateTime(2026, 2, 14, 13, 0),
+            start: DateTime(2026, 2, 14, 12, 0),
+            end: DateTime(2026, 2, 14, 13, 0),
+            isAllDay: false,
             text: 'Lunch',
           ),
         ];
 
         await tester.pumpWidget(
-          buildDayView(events: events, specialTimeRegions: regions),
+          buildDayView(events: events, regions: regions),
         );
         await tester.pumpAndSettle();
 
@@ -386,17 +408,18 @@ void main() {
       ) async {
         var builderCalled = false;
         final regions = [
-          MCalTimeRegion(
+          MCalRegion(
             id: 'custom',
-            startTime: DateTime(2026, 2, 14, 12, 0),
-            endTime: DateTime(2026, 2, 14, 13, 0),
+            start: DateTime(2026, 2, 14, 12, 0),
+            end: DateTime(2026, 2, 14, 13, 0),
+            isAllDay: false,
             text: 'Original',
           ),
         ];
 
         await tester.pumpWidget(
           buildDayView(
-            specialTimeRegions: regions,
+            regions: regions,
             timeRegionBuilder: (context, ctx, defaultWidget) {
               builderCalled = true;
               return Container(
@@ -418,17 +441,18 @@ void main() {
       ) async {
         MCalTimeRegionContext? capturedContext;
         final regions = [
-          MCalTimeRegion(
+          MCalRegion(
             id: 'ctx-test',
-            startTime: DateTime(2026, 2, 14, 12, 0),
-            endTime: DateTime(2026, 2, 14, 13, 0),
+            start: DateTime(2026, 2, 14, 12, 0),
+            end: DateTime(2026, 2, 14, 13, 0),
+            isAllDay: false,
             text: 'Context Test',
           ),
         ];
 
         await tester.pumpWidget(
           buildDayView(
-            specialTimeRegions: regions,
+            regions: regions,
             timeRegionBuilder: (context, ctx, defaultWidget) {
               capturedContext = ctx;
               return Text('Region: ${ctx.region.id}');
@@ -450,22 +474,23 @@ void main() {
         tester,
       ) async {
         final regions = [
-          MCalTimeRegion(
+          MCalRegion(
             id: 'layer-test',
-            startTime: DateTime(2026, 2, 14, 12, 0),
-            endTime: DateTime(2026, 2, 14, 13, 0),
+            start: DateTime(2026, 2, 14, 12, 0),
+            end: DateTime(2026, 2, 14, 13, 0),
+            isAllDay: false,
             text: 'Layer Test',
           ),
         ];
 
-        await tester.pumpWidget(buildDayView(specialTimeRegions: regions));
+        await tester.pumpWidget(buildDayView(regions: regions));
         await tester.pumpAndSettle();
 
         expect(find.byType(MCalDayView), findsOneWidget);
         expect(find.text('Layer Test'), findsOneWidget);
       });
 
-      testWidgets('no regions layer when specialTimeRegions empty', (
+      testWidgets('no regions layer when no regions added', (
         tester,
       ) async {
         await tester.pumpWidget(buildDayView());

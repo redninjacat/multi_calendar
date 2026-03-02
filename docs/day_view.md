@@ -39,7 +39,7 @@ A comprehensive guide to the Day View calendar widget in the `multi_calendar` Fl
 | Timed events | Events positioned by start/end time with overlap detection |
 | Drag and drop | Move events within day, across days, or convert all-day ↔ timed |
 | Resize | Drag event edges to change duration |
-| Time regions | Blocked time, lunch breaks, non-working hours |
+| Regions | Blocked time, lunch breaks, non-working hours via unified `MCalRegion` |
 | Current time indicator | Live-updating line marking current time |
 | Keyboard navigation | Full keyboard support for accessibility |
 | Customizable | Builders for every visual element |
@@ -566,7 +566,7 @@ MCalTheme(
 | `timedEventMinHeight`, `timedEventBorderRadius`, `timedEventPadding` | Timed event tiles |
 | `allDayEventBackgroundColor`, `allDayEventTextStyle` | All-day section |
 | `dayHeaderDayOfWeekStyle`, `dayHeaderDateStyle` | Day header |
-| `specialTimeRegionColor`, `blockedTimeRegionColor` | Time regions |
+| `specialTimeRegionColor`, `blockedTimeRegionColor` | Region styling |
 
 ### Per-Widget Theme
 
@@ -581,32 +581,35 @@ MCalDayView(
 
 ---
 
-## Special Time Regions
+## Regions
 
-Display blocked time, lunch breaks, or non-working hours:
+Regions are managed on `MCalEventController` using the unified `MCalRegion` class. Both timed and all-day regions are supported. The Day View automatically renders timed regions and enforces blocking rules.
 
 ```dart
+controller.addRegions([
+  MCalRegion(
+    id: 'lunch',
+    start: DateTime(2026, 2, 14, 12, 0),
+    end: DateTime(2026, 2, 14, 13, 0),
+    isAllDay: false,
+    color: Colors.amber.withValues(alpha: 0.3),
+    text: 'Lunch Break',
+    icon: Icons.restaurant,
+    blockInteraction: false,
+  ),
+  MCalRegion(
+    id: 'after-hours',
+    start: DateTime(2026, 2, 14, 18, 0),
+    end: DateTime(2026, 2, 14, 23, 59),
+    isAllDay: false,
+    color: Colors.grey.withValues(alpha: 0.5),
+    text: 'After Hours',
+    blockInteraction: true,
+  ),
+]);
+
 MCalDayView(
   controller: controller,
-  specialTimeRegions: [
-    MCalTimeRegion(
-      id: 'lunch',
-      startTime: DateTime(2026, 2, 14, 12, 0),
-      endTime: DateTime(2026, 2, 14, 13, 0),
-      color: Colors.amber.withValues(alpha: 0.3),
-      text: 'Lunch Break',
-      icon: Icons.restaurant,
-      blockInteraction: false,
-    ),
-    MCalTimeRegion(
-      id: 'after-hours',
-      startTime: DateTime(2026, 2, 14, 18, 0),
-      endTime: DateTime(2026, 2, 14, 23, 59),
-      color: Colors.grey.withValues(alpha: 0.5),
-      text: 'After Hours',
-      blockInteraction: true,
-    ),
-  ],
   timeRegionBuilder: (context, ctx) {
     return Container(
       color: ctx.region.color ?? Colors.grey.withValues(alpha: 0.2),
@@ -616,19 +619,24 @@ MCalDayView(
 )
 ```
 
-Recurring regions use RFC 5545 RRULE:
+Recurring regions use typed `MCalRecurrenceRule`:
 
 ```dart
-MCalTimeRegion(
-  id: 'focus',
-  startTime: DateTime(2026, 2, 14, 9, 0),
-  endTime: DateTime(2026, 2, 14, 10, 0),
-  recurrenceRule: 'FREQ=DAILY;COUNT=30',
-  color: Colors.blue.withValues(alpha: 0.2),
-  text: 'Focus Time',
-  blockInteraction: true,
-)
+controller.addRegions([
+  MCalRegion(
+    id: 'focus',
+    start: DateTime(2026, 2, 14, 9, 0),
+    end: DateTime(2026, 2, 14, 10, 0),
+    isAllDay: false,
+    recurrenceRule: MCalRecurrenceRule(frequency: MCalFrequency.daily, count: 30),
+    color: Colors.blue.withValues(alpha: 0.2),
+    text: 'Focus Time',
+    blockInteraction: true,
+  ),
+]);
 ```
+
+For full details on region fields, cross-view enforcement, and builder contexts, see the [Regions section in the README](../README.md#regions).
 
 ---
 
@@ -729,11 +737,11 @@ Run `dart doc .` to generate API documentation, or see [pub.dev](https://pub.dev
 - **MCalTimedEventTileContext** — Timed event tiles
 - **MCalAllDayEventTileContext** — All-day event tiles
 - **MCalCurrentTimeContext** — Current time indicator
-- **MCalTimeRegionContext** — Special time regions
+- **MCalTimeRegionContext** — Regions (backed by `MCalRegion`)
 
 ### Models
 
-- **MCalTimeRegion** — Special time region model
+- **MCalRegion** — Unified region model (timed and all-day)
 - **MCalCalendarEvent** — Event model
 - **MCalEventController** — Event controller
 
