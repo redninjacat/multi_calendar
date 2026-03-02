@@ -2340,20 +2340,42 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Escape cancels. When in keyboard resize mode (Ctrl+R): arrow keys adjust
   /// time, Tab switches edge, Enter confirms, Escape cancels.
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    if (!widget.enableKeyboardNavigation) return KeyEventResult.ignored;
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
 
-    // Handle keyboard move mode (Task 32)
-    if (_isKeyboardMoveMode) {
-      final result = _handleKeyboardMoveKey(event);
+    // Handle Escape key — works even if keyboard navigation is disabled.
+    // Priority: keyboard resize mode > keyboard move mode > pointer drag.
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      if (_isKeyboardResizeMode) {
+        _ensureDragHandler.cancelResize();
+        _exitKeyboardResizeMode(cancel: true);
+        setState(() {});
+        return KeyEventResult.handled;
+      }
+      if (_isKeyboardMoveMode) {
+        _exitKeyboardMoveMode(cancel: true);
+        setState(() {});
+        return KeyEventResult.handled;
+      }
+      // Cancel pointer drag if active
+      if (widget.enableDragToMove && _isDragActive) {
+        _handleDragCancelled();
+        return KeyEventResult.handled;
+      }
+    }
+
+    if (!widget.enableKeyboardNavigation) return KeyEventResult.ignored;
+
+    // Handle keyboard resize mode (sub-mode of move, checked first)
+    if (_isKeyboardResizeMode) {
+      final result = _handleKeyboardResizeKey(event);
       if (result != null) return result;
     }
 
-    // Handle keyboard resize mode (Task 33)
-    if (_isKeyboardResizeMode) {
-      final result = _handleKeyboardResizeKey(event);
+    // Handle keyboard move mode
+    if (_isKeyboardMoveMode) {
+      final result = _handleKeyboardMoveKey(event);
       if (result != null) return result;
     }
 
@@ -2442,11 +2464,8 @@ class MCalDayViewState extends State<MCalDayView> {
     final rtlMult = isLayoutRTL ? -1 : 1;
 
     switch (event.logicalKey) {
-      case LogicalKeyboardKey.escape:
-        _exitKeyboardMoveMode(cancel: true);
-        return KeyEventResult.handled;
       case LogicalKeyboardKey.enter:
-      case LogicalKeyboardKey.space:
+      case LogicalKeyboardKey.numpadEnter:
         _confirmKeyboardMove();
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowUp:
@@ -2461,6 +2480,14 @@ class MCalDayViewState extends State<MCalDayView> {
       case LogicalKeyboardKey.arrowRight:
         _keyboardMoveByDays(1 * rtlMult);
         return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyR:
+        if (_resolveDragToResize()) {
+          if (_ensureDragHandler.isDragging) {
+            _ensureDragHandler.cancelDrag();
+          }
+          _enterKeyboardResizeMode();
+        }
+        return KeyEventResult.handled;
       default:
         return null;
     }
@@ -2468,16 +2495,49 @@ class MCalDayViewState extends State<MCalDayView> {
 
   /// Handles key events when in keyboard resize mode.
   KeyEventResult? _handleKeyboardResizeKey(KeyEvent event) {
+    final l10n = mcalL10n(context);
+
     switch (event.logicalKey) {
-      case LogicalKeyboardKey.escape:
-        _exitKeyboardResizeMode(cancel: true);
-        return KeyEventResult.handled;
       case LogicalKeyboardKey.enter:
-      case LogicalKeyboardKey.space:
+      case LogicalKeyboardKey.numpadEnter:
         _confirmKeyboardResize();
         return KeyEventResult.handled;
-      case LogicalKeyboardKey.tab:
-        _keyboardResizeSwitchEdge();
+      case LogicalKeyboardKey.keyS:
+        _keyboardResizeEdge = MCalResizeEdge.start;
+        _ensureDragHandler.cancelResize();
+        _ensureDragHandler.startResize(_focusedEvent!, MCalResizeEdge.start);
+        _updateKeyboardResizePreview();
+        if (mounted) {
+          SemanticsService.sendAnnouncement(
+            View.of(context),
+            l10n.announcementResizingStartEdge,
+            Directionality.of(context),
+          );
+        }
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyE:
+        _keyboardResizeEdge = MCalResizeEdge.end;
+        _ensureDragHandler.cancelResize();
+        _ensureDragHandler.startResize(_focusedEvent!, MCalResizeEdge.end);
+        _updateKeyboardResizePreview();
+        if (mounted) {
+          SemanticsService.sendAnnouncement(
+            View.of(context),
+            l10n.announcementResizingEndEdge,
+            Directionality.of(context),
+          );
+        }
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyM:
+        _ensureDragHandler.cancelResize();
+        _exitKeyboardResizeMode(cancel: true);
+        if (mounted) {
+          SemanticsService.sendAnnouncement(
+            View.of(context),
+            l10n.announcementMoveMode,
+            Directionality.of(context),
+          );
+        }
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowUp:
         _keyboardResizeBySlots(-1);
@@ -2511,9 +2571,10 @@ class MCalDayViewState extends State<MCalDayView> {
     _updateKeyboardMovePreview();
 
     if (mounted) {
+      final l10n = mcalL10n(context);
       _announceScreenReader(
         context,
-        'Move mode. Use arrow keys to move ${event.title}. Enter to confirm, Escape to cancel.',
+        l10n.announcementEventSelected(event.title),
       );
     }
     setState(() {});
@@ -2653,11 +2714,15 @@ class MCalDayViewState extends State<MCalDayView> {
     );
     _updateKeyboardMovePreview();
     if (mounted) {
+      final l10n = mcalL10n(context);
       final locale = widget.locale ?? Localizations.localeOf(context);
       final timeStr = DateFormat.Hm(
         locale.toString(),
       ).format(_keyboardMoveProposedStart!);
-      _announceScreenReader(context, 'Moved to $timeStr');
+      _announceScreenReader(
+        context,
+        l10n.announcementMovingEvent(ev.title, timeStr),
+      );
     }
     setState(() {});
   }
@@ -2678,9 +2743,13 @@ class MCalDayViewState extends State<MCalDayView> {
 
     _updateKeyboardMovePreview();
     if (mounted) {
+      final l10n = mcalL10n(context);
       final locale = widget.locale ?? Localizations.localeOf(context);
       final dateStr = DateFormat.yMMMMEEEEd(locale.toString()).format(start);
-      _announceScreenReader(context, 'Moved to $dateStr');
+      _announceScreenReader(
+        context,
+        l10n.announcementMovingEvent(ev.title, dateStr),
+      );
     }
     setState(() {});
   }
@@ -2695,7 +2764,8 @@ class MCalDayViewState extends State<MCalDayView> {
     final isValid = _validateDropForEvent(ev, proposedStart, proposedEnd);
     if (!isValid) {
       if (mounted) {
-        _announceScreenReader(context, 'Invalid drop position');
+        final l10n = mcalL10n(context);
+        _announceScreenReader(context, l10n.announcementMoveInvalidTarget);
       }
       return;
     }
@@ -2733,6 +2803,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
   /// Exits keyboard move mode.
   void _exitKeyboardMoveMode({required bool cancel}) {
+    final title = _keyboardMoveEvent?.title ?? 'event';
     _isKeyboardMoveMode = false;
     _keyboardMoveEvent = null;
     _keyboardMoveOriginalStart = null;
@@ -2741,7 +2812,8 @@ class MCalDayViewState extends State<MCalDayView> {
     _keyboardMoveProposedEnd = null;
     _ensureDragHandler.cancelDrag();
     if (mounted && cancel) {
-      _announceScreenReader(context, 'Move cancelled');
+      final l10n = mcalL10n(context);
+      _announceScreenReader(context, l10n.announcementMoveCancelled(title));
     }
     setState(() {});
   }
@@ -2765,10 +2837,8 @@ class MCalDayViewState extends State<MCalDayView> {
     _updateKeyboardResizePreview();
 
     if (mounted) {
-      _announceScreenReader(
-        context,
-        'Resize mode. Adjusting end time. Arrow Up/Down to change. Tab to switch edge. Enter to confirm, Escape to cancel.',
-      );
+      final l10n = mcalL10n(context);
+      _announceScreenReader(context, l10n.announcementResizeModeEntered);
     }
     setState(() {});
   }
@@ -2860,7 +2930,7 @@ class MCalDayViewState extends State<MCalDayView> {
     setState(() {});
   }
 
-  /// Switches keyboard resize edge (Tab).
+  /// Switches keyboard resize edge.
   void _keyboardResizeSwitchEdge() {
     final dragHandler = _dragHandler;
     if (dragHandler == null || !dragHandler.isResizing) return;
@@ -2884,8 +2954,13 @@ class MCalDayViewState extends State<MCalDayView> {
     );
     _updateKeyboardResizePreview();
     if (mounted) {
-      final edgeLabel = newEdge == MCalResizeEdge.start ? 'start' : 'end';
-      _announceScreenReader(context, 'Now adjusting $edgeLabel time');
+      final l10n = mcalL10n(context);
+      _announceScreenReader(
+        context,
+        newEdge == MCalResizeEdge.start
+            ? l10n.announcementResizingStartEdge
+            : l10n.announcementResizingEndEdge,
+      );
     }
     setState(() {});
   }
@@ -2896,7 +2971,8 @@ class MCalDayViewState extends State<MCalDayView> {
     if (dragHandler == null || !dragHandler.isResizing) return;
     if (!dragHandler.isProposedDropValid) {
       if (mounted) {
-        _announceScreenReader(context, 'Invalid resize');
+        final l10n = mcalL10n(context);
+        _announceScreenReader(context, l10n.announcementResizeInvalid);
       }
       return;
     }
@@ -2910,7 +2986,8 @@ class MCalDayViewState extends State<MCalDayView> {
     _keyboardResizeEdge = null;
     _ensureDragHandler.cancelResize();
     if (mounted && cancel) {
-      _announceScreenReader(context, 'Resize cancelled');
+      final l10n = mcalL10n(context);
+      _announceScreenReader(context, l10n.announcementResizeCancelled);
     }
     setState(() {});
   }
