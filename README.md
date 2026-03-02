@@ -569,20 +569,22 @@ The calendar grid, navigator buttons, and weekday headers automatically flip for
 
 ### Keyboard Navigation
 
-`MCalMonthView` supports full keyboard navigation when focused:
+Both `MCalMonthView` and `MCalDayView` support full keyboard navigation with consistent shortcuts across views.
 
-**Cell Navigation:**
+**Cell/Date Navigation:**
 
-| Key | Action |
-|-----|--------|
-| `←` `→` `↑` `↓` | Navigate between cells |
-| `Enter` / `Space` | Select the focused cell (or enter event selection mode if drag-and-drop is enabled) |
-| `Home` | Jump to first day of month |
-| `End` | Jump to last day of month |
-| `Page Up` | Previous month |
-| `Page Down` | Next month |
+| Key | Month View | Day View |
+|-----|------------|----------|
+| `←` `→` | Navigate by 1 day (RTL-aware) | Navigate to previous/next day (RTL-aware) |
+| `↑` `↓` | Navigate by 1 week | Scroll by 1 time slot |
+| `Enter` / `Space` | Select cell or enter event selection mode | Select cell or enter event selection mode |
+| `Home` | First day of month | Scroll to top of time grid |
+| `End` | Last day of month | Scroll to bottom of time grid |
+| `Page Up` | Previous month | Scroll up by viewport height |
+| `Page Down` | Next month | Scroll down by viewport height |
+| `Tab` | — | Cycle focus between all-day and timed event sections |
 
-**Keyboard Event Moving** (when `enableDragToMove` is `true`):
+**Event Selection and Moving** (when `enableDragToMove` is `true`):
 
 | Key | Action |
 |-----|--------|
@@ -590,23 +592,24 @@ The calendar grid, navigator buttons, and weekday headers automatically flip for
 | `Tab` / `Shift+Tab` | Cycle through events when multiple exist on a cell |
 | `Enter` | Confirm event selection, then confirm move |
 | `←` `→` | Move the selected event by 1 day |
-| `↑` `↓` | Move the selected event by 1 week |
+| `↑` `↓` | Move the selected event by 1 week (Month View) or 1 time slot (Day View) |
+| `R` | Enter resize mode (if resize is enabled) |
 | `Escape` | Cancel the move |
 
-**Keyboard Event Resizing** (when both `enableDragToMove` and `enableDragToResize` are enabled):
+**Event Resizing** (when `enableDragToResize` is enabled):
 
 | Key | Action |
 |-----|--------|
-| `R` | Enter resize mode (from event selection/move mode) |
+| `R` | Enter resize mode (from move mode) |
 | `S` | Switch to resizing the start edge |
 | `E` | Switch to resizing the end edge |
-| `←` `→` | Adjust the active edge by 1 day |
-| `↑` `↓` | Adjust the active edge by 1 week |
+| `←` `→` | Adjust the active edge by 1 day (Month View) or — (Day View) |
+| `↑` `↓` | Adjust the active edge by 1 week (Month View) or 1 time slot (Day View) |
 | `M` | Return to move mode |
 | `Enter` | Confirm the resize |
-| `Escape` | Cancel the resize |
+| `Escape` | Cancel the resize (returns to move mode) |
 
-Screen reader announcements are provided at every step of both keyboard move and resize interactions.
+Screen reader announcements are provided at every step of both keyboard move and resize interactions. All announcements are localized.
 
 ```dart
 MCalMonthView(
