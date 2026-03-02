@@ -2930,41 +2930,6 @@ class MCalDayViewState extends State<MCalDayView> {
     setState(() {});
   }
 
-  /// Switches keyboard resize edge.
-  void _keyboardResizeSwitchEdge() {
-    final dragHandler = _dragHandler;
-    if (dragHandler == null || !dragHandler.isResizing) return;
-
-    final event = dragHandler.resizingEvent!;
-    final edge = _keyboardResizeEdge ?? MCalResizeEdge.end;
-    final newEdge = edge == MCalResizeEdge.start
-        ? MCalResizeEdge.end
-        : MCalResizeEdge.start;
-    _keyboardResizeEdge = newEdge;
-    _ensureDragHandler.cancelResize();
-    _ensureDragHandler.startResize(event, newEdge);
-    _keyboardResizeEdgeOffset = timeToOffset(
-      time: newEdge == MCalResizeEdge.start
-          ? dragHandler.resizeOriginalStart!
-          : dragHandler.resizeOriginalEnd!,
-      startHour: widget.startHour,
-      hourHeight: _cachedHourHeight > 0
-          ? _cachedHourHeight
-          : (widget.hourHeight ?? 80.0),
-    );
-    _updateKeyboardResizePreview();
-    if (mounted) {
-      final l10n = mcalL10n(context);
-      _announceScreenReader(
-        context,
-        newEdge == MCalResizeEdge.start
-            ? l10n.announcementResizingStartEdge
-            : l10n.announcementResizingEndEdge,
-      );
-    }
-    setState(() {});
-  }
-
   /// Confirms the keyboard resize (Enter).
   void _confirmKeyboardResize() {
     final dragHandler = _dragHandler;
