@@ -256,6 +256,21 @@ class MCalMonthDefaultWeekLayoutBuilder {
           maxVisibleRows: maxVisibleRows,
         );
 
+        // Report per-date visible counts for keyboard Event Mode cycling.
+        final visCountMap = layoutContext.layoutVisibleCounts;
+        if (visCountMap != null) {
+          for (int di = 0; di < layoutContext.dates.length && di < 7; di++) {
+            final d = layoutContext.dates[di];
+            final dk = '${d.year}-${d.month}-${d.day}';
+            final info = overflowMap[di];
+            if (info != null) {
+              visCountMap[dk] = info.visibleEvents.length;
+            } else {
+              visCountMap.remove(dk);
+            }
+          }
+        }
+
         // Build widgets
         final children = <Widget>[];
 

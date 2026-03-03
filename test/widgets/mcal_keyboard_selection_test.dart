@@ -37,6 +37,9 @@ void main() {
       required List<MCalCalendarEvent> events,
       required void Function(MCalEventTileContext) onTileBuild,
       bool enableDragToResize = false,
+      void Function(BuildContext, MCalEventTapDetails)? onEventTap,
+      void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap,
+      int maxVisibleEventsPerDay = 5,
     }) async {
       controller.setEvents(events);
       controller.setFocusedDate(DateTime(2025, 1, 15));
@@ -52,6 +55,9 @@ void main() {
                 enableKeyboardNavigation: true,
                 enableDragToMove: true,
                 enableDragToResize: enableDragToResize,
+                maxVisibleEventsPerDay: maxVisibleEventsPerDay,
+                onEventTap: onEventTap,
+                onOverflowTap: onOverflowTap,
                 eventTileBuilder: (context, ctx, defaultTile) {
                   onTileBuild(ctx);
                   return defaultTile;
@@ -81,7 +87,7 @@ void main() {
     }
 
     testWidgets(
-      'single event: Enter selects immediately, tile receives selected state',
+      'single event: Enter immediately selects event in Event Mode',
       (tester) async {
         final event = MCalCalendarEvent(
           id: 'single-event',
@@ -111,23 +117,24 @@ void main() {
         );
         capturedStates.clear();
 
-        // Press Enter to select the event (single event = immediate selection)
+        // Enter: Event Mode — event is immediately selected (no highlighted phase)
         await focusAndSendKey(tester, LogicalKeyboardKey.enter);
 
-        // After Enter on a single-event cell, the event should be selected
-        final selectedStates = capturedStates
-            .where((s) => s == MCalEventKeyboardState.selected)
-            .toList();
         expect(
-          selectedStates,
+          capturedStates.where((s) => s == MCalEventKeyboardState.selected),
           isNotEmpty,
-          reason: 'After Enter, single event should receive selected state',
+          reason: 'After Enter, single event should be immediately selected',
+        );
+        expect(
+          capturedStates.where((s) => s == MCalEventKeyboardState.highlighted),
+          isEmpty,
+          reason: 'There is no highlighted state — Event Mode uses selected directly',
         );
       },
     );
 
     testWidgets(
-      'multiple events: Enter enters cycling, first event is highlighted',
+      'multiple events: Enter immediately selects first event',
       (tester) async {
         final event1 = MCalCalendarEvent(
           id: 'multi-1',
@@ -158,29 +165,27 @@ void main() {
         // Clear initial build states
         statesById.clear();
 
-        // Press Enter to enter event selection cycling mode
+        // Enter: first event should be immediately selected (index 0)
         await focusAndSendKey(tester, LogicalKeyboardKey.enter);
 
-        // First event should be highlighted (index 0)
         final firstStates = statesById['multi-1'] ?? [];
         final secondStates = statesById['multi-2'] ?? [];
 
         expect(
-          firstStates.where((s) => s == MCalEventKeyboardState.highlighted),
+          firstStates.where((s) => s == MCalEventKeyboardState.selected),
           isNotEmpty,
-          reason: 'First event should be highlighted after Enter on multi-event cell',
+          reason: 'First event should be selected immediately after Enter',
         );
-        // Second event should remain none
         expect(
           secondStates.every((s) => s == MCalEventKeyboardState.none),
           isTrue,
-          reason: 'Second event should remain none when first is highlighted',
+          reason: 'Second event should remain none when first is selected',
         );
       },
     );
 
     testWidgets(
-      'Tab cycles highlight to next event',
+      'Tab cycles selection to next event',
       (tester) async {
         final event1 = MCalCalendarEvent(
           id: 'cycle-1',
@@ -208,34 +213,34 @@ void main() {
           },
         );
 
-        // Enter selection mode
+        // Enter Event Mode (first event selected)
         await focusAndSendKey(tester, LogicalKeyboardKey.enter);
         statesById.clear();
 
-        // Tab to cycle to next event (widget already has focus, no need to tap again)
+        // Tab to cycle to next event (widget already has focus)
         await tester.sendKeyEvent(LogicalKeyboardKey.tab);
         await tester.pumpAndSettle();
 
-        // Second event should now be highlighted
+        // Second event should now be selected
         final secondStates = statesById['cycle-2'] ?? [];
         expect(
-          secondStates.where((s) => s == MCalEventKeyboardState.highlighted),
+          secondStates.where((s) => s == MCalEventKeyboardState.selected),
           isNotEmpty,
-          reason: 'Second event should be highlighted after Tab',
+          reason: 'Second event should be selected after Tab',
         );
 
-        // First event should no longer be highlighted
+        // First event should no longer be selected
         final firstStates = statesById['cycle-1'] ?? [];
         expect(
           firstStates.every((s) => s == MCalEventKeyboardState.none),
           isTrue,
-          reason: 'First event should be none after Tab moves highlight away',
+          reason: 'First event should be none after Tab moves selection away',
         );
       },
     );
 
     testWidgets(
-      'Enter during cycling confirms selection (selected state)',
+      'Enter in Event Mode fires onEventTap for selected event',
       (tester) async {
         final event1 = MCalCalendarEvent(
           id: 'confirm-1',
@@ -252,32 +257,40 @@ void main() {
           color: Colors.red,
         );
 
+        MCalEventTapDetails? tappedDetails;
         final statesById = <String, List<MCalEventKeyboardState>>{};
 
         await pumpCalendar(
           tester,
           events: [event1, event2],
+          onEventTap: (ctx, details) => tappedDetails = details,
           onTileBuild: (ctx) {
             statesById.putIfAbsent(ctx.event.id, () => []);
             statesById[ctx.event.id]!.add(ctx.keyboardState);
           },
         );
 
-        // Enter selection mode, Tab to second event, Enter to confirm
+        // Enter Event Mode and Tab to second event
         await focusAndSendKey(tester, LogicalKeyboardKey.enter);
         await tester.sendKeyEvent(LogicalKeyboardKey.tab);
         await tester.pumpAndSettle();
         statesById.clear();
 
+        // Enter fires onEventTap for the currently selected (second) event
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await tester.pumpAndSettle();
 
-        // Second event should now be selected (confirmed for move)
-        final secondStates = statesById['confirm-2'] ?? [];
         expect(
-          secondStates.where((s) => s == MCalEventKeyboardState.selected),
-          isNotEmpty,
-          reason: 'Confirmed event should receive selected state',
+          tappedDetails,
+          isNotNull,
+          reason: 'onEventTap should fire when Enter is pressed in Event Mode',
+        );
+        // The tapped event should be one of the events on the cell
+        final tappedId = tappedDetails!.event.id;
+        expect(
+          tappedId == 'confirm-1' || tappedId == 'confirm-2',
+          isTrue,
+          reason: 'onEventTap should fire for one of the events on the cell',
         );
       },
     );
@@ -305,11 +318,11 @@ void main() {
           },
         );
 
-        // Select the event
+        // Enter Event Mode — event is selected
         await focusAndSendKey(tester, LogicalKeyboardKey.enter);
         capturedStates.clear();
 
-        // Press Escape to cancel (widget already has focus, no need to tap again)
+        // Press Escape to exit Event Mode (widget already has focus)
         await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await tester.pumpAndSettle();
 
@@ -354,10 +367,9 @@ void main() {
         );
         capturedStates.clear();
 
-        // Press Enter to select the event (single event = immediate selection)
+        // Enter: immediately selects event in Event Mode (even with resize enabled)
         await focusAndSendKey(tester, LogicalKeyboardKey.enter);
 
-        // After Enter, the event should be selected even with resize enabled
         final selectedStates = capturedStates
             .where((s) => s == MCalEventKeyboardState.selected)
             .toList();
@@ -401,6 +413,590 @@ void main() {
           isTrue,
           reason: 'Without keyboard interaction, all states should be none',
         );
+      },
+    );
+
+    testWidgets(
+      'M key in Event Mode enters Move Mode for selected event',
+      (tester) async {
+        final event = MCalCalendarEvent(
+          id: 'move-from-event',
+          title: 'MoveEvent',
+          start: DateTime(2025, 1, 15, 10, 0),
+          end: DateTime(2025, 1, 15, 11, 0),
+          color: Colors.blue,
+        );
+
+        final capturedStates = <MCalEventKeyboardState>[];
+
+        await pumpCalendar(
+          tester,
+          events: [event],
+          onTileBuild: (ctx) {
+            if (ctx.event.id == 'move-from-event') {
+              capturedStates.add(ctx.keyboardState);
+            }
+          },
+        );
+
+        // Enter Event Mode
+        await focusAndSendKey(tester, LogicalKeyboardKey.enter);
+        capturedStates.clear();
+
+        // Press M to enter Move Mode
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+        await tester.pumpAndSettle();
+
+        // Event should still be selected (Move Mode shows selected)
+        expect(
+          capturedStates.where((s) => s == MCalEventKeyboardState.selected),
+          isNotEmpty,
+          reason: 'In Move Mode, event should still appear selected',
+        );
+
+        // Move right and confirm — event should move to Jan 16
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        final movedEvents = controller.getEventsForDate(DateTime(2025, 1, 16));
+        expect(
+          movedEvents.any((e) => e.id == 'move-from-event'),
+          isTrue,
+          reason: 'Event should move to Jan 16 after M + ArrowRight + Enter',
+        );
+      },
+    );
+
+    testWidgets(
+      'Escape from Move Mode returns to Event Mode (event still selected)',
+      (tester) async {
+        final event = MCalCalendarEvent(
+          id: 'escape-move',
+          title: 'EscapeMove',
+          start: DateTime(2025, 1, 15, 10, 0),
+          end: DateTime(2025, 1, 15, 11, 0),
+          color: Colors.blue,
+        );
+
+        final capturedStates = <MCalEventKeyboardState>[];
+
+        await pumpCalendar(
+          tester,
+          events: [event],
+          onTileBuild: (ctx) {
+            if (ctx.event.id == 'escape-move') {
+              capturedStates.add(ctx.keyboardState);
+            }
+          },
+        );
+
+        // Enter Event Mode → M key → Move Mode
+        await focusAndSendKey(tester, LogicalKeyboardKey.enter);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+        await tester.pumpAndSettle();
+        capturedStates.clear();
+
+        // Escape from Move Mode → returns to Event Mode
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+
+        // Event should still be selected (back in Event Mode)
+        expect(
+          capturedStates.where((s) => s == MCalEventKeyboardState.selected),
+          isNotEmpty,
+          reason: 'After Escape from Move Mode, event should remain selected in Event Mode',
+        );
+
+        // A second Escape exits Event Mode entirely
+        capturedStates.clear();
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+
+        expect(
+          capturedStates.every((s) => s == MCalEventKeyboardState.none),
+          isTrue,
+          reason: 'After second Escape, all keyboard states should be none',
+        );
+      },
+    );
+
+    testWidgets(
+      'Down arrow cycles selection to next event same as Tab',
+      (tester) async {
+        final event1 = MCalCalendarEvent(
+          id: 'down-1',
+          title: 'Down A',
+          start: DateTime(2025, 1, 15, 9, 0),
+          end: DateTime(2025, 1, 15, 10, 0),
+          color: Colors.blue,
+        );
+        final event2 = MCalCalendarEvent(
+          id: 'down-2',
+          title: 'Down B',
+          start: DateTime(2025, 1, 15, 11, 0),
+          end: DateTime(2025, 1, 15, 12, 0),
+          color: Colors.red,
+        );
+
+        final statesById = <String, List<MCalEventKeyboardState>>{};
+
+        await pumpCalendar(
+          tester,
+          events: [event1, event2],
+          onTileBuild: (ctx) {
+            statesById.putIfAbsent(ctx.event.id, () => []);
+            statesById[ctx.event.id]!.add(ctx.keyboardState);
+          },
+        );
+
+        // Enter Event Mode
+        await focusAndSendKey(tester, LogicalKeyboardKey.enter);
+        statesById.clear();
+
+        // Down arrow cycles to next event
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+
+        // Second event should be selected
+        final secondStates = statesById['down-2'] ?? [];
+        expect(
+          secondStates.where((s) => s == MCalEventKeyboardState.selected),
+          isNotEmpty,
+          reason: 'Second event should be selected after ArrowDown',
+        );
+      },
+    );
+
+    testWidgets(
+      'onOverflowTap fires when Enter is pressed on overflow indicator',
+      (tester) async {
+        // Create enough events to trigger overflow (default maxVisible = 5)
+        final events = List.generate(
+          6,
+          (i) => MCalCalendarEvent(
+            id: 'overflow-$i',
+            title: 'Event $i',
+            start: DateTime(2025, 1, 15, 8 + i, 0),
+            end: DateTime(2025, 1, 15, 9 + i, 0),
+            color: Colors.blue,
+          ),
+        );
+
+        MCalOverflowTapDetails? overflowDetails;
+        final capturedStates = <MCalEventKeyboardState>[];
+
+        await pumpCalendar(
+          tester,
+          events: events,
+          maxVisibleEventsPerDay: 4,
+          onOverflowTap: (ctx, details) => overflowDetails = details,
+          onTileBuild: (ctx) => capturedStates.add(ctx.keyboardState),
+        );
+
+        // Enter Event Mode — first visible event is selected
+        await focusAndSendKey(tester, LogicalKeyboardKey.enter);
+
+        // Cycle down past the visible events to reach the overflow indicator.
+        // With maxVisible=4, there are 3 visible events + 1 overflow indicator.
+        // Pressing down 3 times (3 events) reaches the overflow indicator.
+        for (int i = 0; i < 3; i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+          await tester.pumpAndSettle();
+        }
+
+        // Enter on the overflow indicator should fire onOverflowTap
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(
+          overflowDetails,
+          isNotNull,
+          reason: 'onOverflowTap should fire when Enter is pressed on overflow indicator',
+        );
+      },
+    );
+  });
+
+  group('Keyboard event selection - height-based overflow and custom builders', () {
+    late _TestController controller;
+
+    setUp(() {
+      controller = _TestController(initialDate: DateTime(2025, 1, 1));
+    });
+
+    tearDown(() {
+      controller.dispose();
+    });
+
+    /// Helper: pumps a calendar with constrained height.
+    Future<void> pumpConstrainedCalendar(
+      WidgetTester tester, {
+      required List<MCalCalendarEvent> events,
+      required void Function(MCalEventTileContext) onTileBuild,
+      double height = 250,
+      double width = 400,
+      int maxVisibleEventsPerDay = 100,
+      void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap,
+      void Function(BuildContext, MCalEventTapDetails)? onEventTap,
+      MCalWeekLayoutBuilder? weekLayoutBuilder,
+    }) async {
+      controller.setEvents(events);
+      controller.setFocusedDate(DateTime(2025, 1, 15));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: height,
+              width: width,
+              child: MCalMonthView(
+                controller: controller,
+                enableKeyboardNavigation: true,
+                enableDragToMove: true,
+                maxVisibleEventsPerDay: maxVisibleEventsPerDay,
+                onEventTap: onEventTap,
+                onOverflowTap: onOverflowTap,
+                weekLayoutBuilder: weekLayoutBuilder,
+                eventTileBuilder: (context, ctx, defaultTile) {
+                  onTileBuild(ctx);
+                  return defaultTile;
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> focusAndSendKey(
+      WidgetTester tester,
+      LogicalKeyboardKey key,
+    ) async {
+      final savedFocusedDate = controller.focusedDate;
+      await tester.tap(find.byType(MCalMonthView));
+      await tester.pumpAndSettle();
+      controller.setFocusedDate(savedFocusedDate);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'height-based overflow: cycling skips hidden events and reaches '
+      'overflow indicator',
+      (tester) async {
+        // 4 events on the same day in a very short calendar (250px).
+        // With ~5 week rows, each row is ~50px. After the date label
+        // (~18px + 4px padding) there is barely room for 1 event tile
+        // (~18px + 2px spacing). So only 1 event should be visible with
+        // an overflow indicator, despite maxVisibleEventsPerDay being
+        // unconstrained (100).
+        final events = List.generate(
+          4,
+          (i) => MCalCalendarEvent(
+            id: 'hgt-$i',
+            title: 'Hgt $i',
+            start: DateTime(2025, 1, 15, 8 + i, 0),
+            end: DateTime(2025, 1, 15, 9 + i, 0),
+            color: Colors.blue,
+          ),
+        );
+
+        MCalOverflowTapDetails? overflowDetails;
+        MCalEventTapDetails? tappedDetails;
+        final selectedIds = <String>[];
+
+        await pumpConstrainedCalendar(
+          tester,
+          events: events,
+          height: 250,
+          onOverflowTap: (ctx, details) => overflowDetails = details,
+          onEventTap: (ctx, details) => tappedDetails = details,
+          onTileBuild: (ctx) {
+            if (ctx.keyboardState == MCalEventKeyboardState.selected) {
+              selectedIds.add(ctx.event.id);
+            }
+          },
+        );
+
+        // Enter Event Mode
+        selectedIds.clear();
+        await focusAndSendKey(tester, LogicalKeyboardKey.enter);
+
+        // The first (and only visible) event should be selected
+        expect(selectedIds, contains('hgt-0'));
+
+        // Pressing Down once should reach the overflow indicator (since
+        // only 1 event is visible). Pressing Enter should fire
+        // onOverflowTap.
+        selectedIds.clear();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+
+        // No event should be selected (overflow is focused)
+        expect(
+          selectedIds,
+          isEmpty,
+          reason:
+              'When overflow indicator is focused, no event should be selected',
+        );
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(
+          overflowDetails,
+          isNotNull,
+          reason:
+              'onOverflowTap should fire when height-based overflow is present',
+        );
+
+        // The hidden events should NOT have been cycled through
+        expect(
+          tappedDetails,
+          isNull,
+          reason:
+              'onEventTap should not fire — overflow indicator was activated',
+        );
+      },
+    );
+
+    testWidgets(
+      'height-based overflow: onEventTap fires for visible event',
+      (tester) async {
+        final events = List.generate(
+          4,
+          (i) => MCalCalendarEvent(
+            id: 'tap-$i',
+            title: 'Tap $i',
+            start: DateTime(2025, 1, 15, 8 + i, 0),
+            end: DateTime(2025, 1, 15, 9 + i, 0),
+            color: Colors.blue,
+          ),
+        );
+
+        MCalEventTapDetails? tappedDetails;
+
+        await pumpConstrainedCalendar(
+          tester,
+          events: events,
+          height: 250,
+          onEventTap: (ctx, details) => tappedDetails = details,
+          onTileBuild: (_) {},
+        );
+
+        // Enter Event Mode, then press Enter on the first visible event
+        await focusAndSendKey(tester, LogicalKeyboardKey.enter);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(tappedDetails, isNotNull);
+        expect(tappedDetails!.event.id, equals('tap-0'));
+      },
+    );
+
+    testWidgets(
+      'custom weekLayoutBuilder that reports visible counts: cycling '
+      'respects custom counts',
+      (tester) async {
+        // 4 events, but the custom builder reports only 2 as visible.
+        final events = List.generate(
+          4,
+          (i) => MCalCalendarEvent(
+            id: 'custom-$i',
+            title: 'Custom $i',
+            start: DateTime(2025, 1, 15, 8 + i, 0),
+            end: DateTime(2025, 1, 15, 9 + i, 0),
+            color: Colors.blue,
+          ),
+        );
+
+        MCalOverflowTapDetails? overflowDetails;
+        final selectedIds = <String>[];
+
+        await pumpConstrainedCalendar(
+          tester,
+          events: events,
+          height: 600,
+          maxVisibleEventsPerDay: 100,
+          onOverflowTap: (ctx, details) => overflowDetails = details,
+          onTileBuild: (ctx) {
+            if (ctx.keyboardState == MCalEventKeyboardState.selected) {
+              selectedIds.add(ctx.event.id);
+            }
+          },
+          weekLayoutBuilder: (context, layoutContext) {
+            // Fully custom builder: renders all tiles but reports only 2
+            // as visible for Jan 15. Does NOT delegate to the default
+            // builder (which would overwrite the counts).
+            return LayoutBuilder(
+              builder: (ctx, constraints) {
+                final map = layoutContext.layoutVisibleCounts;
+                if (map != null) {
+                  for (final d in layoutContext.dates) {
+                    final dk = '${d.year}-${d.month}-${d.day}';
+                    if (d.day == 15 && d.month == 1 && d.year == 2025) {
+                      map[dk] = 2;
+                    } else {
+                      map.remove(dk);
+                    }
+                  }
+                }
+
+                final dayWidth = constraints.maxWidth / 7;
+                final children = <Widget>[];
+                for (final seg in layoutContext.segments) {
+                  final tileCtx = MCalEventTileContext(
+                    event: seg.event,
+                    displayDate: layoutContext.dates[seg.startDayInWeek],
+                    isAllDay: seg.event.isAllDay,
+                    segment: seg,
+                    width: dayWidth * seg.spanDays,
+                    height: layoutContext.config.tileHeight,
+                  );
+                  children.add(
+                    Positioned(
+                      left: dayWidth * seg.startDayInWeek,
+                      top: seg.weekRowIndex * 20.0,
+                      width: dayWidth * seg.spanDays,
+                      height: layoutContext.config.tileHeight,
+                      child: layoutContext.eventTileBuilder(ctx, tileCtx),
+                    ),
+                  );
+                }
+                if (children.isEmpty) {
+                  children.add(const SizedBox.shrink());
+                }
+                return Stack(
+                  clipBehavior: Clip.hardEdge,
+                  children: children,
+                );
+              },
+            );
+          },
+        );
+
+        // Enter Event Mode
+        selectedIds.clear();
+        await focusAndSendKey(tester, LogicalKeyboardKey.enter);
+
+        // First event selected
+        expect(selectedIds, contains('custom-0'));
+
+        // Down → second visible event
+        selectedIds.clear();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+        expect(selectedIds, contains('custom-1'));
+
+        // Down → overflow indicator (only 2 visible per custom report)
+        selectedIds.clear();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+        expect(
+          selectedIds,
+          isEmpty,
+          reason: 'Third Down should reach overflow indicator, not third event',
+        );
+
+        // Enter activates overflow
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(overflowDetails, isNotNull);
+      },
+    );
+
+    testWidgets(
+      'custom weekLayoutBuilder that does NOT report visible counts: '
+      'falls back to cycling all events',
+      (tester) async {
+        // 3 events, custom builder renders tiles but does not write to
+        // layoutVisibleCounts. Keyboard cycling should fall back to
+        // treating all 3 as visible with no overflow indicator.
+        final events = List.generate(
+          3,
+          (i) => MCalCalendarEvent(
+            id: 'nomap-$i',
+            title: 'NoMap $i',
+            start: DateTime(2025, 1, 15, 8 + i, 0),
+            end: DateTime(2025, 1, 15, 9 + i, 0),
+            color: Colors.blue,
+          ),
+        );
+
+        final selectedIds = <String>[];
+
+        await pumpConstrainedCalendar(
+          tester,
+          events: events,
+          height: 600,
+          onTileBuild: (ctx) {
+            if (ctx.keyboardState == MCalEventKeyboardState.selected) {
+              selectedIds.add(ctx.event.id);
+            }
+          },
+          weekLayoutBuilder: (context, layoutContext) {
+            // Custom builder that renders tiles but intentionally does
+            // NOT write to layoutVisibleCounts.
+            return LayoutBuilder(
+              builder: (ctx, constraints) {
+                final dayWidth = constraints.maxWidth / 7;
+                final children = <Widget>[];
+                for (final seg in layoutContext.segments) {
+                  final tileCtx = MCalEventTileContext(
+                    event: seg.event,
+                    displayDate: layoutContext.dates[seg.startDayInWeek],
+                    isAllDay: seg.event.isAllDay,
+                    segment: seg,
+                    width: dayWidth * seg.spanDays,
+                    height: layoutContext.config.tileHeight,
+                  );
+                  children.add(
+                    Positioned(
+                      left: dayWidth * seg.startDayInWeek,
+                      top: seg.weekRowIndex * 20.0,
+                      width: dayWidth * seg.spanDays,
+                      height: layoutContext.config.tileHeight,
+                      child: layoutContext.eventTileBuilder(ctx, tileCtx),
+                    ),
+                  );
+                }
+                if (children.isEmpty) {
+                  children.add(const SizedBox.shrink());
+                }
+                return Stack(
+                  clipBehavior: Clip.hardEdge,
+                  children: children,
+                );
+              },
+            );
+          },
+        );
+
+        // Enter Event Mode
+        selectedIds.clear();
+        await focusAndSendKey(tester, LogicalKeyboardKey.enter);
+        expect(selectedIds, contains('nomap-0'));
+
+        // Cycle through all 3 events
+        selectedIds.clear();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+        expect(selectedIds, contains('nomap-1'));
+
+        selectedIds.clear();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+        expect(selectedIds, contains('nomap-2'));
+
+        // Down again wraps back to first event (no overflow indicator)
+        selectedIds.clear();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+        expect(selectedIds, contains('nomap-0'));
       },
     );
   });

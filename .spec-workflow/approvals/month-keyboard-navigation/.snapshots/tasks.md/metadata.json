@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/month-keyboard-navigation/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-03T23:18:13.946Z",
+      "trigger": "initial",
+      "approvalId": "approval_1772579893938_kbmt3sk3y",
+      "approvalTitle": "Month Keyboard Navigation - Tasks"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-03-03T23:19:19.134Z",
+      "trigger": "approved",
+      "approvalId": "approval_1772579893938_kbmt3sk3y",
+      "approvalTitle": "Month Keyboard Navigation - Tasks"
+    }
+  ]
+}

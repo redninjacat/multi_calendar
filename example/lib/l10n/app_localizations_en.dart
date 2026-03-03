@@ -234,6 +234,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingAutoFocusOnCellTap => 'Auto Focus on Cell Tap';
 
   @override
+  String get settingAllowKeyboardDelete => 'Allow Keyboard Delete';
+
+  @override
   String get settingAutoFocusOnEventTap => 'Auto Focus on Event Tap';
 
   @override
@@ -795,48 +798,100 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accessibilityMonthKeyboardNavInstructionsDetail =>
-      'Tab or click to focus the calendar, then use arrow keys to navigate between cells. Press Enter or Space to select a cell. Tab to cycle through events within a cell. With an event focused, press Enter to enter move mode and use arrow keys to move it to a target cell, then Enter to confirm or Escape to cancel. Press R to enter resize mode, S/E to choose the start or end edge, then arrow keys to resize.';
+      'Tab or click to focus the calendar, then use arrow keys to navigate between cells. Press Enter or Space on a cell with events to enter Event Mode — the first event is immediately selected. In Event Mode, Tab, Shift+Tab, Up, and Down arrows cycle through visible events and the overflow indicator. Press Enter or Space to activate the focused event (fires onEventTap). Press M to enter Move Mode, or R to enter Resize Mode. In Move Mode, use arrow keys to move the event to a target cell, then Enter to confirm or Escape to return to Event Mode. In Resize Mode, S/E switch which edge to resize, arrow keys resize, Enter confirms, and Escape returns to Event Mode.';
 
   @override
-  String get accessibilityMonthShortcutArrows => 'Arrow keys: Navigate cells';
+  String get accessibilityMonthModeNavigation => 'Navigation Mode';
 
   @override
-  String get accessibilityMonthShortcutEnterSpace =>
-      'Enter/Space: Select cell or enter event mode';
+  String get accessibilityMonthModeNavigationDesc =>
+      'Default mode. Arrow keys move between cells.';
 
   @override
-  String get accessibilityMonthShortcutHome => 'Home: First day of month';
+  String get accessibilityMonthModeEvent => 'Event Mode';
 
   @override
-  String get accessibilityMonthShortcutEnd => 'End: Last day of month';
+  String get accessibilityMonthModeEventDesc =>
+      'Enter/Space on a cell with events. Cycle through visible events.';
 
   @override
-  String get accessibilityMonthShortcutPageUp => 'Page Up: Previous month';
+  String get accessibilityMonthModeMove => 'Move Mode';
 
   @override
-  String get accessibilityMonthShortcutPageDown => 'Page Down: Next month';
+  String get accessibilityMonthModeMoveDesc =>
+      'Press M in Event Mode. Relocate the selected event.';
 
   @override
-  String get accessibilityMonthShortcutTab =>
-      'Tab/Shift+Tab: Cycle events in selected cell';
+  String get accessibilityMonthModeResize => 'Resize Mode';
 
   @override
-  String get accessibilityMonthShortcutEnterConfirm => 'Enter: Confirm move';
+  String get accessibilityMonthModeResizeDesc =>
+      'Press R in Event Mode. Change the start or end date.';
 
   @override
-  String get accessibilityMonthShortcutEscape => 'Escape: Cancel operation';
+  String get accessibilityMonthNavArrows => 'Navigate between cells';
 
   @override
-  String get accessibilityMonthShortcutR => 'R: Enter resize mode';
+  String get accessibilityMonthNavEnterSpace =>
+      'Enter Event Mode (if cell has events)';
 
   @override
-  String get accessibilityMonthShortcutS => 'S: Switch to start edge';
+  String get accessibilityMonthNavHome => 'First day of month';
 
   @override
-  String get accessibilityMonthShortcutE => 'E: Switch to end edge';
+  String get accessibilityMonthNavEnd => 'Last day of month';
 
   @override
-  String get accessibilityMonthShortcutM => 'M: Return to move mode';
+  String get accessibilityMonthNavPageUp => 'Previous month';
+
+  @override
+  String get accessibilityMonthNavPageDown => 'Next month';
+
+  @override
+  String get accessibilityMonthEventUpDown =>
+      'Cycle through visible events and overflow indicator';
+
+  @override
+  String get accessibilityMonthEventEnterSpace =>
+      'Activate event/overflow and return to Navigation';
+
+  @override
+  String get accessibilityMonthEventD => 'Delete event (if handler provided)';
+
+  @override
+  String get accessibilityMonthEventM => 'Enter Move Mode';
+
+  @override
+  String get accessibilityMonthEventR => 'Enter Resize Mode';
+
+  @override
+  String get accessibilityMonthEventEscape => 'Return to Navigation Mode';
+
+  @override
+  String get accessibilityMonthMoveArrows => 'Move event to target cell';
+
+  @override
+  String get accessibilityMonthMoveEnter => 'Confirm move';
+
+  @override
+  String get accessibilityMonthMoveEscape =>
+      'Cancel move, return to Event Mode';
+
+  @override
+  String get accessibilityMonthResizeSE => 'Switch between start/end edge';
+
+  @override
+  String get accessibilityMonthResizeArrows => 'Resize selected edge';
+
+  @override
+  String get accessibilityMonthResizeEnter => 'Confirm resize';
+
+  @override
+  String get accessibilityMonthResizeM => 'Switch to Move Mode';
+
+  @override
+  String get accessibilityMonthResizeEscape =>
+      'Cancel resize, return to Event Mode';
 
   @override
   String get accessibilityDayKeyboardShortcuts => 'Day View Keyboard Shortcuts';

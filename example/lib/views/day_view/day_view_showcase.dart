@@ -63,8 +63,8 @@ class _DayViewShowcaseState extends State<DayViewShowcase>
               Tab(text: l10n.tabFeatures),
               Tab(text: l10n.tabTheme),
               Tab(text: l10n.tabStyles),
-              Tab(text: l10n.tabStressTest),
               Tab(text: l10n.tabAccessibility),
+              Tab(text: l10n.tabStressTest),
             ],
           ),
         ),
@@ -84,13 +84,13 @@ class _DayViewShowcaseState extends State<DayViewShowcase>
                 locale: widget.currentLocale,
                 isDarkMode: widget.isDarkMode,
               ),
-              // Stress Test tab
-              DayStressTestTab(
+              // Accessibility tab
+              DayAccessibilityTab(
                 locale: widget.currentLocale,
                 isDarkMode: widget.isDarkMode,
               ),
-              // Accessibility tab
-              DayAccessibilityTab(
+              // Stress Test tab
+              DayStressTestTab(
                 locale: widget.currentLocale,
                 isDarkMode: widget.isDarkMode,
               ),

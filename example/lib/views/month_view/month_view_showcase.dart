@@ -63,8 +63,8 @@ class _MonthViewShowcaseState extends State<MonthViewShowcase>
               Tab(text: l10n.tabFeatures),
               Tab(text: l10n.tabTheme),
               Tab(text: l10n.tabStyles),
-              Tab(text: l10n.tabStressTest),
               Tab(text: l10n.tabAccessibility),
+              Tab(text: l10n.tabStressTest),
             ],
           ),
         ),
@@ -82,10 +82,10 @@ class _MonthViewShowcaseState extends State<MonthViewShowcase>
                 locale: widget.currentLocale,
                 isDarkMode: widget.isDarkMode,
               ),
-              // Stress Test tab
-              const MonthStressTestTab(),
               // Accessibility tab
               const MonthAccessibilityTab(),
+              // Stress Test tab
+              const MonthStressTestTab(),
             ],
           ),
         ),

@@ -501,6 +501,23 @@ class MCalMonthWeekLayoutContext {
   /// to create overflow indicator widgets when events are hidden.
   final MCalOverflowIndicatorBuilder overflowIndicatorBuilder;
 
+  /// Shared map for reporting the actual visible event count per date.
+  ///
+  /// Layout builders (both default and custom) should write to this map
+  /// so that keyboard Event Mode cycling only cycles through events that
+  /// are actually rendered on screen. The key format is
+  /// `'${date.year}-${date.month}-${date.day}'`.
+  ///
+  /// For each date in the week:
+  /// - If the date has overflow (some events are hidden), store the
+  ///   visible event count.
+  /// - If all events are visible, remove any existing entry for that date
+  ///   (the keyboard handler falls back to the total event count).
+  ///
+  /// When `null`, no reporting occurs and the keyboard handler assumes all
+  /// events for a date are visible.
+  final Map<String, int>? layoutVisibleCounts;
+
   /// Creates a new [MCalWeekLayoutContext] instance.
   const MCalMonthWeekLayoutContext({
     required this.segments,
@@ -513,6 +530,7 @@ class MCalMonthWeekLayoutContext {
     required this.eventTileBuilder,
     required this.dateLabelBuilder,
     required this.overflowIndicatorBuilder,
+    this.layoutVisibleCounts,
   });
 
   @override

@@ -16,7 +16,7 @@ Currently, regions are view-local: `MCalDayView` receives `specialTimeRegions` (
 
 **From tech.md:**
 - **Controller Pattern**: The controller already manages events, display state, and recurrence expansion. Adding regions is a natural extension.
-- **Performance**: Region lookups during drag validation must remain fast. The existing O(n) region scan per validation call is acceptable since region counts are typically small (<50).
+- **Performance**: Region lookups during drag validation must remain fast. The existing O(n) region scan per validation call is acceptable since region counts are typically small (fewer than 50).
 
 ## Requirements
 
@@ -134,7 +134,7 @@ Currently, regions are view-local: `MCalDayView` receives `specialTimeRegions` (
 - **Clear Interfaces**: Controller exposes clean query methods; views consume regions via the controller.
 
 ### Performance
-- Region lookups during drag validation must not cause frame drops. With typical region counts (<50), O(n) scans are acceptable.
+- Region lookups during drag validation must not cause frame drops. With typical region counts (fewer than 50), O(n) scans are acceptable.
 - Recurrence expansion for regions should be cached or lazily computed per visible date range, consistent with event expansion patterns.
 
 ### Clean Removal

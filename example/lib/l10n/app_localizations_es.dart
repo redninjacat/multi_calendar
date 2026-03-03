@@ -241,6 +241,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingAutoFocusOnCellTap => 'Enfoque Automático al Tocar Celda';
 
   @override
+  String get settingAllowKeyboardDelete => 'Permitir Eliminación por Teclado';
+
+  @override
   String get settingAutoFocusOnEventTap => 'Enfoque Automático al Tocar Evento';
 
   @override
@@ -829,51 +832,102 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get accessibilityMonthKeyboardNavInstructionsDetail =>
-      'Tab o clic para enfocar el calendario, luego use las teclas de flecha para navegar entre celdas. Presione Entrar o Espacio para seleccionar una celda. Tab para recorrer eventos en una celda. Con un evento enfocado, presione Entrar para entrar al modo de mover y use las flechas para moverlo, luego Entrar para confirmar o Escape para cancelar. Presione R para el modo de redimensionar, S/E para elegir el borde inicial o final, luego las teclas de flecha para redimensionar.';
+      'Tab o clic para enfocar el calendario, luego use las teclas de flecha para navegar entre celdas. Presione Enter o Espacio en una celda con eventos para entrar en Modo Evento — el primer evento se selecciona inmediatamente. En Modo Evento, Tab, Shift+Tab, Arriba y Abajo recorren los eventos visibles y el indicador de desbordamiento. Presione Enter o Espacio para activar el evento seleccionado. Presione M para entrar en Modo Mover, o R para Modo Redimensionar. En Modo Mover, use las flechas para mover el evento, Enter para confirmar o Escape para volver al Modo Evento. En Modo Redimensionar, S/E cambian el borde, las flechas redimensionan, Enter confirma y Escape vuelve al Modo Evento.';
 
   @override
-  String get accessibilityMonthShortcutArrows =>
-      'Teclas de flecha: Navegar celdas';
+  String get accessibilityMonthModeNavigation => 'Modo Navegación';
 
   @override
-  String get accessibilityMonthShortcutEnterSpace =>
-      'Enter/Espacio: Seleccionar celda o entrar en modo de evento';
+  String get accessibilityMonthModeNavigationDesc =>
+      'Modo predeterminado. Las teclas de flecha mueven entre celdas.';
 
   @override
-  String get accessibilityMonthShortcutHome => 'Inicio: Primer día del mes';
+  String get accessibilityMonthModeEvent => 'Modo Evento';
 
   @override
-  String get accessibilityMonthShortcutEnd => 'Fin: Último día del mes';
+  String get accessibilityMonthModeEventDesc =>
+      'Enter/Espacio en una celda con eventos. Recorra los eventos visibles.';
 
   @override
-  String get accessibilityMonthShortcutPageUp => 'Página Arriba: Mes anterior';
+  String get accessibilityMonthModeMove => 'Modo Mover';
 
   @override
-  String get accessibilityMonthShortcutPageDown =>
-      'Página Abajo: Mes siguiente';
+  String get accessibilityMonthModeMoveDesc =>
+      'Presione M en Modo Evento. Reubique el evento seleccionado.';
 
   @override
-  String get accessibilityMonthShortcutTab =>
-      'Tab/Shift+Tab: Recorrer eventos en celda seleccionada';
+  String get accessibilityMonthModeResize => 'Modo Redimensionar';
 
   @override
-  String get accessibilityMonthShortcutEnterConfirm =>
-      'Enter: Confirmar movimiento';
+  String get accessibilityMonthModeResizeDesc =>
+      'Presione R en Modo Evento. Cambie la fecha de inicio o fin.';
 
   @override
-  String get accessibilityMonthShortcutEscape => 'Escape: Cancelar operación';
+  String get accessibilityMonthNavArrows => 'Navegar entre celdas';
 
   @override
-  String get accessibilityMonthShortcutR => 'R: Entrar en modo redimensionar';
+  String get accessibilityMonthNavEnterSpace =>
+      'Entrar en Modo Evento (si la celda tiene eventos)';
 
   @override
-  String get accessibilityMonthShortcutS => 'S: Cambiar a borde de inicio';
+  String get accessibilityMonthNavHome => 'Primer día del mes';
 
   @override
-  String get accessibilityMonthShortcutE => 'E: Cambiar a borde de fin';
+  String get accessibilityMonthNavEnd => 'Último día del mes';
 
   @override
-  String get accessibilityMonthShortcutM => 'M: Volver a modo mover';
+  String get accessibilityMonthNavPageUp => 'Mes anterior';
+
+  @override
+  String get accessibilityMonthNavPageDown => 'Mes siguiente';
+
+  @override
+  String get accessibilityMonthEventUpDown =>
+      'Recorrer eventos visibles e indicador de desbordamiento';
+
+  @override
+  String get accessibilityMonthEventEnterSpace =>
+      'Activar evento/desbordamiento y volver a Navegación';
+
+  @override
+  String get accessibilityMonthEventD =>
+      'Eliminar evento (si hay controlador proporcionado)';
+
+  @override
+  String get accessibilityMonthEventM => 'Entrar en Modo Mover';
+
+  @override
+  String get accessibilityMonthEventR => 'Entrar en Modo Redimensionar';
+
+  @override
+  String get accessibilityMonthEventEscape => 'Volver al Modo Navegación';
+
+  @override
+  String get accessibilityMonthMoveArrows => 'Mover evento a celda destino';
+
+  @override
+  String get accessibilityMonthMoveEnter => 'Confirmar movimiento';
+
+  @override
+  String get accessibilityMonthMoveEscape =>
+      'Cancelar movimiento, volver al Modo Evento';
+
+  @override
+  String get accessibilityMonthResizeSE => 'Alternar entre borde de inicio/fin';
+
+  @override
+  String get accessibilityMonthResizeArrows =>
+      'Redimensionar borde seleccionado';
+
+  @override
+  String get accessibilityMonthResizeEnter => 'Confirmar redimensionamiento';
+
+  @override
+  String get accessibilityMonthResizeM => 'Cambiar a Modo Mover';
+
+  @override
+  String get accessibilityMonthResizeEscape =>
+      'Cancelar redimensionamiento, volver al Modo Evento';
 
   @override
   String get accessibilityDayKeyboardShortcuts =>

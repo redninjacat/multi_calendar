@@ -241,6 +241,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Focus Automatique au Toucher de Cellule';
 
   @override
+  String get settingAllowKeyboardDelete =>
+      'Autoriser la Suppression au Clavier';
+
+  @override
   String get settingAutoFocusOnEventTap =>
       'Focus Automatique au Toucher d\'Événement';
 
@@ -837,52 +841,104 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get accessibilityMonthKeyboardNavInstructionsDetail =>
-      'Tabulation ou clic pour mettre le calendrier en focus, puis utilisez les touches fléchées pour naviguer entre les cellules. Appuyez sur Entrée ou Espace pour sélectionner une cellule. Tab pour parcourir les événements dans une cellule. Avec un événement en focus, appuyez sur Entrée pour entrer en mode déplacement et utilisez les flèches, puis Entrée pour confirmer ou Échap pour annuler. Appuyez sur R pour le mode redimensionnement, S/E pour choisir le bord début ou fin, puis les touches fléchées pour redimensionner.';
+      'Tab ou clic pour mettre le calendrier en focus, puis utilisez les touches fléchées pour naviguer entre les cellules. Appuyez sur Entrée ou Espace sur une cellule avec des événements pour entrer en Mode Événement — le premier événement est immédiatement sélectionné. En Mode Événement, Tab, Shift+Tab, Haut et Bas parcourent les événements visibles et l\'indicateur de débordement. Appuyez sur Entrée ou Espace pour activer l\'événement sélectionné. Appuyez sur M pour le Mode Déplacement, ou R pour le Mode Redimensionnement. En Mode Déplacement, utilisez les flèches pour déplacer l\'événement, Entrée pour confirmer ou Échap pour revenir au Mode Événement. En Mode Redimensionnement, S/E changent le bord, les flèches redimensionnent, Entrée confirme et Échap revient au Mode Événement.';
 
   @override
-  String get accessibilityMonthShortcutArrows =>
-      'Touches fléchées : Naviguer dans les cellules';
+  String get accessibilityMonthModeNavigation => 'Mode Navigation';
 
   @override
-  String get accessibilityMonthShortcutEnterSpace =>
-      'Entrée/Espace : Sélectionner la cellule ou entrer en mode événement';
+  String get accessibilityMonthModeNavigationDesc =>
+      'Mode par défaut. Les touches fléchées déplacent entre les cellules.';
 
   @override
-  String get accessibilityMonthShortcutHome => 'Début : Premier jour du mois';
+  String get accessibilityMonthModeEvent => 'Mode Événement';
 
   @override
-  String get accessibilityMonthShortcutEnd => 'Fin : Dernier jour du mois';
+  String get accessibilityMonthModeEventDesc =>
+      'Entrée/Espace sur une cellule avec événements. Parcourez les événements visibles.';
 
   @override
-  String get accessibilityMonthShortcutPageUp => 'Page Haut : Mois précédent';
+  String get accessibilityMonthModeMove => 'Mode Déplacement';
 
   @override
-  String get accessibilityMonthShortcutPageDown => 'Page Bas : Mois suivant';
+  String get accessibilityMonthModeMoveDesc =>
+      'Appuyez sur M en Mode Événement. Repositionnez l\'événement sélectionné.';
 
   @override
-  String get accessibilityMonthShortcutTab =>
-      'Tab/Shift+Tab : Parcourir les événements dans la cellule sélectionnée';
+  String get accessibilityMonthModeResize => 'Mode Redimensionnement';
 
   @override
-  String get accessibilityMonthShortcutEnterConfirm =>
-      'Entrée : Confirmer le déplacement';
+  String get accessibilityMonthModeResizeDesc =>
+      'Appuyez sur R en Mode Événement. Modifiez la date de début ou de fin.';
 
   @override
-  String get accessibilityMonthShortcutEscape =>
-      'Échapper : Annuler l\'opération';
+  String get accessibilityMonthNavArrows => 'Naviguer entre les cellules';
 
   @override
-  String get accessibilityMonthShortcutR =>
-      'R : Entrer en mode redimensionnement';
+  String get accessibilityMonthNavEnterSpace =>
+      'Entrer en Mode Événement (si la cellule a des événements)';
 
   @override
-  String get accessibilityMonthShortcutS => 'S : Passer au bord de début';
+  String get accessibilityMonthNavHome => 'Premier jour du mois';
 
   @override
-  String get accessibilityMonthShortcutE => 'E : Passer au bord de fin';
+  String get accessibilityMonthNavEnd => 'Dernier jour du mois';
 
   @override
-  String get accessibilityMonthShortcutM => 'M : Revenir au mode déplacement';
+  String get accessibilityMonthNavPageUp => 'Mois précédent';
+
+  @override
+  String get accessibilityMonthNavPageDown => 'Mois suivant';
+
+  @override
+  String get accessibilityMonthEventUpDown =>
+      'Parcourir les événements visibles et l\'indicateur de débordement';
+
+  @override
+  String get accessibilityMonthEventEnterSpace =>
+      'Activer événement/débordement et revenir à la Navigation';
+
+  @override
+  String get accessibilityMonthEventD =>
+      'Supprimer l\'événement (si gestionnaire fourni)';
+
+  @override
+  String get accessibilityMonthEventM => 'Entrer en Mode Déplacement';
+
+  @override
+  String get accessibilityMonthEventR => 'Entrer en Mode Redimensionnement';
+
+  @override
+  String get accessibilityMonthEventEscape => 'Revenir au Mode Navigation';
+
+  @override
+  String get accessibilityMonthMoveArrows =>
+      'Déplacer l\'événement vers la cellule cible';
+
+  @override
+  String get accessibilityMonthMoveEnter => 'Confirmer le déplacement';
+
+  @override
+  String get accessibilityMonthMoveEscape =>
+      'Annuler le déplacement, revenir au Mode Événement';
+
+  @override
+  String get accessibilityMonthResizeSE =>
+      'Alterner entre le bord de début/fin';
+
+  @override
+  String get accessibilityMonthResizeArrows =>
+      'Redimensionner le bord sélectionné';
+
+  @override
+  String get accessibilityMonthResizeEnter => 'Confirmer le redimensionnement';
+
+  @override
+  String get accessibilityMonthResizeM => 'Passer au Mode Déplacement';
+
+  @override
+  String get accessibilityMonthResizeEscape =>
+      'Annuler le redimensionnement, revenir au Mode Événement';
 
   @override
   String get accessibilityDayKeyboardShortcuts =>

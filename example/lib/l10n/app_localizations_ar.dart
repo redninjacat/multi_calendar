@@ -234,6 +234,9 @@ class AppLocalizationsAr extends AppLocalizations {
       'التركيز التلقائي عند النقر على الخلية';
 
   @override
+  String get settingAllowKeyboardDelete => 'السماح بالحذف عبر لوحة المفاتيح';
+
+  @override
   String get settingAutoFocusOnEventTap =>
       'التركيز التلقائي عند النقر على الحدث';
 
@@ -795,49 +798,100 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get accessibilityMonthKeyboardNavInstructionsDetail =>
-      'اضغط Tab أو انقر لتركيز التقويم، ثم استخدم مفاتيح الأسهم للتنقل بين الخلايا. اضغط Enter أو Space لتحديد خلية. اضغط Tab للتنقل بين الأحداث في الخلية. مع تركيز حدث، اضغط Enter للدخول إلى وضع النقل واستخدم الأسهم، ثم Enter للتأكيد أو Escape للإلغاء. اضغط R لوضع تغيير الحجم، S/E لاختيار الحافة البداية أو النهاية، ثم مفاتيح الأسهم لتغيير الحجم.';
+      'اضغط Tab أو انقر لتركيز التقويم، ثم استخدم مفاتيح الأسهم للتنقل بين الخلايا. اضغط Enter أو مسافة على خلية بها أحداث للدخول في وضع الحدث — يتم تحديد الحدث الأول فوراً. في وضع الحدث، Tab وShift+Tab وأعلى وأسفل يتنقلون بين الأحداث المرئية ومؤشر الفائض. اضغط Enter أو مسافة لتفعيل الحدث المحدد. اضغط M لوضع النقل، أو R لوضع تغيير الحجم. في وضع النقل، استخدم الأسهم لنقل الحدث، Enter للتأكيد أو Escape للعودة إلى وضع الحدث. في وضع تغيير الحجم، S/E لتبديل الحافة، الأسهم لتغيير الحجم، Enter للتأكيد وEscape للعودة إلى وضع الحدث.';
 
   @override
-  String get accessibilityMonthShortcutArrows =>
-      'مفاتيح الأسهم: التنقل بين الخلايا';
+  String get accessibilityMonthModeNavigation => 'وضع التنقل';
 
   @override
-  String get accessibilityMonthShortcutEnterSpace =>
-      'إدخال/مسافة: تحديد الخلية أو الدخول في وضع الحدث';
+  String get accessibilityMonthModeNavigationDesc =>
+      'الوضع الافتراضي. مفاتيح الأسهم تتنقل بين الخلايا.';
 
   @override
-  String get accessibilityMonthShortcutHome => 'البداية: اليوم الأول من الشهر';
+  String get accessibilityMonthModeEvent => 'وضع الحدث';
 
   @override
-  String get accessibilityMonthShortcutEnd => 'النهاية: آخر يوم من الشهر';
+  String get accessibilityMonthModeEventDesc =>
+      'Enter/مسافة على خلية بها أحداث. تنقل بين الأحداث المرئية.';
 
   @override
-  String get accessibilityMonthShortcutPageUp => 'صفحة لأعلى: الشهر السابق';
+  String get accessibilityMonthModeMove => 'وضع النقل';
 
   @override
-  String get accessibilityMonthShortcutPageDown => 'صفحة لأسفل: الشهر التالي';
+  String get accessibilityMonthModeMoveDesc =>
+      'اضغط M في وضع الحدث. أعد تحديد موقع الحدث المحدد.';
 
   @override
-  String get accessibilityMonthShortcutTab =>
-      'Tab/Shift+Tab: التنقل بين الأحداث في الخلية المحددة';
+  String get accessibilityMonthModeResize => 'وضع تغيير الحجم';
 
   @override
-  String get accessibilityMonthShortcutEnterConfirm => 'إدخال: تأكيد النقل';
+  String get accessibilityMonthModeResizeDesc =>
+      'اضغط R في وضع الحدث. غيّر تاريخ البداية أو النهاية.';
 
   @override
-  String get accessibilityMonthShortcutEscape => 'إلغاء: إلغاء العملية';
+  String get accessibilityMonthNavArrows => 'التنقل بين الخلايا';
 
   @override
-  String get accessibilityMonthShortcutR => 'R: الدخول في وضع تغيير الحجم';
+  String get accessibilityMonthNavEnterSpace =>
+      'الدخول في وضع الحدث (إذا كانت الخلية بها أحداث)';
 
   @override
-  String get accessibilityMonthShortcutS => 'S: التبديل إلى حافة البداية';
+  String get accessibilityMonthNavHome => 'اليوم الأول من الشهر';
 
   @override
-  String get accessibilityMonthShortcutE => 'E: التبديل إلى حافة النهاية';
+  String get accessibilityMonthNavEnd => 'آخر يوم من الشهر';
 
   @override
-  String get accessibilityMonthShortcutM => 'M: العودة إلى وضع النقل';
+  String get accessibilityMonthNavPageUp => 'الشهر السابق';
+
+  @override
+  String get accessibilityMonthNavPageDown => 'الشهر التالي';
+
+  @override
+  String get accessibilityMonthEventUpDown =>
+      'التنقل بين الأحداث المرئية ومؤشر الفائض';
+
+  @override
+  String get accessibilityMonthEventEnterSpace =>
+      'تفعيل الحدث/الفائض والعودة إلى التنقل';
+
+  @override
+  String get accessibilityMonthEventD => 'حذف الحدث (إذا تم توفير معالج)';
+
+  @override
+  String get accessibilityMonthEventM => 'الدخول في وضع النقل';
+
+  @override
+  String get accessibilityMonthEventR => 'الدخول في وضع تغيير الحجم';
+
+  @override
+  String get accessibilityMonthEventEscape => 'العودة إلى وضع التنقل';
+
+  @override
+  String get accessibilityMonthMoveArrows => 'نقل الحدث إلى الخلية المستهدفة';
+
+  @override
+  String get accessibilityMonthMoveEnter => 'تأكيد النقل';
+
+  @override
+  String get accessibilityMonthMoveEscape =>
+      'إلغاء النقل، العودة إلى وضع الحدث';
+
+  @override
+  String get accessibilityMonthResizeSE => 'التبديل بين حافة البداية/النهاية';
+
+  @override
+  String get accessibilityMonthResizeArrows => 'تغيير حجم الحافة المحددة';
+
+  @override
+  String get accessibilityMonthResizeEnter => 'تأكيد تغيير الحجم';
+
+  @override
+  String get accessibilityMonthResizeM => 'التبديل إلى وضع النقل';
+
+  @override
+  String get accessibilityMonthResizeEscape =>
+      'إلغاء تغيير الحجم، العودة إلى وضع الحدث';
 
   @override
   String get accessibilityDayKeyboardShortcuts =>

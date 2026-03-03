@@ -548,6 +548,12 @@ abstract class AppLocalizations {
   /// **'Auto Focus on Cell Tap'**
   String get settingAutoFocusOnCellTap;
 
+  /// No description provided for @settingAllowKeyboardDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Keyboard Delete'**
+  String get settingAllowKeyboardDelete;
+
   /// No description provided for @settingAutoFocusOnEventTap.
   ///
   /// In en, this message translates to:
@@ -1589,86 +1595,176 @@ abstract class AppLocalizations {
   /// No description provided for @accessibilityMonthKeyboardNavInstructionsDetail.
   ///
   /// In en, this message translates to:
-  /// **'Tab or click to focus the calendar, then use arrow keys to navigate between cells. Press Enter or Space to select a cell. Tab to cycle through events within a cell. With an event focused, press Enter to enter move mode and use arrow keys to move it to a target cell, then Enter to confirm or Escape to cancel. Press R to enter resize mode, S/E to choose the start or end edge, then arrow keys to resize.'**
+  /// **'Tab or click to focus the calendar, then use arrow keys to navigate between cells. Press Enter or Space on a cell with events to enter Event Mode — the first event is immediately selected. In Event Mode, Tab, Shift+Tab, Up, and Down arrows cycle through visible events and the overflow indicator. Press Enter or Space to activate the focused event (fires onEventTap). Press M to enter Move Mode, or R to enter Resize Mode. In Move Mode, use arrow keys to move the event to a target cell, then Enter to confirm or Escape to return to Event Mode. In Resize Mode, S/E switch which edge to resize, arrow keys resize, Enter confirms, and Escape returns to Event Mode.'**
   String get accessibilityMonthKeyboardNavInstructionsDetail;
 
-  /// No description provided for @accessibilityMonthShortcutArrows.
+  /// No description provided for @accessibilityMonthModeNavigation.
   ///
   /// In en, this message translates to:
-  /// **'Arrow keys: Navigate cells'**
-  String get accessibilityMonthShortcutArrows;
+  /// **'Navigation Mode'**
+  String get accessibilityMonthModeNavigation;
 
-  /// No description provided for @accessibilityMonthShortcutEnterSpace.
+  /// No description provided for @accessibilityMonthModeNavigationDesc.
   ///
   /// In en, this message translates to:
-  /// **'Enter/Space: Select cell or enter event mode'**
-  String get accessibilityMonthShortcutEnterSpace;
+  /// **'Default mode. Arrow keys move between cells.'**
+  String get accessibilityMonthModeNavigationDesc;
 
-  /// No description provided for @accessibilityMonthShortcutHome.
+  /// No description provided for @accessibilityMonthModeEvent.
   ///
   /// In en, this message translates to:
-  /// **'Home: First day of month'**
-  String get accessibilityMonthShortcutHome;
+  /// **'Event Mode'**
+  String get accessibilityMonthModeEvent;
 
-  /// No description provided for @accessibilityMonthShortcutEnd.
+  /// No description provided for @accessibilityMonthModeEventDesc.
   ///
   /// In en, this message translates to:
-  /// **'End: Last day of month'**
-  String get accessibilityMonthShortcutEnd;
+  /// **'Enter/Space on a cell with events. Cycle through visible events.'**
+  String get accessibilityMonthModeEventDesc;
 
-  /// No description provided for @accessibilityMonthShortcutPageUp.
+  /// No description provided for @accessibilityMonthModeMove.
   ///
   /// In en, this message translates to:
-  /// **'Page Up: Previous month'**
-  String get accessibilityMonthShortcutPageUp;
+  /// **'Move Mode'**
+  String get accessibilityMonthModeMove;
 
-  /// No description provided for @accessibilityMonthShortcutPageDown.
+  /// No description provided for @accessibilityMonthModeMoveDesc.
   ///
   /// In en, this message translates to:
-  /// **'Page Down: Next month'**
-  String get accessibilityMonthShortcutPageDown;
+  /// **'Press M in Event Mode. Relocate the selected event.'**
+  String get accessibilityMonthModeMoveDesc;
 
-  /// No description provided for @accessibilityMonthShortcutTab.
+  /// No description provided for @accessibilityMonthModeResize.
   ///
   /// In en, this message translates to:
-  /// **'Tab/Shift+Tab: Cycle events in selected cell'**
-  String get accessibilityMonthShortcutTab;
+  /// **'Resize Mode'**
+  String get accessibilityMonthModeResize;
 
-  /// No description provided for @accessibilityMonthShortcutEnterConfirm.
+  /// No description provided for @accessibilityMonthModeResizeDesc.
   ///
   /// In en, this message translates to:
-  /// **'Enter: Confirm move'**
-  String get accessibilityMonthShortcutEnterConfirm;
+  /// **'Press R in Event Mode. Change the start or end date.'**
+  String get accessibilityMonthModeResizeDesc;
 
-  /// No description provided for @accessibilityMonthShortcutEscape.
+  /// No description provided for @accessibilityMonthNavArrows.
   ///
   /// In en, this message translates to:
-  /// **'Escape: Cancel operation'**
-  String get accessibilityMonthShortcutEscape;
+  /// **'Navigate between cells'**
+  String get accessibilityMonthNavArrows;
 
-  /// No description provided for @accessibilityMonthShortcutR.
+  /// No description provided for @accessibilityMonthNavEnterSpace.
   ///
   /// In en, this message translates to:
-  /// **'R: Enter resize mode'**
-  String get accessibilityMonthShortcutR;
+  /// **'Enter Event Mode (if cell has events)'**
+  String get accessibilityMonthNavEnterSpace;
 
-  /// No description provided for @accessibilityMonthShortcutS.
+  /// No description provided for @accessibilityMonthNavHome.
   ///
   /// In en, this message translates to:
-  /// **'S: Switch to start edge'**
-  String get accessibilityMonthShortcutS;
+  /// **'First day of month'**
+  String get accessibilityMonthNavHome;
 
-  /// No description provided for @accessibilityMonthShortcutE.
+  /// No description provided for @accessibilityMonthNavEnd.
   ///
   /// In en, this message translates to:
-  /// **'E: Switch to end edge'**
-  String get accessibilityMonthShortcutE;
+  /// **'Last day of month'**
+  String get accessibilityMonthNavEnd;
 
-  /// No description provided for @accessibilityMonthShortcutM.
+  /// No description provided for @accessibilityMonthNavPageUp.
   ///
   /// In en, this message translates to:
-  /// **'M: Return to move mode'**
-  String get accessibilityMonthShortcutM;
+  /// **'Previous month'**
+  String get accessibilityMonthNavPageUp;
+
+  /// No description provided for @accessibilityMonthNavPageDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Next month'**
+  String get accessibilityMonthNavPageDown;
+
+  /// No description provided for @accessibilityMonthEventUpDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Cycle through visible events and overflow indicator'**
+  String get accessibilityMonthEventUpDown;
+
+  /// No description provided for @accessibilityMonthEventEnterSpace.
+  ///
+  /// In en, this message translates to:
+  /// **'Activate event/overflow and return to Navigation'**
+  String get accessibilityMonthEventEnterSpace;
+
+  /// No description provided for @accessibilityMonthEventD.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete event (if handler provided)'**
+  String get accessibilityMonthEventD;
+
+  /// No description provided for @accessibilityMonthEventM.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Move Mode'**
+  String get accessibilityMonthEventM;
+
+  /// No description provided for @accessibilityMonthEventR.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Resize Mode'**
+  String get accessibilityMonthEventR;
+
+  /// No description provided for @accessibilityMonthEventEscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to Navigation Mode'**
+  String get accessibilityMonthEventEscape;
+
+  /// No description provided for @accessibilityMonthMoveArrows.
+  ///
+  /// In en, this message translates to:
+  /// **'Move event to target cell'**
+  String get accessibilityMonthMoveArrows;
+
+  /// No description provided for @accessibilityMonthMoveEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm move'**
+  String get accessibilityMonthMoveEnter;
+
+  /// No description provided for @accessibilityMonthMoveEscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel move, return to Event Mode'**
+  String get accessibilityMonthMoveEscape;
+
+  /// No description provided for @accessibilityMonthResizeSE.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch between start/end edge'**
+  String get accessibilityMonthResizeSE;
+
+  /// No description provided for @accessibilityMonthResizeArrows.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize selected edge'**
+  String get accessibilityMonthResizeArrows;
+
+  /// No description provided for @accessibilityMonthResizeEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm resize'**
+  String get accessibilityMonthResizeEnter;
+
+  /// No description provided for @accessibilityMonthResizeM.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to Move Mode'**
+  String get accessibilityMonthResizeM;
+
+  /// No description provided for @accessibilityMonthResizeEscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel resize, return to Event Mode'**
+  String get accessibilityMonthResizeEscape;
 
   /// No description provided for @accessibilityDayKeyboardShortcuts.
   ///

@@ -232,6 +232,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get settingAutoFocusOnCellTap => 'מיקוד אוטומטי בלחיצה על תא';
 
   @override
+  String get settingAllowKeyboardDelete => 'אפשר מחיקה באמצעות מקלדת';
+
+  @override
   String get settingAutoFocusOnEventTap => 'מיקוד אוטומטי בלחיצה על אירוע';
 
   @override
@@ -785,48 +788,99 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get accessibilityMonthKeyboardNavInstructionsDetail =>
-      'לחץ Tab או לחץ כדי למקד את לוח השנה, ואז השתמש במקשי החצים לניווט בין תאים. לחץ Enter או רווח לבחירת תא. לחץ Tab כדי לעבור בין אירועים בתא. עם אירוע ממוקד, לחץ Enter להיכנס למצב העברה והשתמש בחצים, ואז Enter לאישור או Escape לביטול. לחץ R למצב שינוי גודל, S/E לבחירת קצה ההתחלה או הסוף, ואז מקשי החצים לשינוי הגודל.';
+      'לחץ Tab או לחץ כדי למקד את לוח השנה, ואז השתמש במקשי החצים לניווט בין תאים. לחץ Enter או רווח על תא עם אירועים כדי להיכנס למצב אירוע — האירוע הראשון נבחר מיד. במצב אירוע, Tab, Shift+Tab, למעלה ולמטה עוברים בין אירועים גלויים ומחוון הגלישה. לחץ Enter או רווח כדי להפעיל את האירוע הנבחר. לחץ M למצב הזזה, או R למצב שינוי גודל. במצב הזזה, השתמש בחצים להזזת האירוע, Enter לאישור או Escape לחזרה למצב אירוע. במצב שינוי גודל, S/E מחליפים קצה, חצים משנים גודל, Enter מאשר ו-Escape חוזר למצב אירוע.';
 
   @override
-  String get accessibilityMonthShortcutArrows => 'מקשי חצים: נווט בין תאים';
+  String get accessibilityMonthModeNavigation => 'מצב ניווט';
 
   @override
-  String get accessibilityMonthShortcutEnterSpace =>
-      'Enter/רווח: בחר תא או היכנס למצב אירוע';
+  String get accessibilityMonthModeNavigationDesc =>
+      'מצב ברירת מחדל. מקשי חצים זזים בין תאים.';
 
   @override
-  String get accessibilityMonthShortcutHome => 'Home: יום ראשון בחודש';
+  String get accessibilityMonthModeEvent => 'מצב אירוע';
 
   @override
-  String get accessibilityMonthShortcutEnd => 'End: יום אחרון בחודש';
+  String get accessibilityMonthModeEventDesc =>
+      'Enter/רווח על תא עם אירועים. עבור בין אירועים גלויים.';
 
   @override
-  String get accessibilityMonthShortcutPageUp => 'Page Up: חודש קודם';
+  String get accessibilityMonthModeMove => 'מצב הזזה';
 
   @override
-  String get accessibilityMonthShortcutPageDown => 'Page Down: חודש הבא';
+  String get accessibilityMonthModeMoveDesc =>
+      'לחץ M במצב אירוע. העבר את האירוע הנבחר.';
 
   @override
-  String get accessibilityMonthShortcutTab =>
-      'Tab/Shift+Tab: סובב בין אירועים בתא הנבחר';
+  String get accessibilityMonthModeResize => 'מצב שינוי גודל';
 
   @override
-  String get accessibilityMonthShortcutEnterConfirm => 'Enter: אשר העברה';
+  String get accessibilityMonthModeResizeDesc =>
+      'לחץ R במצב אירוע. שנה את תאריך ההתחלה או הסיום.';
 
   @override
-  String get accessibilityMonthShortcutEscape => 'Escape: בטל פעולה';
+  String get accessibilityMonthNavArrows => 'נווט בין תאים';
 
   @override
-  String get accessibilityMonthShortcutR => 'R: היכנס למצב שינוי גודל';
+  String get accessibilityMonthNavEnterSpace =>
+      'היכנס למצב אירוע (אם לתא יש אירועים)';
 
   @override
-  String get accessibilityMonthShortcutS => 'S: עבור לקצה התחלה';
+  String get accessibilityMonthNavHome => 'יום ראשון בחודש';
 
   @override
-  String get accessibilityMonthShortcutE => 'E: עבור לקצה סיום';
+  String get accessibilityMonthNavEnd => 'יום אחרון בחודש';
 
   @override
-  String get accessibilityMonthShortcutM => 'M: חזור למצב הזזה';
+  String get accessibilityMonthNavPageUp => 'חודש קודם';
+
+  @override
+  String get accessibilityMonthNavPageDown => 'חודש הבא';
+
+  @override
+  String get accessibilityMonthEventUpDown =>
+      'עבור בין אירועים גלויים ומחוון הגלישה';
+
+  @override
+  String get accessibilityMonthEventEnterSpace =>
+      'הפעל אירוע/גלישה וחזור לניווט';
+
+  @override
+  String get accessibilityMonthEventD => 'מחק אירוע (אם סופק מטפל)';
+
+  @override
+  String get accessibilityMonthEventM => 'היכנס למצב הזזה';
+
+  @override
+  String get accessibilityMonthEventR => 'היכנס למצב שינוי גודל';
+
+  @override
+  String get accessibilityMonthEventEscape => 'חזור למצב ניווט';
+
+  @override
+  String get accessibilityMonthMoveArrows => 'הזז אירוע לתא יעד';
+
+  @override
+  String get accessibilityMonthMoveEnter => 'אשר הזזה';
+
+  @override
+  String get accessibilityMonthMoveEscape => 'בטל הזזה, חזור למצב אירוע';
+
+  @override
+  String get accessibilityMonthResizeSE => 'החלף בין קצה התחלה/סיום';
+
+  @override
+  String get accessibilityMonthResizeArrows => 'שנה גודל הקצה הנבחר';
+
+  @override
+  String get accessibilityMonthResizeEnter => 'אשר שינוי גודל';
+
+  @override
+  String get accessibilityMonthResizeM => 'עבור למצב הזזה';
+
+  @override
+  String get accessibilityMonthResizeEscape =>
+      'בטל שינוי גודל, חזור למצב אירוע';
 
   @override
   String get accessibilityDayKeyboardShortcuts => 'קיצורי מקלדת תצוגת יום';

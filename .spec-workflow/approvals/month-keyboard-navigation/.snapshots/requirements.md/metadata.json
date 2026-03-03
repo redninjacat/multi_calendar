@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/month-keyboard-navigation/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-03T19:47:09.014Z",
+      "trigger": "initial",
+      "approvalId": "approval_1772567228998_vii54qkif",
+      "approvalTitle": "Month Keyboard Navigation - Requirements"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-03-03T21:25:26.498Z",
+      "trigger": "approved",
+      "approvalId": "approval_1772567228998_vii54qkif",
+      "approvalTitle": "Month Keyboard Navigation - Requirements"
+    }
+  ]
+}

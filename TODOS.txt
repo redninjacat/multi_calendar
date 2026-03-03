@@ -1,0 +1,13 @@
+Please review the code regarding enabling drag to move and drag to resize in the Month view. Based on what I am seeing in the Month View Features demo, the Month View drag to Move toggle is enabling/disabling the drag to resize handles. That is incorrect behavior that automated tests SHOULD have identified. Related to that, after making any needed fixes, please ensure proper test coverage.
+
+Please review the keyboard shortcuts for both the day view and month view. They seem to be different. Month view seems to be the most correct. The important things are that all semantics should be in place and keys should be consistent across views. E.g. navigating between pages days and then events within days should be consistent. Day view has two event areas so both need to be handled and could have extra keys not in the month view. But then selecting, resizing and moving events should be consistent across views. Again, month view is mostly correct (or perhaps entirely correct.) (in any case, when both day view and month view use different keys to do the same thing, defer to month view UNLESS day view is somehow better/easier for the user)
+
+
+Month view
+ keyboard navigation
+ Swipe navigation direction - vertical - edge detection and example snackbar
+ drop tile ghost
+ Add layoutVisibleCounts handling to examples that have custom weeklayout
+
+Day view
+ all day section - max rows??

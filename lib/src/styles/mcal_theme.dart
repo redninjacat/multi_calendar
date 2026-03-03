@@ -61,22 +61,44 @@ class MCalTheme extends InheritedWidget {
   /// }
   /// ```
   static MCalThemeData of(BuildContext context) {
+    final themeData = Theme.of(context);
+
     // Step 1: Try to find MCalTheme ancestor
     final inheritedTheme = context
         .dependOnInheritedWidgetOfExactType<MCalTheme>();
     if (inheritedTheme != null) {
-      return inheritedTheme.data;
+      return _fillNullSubThemes(inheritedTheme.data, themeData);
     }
 
     // Step 2: Try ThemeExtension
-    final themeData = Theme.of(context);
     final extension = themeData.extension<MCalThemeData>();
     if (extension != null) {
-      return extension;
+      return _fillNullSubThemes(extension, themeData);
     }
 
     // Step 3: Fallback to fromTheme()
     return MCalThemeData.fromTheme(themeData);
+  }
+
+  /// Fills null sub-themes with Material-derived defaults, consistent with the
+  /// documented intent on [MCalThemeData.monthTheme] and [MCalThemeData.dayTheme]:
+  /// "When null, [MCalThemeData.fromTheme] creates default values."
+  ///
+  /// This applies when an explicit [MCalTheme] ancestor (or ThemeExtension) is
+  /// found but its [MCalThemeData.monthTheme] or [MCalThemeData.dayTheme] are
+  /// null — for example, `MCalTheme(data: MCalThemeData(), ...)`.
+  static MCalThemeData _fillNullSubThemes(
+    MCalThemeData data,
+    ThemeData themeData,
+  ) {
+    final needsMonthTheme = data.monthTheme == null;
+    final needsDayTheme = data.dayTheme == null;
+    if (!needsMonthTheme && !needsDayTheme) return data;
+    return data.copyWith(
+      monthTheme:
+          needsMonthTheme ? MCalMonthThemeData.defaults(themeData) : null,
+      dayTheme: needsDayTheme ? MCalDayThemeData.defaults(themeData) : null,
+    );
   }
 
   /// Returns the [MCalThemeData] from the closest [MCalTheme] ancestor,

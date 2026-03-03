@@ -140,27 +140,6 @@ class MCalMonthViewCreateEventIntent extends Intent {
   const MCalMonthViewCreateEventIntent();
 }
 
-/// Intent for the "delete event" keyboard shortcut (Cmd/Ctrl+D, Delete, Backspace).
-///
-/// When [MCalMonthView.enableKeyboardNavigation] is true and an event has focus,
-/// pressing Cmd+D, Delete, or Backspace triggers [MCalMonthView.onDeleteEventRequested].
-///
-/// Override via [MCalMonthView.keyboardShortcuts] to customize the activator.
-class MCalMonthViewDeleteEventIntent extends Intent {
-  const MCalMonthViewDeleteEventIntent();
-}
-
-/// Intent for the "edit event" keyboard shortcut (Cmd/Ctrl+E).
-///
-/// When [MCalMonthView.enableKeyboardNavigation] is true and an event has focus,
-/// pressing Cmd+E (Mac) or Ctrl+E (Windows/Linux) triggers
-/// [MCalMonthView.onEditEventRequested].
-///
-/// Override via [MCalMonthView.keyboardShortcuts] to customize the activator.
-class MCalMonthViewEditEventIntent extends Intent {
-  const MCalMonthViewEditEventIntent();
-}
-
 // ============================================================================
 // MCalMonthView Widget
 // ============================================================================
@@ -430,8 +409,6 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Default shortcuts:
   /// - Cmd/Ctrl+N: Create new event ([MCalMonthViewCreateEventIntent])
-  /// - Cmd/Ctrl+D, Delete, Backspace: Delete focused event ([MCalMonthViewDeleteEventIntent])
-  /// - Cmd/Ctrl+E: Edit focused event ([MCalMonthViewEditEventIntent])
   ///
   /// Example: Override Cmd+N to use a different shortcut:
   /// ```dart
@@ -450,17 +427,21 @@ class MCalMonthView extends StatefulWidget {
   /// to determine the date for the new event.
   final VoidCallback? onCreateEventRequested;
 
-  /// Called when the user requests to delete the focused event via keyboard shortcut
-  /// (Cmd/Ctrl+D, Delete, or Backspace by default).
+  /// Called when the user requests to delete the focused event via keyboard
+  /// (D, Delete, or Backspace while in Event Mode).
   ///
-  /// Receives the focused event. Only fires when an event has keyboard focus.
-  final void Function(MCalCalendarEvent event)? onDeleteEventRequested;
-
-  /// Called when the user requests to edit the focused event via keyboard shortcut
-  /// (Cmd/Ctrl+E by default).
+  /// The library never deletes events itself — the consumer must perform the
+  /// actual removal (e.g. call [MCalEventController.removeEvent]).
   ///
-  /// Receives the focused event. Only fires when an event has keyboard focus.
-  final void Function(MCalCalendarEvent event)? onEditEventRequested;
+  /// Return `true` if the event was deleted (the library exits the current
+  /// keyboard mode). Return `false` to cancel (stays in the current mode).
+  ///
+  /// For synchronous deletes, return `true` directly for best performance.
+  /// For async operations (e.g. confirmation dialogs), return a `Future<bool>`.
+  ///
+  /// If `null`, the keyboard delete shortcuts are disabled.
+  final FutureOr<bool> Function(BuildContext context, MCalEventTapDetails details)?
+      onDeleteEventRequested;
 
   // ============ Navigation callbacks ============
 
@@ -943,7 +924,6 @@ class MCalMonthView extends StatefulWidget {
     // Keyboard CRUD callbacks
     this.onCreateEventRequested,
     this.onDeleteEventRequested,
-    this.onEditEventRequested,
     // Navigation callbacks
     this.onDisplayDateChanged,
     this.onViewableRangeChanged,
@@ -1152,6 +1132,16 @@ class _MCalMonthViewState extends State<MCalMonthView> {
 
   /// The proposed end date during keyboard resize.
   DateTime? _keyboardResizeProposedEnd;
+
+  /// Whether the overflow indicator is currently keyboard-focused in Event Mode.
+  bool _isKeyboardOverflowFocused = false;
+
+  /// Caches the actual visible event count per date as computed by the layout.
+  ///
+  /// Updated by [_WeekRowWidgetState._buildLayer2Events] during build.
+  /// Only contains entries for dates with overflow (visible count < total).
+  /// Dates without an entry are assumed to have all events visible.
+  final Map<String, int> _layoutVisibleCounts = {};
 
   // ============================================================
   // Boundary Calculation Methods (Task 9)
@@ -1458,25 +1448,25 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     return size.shortestSide >= 600;
   }
 
-  /// The event ID currently highlighted during keyboard Tab/Shift+Tab cycling.
+  /// Always null — Event Mode uses `selected` state directly (no highlighted phase).
+  String? get _keyboardHighlightedEventId => null;
+
+  /// The event ID currently selected in Event Mode or keyboard move/resize mode.
   ///
-  /// Returns `null` when not in event selection mode.
-  String? get _keyboardHighlightedEventId {
-    if (!_isKeyboardEventSelectionMode || _isKeyboardMoveMode) return null;
+  /// In Event Mode (`_isKeyboardEventSelectionMode && !_isKeyboardMoveMode`),
+  /// returns the event at the current cycle index (null when overflow is focused).
+  /// In Move/Resize Mode, returns the event being moved/resized.
+  String? get _keyboardSelectedEventId {
+    if (_isKeyboardMoveMode) return _keyboardMoveEvent?.id;
+    if (!_isKeyboardEventSelectionMode) return null;
+    if (_isKeyboardOverflowFocused) return null;
     final focusedDate =
         widget.controller.focusedDate ?? widget.controller.displayDate;
-    final dayEvents = _getEventsForDate(focusedDate);
-    if (dayEvents.isEmpty) return null;
-    final index = _keyboardMoveEventIndex.clamp(0, dayEvents.length - 1);
+    final dayEvents = _getSortedEventsForDate(focusedDate);
+    final visibleCount = _visibleCountForDate(focusedDate, dayEvents);
+    if (dayEvents.isEmpty || visibleCount == 0) return null;
+    final index = _keyboardMoveEventIndex.clamp(0, visibleCount - 1);
     return dayEvents[index].id;
-  }
-
-  /// The event ID currently selected for keyboard move or resize.
-  ///
-  /// Returns `null` when not in move/resize mode.
-  String? get _keyboardSelectedEventId {
-    if (!_isKeyboardMoveMode) return null;
-    return _keyboardMoveEvent?.id;
   }
 
   /// Syncs the PageView to display the specified month.
@@ -1743,6 +1733,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           // Keyboard selection state
           keyboardHighlightedEventId: _keyboardHighlightedEventId,
           keyboardSelectedEventId: _keyboardSelectedEventId,
+          keyboardOverflowFocusedDate:
+              (_isKeyboardEventSelectionMode && _isKeyboardOverflowFocused)
+                  ? (widget.controller.focusedDate ??
+                        widget.controller.displayDate)
+                  : null,
+          layoutVisibleCounts: _layoutVisibleCounts,
           // Day regions
           dayRegionBuilder: widget.dayRegionBuilder,
         );
@@ -1792,7 +1788,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   // Keyboard Shortcut Helpers
   // ============================================================================
 
-  /// Builds the default keyboard shortcuts for Month View CRUD operations.
+  /// Builds the default keyboard shortcuts for Month View.
   Map<ShortcutActivator, Intent> _buildDefaultShortcuts() {
     return <ShortcutActivator, Intent>{
       // Cmd/Ctrl+N: Create new event
@@ -1800,21 +1796,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           const MCalMonthViewCreateEventIntent(),
       const SingleActivator(LogicalKeyboardKey.keyN, meta: true):
           const MCalMonthViewCreateEventIntent(),
-      // Cmd/Ctrl+D: Delete focused event
-      const SingleActivator(LogicalKeyboardKey.keyD, control: true):
-          const MCalMonthViewDeleteEventIntent(),
-      const SingleActivator(LogicalKeyboardKey.keyD, meta: true):
-          const MCalMonthViewDeleteEventIntent(),
-      // Cmd/Ctrl+E: Edit focused event
-      const SingleActivator(LogicalKeyboardKey.keyE, control: true):
-          const MCalMonthViewEditEventIntent(),
-      const SingleActivator(LogicalKeyboardKey.keyE, meta: true):
-          const MCalMonthViewEditEventIntent(),
-      // Delete/Backspace: Delete focused event
-      const SingleActivator(LogicalKeyboardKey.delete):
-          const MCalMonthViewDeleteEventIntent(),
-      const SingleActivator(LogicalKeyboardKey.backspace):
-          const MCalMonthViewDeleteEventIntent(),
     };
   }
 
@@ -1836,28 +1817,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           CallbackAction<MCalMonthViewCreateEventIntent>(
             onInvoke: (_) {
               widget.onCreateEventRequested?.call();
-              return null;
-            },
-          ),
-      MCalMonthViewDeleteEventIntent:
-          CallbackAction<MCalMonthViewDeleteEventIntent>(
-            onInvoke: (_) {
-              // Get the focused event
-              final event = _keyboardMoveEvent;
-              if (event != null) {
-                widget.onDeleteEventRequested?.call(event);
-              }
-              return null;
-            },
-          ),
-      MCalMonthViewEditEventIntent:
-          CallbackAction<MCalMonthViewEditEventIntent>(
-            onInvoke: (_) {
-              // Get the focused event
-              final event = _keyboardMoveEvent;
-              if (event != null) {
-                widget.onEditEventRequested?.call(event);
-              }
               return null;
             },
           ),
@@ -2053,12 +2012,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final l10n = mcalL10n(context);
 
     // Handle Escape key — works even if keyboard navigation is disabled.
-    // Priority: keyboard resize mode > keyboard move mode > keyboard selection mode > pointer drag.
+    // Priority: keyboard resize mode > keyboard move mode > Event Mode > pointer drag.
     if (event.logicalKey == LogicalKeyboardKey.escape) {
       if (_isKeyboardResizeMode) {
-        // Cancel resize sub-mode, stay in move mode
-        _ensureDragHandler.cancelResize();
-        _exitKeyboardResizeMode();
+        // Cancel resize, return to Event Mode (not Move Mode)
+        _returnToEventMode();
+        _isKeyboardEventSelectionMode = true;
         setState(() {});
         SemanticsService.sendAnnouncement(
           View.of(context),
@@ -2068,10 +2027,10 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         return KeyEventResult.handled;
       }
       if (_isKeyboardMoveMode) {
+        // Cancel move, return to Event Mode (not Navigation Mode)
         final title = _keyboardMoveEvent?.title ?? 'event';
-        _ensureDragHandler.cancelDrag();
-        _isDragActive = false;
-        _exitKeyboardMoveMode();
+        _returnToEventMode();
+        _isKeyboardEventSelectionMode = true;
         setState(() {});
         SemanticsService.sendAnnouncement(
           View.of(context),
@@ -2108,9 +2067,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       return _handleKeyboardResizeModeKey(event);
     }
 
-    // Handle keyboard event selection mode (Tab/Shift+Tab cycles, Enter selects)
+    // Handle Event Mode (cycle events, Enter fires tap, M/R enter Move/Resize)
     if (_isKeyboardEventSelectionMode && !_isKeyboardMoveMode) {
-      return _handleKeyboardSelectionModeKey(event);
+      return _handleKeyboardEventModeKey(event);
     }
 
     // Handle keyboard move mode (arrow keys move, Enter confirms, R enters resize)
@@ -2198,15 +2157,15 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       newFocusedDate = DateTime(nextMonth.year, nextMonth.month, targetDay);
       handled = true;
     }
-    // Enter/Space - enter keyboard move mode if drag-and-drop is enabled
-    // and the focused cell has events; otherwise trigger normal cell tap.
+    // Enter/Space - enter Event Mode if drag-and-drop is enabled and the
+    // focused cell has events; otherwise trigger normal cell tap.
     else if (key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.space ||
         key == LogicalKeyboardKey.numpadEnter) {
       if (widget.enableDragToMove) {
-        final dayEvents = _getEventsForDate(focusedDate);
+        final dayEvents = _getSortedEventsForDate(focusedDate);
         if (dayEvents.isNotEmpty) {
-          _enterKeyboardEventSelectionMode(focusedDate, dayEvents);
+          _enterKeyboardEventMode(focusedDate);
           return KeyEventResult.handled;
         }
       }
@@ -2309,11 +2268,31 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }).toList();
   }
 
+  /// Returns events for [date] sorted by [MCalMultiDayRenderer.multiDayEventComparator].
+  ///
+  /// Produces the same display order used by [_WeekRowWidgetState._getEventsForDate],
+  /// ensuring keyboard cycling matches the visual order on screen.
+  List<MCalCalendarEvent> _getSortedEventsForDate(DateTime date) {
+    final events = _getEventsForDate(date);
+    events.sort(MCalMultiDayRenderer.multiDayEventComparator);
+    return events;
+  }
+
+  /// Returns the layout-computed visible event count for [date].
+  ///
+  /// Falls back to [allEvents].length when no layout data is available
+  /// (e.g. before the first build or for dates whose row has no overflow).
+  int _visibleCountForDate(DateTime date, List<MCalCalendarEvent> allEvents) {
+    final key = '${date.year}-${date.month}-${date.day}';
+    return _layoutVisibleCounts[key] ?? allEvents.length;
+  }
+
   /// Clears all keyboard-move state fields (and keyboard-resize sub-mode).
   void _exitKeyboardMoveMode() {
     _exitKeyboardResizeMode();
     _isKeyboardMoveMode = false;
     _isKeyboardEventSelectionMode = false;
+    _isKeyboardOverflowFocused = false;
     _keyboardMoveEvent = null;
     _keyboardMoveOriginalStart = null;
     _keyboardMoveOriginalEnd = null;
@@ -2329,32 +2308,26 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     _keyboardResizeProposedEnd = null;
   }
 
-  /// Enters keyboard event selection mode for the given [date] and [events].
+  /// Enters Event Mode for [date].
   ///
-  /// If only one event exists, selects it immediately and enters move mode.
-  /// If multiple events exist, enters cycling mode (Tab/Shift+Tab).
-  void _enterKeyboardEventSelectionMode(
-    DateTime date,
-    List<MCalCalendarEvent> events,
-  ) {
-    if (events.length == 1) {
-      // Single event: select immediately and enter move mode
-      _selectKeyboardMoveEvent(events.first);
-    } else {
-      // Multiple events: enter cycling mode
-      final l10n = mcalL10n(context);
-      _isKeyboardEventSelectionMode = true;
-      _keyboardMoveEventIndex = 0;
-      setState(() {});
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        l10n.announcementEventsHighlighted(
-          events.length.toString(),
-          events.first.title,
-        ),
-        Directionality.of(context),
-      );
-    }
+  /// Immediately selects the first visible event (no intermediate highlighted
+  /// phase). All Tab, arrow, and Enter keys are captured within the widget.
+  void _enterKeyboardEventMode(DateTime date) {
+    final events = _getSortedEventsForDate(date);
+    if (events.isEmpty) return;
+    final l10n = mcalL10n(context);
+    _isKeyboardEventSelectionMode = true;
+    _keyboardMoveEventIndex = 0;
+    _isKeyboardOverflowFocused = false;
+    setState(() {});
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      l10n.announcementEventsHighlighted(
+        events.length.toString(),
+        events.first.title,
+      ),
+      Directionality.of(context),
+    );
   }
 
   /// Selects the given [event] for keyboard move mode.
@@ -2381,58 +2354,259 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     );
   }
 
-  /// Handles key events during event selection mode (cycling through events).
+  /// Handles key events during Event Mode (cycling through events/overflow).
   ///
-  /// Tab/Shift+Tab cycles through events on the focused cell.
-  /// Enter confirms the selection and enters move mode.
-  /// Escape exits selection mode.
-  KeyEventResult _handleKeyboardSelectionModeKey(KeyEvent event) {
+  /// - Up/Down/Tab/Shift+Tab: cycle through visible events + overflow indicator.
+  /// - Left/Right: absorbed (no action).
+  /// - Enter/Space on event: fires [onEventTap], stays in Event Mode.
+  /// - Enter/Space on overflow: fires [onOverflowTap], exits to Navigation Mode.
+  /// - M on event: enters Move Mode for that event.
+  /// - R on event: enters Resize Mode directly for that event.
+  /// - Escape: handled by the top-level handler.
+  KeyEventResult _handleKeyboardEventModeKey(KeyEvent event) {
     final l10n = mcalL10n(context);
     final key = event.logicalKey;
     final focusedDate =
         widget.controller.focusedDate ?? widget.controller.displayDate;
-    final dayEvents = _getEventsForDate(focusedDate);
+    final allEvents = _getSortedEventsForDate(focusedDate);
 
-    if (dayEvents.isEmpty) {
+    if (allEvents.isEmpty) {
       _exitKeyboardMoveMode();
       setState(() {});
       return KeyEventResult.handled;
     }
 
-    if (key == LogicalKeyboardKey.tab) {
-      final isShift = HardwareKeyboard.instance.isShiftPressed;
-      if (isShift) {
-        _keyboardMoveEventIndex =
-            (_keyboardMoveEventIndex - 1 + dayEvents.length) % dayEvents.length;
-      } else {
-        _keyboardMoveEventIndex =
-            (_keyboardMoveEventIndex + 1) % dayEvents.length;
-      }
-      final highlighted = dayEvents[_keyboardMoveEventIndex];
-      setState(() {});
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        l10n.announcementEventCycled(
-          highlighted.title,
-          (_keyboardMoveEventIndex + 1).toString(),
-          dayEvents.length.toString(),
-        ),
-        Directionality.of(context),
-      );
+    final visibleCount = _visibleCountForDate(focusedDate, allEvents);
+    final hasOverflow = visibleCount < allEvents.length;
+    final totalItems = visibleCount + (hasOverflow ? 1 : 0);
+
+    // Left/Right: absorbed, no action
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
       return KeyEventResult.handled;
     }
 
+    // Up/Down/Tab/Shift+Tab: cycle forward or backward
+    final isForward = key == LogicalKeyboardKey.arrowDown ||
+        (key == LogicalKeyboardKey.tab &&
+            !HardwareKeyboard.instance.isShiftPressed);
+    final isBackward = key == LogicalKeyboardKey.arrowUp ||
+        (key == LogicalKeyboardKey.tab &&
+            HardwareKeyboard.instance.isShiftPressed);
+
+    if (isForward || isBackward) {
+      // currentIndex: 0..visibleCount-1 = events; visibleCount = overflow
+      final currentIndex =
+          _isKeyboardOverflowFocused ? visibleCount : _keyboardMoveEventIndex;
+      final newIndex = isForward
+          ? (currentIndex + 1) % totalItems
+          : (currentIndex - 1 + totalItems) % totalItems;
+
+      _isKeyboardOverflowFocused = hasOverflow && (newIndex == visibleCount);
+      if (!_isKeyboardOverflowFocused) {
+        _keyboardMoveEventIndex = newIndex.clamp(0, visibleCount - 1);
+      }
+
+      setState(() {});
+
+      if (_isKeyboardOverflowFocused) {
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          l10n.announcementEventCycled(
+            'overflow indicator',
+            (visibleCount + 1).toString(),
+            totalItems.toString(),
+          ),
+          Directionality.of(context),
+        );
+      } else {
+        final selected = allEvents[_keyboardMoveEventIndex];
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          l10n.announcementEventCycled(
+            selected.title,
+            (_keyboardMoveEventIndex + 1).toString(),
+            totalItems.toString(),
+          ),
+          Directionality.of(context),
+        );
+      }
+      return KeyEventResult.handled;
+    }
+
+    // Enter/Space: activate the current item
     if (key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.numpadEnter) {
-      final selectedIndex = _keyboardMoveEventIndex.clamp(
-        0,
-        dayEvents.length - 1,
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      if (_isKeyboardOverflowFocused) {
+        _triggerKeyboardOverflowTap(focusedDate, allEvents, visibleCount);
+        _exitKeyboardMoveMode();
+        setState(() {});
+      } else {
+        final selectedIndex = _keyboardMoveEventIndex.clamp(
+          0,
+          visibleCount - 1,
+        );
+        _triggerKeyboardEventTap(allEvents[selectedIndex], focusedDate);
+        _exitKeyboardMoveMode();
+        setState(() {});
+      }
+      return KeyEventResult.handled;
+    }
+
+    // M: enter Move Mode for the currently selected event
+    if (key == LogicalKeyboardKey.keyM && !_isKeyboardOverflowFocused) {
+      final selectedIndex = _keyboardMoveEventIndex.clamp(0, visibleCount - 1);
+      _selectKeyboardMoveEvent(allEvents[selectedIndex]);
+      return KeyEventResult.handled;
+    }
+
+    // R: enter Resize Mode directly for the currently selected event
+    if (key == LogicalKeyboardKey.keyR &&
+        !_isKeyboardOverflowFocused &&
+        _resolveDragToResize(context)) {
+      final selectedIndex = _keyboardMoveEventIndex.clamp(0, visibleCount - 1);
+      _enterResizeModeFromEventMode(allEvents[selectedIndex]);
+      return KeyEventResult.handled;
+    }
+
+    // D / Delete / Backspace: request event deletion
+    if ((key == LogicalKeyboardKey.keyD ||
+            key == LogicalKeyboardKey.delete ||
+            key == LogicalKeyboardKey.backspace) &&
+        !_isKeyboardOverflowFocused &&
+        widget.onDeleteEventRequested != null) {
+      final selectedIndex = _keyboardMoveEventIndex.clamp(0, visibleCount - 1);
+      final event = allEvents[selectedIndex];
+      _handleDeleteResult(
+        widget.onDeleteEventRequested!(
+          context,
+          MCalEventTapDetails(event: event, displayDate: focusedDate),
+        ),
       );
-      _selectKeyboardMoveEvent(dayEvents[selectedIndex]);
       return KeyEventResult.handled;
     }
 
     return KeyEventResult.ignored;
+  }
+
+  /// Fires [onEventTap] for [event] at [date], replicating pointer-tap behaviour.
+  void _triggerKeyboardEventTap(MCalCalendarEvent event, DateTime date) {
+    widget.onEventTap?.call(
+      context,
+      MCalEventTapDetails(event: event, displayDate: date),
+    );
+  }
+
+  /// Processes the [FutureOr<bool>] result from [onDeleteEventRequested].
+  ///
+  /// If `true` (sync or async), exits all keyboard modes. If `false`, stays
+  /// in the current mode.
+  void _handleDeleteResult(FutureOr<bool> result) {
+    if (result is Future<bool>) {
+      result.then((confirmed) {
+        if (confirmed && mounted) {
+          _exitKeyboardMoveMode();
+          setState(() {});
+        }
+      });
+    } else if (result) {
+      _exitKeyboardMoveMode();
+      setState(() {});
+    }
+  }
+
+  /// Fires [onOverflowTap] using the visible/hidden split for [date].
+  void _triggerKeyboardOverflowTap(
+    DateTime date,
+    List<MCalCalendarEvent> allEvents,
+    int visibleCount,
+  ) {
+    if (widget.onOverflowTap == null) return;
+    final safeVisible = visibleCount.clamp(0, allEvents.length);
+    widget.onOverflowTap!(
+      context,
+      MCalOverflowTapDetails(
+        date: date,
+        visibleEvents: allEvents.sublist(0, safeVisible),
+        hiddenEvents: allEvents.sublist(safeVisible),
+      ),
+    );
+  }
+
+  /// Returns to Event Mode from Move or Resize Mode on Escape.
+  ///
+  /// Cancels any active drag/resize in the drag handler, clears Move/Resize
+  /// state, but keeps [_isKeyboardEventSelectionMode], [_keyboardMoveEventIndex],
+  /// and [_isKeyboardOverflowFocused] intact so focus stays on the same item.
+  void _returnToEventMode() {
+    final dh = _dragHandler;
+    if (dh != null) {
+      if (dh.isResizing) dh.cancelResize();
+      if (dh.isDragging) dh.cancelDrag();
+    }
+    _isDragActive = false;
+    _isKeyboardMoveMode = false;
+    _isKeyboardResizeMode = false;
+    _keyboardResizeEdge = MCalResizeEdge.end;
+    _keyboardResizeProposedStart = null;
+    _keyboardResizeProposedEnd = null;
+    _keyboardMoveProposedDate = null;
+    _keyboardMoveEvent = null;
+    _keyboardMoveOriginalStart = null;
+    _keyboardMoveOriginalEnd = null;
+  }
+
+  /// Enters Resize Mode directly from Event Mode for [event].
+  ///
+  /// Sets up Move + Resize state without going through Move Mode entry,
+  /// mirroring the R-key logic in [_handleKeyboardMoveModeKey].
+  void _enterResizeModeFromEventMode(MCalCalendarEvent event) {
+    final l10n = mcalL10n(context);
+    final dragHandler = _ensureDragHandler;
+
+    // Transition out of Event Mode, into Move+Resize Mode
+    _isKeyboardEventSelectionMode = false;
+    _isKeyboardMoveMode = true;
+    _keyboardMoveEvent = event;
+    _keyboardMoveOriginalStart = event.start;
+    _keyboardMoveOriginalEnd = event.end;
+    _keyboardMoveProposedDate = DateTime(
+      event.start.year,
+      event.start.month,
+      event.start.day,
+    );
+
+    // Enter resize sub-mode
+    _isKeyboardResizeMode = true;
+    _keyboardResizeEdge = MCalResizeEdge.end;
+    _keyboardResizeProposedStart = DateTime(
+      event.start.year,
+      event.start.month,
+      event.start.day,
+    );
+    _keyboardResizeProposedEnd = DateTime(
+      event.end.year,
+      event.end.month,
+      event.end.day,
+    );
+
+    dragHandler.startResize(event, MCalResizeEdge.end);
+
+    final isValid = _validateKeyboardResize(event);
+    dragHandler.updateResize(
+      proposedStart: _keyboardResizeProposedStart!,
+      proposedEnd: _keyboardResizeProposedEnd!,
+      isValid: isValid,
+      cells: [],
+    );
+
+    setState(() {});
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      l10n.announcementResizeModeEntered,
+      Directionality.of(context),
+    );
   }
 
   /// Handles key events during move mode (arrow keys, Enter, Escape).
@@ -2632,6 +2806,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     if (key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter) {
       _handleKeyboardDrop();
+      return KeyEventResult.handled;
+    }
+
+    // Tab has no defined action in move mode — consume it so focus stays within
+    // the calendar rather than escaping to the next focusable widget.
+    if (key == LogicalKeyboardKey.tab) {
       return KeyEventResult.handled;
     }
 
@@ -3983,6 +4163,13 @@ class _MonthPageWidget extends StatefulWidget {
   /// The event ID currently selected for keyboard move/resize.
   final String? keyboardSelectedEventId;
 
+  /// The date whose overflow indicator is keyboard-focused in Event Mode.
+  /// Null when the overflow indicator is not focused.
+  final DateTime? keyboardOverflowFocusedDate;
+
+  /// Shared map from [_MCalMonthViewState] for layout-computed visible counts.
+  final Map<String, int>? layoutVisibleCounts;
+
   /// Optional custom builder for day region overlays.
   final Widget Function(BuildContext, MCalRegionContext, Widget)?
   dayRegionBuilder;
@@ -4055,6 +4242,8 @@ class _MonthPageWidget extends StatefulWidget {
     // Keyboard selection state
     this.keyboardHighlightedEventId,
     this.keyboardSelectedEventId,
+    this.keyboardOverflowFocusedDate,
+    this.layoutVisibleCounts,
     // Day regions
     this.dayRegionBuilder,
   });
@@ -5171,6 +5360,8 @@ class _MonthPageWidgetState extends State<_MonthPageWidget> {
             // Keyboard selection state
             keyboardHighlightedEventId: widget.keyboardHighlightedEventId,
             keyboardSelectedEventId: widget.keyboardSelectedEventId,
+            keyboardOverflowFocusedDate: widget.keyboardOverflowFocusedDate,
+            layoutVisibleCounts: widget.layoutVisibleCounts,
             // Day regions
             dayRegionBuilder: widget.dayRegionBuilder,
           ),
@@ -5542,6 +5733,12 @@ class _WeekRowWidget extends StatefulWidget {
   /// The event ID currently selected for keyboard move/resize.
   final String? keyboardSelectedEventId;
 
+  /// The date whose overflow indicator is keyboard-focused in Event Mode.
+  final DateTime? keyboardOverflowFocusedDate;
+
+  /// Shared map for layout-computed visible event counts per date.
+  final Map<String, int>? layoutVisibleCounts;
+
   /// Optional custom builder for day region overlays.
   final Widget Function(BuildContext, MCalRegionContext, Widget)?
   dayRegionBuilder;
@@ -5607,6 +5804,8 @@ class _WeekRowWidget extends StatefulWidget {
     // Keyboard selection state
     this.keyboardHighlightedEventId,
     this.keyboardSelectedEventId,
+    this.keyboardOverflowFocusedDate,
+    this.layoutVisibleCounts,
     // Day regions
     this.dayRegionBuilder,
   });
@@ -5841,7 +6040,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       onHoverDateLabel: widget.onHoverDateLabel,
     );
 
-    final wrappedOverflowIndicatorBuilder =
+    final baseOverflowIndicatorBuilder =
         MCalBuilderWrapper.wrapOverflowIndicatorBuilder(
           developerBuilder: widget.overflowIndicatorBuilder,
           defaultBuilder: _buildDefaultOverflowIndicator,
@@ -5849,6 +6048,31 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           onOverflowLongPress: widget.onOverflowLongPress,
           onOverflowDoubleTap: widget.onOverflowDoubleTap,
         );
+
+    // Wrap overflow builder to add a keyboard-focus highlight when the
+    // overflow indicator for this cell is focused via keyboard in Event Mode.
+    final overflowFocusedDate = widget.keyboardOverflowFocusedDate;
+    final Widget Function(BuildContext, MCalMonthOverflowIndicatorContext)
+    wrappedOverflowIndicatorBuilder;
+    if (overflowFocusedDate != null) {
+      final focusColor = widget.theme.monthTheme?.focusedDateBackgroundColor;
+      wrappedOverflowIndicatorBuilder =
+          (BuildContext ctx, MCalMonthOverflowIndicatorContext overflowCtx) {
+            final child = baseOverflowIndicatorBuilder(ctx, overflowCtx);
+            if (focusColor != null &&
+                overflowCtx.date.year == overflowFocusedDate.year &&
+                overflowCtx.date.month == overflowFocusedDate.month &&
+                overflowCtx.date.day == overflowFocusedDate.day) {
+              return DecoratedBox(
+                decoration: BoxDecoration(color: focusColor),
+                child: child,
+              );
+            }
+            return child;
+          };
+    } else {
+      wrappedOverflowIndicatorBuilder = baseOverflowIndicatorBuilder;
+    }
 
     // Optionally wrap event tile builder with resize handles for all events
     final MCalEventTileBuilder finalEventTileBuilder;
@@ -5992,6 +6216,7 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
       eventTileBuilder: keyboardAwareBuilder,
       dateLabelBuilder: wrappedDateLabelBuilder,
       overflowIndicatorBuilder: wrappedOverflowIndicatorBuilder,
+      layoutVisibleCounts: widget.layoutVisibleCounts,
     );
 
     // Use custom weekLayoutBuilder if provided, otherwise use default

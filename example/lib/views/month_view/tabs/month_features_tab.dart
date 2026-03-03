@@ -78,6 +78,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
   // ============================================================
   bool _enableKeyboardNavigation = true;
   bool _autoFocusOnCellTap = true;
+  bool _allowKeyboardDelete = true;
 
   // ============================================================
   // RTL Override Settings
@@ -228,6 +229,16 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
               // Keyboard
               enableKeyboardNavigation: _enableKeyboardNavigation,
               autoFocusOnCellTap: _autoFocusOnCellTap,
+              onDeleteEventRequested: _allowKeyboardDelete
+                  ? (ctx, details) {
+                      _controller.removeEvents([details.event.id]);
+                      SnackBarHelper.show(
+                        context,
+                        l10n.snackbarEventDeleted(details.event.title),
+                      );
+                      return true;
+                    }
+                  : null,
               // RTL Override
               textDirection: _textDirectionOverride,
               layoutDirection: _layoutDirectionOverride,
@@ -593,6 +604,12 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
               label: l10n.settingAutoFocusOnCellTap,
               value: _autoFocusOnCellTap,
               onChanged: (value) => setState(() => _autoFocusOnCellTap = value),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingAllowKeyboardDelete,
+              value: _allowKeyboardDelete,
+              onChanged: (value) =>
+                  setState(() => _allowKeyboardDelete = value),
             ),
           ],
         ),

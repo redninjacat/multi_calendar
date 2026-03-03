@@ -58,70 +58,185 @@ class _MonthAccessibilityTabState extends State<MonthAccessibilityTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Keyboard shortcuts — hidden on platforms without a hardware keyboard
+        // Keyboard shortcuts organized by mode — hidden on non-keyboard platforms
         if (supportsKeyboard) ...[
-          _SectionHeader(icon: Icons.keyboard, title: l10n.accessibilityMonthKeyboardShortcuts),
+          _SectionHeader(
+            icon: Icons.keyboard,
+            title: l10n.accessibilityMonthKeyboardShortcuts,
+          ),
           const SizedBox(height: 8),
-          _ShortcutRow(keys: l10n.accessibilityShortcutArrows, action: l10n.accessibilityMonthShortcutArrows),
-          _ShortcutRow(keys: l10n.accessibilityShortcutEnter, action: l10n.accessibilityMonthShortcutEnterSpace),
-          _ShortcutRow(keys: l10n.accessibilityShortcutHome, action: l10n.accessibilityMonthShortcutHome),
-          _ShortcutRow(keys: l10n.accessibilityShortcutEnd, action: l10n.accessibilityMonthShortcutEnd),
-          _ShortcutRow(keys: l10n.accessibilityShortcutPageUp, action: l10n.accessibilityMonthShortcutPageUp),
-          _ShortcutRow(keys: l10n.accessibilityShortcutPageDown, action: l10n.accessibilityMonthShortcutPageDown),
-          _ShortcutRow(keys: l10n.accessibilityShortcutTab, action: l10n.accessibilityMonthShortcutTab),
-          _ShortcutRow(keys: 'Enter (on event)', action: l10n.accessibilityMonthShortcutEnterConfirm),
-          _ShortcutRow(keys: l10n.accessibilityShortcutEscape, action: l10n.accessibilityMonthShortcutEscape),
-          _ShortcutRow(keys: l10n.accessibilityShortcutR, action: l10n.accessibilityMonthShortcutR),
-          _ShortcutRow(keys: 'S / E', action: '${l10n.accessibilityMonthShortcutS} / ${l10n.accessibilityMonthShortcutE}'),
-          _ShortcutRow(keys: l10n.accessibilityShortcutM, action: l10n.accessibilityMonthShortcutM),
+
+          // Navigation Mode
+          _ModeSection(
+            title: l10n.accessibilityMonthModeNavigation,
+            description: l10n.accessibilityMonthModeNavigationDesc,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutArrows,
+            action: l10n.accessibilityMonthNavArrows,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEnter,
+            action: l10n.accessibilityMonthNavEnterSpace,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutHome,
+            action: l10n.accessibilityMonthNavHome,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEnd,
+            action: l10n.accessibilityMonthNavEnd,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutPageUp,
+            action: l10n.accessibilityMonthNavPageUp,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutPageDown,
+            action: l10n.accessibilityMonthNavPageDown,
+          ),
+          const SizedBox(height: 12),
+
+          // Event Mode
+          _ModeSection(
+            title: l10n.accessibilityMonthModeEvent,
+            description: l10n.accessibilityMonthModeEventDesc,
+          ),
+          _ShortcutRow(
+            keys: '${l10n.accessibilityShortcutTab} / ↑↓',
+            action: l10n.accessibilityMonthEventUpDown,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEnter,
+            action: l10n.accessibilityMonthEventEnterSpace,
+          ),
+          _ShortcutRow(
+            keys: 'D / Delete',
+            action: l10n.accessibilityMonthEventD,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutM,
+            action: l10n.accessibilityMonthEventM,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutR,
+            action: l10n.accessibilityMonthEventR,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEscape,
+            action: l10n.accessibilityMonthEventEscape,
+          ),
+          const SizedBox(height: 12),
+
+          // Move Mode
+          _ModeSection(
+            title: l10n.accessibilityMonthModeMove,
+            description: l10n.accessibilityMonthModeMoveDesc,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutArrows,
+            action: l10n.accessibilityMonthMoveArrows,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEnter,
+            action: l10n.accessibilityMonthMoveEnter,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEscape,
+            action: l10n.accessibilityMonthMoveEscape,
+          ),
+          const SizedBox(height: 12),
+
+          // Resize Mode
+          _ModeSection(
+            title: l10n.accessibilityMonthModeResize,
+            description: l10n.accessibilityMonthModeResizeDesc,
+          ),
+          _ShortcutRow(
+            keys: 'S / E',
+            action: l10n.accessibilityMonthResizeSE,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutArrows,
+            action: l10n.accessibilityMonthResizeArrows,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEnter,
+            action: l10n.accessibilityMonthResizeEnter,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutM,
+            action: l10n.accessibilityMonthResizeM,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEscape,
+            action: l10n.accessibilityMonthResizeEscape,
+          ),
           const SizedBox(height: 20),
         ],
 
         // Screen reader guide section
-        _SectionHeader(icon: Icons.record_voice_over, title: l10n.accessibilityScreenReaderGuide),
+        _SectionHeader(
+          icon: Icons.record_voice_over,
+          title: l10n.accessibilityScreenReaderGuide,
+        ),
         const SizedBox(height: 8),
         _InfoSection(
           title: 'Cell Labels',
-          content: 'Each cell announces date, day of week, and number of events. Example: "Monday, February 10, 2026. 3 events."',
+          content:
+              'Each cell announces date, day of week, and number of events. Example: "Monday, February 10, 2026. 3 events."',
         ),
         const SizedBox(height: 8),
         _InfoSection(
           title: 'Event Labels',
-          content: 'Events announce title, duration, and position. Example: "Team Meeting. February 10-12. Spans 3 days."',
+          content:
+              'Events announce title, duration, and position. Example: "Team Meeting. February 10-12. Spans 3 days."',
         ),
         const SizedBox(height: 8),
         _InfoSection(
           title: 'Multi-day Events',
-          content: 'Multi-day event spans are announced with clear start and end dates and total duration.',
+          content:
+              'Multi-day event spans are announced with clear start and end dates and total duration.',
         ),
         const SizedBox(height: 8),
         _InfoSection(
           title: 'Navigator',
-          content: 'Navigation buttons announce current month/year and action. Example: "February 2026. Previous month button."',
+          content:
+              'Navigation buttons announce current month/year and action. Example: "February 2026. Previous month button."',
         ),
         const SizedBox(height: 8),
         _InfoSection(
           title: 'Overflow Indicators',
-          content: 'When a day has more events than can display, overflow indicator announces: "+3 more events. Tap to view all."',
+          content:
+              'When a day has more events than can display, overflow indicator announces: "+3 more events. Tap to view all."',
         ),
         const SizedBox(height: 20),
 
         // High contrast toggle
-        _SectionHeader(icon: Icons.contrast, title: l10n.accessibilityHighContrast),
+        _SectionHeader(
+          icon: Icons.contrast,
+          title: l10n.accessibilityHighContrast,
+        ),
         const SizedBox(height: 8),
         Semantics(
           label: l10n.accessibilityHighContrastDescription,
           child: SwitchListTile(
             value: _highContrastMode,
             onChanged: (v) => setState(() => _highContrastMode = v),
-            title: Text(l10n.accessibilityHighContrastDescription, style: textTheme.bodySmall),
+            title: Text(
+              l10n.accessibilityHighContrastDescription,
+              style: textTheme.bodySmall,
+            ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 8),
           ),
         ),
         const SizedBox(height: 20),
 
         // Accessibility checklist
-        _SectionHeader(icon: Icons.checklist, title: l10n.accessibilityChecklist),
+        _SectionHeader(
+          icon: Icons.checklist,
+          title: l10n.accessibilityChecklist,
+        ),
         const SizedBox(height: 8),
         _ChecklistItem(text: l10n.accessibilityChecklistItem1),
         _ChecklistItem(text: 'Full keyboard navigation support'),
@@ -131,34 +246,19 @@ class _MonthAccessibilityTabState extends State<MonthAccessibilityTab> {
         _ChecklistItem(text: 'Respects reduced motion preferences'),
         const SizedBox(height: 20),
 
-        // Keyboard navigation flow + instructions — hidden on non-keyboard platforms
+        // Detailed keyboard instructions — hidden on non-keyboard platforms
         if (supportsKeyboard) ...[
-          _SectionHeader(icon: Icons.keyboard_double_arrow_down, title: l10n.accessibilityKeyboardNavFlow),
-          const SizedBox(height: 8),
-          _FlowStep(
-            step: 1,
-            text: 'Use arrow keys to navigate between calendar cells. Focus indicator shows current cell.',
+          _SectionHeader(
+            icon: Icons.tips_and_updates,
+            title: l10n.accessibilityKeyboardNavInstructions,
           ),
-          _FlowStep(
-            step: 2,
-            text: 'Press Enter or Space on a cell to select it. If the cell has events, press Tab to cycle through them.',
-          ),
-          _FlowStep(
-            step: 3,
-            text: 'With an event focused, press Enter to start move mode. Use arrows to navigate to target cell, Enter to confirm, or Escape to cancel.',
-          ),
-          _FlowStep(
-            step: 4,
-            text: 'Press R to enter resize mode. Use S/E to switch which edge to resize, arrows to resize, Enter to confirm, or M to return to move mode.',
-          ),
-          const SizedBox(height: 20),
-
-          // Keyboard navigation instructions
-          _SectionHeader(icon: Icons.tips_and_updates, title: l10n.accessibilityKeyboardNavInstructions),
           const SizedBox(height: 8),
           Text(
             l10n.accessibilityMonthKeyboardNavInstructionsDetail,
-            style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant, height: 1.5),
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.5,
+            ),
           ),
         ],
       ],
@@ -362,50 +462,43 @@ class _ChecklistItem extends StatelessWidget {
   }
 }
 
-class _FlowStep extends StatelessWidget {
-  const _FlowStep({required this.step, required this.text});
+class _ModeSection extends StatelessWidget {
+  const _ModeSection({required this.title, required this.description});
 
-  final int step;
-  final String text;
+  final String title;
+  final String description;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '$step',
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onPrimaryContainer,
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.primary,
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                text,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  height: 1.3,
-                ),
+            const SizedBox(height: 2),
+            Text(
+              description,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

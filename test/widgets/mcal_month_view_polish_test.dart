@@ -666,8 +666,12 @@ void main() {
         controller.setFocusedDate(DateTime(2025, 1, 15));
         await tester.pumpAndSettle();
 
-        // Press Enter to activate selection mode (single event → auto-move)
+        // Enter: immediately enters Event Mode (event selected)
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        // M: enters Move Mode for the selected event
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
         await tester.pumpAndSettle();
 
         // ArrowRight moves the event one day
@@ -714,15 +718,21 @@ void main() {
       controller.setFocusedDate(DateTime(2025, 1, 15));
       await tester.pumpAndSettle();
 
-      // Enter selection, move right, then cancel
+      // Enter Event Mode, M to enter Move Mode, move right, then cancel with Escape
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();
+      // Escape returns to Event Mode (move not confirmed)
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      // Second Escape exits Event Mode
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
 
-      // Event should still be on original date
+      // Event should still be on original date (move was cancelled)
       final eventsOnOriginal = controller.getEventsForDate(
         DateTime(2025, 1, 15),
       );
@@ -765,13 +775,17 @@ void main() {
       controller.setFocusedDate(DateTime(2025, 1, 15));
       await tester.pumpAndSettle();
 
+      // Enter Event Mode, M to enter Move Mode, ArrowRight to move, Enter to confirm
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
 
+      expect(droppedDetails, isNotNull);
       if (droppedDetails != null) {
         expect(droppedDetails!.event.id, equals('kb-drop-cb'));
       }
@@ -871,11 +885,11 @@ void main() {
       controller.setFocusedDate(DateTime(2025, 1, 6));
       await tester.pumpAndSettle();
 
-      // Enter selection mode (single event → auto-selects → move mode)
+      // Enter: immediately enters Event Mode (event selected)
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
 
-      // Press R to enter resize mode
+      // Press R to enter Resize Mode directly from Event Mode
       await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
       await tester.pumpAndSettle();
 
@@ -1002,7 +1016,7 @@ void main() {
       );
     });
 
-    testWidgets('Escape in resize mode cancels resize but stays in move mode', (
+    testWidgets('Escape in resize mode cancels resize and returns to Event Mode', (
       tester,
     ) async {
       final event = MCalCalendarEvent(
@@ -1039,11 +1053,11 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();
 
-      // Escape cancels resize, returns to move mode
+      // Escape cancels resize, returns to Event Mode (not Move Mode)
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
 
-      // Escape again to fully exit
+      // Escape again exits Event Mode to Navigation Mode
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
 

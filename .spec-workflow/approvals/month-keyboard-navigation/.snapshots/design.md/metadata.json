@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/month-keyboard-navigation/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-03T21:28:23.377Z",
+      "trigger": "initial",
+      "approvalId": "approval_1772573303368_vp2hg5tjf",
+      "approvalTitle": "Month Keyboard Navigation - Design"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-03-03T23:16:00.709Z",
+      "trigger": "approved",
+      "approvalId": "approval_1772573303368_vp2hg5tjf",
+      "approvalTitle": "Month Keyboard Navigation - Design"
+    }
+  ]
+}
