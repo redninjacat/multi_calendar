@@ -4,7 +4,7 @@
 
 This design covers the complete keyboard navigation system for `MCalMonthView`. The system uses a four-mode state machine (Navigation, Event, Move, Resize) implemented as raw key event handling in `_MCalMonthViewState`, with mode state tracked via boolean flags and index fields. The design is partially retroactive — the state machine, mode handlers, delete callback, and visible-count-aware cycling are already implemented. The new work is configurable key bindings via `MCalKeyActivator` and `MCalMonthKeyBindings`.
 
-The keyboard navigation system sits between the Flutter focus system and the existing `Shortcuts`/`Actions` layer. Raw key events are intercepted via `Focus.onKeyEvent` before they reach `Shortcuts`, allowing the same physical key to trigger different behavior depending on the current mode. The `Shortcuts` system is reserved for mode-independent global shortcuts (currently only Cmd+N for create).
+The keyboard navigation system sits between the Flutter focus system and the existing `Shortcuts`/`Actions` layer. Raw key events are intercepted via `Focus.onKeyEvent` before they reach `Shortcuts`, allowing the same physical key to trigger different behavior depending on the current mode. With the addition of Requirement 8, the `Shortcuts` system is no longer used for create — N in Navigation Mode is handled directly in the raw key handler, and `MCalMonthViewCreateEventIntent` / `Cmd+N` wiring is removed entirely.
 
 ## Steering Document Alignment
 
@@ -34,8 +34,8 @@ The keyboard navigation system sits between the Flutter focus system and the exi
 - **`_exitKeyboardMoveMode`** (line 2291): Centralized cleanup that resets all keyboard state fields.
 - **`_handleDeleteResult`** (line 2505): Handles `FutureOr<bool>` result from `onDeleteEventRequested`, supporting both sync and async consumers.
 - **`_visibleCountForDate`** (line 2285): Reads from `_layoutVisibleCounts` map to determine how many events are actually visible on screen for a given date.
-- **`_buildDefaultShortcuts`** (line 1792): Returns `Shortcuts` map for mode-independent global shortcuts (Cmd+N only).
-- **`_buildActionsMap`** (line 1814): Returns `Actions` map for `MCalMonthViewCreateEventIntent`.
+- **`_buildDefaultShortcuts`** (line 1792): Previously returned Cmd+N → `MCalMonthViewCreateEventIntent`. Will be removed or emptied (no default shortcuts remain).
+- **`_buildActionsMap`** (line 1814): Previously returned the `MCalMonthViewCreateEventIntent` action. Will be removed along with the intent class.
 
 ### Integration Points
 
@@ -84,12 +84,12 @@ Focus.onKeyEvent
   │
   ├─ _isKeyboardEventSelectionMode? → _handleKeyboardEventModeKey()
   │
-  ├─ Navigation Mode keys    → handle arrows, Home/End, PgUp/PgDn, Enter/Space
+  ├─ Navigation Mode keys    → handle arrows, Home/End, PgUp/PgDn, Enter/Space, N (create)
   │
   └─ Not handled → KeyEventResult.ignored
                      │
                      ▼
-              Shortcuts/Actions (Cmd+N → Create)
+              Shortcuts/Actions (no default shortcuts remain — Cmd+N removed)
 ```
 
 ## Components and Interfaces
@@ -217,6 +217,36 @@ Focus.onKeyEvent
 - **Dependencies**: `MCalMonthKeyBindings`, `MCalKeyActivator`
 - **Reuses**: All existing mode handler logic, state fields, and helper methods remain unchanged — only the key-matching expressions change.
 
+### Component 5: Navigation Mode — Create Event (NEW — Requirement 8)
+
+- **Purpose**: Replace the `Cmd+N` global `Shortcuts`/`Actions` wiring with a plain `N` key in the raw Navigation Mode handler. The callback receives `BuildContext` and the focused `DateTime` so the consumer can open a creation dialog pre-populated with the date.
+- **File**: `lib/src/widgets/mcal_month_view.dart`
+- **Changes**:
+
+  **Remove:**
+  - `MCalMonthViewCreateEventIntent` class (~line 137–141)
+  - `MCalMonthView.keyboardShortcuts` parameter and all doc/constructor references
+  - `MCalMonthView.onCreateEventRequested: VoidCallback?` parameter
+  - `_buildDefaultShortcuts()`, `_buildShortcutsMap()`, `_buildActionsMap()` helper methods
+  - The `Shortcuts` / `Actions` widget wrappers in `build()` that wire up these methods
+
+  **Add:**
+  - New parameter: `final void Function(BuildContext, DateTime)? onCreateEventRequested;`
+  - New key binding in `MCalMonthKeyBindings`: `createEvent` (default: `[MCalKeyActivator(LogicalKeyboardKey.keyN)]`), in the Navigation Mode section
+  - In `_handleKeyEvent` Navigation Mode block, after the Enter/Space handler: check `_matchesAny(_keyBindings.createEvent, key)` → call `widget.onCreateEventRequested?.call(context, focusedDate)` → return `KeyEventResult.handled`
+
+- **Callback contract**:
+  ```dart
+  final FutureOr<bool> Function(BuildContext context, DateTime focusedDate)? onCreateEventRequested;
+  ```
+  - `context` — allows the consumer to call `showDialog` or `Navigator.push`
+  - `focusedDate` — the currently focused cell's date (normalized to midnight, no time component)
+  - Returns `FutureOr<bool>` — the library awaits the result if a `Future` is returned but currently takes no action based on the `bool` value. The signature is forward-compatible: if a future version defines behavior for the return value (e.g., `true` triggers auto-focus on the new event), no API change is needed. Sync consumers return `true` or `false` directly with no `Future` wrapping required.
+  - If null, N is absorbed (returns `KeyEventResult.handled` to prevent propagation)
+  - The implementation mirrors `_handleDeleteResult` but without the mode-exit logic — a shared helper or an inline `.then(() {})` suffices
+
+- **Migration note**: Consumers previously using `onCreateEventRequested: () { ... }` must update to `onCreateEventRequested: (context, date) { ... return true; }` (or `return false` for a no-op). Consumers who used the `keyboardShortcuts` parameter to add `Cmd+N` must handle that at the app level (e.g., with a `Shortcuts` widget above the calendar, firing their own create logic).
+
 ### Component 4: Existing mode handlers (retroactive — Requirements 1–5, 7)
 
 These are already implemented. Documenting for completeness:
@@ -247,12 +277,19 @@ class MCalKeyActivator {
 
 ```dart
 class MCalMonthKeyBindings {
-  // 5 Navigation Mode bindings
+  // 6 Navigation Mode bindings (5 existing + createEvent)
   // 7 Event Mode bindings
   // 3 Move Mode bindings
   // 5 Resize Mode bindings
-  // = 20 named Set<MCalKeyActivator> properties
+  // = 21 named List<MCalKeyActivator> properties
 }
+```
+
+Key addition:
+
+```dart
+// Navigation Mode (new)
+this.createEvent = const [MCalKeyActivator(LogicalKeyboardKey.keyN)],
 ```
 
 ### Existing models used
@@ -260,6 +297,10 @@ class MCalMonthKeyBindings {
 - **`MCalEventTapDetails`**: `{ event: MCalCalendarEvent, displayDate: DateTime }` — passed to `onEventTap` and `onDeleteEventRequested`.
 - **`MCalCalendarEvent`**: The event model, identified by `id: String`.
 - **`MCalEventChangeInfo`**: `{ type: MCalChangeType, affectedEventIds: Set<String> }` — set by controller mutations for targeted view rebuilds.
+
+### Removed models
+
+- **`MCalMonthViewCreateEventIntent`**: Previously used to wire Cmd+N to `onCreateEventRequested`. Removed in Requirement 8 — the intent/shortcuts pattern is replaced by direct raw key handling in Navigation Mode.
 
 ## Error Handling
 
@@ -281,7 +322,15 @@ class MCalMonthKeyBindings {
    - **Handling**: If a consumer provides an empty set for an action (e.g., `delete: {}`), that action becomes unreachable by keyboard. This is intentional — it's how consumers disable specific shortcuts.
    - **User Impact**: The action is not triggered by any key.
 
-5. **`layoutVisibleCounts` not populated (custom builder)**
+5. **Create callback returns `Future` that never completes**
+   - **Handling**: The library holds no reference to the future after `.then()`. Since no state transition is tied to the result today, the calendar remains fully interactive. The user can continue navigating normally.
+   - **User Impact**: No visible hang — the calendar is not blocked.
+
+6. **Create callback invoked with no focused date**
+   - **Handling**: If `controller.focusedDate` is null when N is pressed, the Navigation Mode handler already falls back to `controller.displayDate` for focus initialization. `onCreateEventRequested` receives whichever non-null date is resolved. If both are null (degenerate controller state), the handler does not call the callback.
+   - **User Impact**: Rare edge case. The create action silently does nothing rather than crashing.
+
+6. **`layoutVisibleCounts` not populated (custom builder)**
    - **Handling**: `_visibleCountForDate` falls back to `allEvents.length`, treating all events as visible. This is safe but may allow cycling through events that are visually hidden.
    - **User Impact**: Keyboard may cycle through events not visible on screen. Custom builder developers are encouraged to populate `layoutVisibleCounts`.
 
@@ -300,6 +349,15 @@ class MCalMonthKeyBindings {
 - **Disabled action**: Create `MCalMonthView` with `keyBindings` where `delete: {}`. Simulate pressing D in Event Mode → verify no deletion occurs.
 - **Modifier-aware binding**: Create a binding with `MCalKeyActivator(LogicalKeyboardKey.keyA, control: true)`. Verify Ctrl+A triggers the action but plain A does not.
 - **Default bindings**: Verify all existing keyboard navigation tests pass without providing `keyBindings` (defaults match current hardcoded behavior).
+
+### New tests for Requirement 8
+
+- **N key triggers `onCreateEventRequested` in Navigation Mode**: Pump calendar with `onCreateEventRequested` wired. Focus calendar, press N → verify callback called with expected `BuildContext` and focused date.
+- **N key with no callback absorbs the event**: Verify `onCreateEventRequested: null` does not crash and key is absorbed (no other action fires).
+- **N key in Event Mode does NOT trigger create**: Enter Event Mode (press Enter on a cell with events), press N → verify `onCreateEventRequested` is NOT called (Event Mode absorbs all non-bound keys).
+- **Remapping createEvent binding**: Provide `keyBindings: MCalMonthKeyBindings(createEvent: [MCalKeyActivator(LogicalKeyboardKey.keyC)])`. Verify C triggers create, N does not.
+- **Disabling create**: Provide `keyBindings: MCalMonthKeyBindings(createEvent: [])`. Verify N does not trigger `onCreateEventRequested`.
+- **Breaking change test**: Verify `MCalMonthViewCreateEventIntent` no longer exists (compile-time). Verify `MCalMonthView` no longer has `keyboardShortcuts` parameter.
 
 ### Retroactive coverage (existing tests)
 

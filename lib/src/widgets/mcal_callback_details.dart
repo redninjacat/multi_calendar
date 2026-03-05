@@ -200,6 +200,42 @@ class MCalOverflowTapDetails {
   List<MCalCalendarEvent> get allEvents => [...visibleEvents, ...hiddenEvents];
 }
 
+/// Context provided to the Day View's all-day overflow indicator builder.
+///
+/// When the number of all-day events exceeds [MCalDayView.allDaySectionMaxRows],
+/// an overflow indicator is shown. Use this context to build a custom indicator.
+///
+/// Example:
+/// ```dart
+/// allDayOverflowBuilder: (context, ctx, defaultWidget) {
+///   return GestureDetector(
+///     onTap: () => showAllDayEvents(ctx.date, ctx.hiddenEvents),
+///     child: Text('+${ctx.hiddenEventCount} more'),
+///   );
+/// }
+/// ```
+class MCalDayOverflowIndicatorContext {
+  /// The date for which overflow is occurring.
+  final DateTime date;
+
+  /// The number of events that are hidden due to space constraints.
+  final int hiddenEventCount;
+
+  /// List of events that are hidden and not displayed.
+  final List<MCalCalendarEvent> hiddenEvents;
+
+  /// List of events that are currently visible/displayed.
+  final List<MCalCalendarEvent> visibleEvents;
+
+  /// Creates a new [MCalDayOverflowIndicatorContext] instance.
+  const MCalDayOverflowIndicatorContext({
+    required this.date,
+    required this.hiddenEventCount,
+    required this.hiddenEvents,
+    required this.visibleEvents,
+  });
+}
+
 /// Details object for date label tap callbacks.
 ///
 /// Provides context about a tap event on a date label in the month view.

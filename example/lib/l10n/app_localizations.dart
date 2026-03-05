@@ -554,6 +554,12 @@ abstract class AppLocalizations {
   /// **'Allow Keyboard Delete'**
   String get settingAllowKeyboardDelete;
 
+  /// No description provided for @settingAllowKeyboardCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Keyboard Create (N key)'**
+  String get settingAllowKeyboardCreate;
+
   /// No description provided for @settingAutoFocusOnEventTap.
   ///
   /// In en, this message translates to:
@@ -1682,6 +1688,12 @@ abstract class AppLocalizations {
   /// **'Next month'**
   String get accessibilityMonthNavPageDown;
 
+  /// No description provided for @accessibilityMonthNavN.
+  ///
+  /// In en, this message translates to:
+  /// **'Create event on focused date (if handler provided)'**
+  String get accessibilityMonthNavN;
+
   /// No description provided for @accessibilityMonthEventUpDown.
   ///
   /// In en, this message translates to:
@@ -1730,6 +1742,12 @@ abstract class AppLocalizations {
   /// **'Confirm move'**
   String get accessibilityMonthMoveEnter;
 
+  /// No description provided for @accessibilityMonthMoveR.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel move, switch to Resize Mode'**
+  String get accessibilityMonthMoveR;
+
   /// No description provided for @accessibilityMonthMoveEscape.
   ///
   /// In en, this message translates to:
@@ -1765,6 +1783,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancel resize, return to Event Mode'**
   String get accessibilityMonthResizeEscape;
+
+  /// No description provided for @accessibilityMonthKeyBindingsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'These key bindings are the defaults. Developers integrating this calendar can customize or disable any of them via the keyBindings parameter on MCalMonthView.'**
+  String get accessibilityMonthKeyBindingsNote;
 
   /// No description provided for @accessibilityDayKeyboardShortcuts.
   ///
@@ -1880,6 +1904,12 @@ abstract class AppLocalizations {
   /// **'Overflow long pressed: {date} ({count} hidden events)'**
   String snackbarOverflowLongPress(String date, int count);
 
+  /// Message shown when overflow indicator is double-tapped
+  ///
+  /// In en, this message translates to:
+  /// **'Overflow double-tapped: {count} hidden events'**
+  String snackbarOverflowDoubleTap(int count);
+
   /// Message shown when hovering over a cell
   ///
   /// In en, this message translates to:
@@ -1952,11 +1982,29 @@ abstract class AppLocalizations {
   /// **'Day header long pressed: {date}'**
   String snackbarDayHeaderLongPress(String date);
 
+  /// Message shown when day header is double-tapped
+  ///
+  /// In en, this message translates to:
+  /// **'Day header double-tapped: {date}'**
+  String snackbarDayHeaderDoubleTap(String date);
+
   /// Message shown when time label is tapped
   ///
   /// In en, this message translates to:
   /// **'Time label tapped: {time}'**
   String snackbarTimeLabelTap(String time);
+
+  /// Message shown when time label is long pressed
+  ///
+  /// In en, this message translates to:
+  /// **'Time label long pressed: {time}'**
+  String snackbarTimeLabelLongPress(String time);
+
+  /// Message shown when time label is double-tapped
+  ///
+  /// In en, this message translates to:
+  /// **'Time label double-tapped: {time}'**
+  String snackbarTimeLabelDoubleTap(String time);
 
   /// Message shown when time slot is tapped
   ///

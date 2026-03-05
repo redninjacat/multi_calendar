@@ -238,6 +238,7 @@ class MCalDayView extends StatefulWidget {
     this.timeLabelBuilder,
     this.gridlineBuilder,
     this.allDayEventTileBuilder,
+    this.allDayOverflowBuilder,
     this.timedEventTileBuilder,
     this.currentTimeIndicatorBuilder,
     this.navigatorBuilder,
@@ -837,6 +838,23 @@ class MCalDayView extends StatefulWidget {
   )?
   allDayEventTileBuilder;
 
+  /// Builder for the all-day section overflow indicator.
+  ///
+  /// When the number of all-day events exceeds [allDaySectionMaxRows],
+  /// an overflow indicator (e.g. "+5 more") is shown. Use this builder
+  /// to provide a custom overflow widget.
+  ///
+  /// If null, uses the default "+N more" chip.
+  ///
+  /// Receives [MCalDayOverflowIndicatorContext] with hidden/visible event
+  /// lists and the default widget.
+  final Widget Function(
+    BuildContext context,
+    MCalDayOverflowIndicatorContext overflowContext,
+    Widget defaultWidget,
+  )?
+  allDayOverflowBuilder;
+
   /// Builder for timed event tiles.
   ///
   /// If null, uses default timed event tile rendering.
@@ -1365,6 +1383,23 @@ class MCalDayViewState extends State<MCalDayView> {
   List<MCalCalendarEvent> _timedEvents = [];
   bool _isLoading = false;
   Object? _error;
+
+  /// Caches the actual visible all-day event count as computed by the layout.
+  ///
+  /// Updated by [_AllDayEventsSection] during build. When null, the keyboard
+  /// handler falls back to [_allDayEvents].length (all events visible).
+  int? _allDayVisibleCount;
+
+  /// Last emitted values for time-grid hover deduplication.
+  /// Only fires [onHoverTimeSlot] when the snapped slot or hovered event changes.
+  int? _lastHoveredHour;
+  int? _lastHoveredMinute;
+  MCalCalendarEvent? _lastEmittedHoveredEvent;
+
+  /// The event currently under the cursor (if any), tracked via event-tile
+  /// [MouseRegion] enter/exit. Passed through [MCalTimeSlotContext.hoveredEvent]
+  /// so consumers can decide how to handle overlapping hover contexts.
+  MCalCalendarEvent? _hoveredEvent;
 
   // ============================================================================
   // Drag State (matches Month View pattern)
@@ -2964,8 +2999,15 @@ class MCalDayViewState extends State<MCalDayView> {
   }
 
   /// Handles Tab/Shift+Tab to cycle focus between events.
+  ///
+  /// Only includes all-day events that are actually visible (not hidden
+  /// behind the overflow indicator). Uses [_allDayVisibleCount] reported
+  /// by [_AllDayEventsSection] during build.
   void _handleTabNavigation(bool shift) {
-    final allFocusable = [..._allDayEvents, ..._timedEvents];
+    final visibleAllDay = _allDayVisibleCount != null
+        ? _allDayEvents.take(_allDayVisibleCount!).toList()
+        : _allDayEvents;
+    final allFocusable = [...visibleAllDay, ..._timedEvents];
     if (allFocusable.isEmpty) return;
 
     int nextIndex;
@@ -5263,6 +5305,7 @@ class MCalDayViewState extends State<MCalDayView> {
           onEventTap: _handleEventTap,
           onEventLongPress: widget.onEventLongPress,
           onEventDoubleTap: widget.onEventDoubleTap,
+          onHoverEvent: _wrapOnHoverEvent(),
           keyboardFocusedEventId: _focusedEvent?.id,
           enableDragToMove: widget.enableDragToMove,
           enableDragToResize: _resolveDragToResize(),
@@ -5361,6 +5404,21 @@ class MCalDayViewState extends State<MCalDayView> {
           )
         : Semantics(label: scheduleLabel, container: true, child: stack);
 
+    // Wrap with MouseRegion for continuous time-grid hover tracking.
+    // Fires onHoverTimeSlot with the snapped time slot under the cursor,
+    // deduplicated so it only fires on time-boundary crossings.
+    final Widget hoverChild;
+    if (widget.onHoverTimeSlot != null) {
+      hoverChild = MouseRegion(
+        onHover: (event) =>
+            _handleTimeGridHover(event.localPosition, hourHeight, context),
+        onExit: (_) => _handleTimeGridHoverExit(context),
+        child: gestureChild,
+      );
+    } else {
+      hoverChild = gestureChild;
+    }
+
     // Attach _timeGridKey to this SizedBox which always has the full
     // time grid dimensions (contentHeight x full width), even when the page
     // has no events.  The key is only on the active page to avoid GlobalKey
@@ -5372,7 +5430,7 @@ class MCalDayViewState extends State<MCalDayView> {
     return SizedBox(
       key: isCurrentPage ? _timeGridKey : null,
       height: contentHeight,
-      child: gestureChild,
+      child: hoverChild,
     );
   }
 
@@ -5441,13 +5499,17 @@ class MCalDayViewState extends State<MCalDayView> {
       if (!isInteractive) return; // Early return if slot is not interactive
     }
 
+    final allRegions = widget.controller.getRegionsForDate(_displayDate);
     final slotContext = MCalTimeSlotContext(
       displayDate: _displayDate,
       hour: tappedTime.hour,
       minute: tappedTime.minute,
       offset: localPosition.dy,
       isAllDayArea: false,
-      regions: widget.controller.getRegionsForDate(_displayDate),
+      regions: [
+        for (final r in allRegions)
+          if (r.isAllDay || r.contains(tappedTime)) r,
+      ],
     );
 
     widget.onTimeSlotTap!(context, slotContext);
@@ -5489,13 +5551,17 @@ class MCalDayViewState extends State<MCalDayView> {
       if (!isInteractive) return; // Early return if slot is not interactive
     }
 
+    final allRegions = widget.controller.getRegionsForDate(_displayDate);
     final slotContext = MCalTimeSlotContext(
       displayDate: _displayDate,
       hour: tappedTime.hour,
       minute: tappedTime.minute,
       offset: localPosition.dy,
       isAllDayArea: false,
-      regions: widget.controller.getRegionsForDate(_displayDate),
+      regions: [
+        for (final r in allRegions)
+          if (r.isAllDay || r.contains(tappedTime)) r,
+      ],
     );
 
     widget.onTimeSlotLongPress!(context, slotContext);
@@ -5543,17 +5609,106 @@ class MCalDayViewState extends State<MCalDayView> {
       if (!isInteractive) return; // Early return if slot is not interactive
     }
 
-    // Build full MCalTimeSlotContext
+    final allRegions = widget.controller.getRegionsForDate(_displayDate);
     final slotContext = MCalTimeSlotContext(
       displayDate: _displayDate,
       hour: tappedTime.hour,
       minute: tappedTime.minute,
       offset: localPosition.dy,
       isAllDayArea: false,
-      regions: widget.controller.getRegionsForDate(_displayDate),
+      regions: [
+        for (final r in allRegions)
+          if (r.isAllDay || r.contains(tappedTime)) r,
+      ],
     );
 
     widget.onTimeSlotDoubleTap!(context, slotContext);
+  }
+
+  /// Wraps [MCalDayView.onHoverEvent] to also track [_hoveredEvent].
+  ///
+  /// Returns a callback that updates [_hoveredEvent] on enter/exit and
+  /// forwards to the consumer's callback if set. When only
+  /// [onHoverTimeSlot] is set (no [onHoverEvent]), still returns a tracker
+  /// so [MCalTimeSlotContext.hoveredEvent] is accurate.
+  void Function(BuildContext, MCalCalendarEvent?)? _wrapOnHoverEvent() {
+    if (widget.onHoverEvent == null && widget.onHoverTimeSlot == null) {
+      return null;
+    }
+    return (ctx, event) {
+      _hoveredEvent = event;
+      widget.onHoverEvent?.call(ctx, event);
+    };
+  }
+
+  /// Handles continuous mouse hover over the time grid area.
+  ///
+  /// Converts the cursor's Y position to a snapped time slot and fires
+  /// [MCalDayView.onHoverTimeSlot] only when the snapped time changes,
+  /// avoiding excessive callbacks on every pixel of mouse movement.
+  void _handleTimeGridHover(
+    Offset localPosition,
+    double hourHeight,
+    BuildContext hoverContext,
+  ) {
+    if (widget.onHoverTimeSlot == null) return;
+
+    final hoveredTime = snapToTimeSlot(
+      time: offsetToTime(
+        offset: localPosition.dy,
+        date: _displayDate,
+        startHour: widget.startHour,
+        hourHeight: hourHeight,
+      ),
+      timeSlotDuration: widget.timeSlotDuration,
+    );
+
+    // Re-fire when the hovered event changes even if the time slot hasn't,
+    // so the consumer always gets accurate hoveredEvent state.
+    if (hoveredTime.hour == _lastHoveredHour &&
+        hoveredTime.minute == _lastHoveredMinute &&
+        identical(_hoveredEvent, _lastEmittedHoveredEvent)) {
+      return;
+    }
+
+    _lastHoveredHour = hoveredTime.hour;
+    _lastHoveredMinute = hoveredTime.minute;
+    _lastEmittedHoveredEvent = _hoveredEvent;
+
+    // Collect all timed events whose range contains the hovered time.
+    final eventsAtSlot = <MCalCalendarEvent>[
+      for (final e in _timedEvents)
+        if (!hoveredTime.isBefore(e.start) && hoveredTime.isBefore(e.end)) e,
+    ];
+
+    // Collect all regions containing the hovered time (all-day regions
+    // always match; timed regions use half-open interval containment).
+    final allRegions = widget.controller.getRegionsForDate(_displayDate);
+    final regionsAtSlot = <MCalRegion>[
+      for (final r in allRegions)
+        if (r.isAllDay || r.contains(hoveredTime)) r,
+    ];
+
+    final slotContext = MCalTimeSlotContext(
+      displayDate: _displayDate,
+      hour: hoveredTime.hour,
+      minute: hoveredTime.minute,
+      offset: localPosition.dy,
+      isAllDayArea: false,
+      hoveredEvent: _hoveredEvent,
+      events: eventsAtSlot,
+      regions: regionsAtSlot,
+    );
+
+    widget.onHoverTimeSlot!(hoverContext, slotContext);
+  }
+
+  /// Clears hover state and fires null exit callback.
+  void _handleTimeGridHoverExit(BuildContext hoverContext) {
+    _lastHoveredHour = null;
+    _lastHoveredMinute = null;
+    _lastEmittedHoveredEvent = null;
+    widget.onHoverTimeSlot?.call(hoverContext, null);
   }
 
   /// Checks if the tap position overlaps with any event tile.
@@ -5766,6 +5921,7 @@ class MCalDayViewState extends State<MCalDayView> {
             theme: _resolveTheme(context),
             locale: locale,
             allDayEventTileBuilder: widget.allDayEventTileBuilder,
+            allDayOverflowBuilder: widget.allDayOverflowBuilder,
             enableDragToMove: widget.enableDragToMove,
             dragHandler: _dragHandler,
             isDragActive: _isDragActive,
@@ -5776,6 +5932,11 @@ class MCalDayViewState extends State<MCalDayView> {
             onOverflowTap: widget.onOverflowTap,
             onOverflowLongPress: widget.onOverflowLongPress,
             onOverflowDoubleTap: widget.onOverflowDoubleTap,
+            onHoverOverflow: widget.onHoverOverflow,
+            onHoverEvent: _wrapOnHoverEvent(),
+            onVisibleCountChanged: (count) {
+              _allDayVisibleCount = count;
+            },
             onTimeSlotTap: widget.onTimeSlotTap,
             onTimeSlotLongPress: widget.onTimeSlotLongPress,
             onDragStarted: _handleDragStarted,
@@ -6407,7 +6568,7 @@ class _DayHeader extends StatelessWidget {
     return Semantics(
       label: semanticLabel,
       header: true,
-      child: _wrapWithGestureDetector(headerWidget),
+      child: _wrapWithGestureDetector(context, headerContext, headerWidget),
     );
   }
 
@@ -6465,10 +6626,13 @@ class _DayHeader extends StatelessWidget {
     );
   }
 
-  Widget _wrapWithGestureDetector(Widget child) {
+  Widget _wrapWithGestureDetector(
+    BuildContext context,
+    MCalDayHeaderContext headerContext,
+    Widget child,
+  ) {
     Widget result = child;
 
-    // Wrap with GestureDetector if any gesture callbacks are provided
     if (onTap != null || onLongPress != null || onDoubleTap != null) {
       result = GestureDetector(
         onTap: onTap,
@@ -6478,23 +6642,11 @@ class _DayHeader extends StatelessWidget {
       );
     }
 
-    // Wrap with MouseRegion for hover support (only if callback provided)
     if (onHover != null) {
-      result = Builder(
-        builder: (context) {
-          return MouseRegion(
-            onEnter: (_) {
-              final weekNumber = getWeekNumber(displayDate, firstDayOfWeek);
-              final headerContext = MCalDayHeaderContext(
-                date: displayDate,
-                weekNumber: showWeekNumbers ? weekNumber : null,
-              );
-              onHover!(context, headerContext);
-            },
-            onExit: (_) => onHover!(context, null),
-            child: result,
-          );
-        },
+      result = MouseRegion(
+        onEnter: (_) => onHover!(context, headerContext),
+        onExit: (_) => onHover!(context, null),
+        child: result,
       );
     }
 
@@ -7385,6 +7537,7 @@ class _AllDayEventsSection extends StatelessWidget {
     required this.theme,
     required this.locale,
     this.allDayEventTileBuilder,
+    this.allDayOverflowBuilder,
     required this.enableDragToMove,
     this.dragHandler,
     required this.isDragActive,
@@ -7395,6 +7548,9 @@ class _AllDayEventsSection extends StatelessWidget {
     this.onOverflowTap,
     this.onOverflowLongPress,
     this.onOverflowDoubleTap,
+    this.onHoverOverflow,
+    this.onHoverEvent,
+    this.onVisibleCountChanged,
     this.onTimeSlotTap,
     this.onTimeSlotLongPress,
     this.onDragStarted,
@@ -7418,6 +7574,12 @@ class _AllDayEventsSection extends StatelessWidget {
     Widget,
   )?
   allDayEventTileBuilder;
+  final Widget Function(
+    BuildContext,
+    MCalDayOverflowIndicatorContext,
+    Widget,
+  )?
+  allDayOverflowBuilder;
   final bool enableDragToMove;
   final MCalDragHandler? dragHandler;
   final bool isDragActive;
@@ -7431,6 +7593,9 @@ class _AllDayEventsSection extends StatelessWidget {
   onOverflowLongPress;
   final void Function(BuildContext, MCalOverflowTapDetails)?
   onOverflowDoubleTap;
+  final void Function(BuildContext, MCalOverflowTapDetails?)? onHoverOverflow;
+  final void Function(BuildContext, MCalCalendarEvent?)? onHoverEvent;
+  final void Function(int)? onVisibleCountChanged;
   final void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotTap;
   final void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotLongPress;
   final void Function(MCalCalendarEvent, DateTime)? onDragStarted;
@@ -7453,84 +7618,101 @@ class _AllDayEventsSection extends StatelessWidget {
   final Duration dragLongPressDelay;
   final List<MCalRegion> regions;
 
+  static const _wrapSpacing = 4.0;
+  static const _wrapRunSpacing = 4.0;
+  static const _sectionHPadding = 8.0;
+
+  static const _defaultTileWidth = 120.0;
+  static const _defaultTileHeight = 28.0;
+  static const _defaultOverflowWidth = 80.0;
+
   @override
   Widget build(BuildContext context) {
     final effectiveMaxRows = theme.dayTheme?.allDaySectionMaxRows ?? maxRows;
+    final tileWidth = theme.dayTheme?.allDayTileWidth ?? _defaultTileWidth;
+    final tileHeight = theme.dayTheme?.allDayTileHeight ?? _defaultTileHeight;
 
-    // Estimate how many events fit per row
-    final screenWidth = MediaQuery.of(context).size.width;
-    final timeLegendWidth = theme.dayTheme?.timeLegendWidth ?? 60.0;
-    final availableWidth = screenWidth - timeLegendWidth;
-    final estimatedTilesPerRow = (availableWidth / 120).floor().clamp(1, 99);
-    final maxVisibleEvents = effectiveMaxRows * estimatedTilesPerRow;
-
-    final visibleEvents = events.take(maxVisibleEvents).toList();
-    final overflowCount = (events.length - maxVisibleEvents).clamp(0, 999);
-    final hasOverflow = overflowCount > 0;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final sectionWidth = constraints.maxWidth > 0
-            ? constraints.maxWidth
-            : availableWidth;
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-          decoration: BoxDecoration(
-            color: theme.cellBackgroundColor,
-            border: Border(
-              bottom: BorderSide(
-                color:
-                    theme.cellBorderColor ?? Colors.grey.withValues(alpha: 0.2),
-                width: 1.0,
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: _sectionHPadding,
+        vertical: 4.0,
+      ),
+      decoration: BoxDecoration(
+        color: theme.cellBackgroundColor,
+        border: Border(
+          bottom: BorderSide(
+            color:
+                theme.cellBorderColor ?? Colors.grey.withValues(alpha: 0.2),
+            width: 1.0,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4.0),
+            child: Text(
+              'All-day',
+              style:
+                  theme.dayTheme?.timeLegendTextStyle ??
+                  TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // All-day label
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4.0),
-                child: Text(
-                  'All-day',
-                  style:
-                      theme.dayTheme?.timeLegendTextStyle ??
-                      TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-              ),
-              // Wrap layout for events. ConstrainedBox ensures the row area
-              // is at least as tall as one tile even when there are no events,
-              // keeping the section a consistent height for drag-drop targets.
-              ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 24.0),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final contentWidth = constraints.maxWidth;
+              final tilesPerRow = _tilesPerRow(contentWidth, tileWidth);
+              final totalSlots = effectiveMaxRows * tilesPerRow;
+              final hasOverflow = events.length > totalSlots;
+
+              final maxVisibleEvents =
+                  hasOverflow ? totalSlots - 1 : events.length;
+              final visibleEvents =
+                  events.take(maxVisibleEvents).toList();
+              final overflowCount = events.length - maxVisibleEvents;
+
+              onVisibleCountChanged?.call(visibleEvents.length);
+
+              return ConstrainedBox(
+                constraints: BoxConstraints(minHeight: tileHeight),
                 child: Wrap(
-                  spacing: 4.0,
-                  runSpacing: 4.0,
+                  spacing: _wrapSpacing,
+                  runSpacing: _wrapRunSpacing,
                   children: [
                     for (final event in visibleEvents)
-                      _buildEventTile(context, event, sectionWidth),
+                      _buildEventTile(context, event, tileWidth, tileHeight),
                     if (hasOverflow)
-                      _buildOverflowIndicator(context, overflowCount),
+                      _buildOverflowIndicator(
+                          context, overflowCount, tileHeight),
                   ],
                 ),
-              ),
-            ],
+              );
+            },
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
-  /// Builds a single all-day event tile.
+  static int _tilesPerRow(double contentWidth, double tileWidth) {
+    if (contentWidth <= 0 || tileWidth <= 0) return 1;
+    return ((contentWidth + _wrapSpacing) / (tileWidth + _wrapSpacing))
+        .floor()
+        .clamp(1, 99);
+  }
+
+  /// Builds a single all-day event tile with fixed dimensions.
   Widget _buildEventTile(
     BuildContext context,
     MCalCalendarEvent event,
-    double sectionWidth,
+    double tileWidth,
+    double tileHeight,
   ) {
     final tileContext = MCalAllDayEventTileContext(
       event: event,
@@ -7538,7 +7720,6 @@ class _AllDayEventsSection extends StatelessWidget {
       regions: regions,
     );
 
-    // Build the tile content
     final defaultWidget = _buildDefaultTile(context, event);
     Widget tile = allDayEventTileBuilder != null
         ? allDayEventTileBuilder!(context, event, tileContext, defaultWidget)
@@ -7558,24 +7739,18 @@ class _AllDayEventsSection extends StatelessWidget {
       );
     }
 
-    // Add semantic label
     tile = Semantics(
       label: '${event.title}, All day',
       button: true,
       child: tile,
     );
 
-    // Wrap with MCalDraggableEventTile when drag-to-move is enabled
     if (enableDragToMove && onDragStarted != null) {
       final hSpacing = theme.eventTileHorizontalSpacing ?? 2.0;
-      // All-day tiles are intrinsically sized (minWidth: 80, maxWidth: 200).
-      // Pass maxWidth so the drag feedback matches the source tile instead of
-      // stretching to the full section width.
-      const allDayTileMaxWidth = 200.0;
       tile = MCalDraggableEventTile(
         event: event,
         sourceDate: displayDate,
-        dayWidth: allDayTileMaxWidth,
+        dayWidth: tileWidth,
         horizontalSpacing: hSpacing,
         enabled: true,
         dragLongPressDelay: dragLongPressDelay,
@@ -7595,7 +7770,6 @@ class _AllDayEventsSection extends StatelessWidget {
     } else if (onEventTap != null ||
         onEventLongPress != null ||
         onEventDoubleTap != null) {
-      // Wrap with gesture detector for tap/long-press/double-tap when drag is disabled
       tile = GestureDetector(
         onTap: onEventTap != null
             ? () => onEventTap!(
@@ -7619,10 +7793,21 @@ class _AllDayEventsSection extends StatelessWidget {
       );
     }
 
-    return tile;
+    if (onHoverEvent != null) {
+      tile = MouseRegion(
+        onEnter: (_) => onHoverEvent!(context, event),
+        onExit: (_) => onHoverEvent!(context, null),
+        child: tile,
+      );
+    }
+
+    return SizedBox(width: tileWidth, height: tileHeight, child: tile);
   }
 
   /// Builds the default all-day event tile appearance.
+  ///
+  /// The parent [_buildEventTile] constrains this to the fixed tile dimensions,
+  /// so no intrinsic size constraints are needed here.
   Widget _buildDefaultTile(BuildContext context, MCalCalendarEvent event) {
     final tileColor = theme.ignoreEventColors
         ? (theme.allDayEventBackgroundColor ??
@@ -7634,8 +7819,7 @@ class _AllDayEventsSection extends StatelessWidget {
               Colors.blue);
 
     return Container(
-      constraints: const BoxConstraints(minWidth: 80, maxWidth: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
       decoration: BoxDecoration(
         color: tileColor.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(theme.eventTileCornerRadius ?? 3.0),
@@ -7645,9 +7829,7 @@ class _AllDayEventsSection extends StatelessWidget {
         ),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Color bar indicator
           Container(
             width: 3,
             height: 16,
@@ -7656,10 +7838,8 @@ class _AllDayEventsSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(1.5),
             ),
           ),
-          const SizedBox(width: 6),
-
-          // Event title
-          Flexible(
+          const SizedBox(width: 4),
+          Expanded(
             child: Text(
               event.title,
               style:
@@ -7679,10 +7859,30 @@ class _AllDayEventsSection extends StatelessWidget {
   }
 
   /// Builds the overflow indicator showing how many events are hidden.
-  Widget _buildOverflowIndicator(BuildContext context, int count) {
+  Widget _buildOverflowIndicator(
+    BuildContext context,
+    int count,
+    double tileHeight,
+  ) {
+    final overflowWidth =
+        theme.dayTheme?.allDayOverflowIndicatorWidth ?? _defaultOverflowWidth;
     final overflowEvents = events.skip(events.length - count).toList();
+    final visibleEvts = events.take(events.length - count).toList();
 
-    return Semantics(
+    final overflowContext = MCalDayOverflowIndicatorContext(
+      date: displayDate,
+      hiddenEventCount: count,
+      hiddenEvents: overflowEvents,
+      visibleEvents: visibleEvts,
+    );
+
+    final defaultWidget = _buildDefaultOverflowIndicator(context, count);
+
+    Widget indicator = allDayOverflowBuilder != null
+        ? allDayOverflowBuilder!(context, overflowContext, defaultWidget)
+        : defaultWidget;
+
+    indicator = Semantics(
       label: '$count more all-day events',
       button: true,
       child: GestureDetector(
@@ -7694,42 +7894,60 @@ class _AllDayEventsSection extends StatelessWidget {
             : null,
         onDoubleTap: onOverflowDoubleTap != null
             ? () {
-                final visibleEvents = events
-                    .take(events.length - count)
-                    .toList();
                 onOverflowDoubleTap!(
                   context,
                   MCalOverflowTapDetails(
                     date: displayDate,
                     hiddenEvents: overflowEvents,
-                    visibleEvents: visibleEvents,
+                    visibleEvents: visibleEvts,
                   ),
                 );
               }
             : null,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-          decoration: BoxDecoration(
-            color:
-                theme.cellBorderColor?.withValues(alpha: 0.1) ??
-                Colors.grey.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(
-              theme.eventTileCornerRadius ?? 3.0,
-            ),
-            border: Border.all(
-              color:
-                  theme.cellBorderColor ?? Colors.grey.withValues(alpha: 0.3),
-              width: 1.0,
-            ),
+        child: indicator,
+      ),
+    );
+
+    if (onHoverOverflow != null) {
+      indicator = MouseRegion(
+        onEnter: (_) => onHoverOverflow!(
+          context,
+          MCalOverflowTapDetails(
+            date: displayDate,
+            hiddenEvents: overflowEvents,
+            visibleEvents: visibleEvts,
           ),
-          child: Text(
-            '+$count more',
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+        ),
+        onExit: (_) => onHoverOverflow!(context, null),
+        child: indicator,
+      );
+    }
+
+    return SizedBox(width: overflowWidth, height: tileHeight, child: indicator);
+  }
+
+  Widget _buildDefaultOverflowIndicator(BuildContext context, int count) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+      decoration: BoxDecoration(
+        color:
+            theme.cellBorderColor?.withValues(alpha: 0.1) ??
+            Colors.grey.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(
+          theme.eventTileCornerRadius ?? 3.0,
+        ),
+        border: Border.all(
+          color:
+              theme.cellBorderColor ?? Colors.grey.withValues(alpha: 0.3),
+          width: 1.0,
+        ),
+      ),
+      child: Text(
+        '+$count more',
+        style: TextStyle(
+          fontSize: 11,
+          color: Colors.grey[700],
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -7973,6 +8191,7 @@ class _TimeGridEventsLayer extends StatelessWidget {
     this.onEventTap,
     this.onEventLongPress,
     this.onEventDoubleTap,
+    this.onHoverEvent,
     this.keyboardFocusedEventId,
     this.enableDragToMove = false,
     this.enableDragToResize = false,
@@ -8010,6 +8229,7 @@ class _TimeGridEventsLayer extends StatelessWidget {
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final void Function(BuildContext, MCalEventTapDetails)? onEventDoubleTap;
+  final void Function(BuildContext, MCalCalendarEvent?)? onHoverEvent;
   final String? keyboardFocusedEventId;
   final bool enableDragToMove;
   final bool enableDragToResize;
@@ -8260,6 +8480,14 @@ class _TimeGridEventsLayer extends StatelessWidget {
         tileContext,
         width,
         height,
+      );
+    }
+
+    if (onHoverEvent != null) {
+      tile = MouseRegion(
+        onEnter: (_) => onHoverEvent!(context, event),
+        onExit: (_) => onHoverEvent!(context, null),
+        child: tile,
       );
     }
 

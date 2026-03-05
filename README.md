@@ -1193,7 +1193,7 @@ Regions on the controller are enforced across all views. A timed blocking region
 Both views pass regions to builder contexts so consumers can customize rendering:
 
 - **Month View**: `MCalDayCellContext.regions` and `MCalEventTileContext.regions` contain all regions for the cell/event date
-- **Day View**: `MCalTimedEventTileContext.regions`, `MCalAllDayEventTileContext.regions`, `MCalGridlineContext.regions`, and `MCalTimeSlotContext.regions`
+- **Day View**: `MCalTimedEventTileContext.regions`, `MCalAllDayEventTileContext.regions`, `MCalGridlineContext.regions`, and `MCalTimeSlotContext.regions` (filtered to regions containing the specific time slot)
 
 ## Example
 

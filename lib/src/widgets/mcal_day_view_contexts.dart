@@ -526,7 +526,24 @@ class MCalTimeSlotContext {
   /// When true, [hour] and [minute] are null and [offset] is 0.0.
   final bool isAllDayArea;
 
-  /// Regions applicable to the display date.
+  /// The event currently under the cursor, if any.
+  ///
+  /// Non-null when the cursor is positioned over a timed event tile at this
+  /// time slot. Consumers can use this to decide whether to show time-slot
+  /// information, event information, or both.
+  final MCalCalendarEvent? hoveredEvent;
+
+  /// All events that occupy this time slot (may overlap).
+  ///
+  /// Includes every timed event whose time range contains the hovered time.
+  /// Useful for showing all concurrent events in a tooltip or status bar.
+  final List<MCalCalendarEvent> events;
+
+  /// All regions that contain the hovered time slot.
+  ///
+  /// Includes every timed region whose time range contains the hovered time,
+  /// plus any all-day regions on this date. Useful for showing region-specific
+  /// information or checking multiple blocking constraints.
   final List<MCalRegion> regions;
 
   /// Creates a new [MCalTimeSlotContext] instance.
@@ -536,6 +553,8 @@ class MCalTimeSlotContext {
     required this.minute,
     required this.offset,
     required this.isAllDayArea,
+    this.hoveredEvent,
+    this.events = const [],
     this.regions = const [],
   });
 }

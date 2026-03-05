@@ -79,6 +79,7 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
   bool _enableKeyboardNavigation = true;
   bool _autoFocusOnCellTap = true;
   bool _allowKeyboardDelete = true;
+  bool _allowKeyboardCreate = true;
 
   // ============================================================
   // RTL Override Settings
@@ -239,6 +240,15 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
                       return true;
                     }
                   : null,
+              onCreateEventRequested: _allowKeyboardCreate
+                  ? (ctx, date) {
+                      SnackBarHelper.show(
+                        context,
+                        'Create event on ${_formatDate(date, locale)}',
+                      );
+                      return true;
+                    }
+                  : null,
               // RTL Override
               textDirection: _textDirectionOverride,
               layoutDirection: _layoutDirectionOverride,
@@ -309,7 +319,19 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
               },
               onHoverCell: (context, cellContext) {
                 if (cellContext != null) {
-                  _setStatus('Cell: ${_formatDate(cellContext.date, locale)}');
+                  final dateStr = _formatDate(cellContext.date, locale);
+                  final parts = <String>[];
+                  for (final e in cellContext.events) {
+                    parts.add(e.title);
+                  }
+                  for (final r in cellContext.regions) {
+                    parts.add(r.text ?? r.id);
+                  }
+                  if (parts.isNotEmpty) {
+                    _setStatus('${parts.join(' · ')} : $dateStr');
+                  } else {
+                    _setStatus('Cell: $dateStr');
+                  }
                 } else {
                   _setStatus('—');
                 }
@@ -317,6 +339,31 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
               onHoverEvent: (context, eventContext) {
                 if (eventContext != null) {
                   _setStatus('Event: ${eventContext.event.title}');
+                } else {
+                  _setStatus('—');
+                }
+              },
+              onHoverDateLabel: (context, labelContext) {
+                if (labelContext != null) {
+                  _setStatus(
+                    'Date label: ${_formatDate(labelContext.date, locale)}',
+                  );
+                } else {
+                  _setStatus('—');
+                }
+              },
+              onHoverOverflow: (context, details) {
+                if (details != null) {
+                  _setStatus(
+                    'Overflow: ${details.hiddenEventCount} hidden events (${_formatDate(details.date, locale)})',
+                  );
+                } else {
+                  _setStatus('—');
+                }
+              },
+              onHoverDayOfWeekHeader: (context, headerContext) {
+                if (headerContext != null) {
+                  _setStatus('Day header: ${headerContext.dayName}');
                 } else {
                   _setStatus('—');
                 }
@@ -610,6 +657,12 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
               value: _allowKeyboardDelete,
               onChanged: (value) =>
                   setState(() => _allowKeyboardDelete = value),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingAllowKeyboardCreate,
+              value: _allowKeyboardCreate,
+              onChanged: (value) =>
+                  setState(() => _allowKeyboardCreate = value),
             ),
           ],
         ),

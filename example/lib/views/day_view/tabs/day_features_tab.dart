@@ -733,11 +733,37 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               l10n.snackbarDayHeaderLongPress(date.toString().split(' ')[0]),
             );
           },
+          onDayHeaderDoubleTap: (context, headerContext) {
+            SnackBarHelper.show(
+              context,
+              l10n.snackbarDayHeaderDoubleTap(
+                headerContext.date.toString().split(' ')[0],
+              ),
+            );
+          },
           onTimeLabelTap: (context, labelContext) {
             final t = labelContext.time;
             SnackBarHelper.show(
               context,
               l10n.snackbarTimeLabelTap(
+                '${t.hour}:${t.minute.toString().padLeft(2, '0')}',
+              ),
+            );
+          },
+          onTimeLabelLongPress: (context, labelContext) {
+            final t = labelContext.time;
+            SnackBarHelper.show(
+              context,
+              l10n.snackbarTimeLabelLongPress(
+                '${t.hour}:${t.minute.toString().padLeft(2, '0')}',
+              ),
+            );
+          },
+          onTimeLabelDoubleTap: (context, labelContext) {
+            final t = labelContext.time;
+            SnackBarHelper.show(
+              context,
+              l10n.snackbarTimeLabelDoubleTap(
                 '${t.hour}:${t.minute.toString().padLeft(2, '0')}',
               ),
             );
@@ -804,8 +830,46 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             if (slotContext != null) {
               final hour = slotContext.hour ?? 0;
               final minute = slotContext.minute ?? 0;
+              final timeStr = '$hour:${minute.toString().padLeft(2, '0')}';
+              final parts = <String>[];
+              for (final e in slotContext.events) {
+                parts.add(e.title);
+              }
+              for (final r in slotContext.regions) {
+                parts.add(r.text ?? r.id);
+              }
+              if (parts.isNotEmpty) {
+                _setStatus('${parts.join(' · ')} : $timeStr');
+              } else {
+                _setStatus('Time slot: $timeStr');
+              }
+            } else {
+              _setStatus('—');
+            }
+          },
+          onHoverDayHeader: (context, headerContext) {
+            if (headerContext != null) {
               _setStatus(
-                'Time slot: $hour:${minute.toString().padLeft(2, '0')}',
+                'Day header: ${headerContext.date.toString().split(' ')[0]}',
+              );
+            } else {
+              _setStatus('—');
+            }
+          },
+          onHoverTimeLabel: (context, labelContext) {
+            if (labelContext != null) {
+              final t = labelContext.time;
+              _setStatus(
+                'Time label: ${t.hour}:${t.minute.toString().padLeft(2, '0')}',
+              );
+            } else {
+              _setStatus('—');
+            }
+          },
+          onHoverOverflow: (context, details) {
+            if (details != null) {
+              _setStatus(
+                'Overflow: ${details.hiddenEventCount} hidden events (${details.date.toString().split(' ')[0]})',
               );
             } else {
               _setStatus('—');
@@ -815,6 +879,21 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             SnackBarHelper.show(
               context,
               l10n.snackbarOverflowTap(events.length),
+            );
+          },
+          onOverflowLongPress: (context, events, date) {
+            SnackBarHelper.show(
+              context,
+              l10n.snackbarOverflowLongPress(
+                date.toString().split(' ')[0],
+                events.length,
+              ),
+            );
+          },
+          onOverflowDoubleTap: (context, details) {
+            SnackBarHelper.show(
+              context,
+              l10n.snackbarOverflowDoubleTap(details.hiddenEventCount),
             );
           },
           onDragWillAccept: (details) {

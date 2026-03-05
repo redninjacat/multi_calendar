@@ -61,6 +61,7 @@ export 'src/controllers/mcal_event_controller.dart';
 // Export models
 export 'src/models/mcal_calendar_event.dart';
 export 'src/models/mcal_event_change_info.dart';
+export 'src/models/mcal_month_key_bindings.dart';
 export 'src/models/mcal_recurrence_exception.dart';
 export 'src/models/mcal_recurrence_rule.dart';
 export 'src/models/mcal_region.dart';

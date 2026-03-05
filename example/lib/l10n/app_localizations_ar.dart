@@ -237,6 +237,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingAllowKeyboardDelete => 'السماح بالحذف عبر لوحة المفاتيح';
 
   @override
+  String get settingAllowKeyboardCreate =>
+      'السماح بالإنشاء عبر لوحة المفاتيح (مفتاح N)';
+
+  @override
   String get settingAutoFocusOnEventTap =>
       'التركيز التلقائي عند النقر على الحدث';
 
@@ -848,6 +852,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get accessibilityMonthNavPageDown => 'الشهر التالي';
 
   @override
+  String get accessibilityMonthNavN =>
+      'إنشاء حدث في التاريخ المحدد (إذا كان هناك معالج)';
+
+  @override
   String get accessibilityMonthEventUpDown =>
       'التنقل بين الأحداث المرئية ومؤشر الفائض';
 
@@ -874,6 +882,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get accessibilityMonthMoveEnter => 'تأكيد النقل';
 
   @override
+  String get accessibilityMonthMoveR =>
+      'إلغاء النقل، التبديل إلى وضع تغيير الحجم';
+
+  @override
   String get accessibilityMonthMoveEscape =>
       'إلغاء النقل، العودة إلى وضع الحدث';
 
@@ -892,6 +904,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get accessibilityMonthResizeEscape =>
       'إلغاء تغيير الحجم، العودة إلى وضع الحدث';
+
+  @override
+  String get accessibilityMonthKeyBindingsNote =>
+      'اختصارات لوحة المفاتيح هذه هي الافتراضية. يمكن للمطورين الذين يدمجون هذه التقويم تخصيصها أو تعطيلها عبر معامل keyBindings في MCalMonthView.';
 
   @override
   String get accessibilityDayKeyboardShortcuts =>
@@ -975,6 +991,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String snackbarOverflowDoubleTap(int count) {
+    return 'تم النقر المزدوج على الفائض: $count أحداث مخفية';
+  }
+
+  @override
   String snackbarHoverCell(String date) {
     return 'التمرير فوق الخلية: $date';
   }
@@ -1035,8 +1056,23 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String snackbarDayHeaderDoubleTap(String date) {
+    return 'تم النقر المزدوج على رأس اليوم: $date';
+  }
+
+  @override
   String snackbarTimeLabelTap(String time) {
     return 'تم النقر على تسمية الوقت: $time';
+  }
+
+  @override
+  String snackbarTimeLabelLongPress(String time) {
+    return 'تم الضغط المطوّل على تسمية الوقت: $time';
+  }
+
+  @override
+  String snackbarTimeLabelDoubleTap(String time) {
+    return 'تم النقر المزدوج على تسمية الوقت: $time';
   }
 
   @override

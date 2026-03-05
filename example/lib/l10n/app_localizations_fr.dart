@@ -245,6 +245,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Autoriser la Suppression au Clavier';
 
   @override
+  String get settingAllowKeyboardCreate =>
+      'Autoriser la Création au Clavier (touche N)';
+
+  @override
   String get settingAutoFocusOnEventTap =>
       'Focus Automatique au Toucher d\'Événement';
 
@@ -891,6 +895,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get accessibilityMonthNavPageDown => 'Mois suivant';
 
   @override
+  String get accessibilityMonthNavN =>
+      'Créer un événement à la date ciblée (si un gestionnaire est fourni)';
+
+  @override
   String get accessibilityMonthEventUpDown =>
       'Parcourir les événements visibles et l\'indicateur de débordement';
 
@@ -919,6 +927,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get accessibilityMonthMoveEnter => 'Confirmer le déplacement';
 
   @override
+  String get accessibilityMonthMoveR =>
+      'Annuler le déplacement, passer au Mode Redimensionnement';
+
+  @override
   String get accessibilityMonthMoveEscape =>
       'Annuler le déplacement, revenir au Mode Événement';
 
@@ -939,6 +951,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get accessibilityMonthResizeEscape =>
       'Annuler le redimensionnement, revenir au Mode Événement';
+
+  @override
+  String get accessibilityMonthKeyBindingsNote =>
+      'Ces raccourcis clavier sont les valeurs par défaut. Les développeurs intégrant ce calendrier peuvent les personnaliser ou les désactiver via le paramètre keyBindings sur MCalMonthView.';
 
   @override
   String get accessibilityDayKeyboardShortcuts =>
@@ -1025,6 +1041,11 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String snackbarOverflowDoubleTap(int count) {
+    return 'Débordement double-tapé : $count événements masqués';
+  }
+
+  @override
   String snackbarHoverCell(String date) {
     return 'Survol de cellule : $date';
   }
@@ -1085,8 +1106,23 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String snackbarDayHeaderDoubleTap(String date) {
+    return 'En-tête de jour double-tapé : $date';
+  }
+
+  @override
   String snackbarTimeLabelTap(String time) {
     return 'Étiquette horaire touchée : $time';
+  }
+
+  @override
+  String snackbarTimeLabelLongPress(String time) {
+    return 'Étiquette horaire appuyée longuement : $time';
+  }
+
+  @override
+  String snackbarTimeLabelDoubleTap(String time) {
+    return 'Étiquette horaire double-tapée : $time';
   }
 
   @override

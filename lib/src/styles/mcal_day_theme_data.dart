@@ -87,6 +87,28 @@ class MCalDayThemeData {
   /// Maximum number of rows to display in the Day View all-day events section.
   final int? allDaySectionMaxRows;
 
+  /// Fixed width for all-day event tiles in the Day View (in pixels).
+  ///
+  /// Using a fixed width enables deterministic layout: the number of tiles
+  /// per row is computed as `(availableWidth + spacing) / (tileWidth + spacing)`,
+  /// eliminating dependence on font metrics or content length.
+  ///
+  /// Defaults to 120.0.
+  final double? allDayTileWidth;
+
+  /// Fixed height for all-day event tiles in the Day View (in pixels).
+  ///
+  /// Defaults to 28.0.
+  final double? allDayTileHeight;
+
+  /// Fixed width for the all-day overflow indicator in the Day View (in pixels).
+  ///
+  /// The overflow indicator occupies one tile slot in the Wrap layout.
+  /// Its height matches [allDayTileHeight].
+  ///
+  /// Defaults to 80.0.
+  final double? allDayOverflowIndicatorWidth;
+
   /// Minimum height for timed event tiles in Day View (in pixels).
   final double? timedEventMinHeight;
 
@@ -184,6 +206,9 @@ class MCalDayThemeData {
     this.currentTimeIndicatorWidth,
     this.currentTimeIndicatorDotRadius,
     this.allDaySectionMaxRows,
+    this.allDayTileWidth,
+    this.allDayTileHeight,
+    this.allDayOverflowIndicatorWidth,
     this.timedEventMinHeight,
     this.timedEventBorderRadius,
     this.timedEventPadding,
@@ -272,6 +297,9 @@ class MCalDayThemeData {
     double? currentTimeIndicatorWidth,
     double? currentTimeIndicatorDotRadius,
     int? allDaySectionMaxRows,
+    double? allDayTileWidth,
+    double? allDayTileHeight,
+    double? allDayOverflowIndicatorWidth,
     double? timedEventMinHeight,
     double? timedEventBorderRadius,
     EdgeInsets? timedEventPadding,
@@ -312,6 +340,10 @@ class MCalDayThemeData {
       currentTimeIndicatorDotRadius:
           currentTimeIndicatorDotRadius ?? this.currentTimeIndicatorDotRadius,
       allDaySectionMaxRows: allDaySectionMaxRows ?? this.allDaySectionMaxRows,
+      allDayTileWidth: allDayTileWidth ?? this.allDayTileWidth,
+      allDayTileHeight: allDayTileHeight ?? this.allDayTileHeight,
+      allDayOverflowIndicatorWidth:
+          allDayOverflowIndicatorWidth ?? this.allDayOverflowIndicatorWidth,
       timedEventMinHeight: timedEventMinHeight ?? this.timedEventMinHeight,
       timedEventBorderRadius:
           timedEventBorderRadius ?? this.timedEventBorderRadius,
@@ -428,6 +460,21 @@ class MCalDayThemeData {
         t,
       ),
       allDaySectionMaxRows: t < 0.5 ? allDaySectionMaxRows : other.allDaySectionMaxRows,
+      allDayTileWidth: _lerpDouble(
+        allDayTileWidth,
+        other.allDayTileWidth,
+        t,
+      ),
+      allDayTileHeight: _lerpDouble(
+        allDayTileHeight,
+        other.allDayTileHeight,
+        t,
+      ),
+      allDayOverflowIndicatorWidth: _lerpDouble(
+        allDayOverflowIndicatorWidth,
+        other.allDayOverflowIndicatorWidth,
+        t,
+      ),
       timedEventMinHeight: _lerpDouble(
         timedEventMinHeight,
         other.timedEventMinHeight,
@@ -521,6 +568,9 @@ class MCalDayThemeData {
           currentTimeIndicatorWidth == other.currentTimeIndicatorWidth &&
           currentTimeIndicatorDotRadius == other.currentTimeIndicatorDotRadius &&
           allDaySectionMaxRows == other.allDaySectionMaxRows &&
+          allDayTileWidth == other.allDayTileWidth &&
+          allDayTileHeight == other.allDayTileHeight &&
+          allDayOverflowIndicatorWidth == other.allDayOverflowIndicatorWidth &&
           timedEventMinHeight == other.timedEventMinHeight &&
           timedEventBorderRadius == other.timedEventBorderRadius &&
           timedEventPadding == other.timedEventPadding &&
@@ -557,6 +607,9 @@ class MCalDayThemeData {
         currentTimeIndicatorWidth,
         currentTimeIndicatorDotRadius,
         allDaySectionMaxRows,
+        allDayTileWidth,
+        allDayTileHeight,
+        allDayOverflowIndicatorWidth,
         timedEventMinHeight,
         timedEventBorderRadius,
         timedEventPadding,

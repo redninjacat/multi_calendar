@@ -2,6 +2,8 @@
 
 ## Cursor Cloud specific instructions
 
+> **Cloud agents only.** If the spec-workflow MCP server is available (i.e., you are running locally in Cursor, not in the cloud), skip to the **Local agent instructions** section below instead.
+
 ### Overview
 
 This is **Multi Calendar** (`multi_calendar`), a Flutter UI package providing Day View, Multi-Day View, and Month View calendar widgets with RFC 5545 RRULE support. It is a pure Dart/Flutter library with no backend services, databases, or external dependencies.
@@ -37,11 +39,67 @@ This is **Multi Calendar** (`multi_calendar`), a Flutter UI package providing Da
 
 ---
 
+## Local agent instructions
+
+> **Local agents only (Cursor, non-cloud).** This section applies when the spec-workflow MCP server is available. If the MCP server is not reachable, fall back to the **Cursor Cloud specific instructions** section above.
+
+### Mandatory MCP usage
+
+The spec-workflow MCP server (`project-0-multi_calendar-spec-workflow`) **must** be used for all spec-driven development. Do **not** bypass it by writing directly to the filesystem for actions the MCP controls.
+
+**Always call `spec-workflow-guide` first** when starting any spec or implementation work. It returns the authoritative workflow and must be followed exactly.
+
+### Workflow sequence
+
+```
+Requirements → Design → Tasks → Implementation
+```
+
+Each phase must be completed and approved before proceeding to the next. Approval is managed exclusively through the `approvals` MCP tool — verbal approval from the user is **never** accepted.
+
+### MCP tools and when to use them
+
+| MCP Tool | When to use |
+|---|---|
+| `spec-workflow-guide` | FIRST — before any spec or implementation work |
+| `approvals` (action: `request`) | After creating/updating requirements.md, design.md, or tasks.md |
+| `approvals` (action: `status`) | Poll after requesting approval; never proceed without `approved` + successful `delete` |
+| `approvals` (action: `delete`) | After approval is confirmed; block if delete fails |
+| `spec-status` | Check overall spec progress before starting implementation |
+| `log-implementation` | After completing each task — record implementation details |
+
+### Filesystem write restrictions
+
+Only write directly to the filesystem for these purposes:
+
+- **Creating or editing spec documents** (`requirements.md`, `design.md`, `tasks.md`) at `.spec-workflow/specs/<feature-name>/` — the MCP approval flow acts on these files after they are written.
+- **Editing task status** in `tasks.md` — change `[ ]` → `[-]` when starting a task, and `[-]` → `[x]` when complete.
+- **Implementing code** — source files, test files, and example app files modified as part of a task.
+
+**Never write these via the filesystem directly:**
+
+- Implementation logs — always created via the `log-implementation` MCP tool.
+- Approval records — always managed via the `approvals` MCP tool.
+
+### Implementation workflow (per task)
+
+1. Call `spec-workflow-guide` to load the authoritative guide.
+2. Call `spec-status` to confirm which tasks are pending.
+3. Mark the task `[-]` in `tasks.md`.
+4. Search existing implementation logs in `.spec-workflow/specs/<name>/Implementation Logs/` before writing any code (prevents duplicate work).
+5. Read the task's `_Prompt:_` field for role, approach, restrictions, and success criteria.
+6. Implement the code.
+7. Call `log-implementation` with the task ID, summary, files changed, code statistics, and structured artifacts (API endpoints, components, functions, classes, integrations).
+8. Mark the task `[x]` in `tasks.md`.
+9. Repeat for the next task.
+
+---
+
 ## Spec-Workflow Integration
 
-This project uses [spec-workflow-mcp](https://github.com/Pimzino/spec-workflow-mcp) for structured, spec-driven development. The MCP server runs locally and is **not available to cloud agents**. However, all spec-workflow data lives in committed files under `.spec-workflow/`, so cloud agents can and should interact with them directly via the filesystem.
+This project uses [spec-workflow-mcp](https://github.com/Pimzino/spec-workflow-mcp) for structured, spec-driven development. The MCP server runs locally and is **not available to cloud agents**. Cloud agents interact with spec data directly via the filesystem. Local agents must use the MCP as described above.
 
-### Directory layout
+### Shared reference: directory layout
 
 ```
 .spec-workflow/
@@ -93,7 +151,9 @@ Each spec contains three documents that serve distinct purposes:
   - `_Prompt:_` — detailed implementation prompt with Role/Task/Restrictions/Success criteria
   - Checkbox status: `[ ]` pending, `[-]` in progress, `[x]` done
 
-### Writing new spec documents (cloud agent workflow)
+### Writing new spec documents (cloud agent workflow only)
+
+> Local agents: use the `spec-workflow-guide` MCP tool and follow the MCP approval workflow instead.
 
 When asked to create a spec for a new feature, write the documents directly as files. Follow this process:
 
@@ -103,7 +163,9 @@ When asked to create a spec for a new feature, write the documents directly as f
 4. **Cross-reference.** Design should cite specific requirements. Tasks should cite specific requirements and design sections. Tasks should identify existing code to leverage.
 5. **Commit and push.** The local MCP dashboard will pick up the new files when the user runs it.
 
-### Implementing tasks from a spec
+### Implementing tasks from a spec (cloud agent workflow only)
+
+> Local agents: use the `spec-workflow-guide` MCP tool and follow the MCP implementation workflow instead.
 
 When asked to implement a feature that has a spec:
 

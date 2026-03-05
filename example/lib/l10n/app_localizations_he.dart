@@ -235,6 +235,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get settingAllowKeyboardDelete => 'אפשר מחיקה באמצעות מקלדת';
 
   @override
+  String get settingAllowKeyboardCreate => 'אפשר יצירה באמצעות מקלדת (מקש N)';
+
+  @override
   String get settingAutoFocusOnEventTap => 'מיקוד אוטומטי בלחיצה על אירוע';
 
   @override
@@ -838,6 +841,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get accessibilityMonthNavPageDown => 'חודש הבא';
 
   @override
+  String get accessibilityMonthNavN => 'צור אירוע בתאריך הממוקד (אם יש מטפל)';
+
+  @override
   String get accessibilityMonthEventUpDown =>
       'עבור בין אירועים גלויים ומחוון הגלישה';
 
@@ -864,6 +870,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get accessibilityMonthMoveEnter => 'אשר הזזה';
 
   @override
+  String get accessibilityMonthMoveR => 'בטל הזזה, עבור למצב שינוי גודל';
+
+  @override
   String get accessibilityMonthMoveEscape => 'בטל הזזה, חזור למצב אירוע';
 
   @override
@@ -881,6 +890,10 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get accessibilityMonthResizeEscape =>
       'בטל שינוי גודל, חזור למצב אירוע';
+
+  @override
+  String get accessibilityMonthKeyBindingsNote =>
+      'קיצורי המקלדת אלו הם ברירות המחדל. מפתחים המשלבים לוח שנה זה יכולים להתאים אישית או להשבית אותם באמצעות הפרמטר keyBindings ב-MCalMonthView.';
 
   @override
   String get accessibilityDayKeyboardShortcuts => 'קיצורי מקלדת תצוגת יום';
@@ -963,6 +976,11 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String snackbarOverflowDoubleTap(int count) {
+    return 'גלישה נלחצה לחיצה כפולה: $count אירועים מוסתרים';
+  }
+
+  @override
   String snackbarHoverCell(String date) {
     return 'ריחוף מעל תא: $date';
   }
@@ -1023,8 +1041,23 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String snackbarDayHeaderDoubleTap(String date) {
+    return 'כותרת יום נלחצה לחיצה כפולה: $date';
+  }
+
+  @override
   String snackbarTimeLabelTap(String time) {
     return 'תווית זמן נלחצה: $time';
+  }
+
+  @override
+  String snackbarTimeLabelLongPress(String time) {
+    return 'תווית זמן נלחצה לחיצה ארוכה: $time';
+  }
+
+  @override
+  String snackbarTimeLabelDoubleTap(String time) {
+    return 'תווית זמן נלחצה לחיצה כפולה: $time';
   }
 
   @override

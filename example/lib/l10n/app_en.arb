@@ -80,6 +80,7 @@
   "settingEnableKeyboardNavigation": "Enable Keyboard Navigation",
   "settingAutoFocusOnCellTap": "Auto Focus on Cell Tap",
   "settingAllowKeyboardDelete": "Allow Keyboard Delete",
+  "settingAllowKeyboardCreate": "Allow Keyboard Create (N key)",
   "settingAutoFocusOnEventTap": "Auto Focus on Event Tap",
   "settingEnableBlackoutDays": "Enable Blackout Days",
   "settingCellBackgroundColor": "Cell Background Color",
@@ -323,6 +324,7 @@
   "accessibilityMonthNavEnd": "Last day of month",
   "accessibilityMonthNavPageUp": "Previous month",
   "accessibilityMonthNavPageDown": "Next month",
+  "accessibilityMonthNavN": "Create event on focused date (if handler provided)",
   "accessibilityMonthEventUpDown": "Cycle through visible events and overflow indicator",
   "accessibilityMonthEventEnterSpace": "Activate event/overflow and return to Navigation",
   "accessibilityMonthEventD": "Delete event (if handler provided)",
@@ -331,12 +333,14 @@
   "accessibilityMonthEventEscape": "Return to Navigation Mode",
   "accessibilityMonthMoveArrows": "Move event to target cell",
   "accessibilityMonthMoveEnter": "Confirm move",
+  "accessibilityMonthMoveR": "Cancel move, switch to Resize Mode",
   "accessibilityMonthMoveEscape": "Cancel move, return to Event Mode",
   "accessibilityMonthResizeSE": "Switch between start/end edge",
   "accessibilityMonthResizeArrows": "Resize selected edge",
   "accessibilityMonthResizeEnter": "Confirm resize",
   "accessibilityMonthResizeM": "Switch to Move Mode",
   "accessibilityMonthResizeEscape": "Cancel resize, return to Event Mode",
+  "accessibilityMonthKeyBindingsNote": "These key bindings are the defaults. Developers integrating this calendar can customize or disable any of them via the keyBindings parameter on MCalMonthView.",
   "accessibilityDayKeyboardShortcuts": "Day View Keyboard Shortcuts",
   "accessibilityDayShortcutArrows": "Arrow keys: Navigate days/events",
   "accessibilityDayShortcutTab": "Tab: Cycle through events",
@@ -435,6 +439,15 @@
       "date": {
         "type": "String"
       },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "snackbarOverflowDoubleTap": "Overflow double-tapped: {count} hidden events",
+  "@snackbarOverflowDoubleTap": {
+    "description": "Message shown when overflow indicator is double-tapped",
+    "placeholders": {
       "count": {
         "type": "int"
       }
@@ -563,9 +576,36 @@
       }
     }
   },
+  "snackbarDayHeaderDoubleTap": "Day header double-tapped: {date}",
+  "@snackbarDayHeaderDoubleTap": {
+    "description": "Message shown when day header is double-tapped",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "snackbarTimeLabelTap": "Time label tapped: {time}",
   "@snackbarTimeLabelTap": {
     "description": "Message shown when time label is tapped",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarTimeLabelLongPress": "Time label long pressed: {time}",
+  "@snackbarTimeLabelLongPress": {
+    "description": "Message shown when time label is long pressed",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "snackbarTimeLabelDoubleTap": "Time label double-tapped: {time}",
+  "@snackbarTimeLabelDoubleTap": {
+    "description": "Message shown when time label is double-tapped",
     "placeholders": {
       "time": {
         "type": "String"

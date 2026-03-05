@@ -237,6 +237,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingAllowKeyboardDelete => 'Allow Keyboard Delete';
 
   @override
+  String get settingAllowKeyboardCreate => 'Allow Keyboard Create (N key)';
+
+  @override
   String get settingAutoFocusOnEventTap => 'Auto Focus on Event Tap';
 
   @override
@@ -848,6 +851,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accessibilityMonthNavPageDown => 'Next month';
 
   @override
+  String get accessibilityMonthNavN =>
+      'Create event on focused date (if handler provided)';
+
+  @override
   String get accessibilityMonthEventUpDown =>
       'Cycle through visible events and overflow indicator';
 
@@ -874,6 +881,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accessibilityMonthMoveEnter => 'Confirm move';
 
   @override
+  String get accessibilityMonthMoveR => 'Cancel move, switch to Resize Mode';
+
+  @override
   String get accessibilityMonthMoveEscape =>
       'Cancel move, return to Event Mode';
 
@@ -892,6 +902,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get accessibilityMonthResizeEscape =>
       'Cancel resize, return to Event Mode';
+
+  @override
+  String get accessibilityMonthKeyBindingsNote =>
+      'These key bindings are the defaults. Developers integrating this calendar can customize or disable any of them via the keyBindings parameter on MCalMonthView.';
 
   @override
   String get accessibilityDayKeyboardShortcuts => 'Day View Keyboard Shortcuts';
@@ -973,6 +987,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String snackbarOverflowDoubleTap(int count) {
+    return 'Overflow double-tapped: $count hidden events';
+  }
+
+  @override
   String snackbarHoverCell(String date) {
     return 'Hovering over cell: $date';
   }
@@ -1033,8 +1052,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String snackbarDayHeaderDoubleTap(String date) {
+    return 'Day header double-tapped: $date';
+  }
+
+  @override
   String snackbarTimeLabelTap(String time) {
     return 'Time label tapped: $time';
+  }
+
+  @override
+  String snackbarTimeLabelLongPress(String time) {
+    return 'Time label long pressed: $time';
+  }
+
+  @override
+  String snackbarTimeLabelDoubleTap(String time) {
+    return 'Time label double-tapped: $time';
   }
 
   @override

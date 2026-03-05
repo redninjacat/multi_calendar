@@ -10,4 +10,93 @@ Month view
  Add layoutVisibleCounts handling to examples that have custom weeklayout
 
 Day view
+ make key handling work like month view
  all day section - max rows??
+
+
+
+We have re-organized the Month View to use a custom keyboard navigation state machine. Help me create a new spec that changes Day View to use a nearly identical keyboard navigation system. Day View and Month View have different layouts and navigation though. Day view has an all-day section and a time grid, so it needs keys to switch an event between the two. Here is the full list of keys and usages for Month View. This is taken from the Month View Accessibility tab.
+
+-- Navigation Mode --
+Default mode. Arrow keys move between cells.
+
+Arrow keys - Navigate between cells
+Enter / Space - Enter Event Mode (if cell has events)
+Home - First day of month
+End - Last day of month
+Page Up - Previous month
+Page Down - Next month
+N - New event (if handler provided)
+
+-- Event Mode --
+Enter/Space on a cell with events. Cycle through visible events.
+
+Tab / Shift+Tab / Up / Down - Cycle through visible events and overflow indicator
+Enter / Space - Activate event/overflow and return to Navigation
+D / Delete (if handler provided)
+M - Enter Move Mode
+R - Enter Resize Mode
+Escape - Return to Navigation Mode
+
+-- Move Mode --
+Press M in Event Mode. Relocate the selected event.
+
+Arrow keys - Move event to target cell
+Enter / Space - Confirm move
+R - Cancel move, switch to Resize Mode
+Escape - Cancel move, return to Event Mode
+
+-- Resize Mode --
+Press R in Event Mode. Change the start or end date.
+
+S / E - Switch between start/end edge
+Arrow keys - Resize selected edge
+Enter / Space - Confirm resize
+M - Cancel resize, switch to Move Mode
+Escape - Cancel resize, return to Event Mode
+
+
+Here is my vision of the equivalent keys and mods for the Day View
+
+-- Navigation Mode --
+Default mode. Arrow keys move between time slots and days.
+
+Up / Down - Navigate between time slots and the all-day section. (All-day section acts as single time slot)
+Enter / Space - Enter Event Mode (if day has events)
+Home - First visible time slot of day (User must press up key or A to move to All-day section)
+End - Last visible time slot of day
+Page Up - Previous day
+Page Down - Next day
+N - New event (if handler provided)
+A - Jump to All-day section (if not already there)
+T - Jump to time grid (if not already there, use current time of day or closest visible)
+
+-- Event Mode --
+Enter/Space on a day with events. Cycle through visible events.
+
+Tab / Shift+Tab / Up / Down - Cycle through visible events including all-day events
+Enter / Space - Activate event and return to Navigation
+D / Delete (if handler provided)
+M - Enter Move Mode
+R - Enter Resize Mode
+Escape - Return to Navigation Mode
+A - Convert event to all-day event (if timed)
+T - Convert event to timed event (if all-day, use current time of day)
+
+-- Move Mode --
+Press M in Event Mode. Relocate the selected event.
+
+Up / Down - Move event up and down time slots (ignored for all-day events)
+Left / right - Move event between days (using same time of day for timed events)
+Enter / Space - Confirm move
+R - Cancel move, switch to Resize Mode
+Escape - Cancel move, return to Event Mode
+
+-- Resize Mode --
+Press R in Event Mode. Change the start or end date.
+
+S / E - Switch between start/end edge
+Arrow keys - Resize selected edge (up and down are ignored for all-day events)
+Enter / Space - Confirm resize
+M - Cancel resize, switch to Move Mode
+Escape - Cancel resize, return to Event Mode

@@ -9,6 +9,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
+import '../models/mcal_month_key_bindings.dart';
 import '../models/mcal_recurrence_exception.dart';
 import '../models/mcal_region.dart';
 import '../models/mcal_recurrence_rule.dart';
@@ -124,20 +125,6 @@ _getRecurrenceMetadata(
     masterEvent: masterEvent,
     isException: isException,
   );
-}
-
-// ============================================================================
-// Keyboard Shortcut Intents
-// ============================================================================
-
-/// Intent for the "create new event" keyboard shortcut (Cmd/Ctrl+N).
-///
-/// When [MCalMonthView.enableKeyboardNavigation] is true, pressing Cmd+N (Mac)
-/// or Ctrl+N (Windows/Linux) triggers [MCalMonthView.onCreateEventRequested].
-///
-/// Override via [MCalMonthView.keyboardShortcuts] to customize the activator.
-class MCalMonthViewCreateEventIntent extends Intent {
-  const MCalMonthViewCreateEventIntent();
 }
 
 // ============================================================================
@@ -393,6 +380,14 @@ class MCalMonthView extends StatefulWidget {
   /// of hidden events or tooltip information.
   final void Function(BuildContext, MCalOverflowTapDetails?)? onHoverOverflow;
 
+  /// Callback invoked when the mouse hovers over a day-of-week header
+  /// (e.g. "Mon", "Tue").
+  ///
+  /// Receives [BuildContext] and [MCalMonthDayHeaderContext] for the hovered
+  /// header, or null when the mouse exits. Useful for highlighting or tooltips.
+  final void Function(BuildContext, MCalMonthDayHeaderContext?)?
+  onHoverDayOfWeekHeader;
+
   // ============ Keyboard navigation ============
 
   /// Whether keyboard navigation is enabled.
@@ -401,31 +396,48 @@ class MCalMonthView extends StatefulWidget {
   /// select, and other keyboard shortcuts. Defaults to true.
   final bool enableKeyboardNavigation;
 
-  /// Custom keyboard shortcuts for Month View CRUD operations.
+  // keyboardShortcuts removed — global Shortcuts/Actions wiring for Month View
+  // was replaced by the four-mode key event handler. Use [keyBindings] to
+  // configure which keys trigger each action.
+
+  /// Custom key bindings for the four-mode keyboard navigation state machine.
   ///
-  /// Override the default keyboard shortcuts by providing a map of
-  /// [ShortcutActivator] to [Intent]. The provided shortcuts are merged with
-  /// the defaults, allowing selective overrides.
+  /// When null, the default bindings from [MCalMonthKeyBindings] are used.
+  /// Use [MCalMonthKeyBindings.copyWith] to override specific actions while
+  /// keeping all other defaults.
   ///
-  /// Default shortcuts:
-  /// - Cmd/Ctrl+N: Create new event ([MCalMonthViewCreateEventIntent])
+  /// ## Example — disabling keyboard delete
   ///
-  /// Example: Override Cmd+N to use a different shortcut:
   /// ```dart
-  /// keyboardShortcuts: {
-  ///   SingleActivator(LogicalKeyboardKey.keyN, meta: true): MCalMonthViewCreateEventIntent(),
-  /// }
+  /// MCalMonthView(
+  ///   keyBindings: const MCalMonthKeyBindings(delete: []),
+  /// )
   /// ```
-  final Map<ShortcutActivator, Intent>? keyboardShortcuts;
+  final MCalMonthKeyBindings? keyBindings;
 
   // ============ Keyboard CRUD callbacks ============
 
-  /// Called when the user requests to create a new event via keyboard shortcut
-  /// (Cmd/Ctrl+N by default).
+  /// Called when the user presses N (or the configured [MCalMonthKeyBindings.createEvent]
+  /// key) while in Navigation Mode.
   ///
-  /// Use the controller's [MCalEventController.displayDate] and the focused date
-  /// to determine the date for the new event.
-  final VoidCallback? onCreateEventRequested;
+  /// The [BuildContext] passed is the calendar's build context — use it to show
+  /// a dialog or navigate. The [DateTime] is the currently focused date
+  /// (falling back to the displayed month's first day when no date is focused).
+  ///
+  /// The `bool` return is reserved for future library behaviour (e.g.
+  /// auto-navigating focus to a newly created event). The library currently
+  /// ignores the value but **awaits** the [Future] if one is returned, keeping
+  /// the API path open without a breaking change.
+  ///
+  /// Return `true` synchronously for best performance; return a `Future<bool>`
+  /// when an async confirmation dialog is involved.
+  ///
+  /// When `null`, the N key is absorbed with no action.
+  ///
+  /// **Only active in Navigation Mode.** Pressing the configured key in Event,
+  /// Move, or Resize modes does not trigger this callback.
+  final FutureOr<bool> Function(BuildContext context, DateTime date)?
+      onCreateEventRequested;
 
   /// Called when the user requests to delete the focused event via keyboard
   /// (D, Delete, or Backspace while in Event Mode).
@@ -918,9 +930,10 @@ class MCalMonthView extends StatefulWidget {
     this.onHoverEvent,
     this.onHoverDateLabel,
     this.onHoverOverflow,
+    this.onHoverDayOfWeekHeader,
     // Keyboard navigation
     this.enableKeyboardNavigation = true,
-    this.keyboardShortcuts,
+    this.keyBindings,
     // Keyboard CRUD callbacks
     this.onCreateEventRequested,
     this.onDeleteEventRequested,
@@ -1788,41 +1801,6 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   // Keyboard Shortcut Helpers
   // ============================================================================
 
-  /// Builds the default keyboard shortcuts for Month View.
-  Map<ShortcutActivator, Intent> _buildDefaultShortcuts() {
-    return <ShortcutActivator, Intent>{
-      // Cmd/Ctrl+N: Create new event
-      const SingleActivator(LogicalKeyboardKey.keyN, control: true):
-          const MCalMonthViewCreateEventIntent(),
-      const SingleActivator(LogicalKeyboardKey.keyN, meta: true):
-          const MCalMonthViewCreateEventIntent(),
-    };
-  }
-
-  /// Builds the merged shortcuts map (defaults + user overrides).
-  Map<ShortcutActivator, Intent> _buildShortcutsMap() {
-    final shortcuts = Map<ShortcutActivator, Intent>.from(
-      _buildDefaultShortcuts(),
-    );
-    if (widget.keyboardShortcuts != null) {
-      shortcuts.addAll(widget.keyboardShortcuts!);
-    }
-    return shortcuts;
-  }
-
-  /// Builds the Actions map for keyboard shortcut intents.
-  Map<Type, Action<Intent>> _buildActionsMap() {
-    return <Type, Action<Intent>>{
-      MCalMonthViewCreateEventIntent:
-          CallbackAction<MCalMonthViewCreateEventIntent>(
-            onInvoke: (_) {
-              widget.onCreateEventRequested?.call();
-              return null;
-            },
-          ),
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     // Resolve theme and locale ONCE at the top of build() and pass down
@@ -1861,6 +1839,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
             dayHeaderBuilder: widget.dayHeaderBuilder,
             locale: locale,
             showWeekNumbers: widget.showWeekNumbers,
+            onHoverDayOfWeekHeader: widget.onHoverDayOfWeekHeader,
           ),
           Expanded(
             key: _gridAreaKey,
@@ -1902,11 +1881,10 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       children: [calendarContent, if (overlay != null) overlay],
     );
 
-    // Wrap content with Shortcuts and Actions for keyboard CRUD operations
-    final shortcutsContent = Shortcuts(
-      shortcuts: _buildShortcutsMap(),
-      child: Actions(actions: _buildActionsMap(), child: content),
-    );
+    // Alias for readability — no Shortcuts/Actions wrapper needed because the
+    // Focus.onKeyEvent handler in the four-mode state machine now owns all
+    // keyboard routing for Month View.
+    final shortcutsContent = content;
 
     // Generate default semantics label if not provided
     final l10n = mcalL10n(context);
@@ -2112,17 +2090,17 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       handled = true;
     }
     // Home - first day of current month
-    else if (key == LogicalKeyboardKey.home) {
+    else if (_matchesAny(_keyBindings.home, key)) {
       newFocusedDate = DateTime(focusedDate.year, focusedDate.month, 1);
       handled = true;
     }
     // End - last day of current month
-    else if (key == LogicalKeyboardKey.end) {
+    else if (_matchesAny(_keyBindings.end, key)) {
       newFocusedDate = DateTime(focusedDate.year, focusedDate.month + 1, 0);
       handled = true;
     }
     // Page Up - previous month
-    else if (key == LogicalKeyboardKey.pageUp) {
+    else if (_matchesAny(_keyBindings.pageUp, key)) {
       _navigateToPreviousMonth();
       // Move focus to same day in previous month (or last day if month is shorter)
       final prevMonth = focusedDate.month == 1
@@ -2140,7 +2118,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       handled = true;
     }
     // Page Down - next month
-    else if (key == LogicalKeyboardKey.pageDown) {
+    else if (_matchesAny(_keyBindings.pageDown, key)) {
       _navigateToNextMonth();
       // Move focus to same day in next month (or last day if month is shorter)
       final nextMonth = focusedDate.month == 12
@@ -2159,8 +2137,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
     // Enter/Space - enter Event Mode if drag-and-drop is enabled and the
     // focused cell has events; otherwise trigger normal cell tap.
-    else if (key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.space ||
+    else if (_matchesAny(_keyBindings.enterEventMode, key) ||
         key == LogicalKeyboardKey.numpadEnter) {
       if (widget.enableDragToMove) {
         final dayEvents = _getSortedEventsForDate(focusedDate);
@@ -2171,6 +2148,20 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       }
       // No events or drag-and-drop disabled: fall through to cell tap
       _triggerCellTapForFocusedDate(focusedDate);
+      return KeyEventResult.handled;
+    }
+
+    // N (or configured createEvent key): invoke onCreateEventRequested
+    if (_matchesAny(_keyBindings.createEvent, key)) {
+      final callback = widget.onCreateEventRequested;
+      if (callback != null) {
+        final result = callback(context, focusedDate);
+        if (result is Future<bool>) {
+          result.ignore();
+        }
+      }
+      // Absorb the key even when the callback is null so the key event does
+      // not propagate to ancestor widgets (e.g. browser shortcuts).
       return KeyEventResult.handled;
     }
 
@@ -2287,6 +2278,29 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     return _layoutVisibleCounts[key] ?? allEvents.length;
   }
 
+  /// Returns the effective key bindings, falling back to defaults when
+  /// [MCalMonthView.keyBindings] is null.
+  MCalMonthKeyBindings get _keyBindings =>
+      widget.keyBindings ?? const MCalMonthKeyBindings();
+
+  /// Returns true if any activator in [activators] matches [eventKey] and the
+  /// current modifier state from [HardwareKeyboard.instance].
+  bool _matchesAny(
+    List<MCalKeyActivator> activators,
+    LogicalKeyboardKey eventKey,
+  ) {
+    final hw = HardwareKeyboard.instance;
+    return activators.any(
+      (a) => a.matches(
+        eventKey,
+        isShiftPressed: hw.isShiftPressed,
+        isControlPressed: hw.isControlPressed,
+        isMetaPressed: hw.isMetaPressed,
+        isAltPressed: hw.isAltPressed,
+      ),
+    );
+  }
+
   /// Clears all keyboard-move state fields (and keyboard-resize sub-mode).
   void _exitKeyboardMoveMode() {
     _exitKeyboardResizeMode();
@@ -2387,12 +2401,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // Up/Down/Tab/Shift+Tab: cycle forward or backward
-    final isForward = key == LogicalKeyboardKey.arrowDown ||
-        (key == LogicalKeyboardKey.tab &&
-            !HardwareKeyboard.instance.isShiftPressed);
-    final isBackward = key == LogicalKeyboardKey.arrowUp ||
-        (key == LogicalKeyboardKey.tab &&
-            HardwareKeyboard.instance.isShiftPressed);
+    final isForward = _matchesAny(_keyBindings.cycleForward, key);
+    final isBackward = _matchesAny(_keyBindings.cycleBackward, key);
 
     if (isForward || isBackward) {
       // currentIndex: 0..visibleCount-1 = events; visibleCount = overflow
@@ -2435,9 +2445,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // Enter/Space: activate the current item
-    if (key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.numpadEnter ||
-        key == LogicalKeyboardKey.space) {
+    if (_matchesAny(_keyBindings.activate, key) ||
+        key == LogicalKeyboardKey.numpadEnter) {
       if (_isKeyboardOverflowFocused) {
         _triggerKeyboardOverflowTap(focusedDate, allEvents, visibleCount);
         _exitKeyboardMoveMode();
@@ -2455,14 +2464,15 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // M: enter Move Mode for the currently selected event
-    if (key == LogicalKeyboardKey.keyM && !_isKeyboardOverflowFocused) {
+    if (_matchesAny(_keyBindings.enterMoveMode, key) &&
+        !_isKeyboardOverflowFocused) {
       final selectedIndex = _keyboardMoveEventIndex.clamp(0, visibleCount - 1);
       _selectKeyboardMoveEvent(allEvents[selectedIndex]);
       return KeyEventResult.handled;
     }
 
     // R: enter Resize Mode directly for the currently selected event
-    if (key == LogicalKeyboardKey.keyR &&
+    if (_matchesAny(_keyBindings.enterResizeMode, key) &&
         !_isKeyboardOverflowFocused &&
         _resolveDragToResize(context)) {
       final selectedIndex = _keyboardMoveEventIndex.clamp(0, visibleCount - 1);
@@ -2471,9 +2481,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // D / Delete / Backspace: request event deletion
-    if ((key == LogicalKeyboardKey.keyD ||
-            key == LogicalKeyboardKey.delete ||
-            key == LogicalKeyboardKey.backspace) &&
+    if (_matchesAny(_keyBindings.delete, key) &&
         !_isKeyboardOverflowFocused &&
         widget.onDeleteEventRequested != null) {
       final selectedIndex = _keyboardMoveEventIndex.clamp(0, visibleCount - 1);
@@ -2756,7 +2764,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // R key: enter resize mode (if resize is enabled)
-    if (key == LogicalKeyboardKey.keyR && _resolveDragToResize(context)) {
+    if (_matchesAny(_keyBindings.moveToResize, key) &&
+        _resolveDragToResize(context)) {
       final dragHandler = _ensureDragHandler;
 
       // If currently in drag state (from arrow move), cancel it first
@@ -2803,7 +2812,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // Enter: confirm the move
-    if (key == LogicalKeyboardKey.enter ||
+    if (_matchesAny(_keyBindings.confirmMove, key) ||
         key == LogicalKeyboardKey.numpadEnter) {
       _handleKeyboardDrop();
       return KeyEventResult.handled;
@@ -2979,7 +2988,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final rtlMult = isLayoutRTL ? -1 : 1;
 
     // S key: switch to start edge
-    if (key == LogicalKeyboardKey.keyS) {
+    if (_matchesAny(_keyBindings.switchToStartEdge, key)) {
       _keyboardResizeEdge = MCalResizeEdge.start;
       // Restart resize with new edge
       dragHandler.cancelResize();
@@ -3005,7 +3014,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // E key: switch to end edge
-    if (key == LogicalKeyboardKey.keyE) {
+    if (_matchesAny(_keyBindings.switchToEndEdge, key)) {
       _keyboardResizeEdge = MCalResizeEdge.end;
       // Restart resize with new edge
       dragHandler.cancelResize();
@@ -3031,7 +3040,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // M key: cancel resize, return to move mode
-    if (key == LogicalKeyboardKey.keyM) {
+    if (_matchesAny(_keyBindings.resizeToMove, key)) {
       dragHandler.cancelResize();
       _exitKeyboardResizeMode();
       setState(() {});
@@ -3122,14 +3131,14 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // Enter: confirm resize
-    if (key == LogicalKeyboardKey.enter ||
+    if (_matchesAny(_keyBindings.confirmResize, key) ||
         key == LogicalKeyboardKey.numpadEnter) {
       _handleKeyboardResizeEnd();
       return KeyEventResult.handled;
     }
 
     // Escape: cancel resize, stay in move mode
-    if (key == LogicalKeyboardKey.escape) {
+    if (_matchesAny(_keyBindings.cancelResize, key)) {
       dragHandler.cancelResize();
       _exitKeyboardResizeMode();
       setState(() {});
@@ -8176,6 +8185,8 @@ class _WeekdayHeaderRowWidget extends StatelessWidget {
   dayHeaderBuilder;
   final Locale locale;
   final bool showWeekNumbers;
+  final void Function(BuildContext, MCalMonthDayHeaderContext?)?
+  onHoverDayOfWeekHeader;
 
   const _WeekdayHeaderRowWidget({
     required this.firstDayOfWeek,
@@ -8183,6 +8194,7 @@ class _WeekdayHeaderRowWidget extends StatelessWidget {
     this.dayHeaderBuilder,
     required this.locale,
     this.showWeekNumbers = false,
+    this.onHoverDayOfWeekHeader,
   });
 
   @override
@@ -8235,16 +8247,25 @@ class _WeekdayHeaderRowWidget extends StatelessWidget {
         ),
       );
 
-      // Apply builder callback if provided
+      final headerContextObj = MCalMonthDayHeaderContext(
+        dayOfWeek: dayOfWeek,
+        dayName: dayName,
+      );
+
       if (dayHeaderBuilder != null) {
-        final contextObj = MCalMonthDayHeaderContext(
-          dayOfWeek: dayOfWeek,
-          dayName: dayName,
-        );
-        headerContent = dayHeaderBuilder!(context, contextObj, headerContent);
+        headerContent =
+            dayHeaderBuilder!(context, headerContextObj, headerContent);
       }
 
-      // Wrap in Expanded after builder callback to ensure proper Row layout
+      if (onHoverDayOfWeekHeader != null) {
+        headerContent = MouseRegion(
+          onEnter: (_) =>
+              onHoverDayOfWeekHeader!(context, headerContextObj),
+          onExit: (_) => onHoverDayOfWeekHeader!(context, null),
+          child: headerContent,
+        );
+      }
+
       return Expanded(child: headerContent);
     });
 

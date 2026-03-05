@@ -129,6 +129,20 @@ The keyboard navigation system enables desktop and web users to fully operate th
 5. The library SHALL NOT remove events from the controller. The consumer is responsible for calling `controller.removeEvents()` within the callback.
 6. For synchronous deletes, the consumer SHALL be able to return `true` directly (no `Future` wrapping required) for optimal performance.
 
+### Requirement 8: Navigation Mode — Create Event
+
+**User Story:** As a keyboard user, I want to press N while browsing the calendar to create a new event on the focused date, without needing to hold modifier keys.
+
+#### Acceptance Criteria
+
+1. WHEN in Navigation Mode and the user presses N THEN `onCreateEventRequested` SHALL be called with the current `BuildContext` and the focused date (falling back to `displayDate` if no date is focused).
+2. The callback signature SHALL be `FutureOr<bool> Function(BuildContext, DateTime)?` — the `BuildContext` allows the consumer to show a dialog; the `DateTime` is the focused cell's date; the `bool` return is reserved for future library behavior (e.g., auto-navigating focus to a newly created event). The library currently ignores the return value but SHALL await the `Future` if one is returned, keeping the path open for future use without a breaking API change.
+3. WHEN `onCreateEventRequested` is null THEN N SHALL be absorbed with no action.
+4. The N key for create SHALL only be active in Navigation Mode. Pressing N in Event Mode, Move Mode, or Resize Mode SHALL NOT trigger `onCreateEventRequested` (those modes already capture all keys to prevent unintended actions).
+5. The N binding SHALL be configurable via `MCalMonthKeyBindings` as a new `createEvent` property (default: `[MCalKeyActivator(LogicalKeyboardKey.keyN)]`).
+6. The existing `onCreateEventRequested: VoidCallback?` parameter SHALL be replaced with the new `FutureOr<bool> Function(BuildContext, DateTime)?` signature. The old `Cmd/Ctrl+N` global `Shortcuts`/`Actions` wiring (using `MCalMonthViewCreateEventIntent`) SHALL be removed entirely. Consumers who previously used `Cmd+N` via `keyboardShortcuts` should migrate to the new `createEvent` binding or handle it at the app level.
+7. WHEN `onCreateEventRequested` is called THEN the calendar SHALL remain in Navigation Mode regardless of the return value. The `bool` return has no behavioral effect in the current version; this is intentional and documented to avoid surprising consumers.
+
 ## Non-Functional Requirements
 
 ### Code Architecture and Modularity

@@ -95,6 +95,10 @@ class _MonthAccessibilityTabState extends State<MonthAccessibilityTab> {
             keys: l10n.accessibilityShortcutPageDown,
             action: l10n.accessibilityMonthNavPageDown,
           ),
+          _ShortcutRow(
+            keys: 'N',
+            action: l10n.accessibilityMonthNavN,
+          ),
           const SizedBox(height: 12),
 
           // Event Mode
@@ -142,6 +146,10 @@ class _MonthAccessibilityTabState extends State<MonthAccessibilityTab> {
             action: l10n.accessibilityMonthMoveEnter,
           ),
           _ShortcutRow(
+            keys: l10n.accessibilityShortcutR,
+            action: l10n.accessibilityMonthMoveR,
+          ),
+          _ShortcutRow(
             keys: l10n.accessibilityShortcutEscape,
             action: l10n.accessibilityMonthMoveEscape,
           ),
@@ -171,6 +179,42 @@ class _MonthAccessibilityTabState extends State<MonthAccessibilityTab> {
           _ShortcutRow(
             keys: l10n.accessibilityShortcutEscape,
             action: l10n.accessibilityMonthResizeEscape,
+          ),
+          const SizedBox(height: 12),
+
+          // Configurable bindings note
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.5,
+              ),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: theme.colorScheme.outlineVariant,
+                width: 0.5,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.tune,
+                  size: 14,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    l10n.accessibilityMonthKeyBindingsNote,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
         ],

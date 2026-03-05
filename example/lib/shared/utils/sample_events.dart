@@ -165,6 +165,7 @@ List<MCalCalendarEvent> createSampleEvents() {
 
 List<MCalCalendarEvent> createDayViewSampleEvents(DateTime date) {
   final d = DateTime(date.year, date.month, date.day);
+  final tomorrow = DateTime(d.year, d.month, d.day + 1);
   return [
     MCalCalendarEvent(
       id: 'dv-timed-1',
@@ -205,6 +206,24 @@ List<MCalCalendarEvent> createDayViewSampleEvents(DateTime date) {
       end: DateTime(d.year, d.month, d.day, 0, 0),
       isAllDay: true,
       color: eventColors[5],
+    ),
+    // Tomorrow: 20 all-day events to test overflow (default maxRows is 3)
+    for (int i = 1; i <= 20; i++)
+      MCalCalendarEvent(
+        id: 'dv-overflow-allday-$i',
+        title: 'All-Day Event $i',
+        start: DateTime(tomorrow.year, tomorrow.month, tomorrow.day),
+        end: DateTime(tomorrow.year, tomorrow.month, tomorrow.day),
+        isAllDay: true,
+        color: eventColors[(i - 1) % eventColors.length],
+      ),
+    MCalCalendarEvent(
+      id: 'dv-overflow-timed-1',
+      title: 'Tomorrow Standup',
+      start: DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9, 0),
+      end: DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9, 30),
+      isAllDay: false,
+      color: eventColors[0],
     ),
   ];
 }
