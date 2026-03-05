@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/day-view-keyboard-navigation/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-05T17:28:14.167Z",
+      "trigger": "initial",
+      "approvalId": "approval_1772731694161_7oll0i11u",
+      "approvalTitle": "Day View Keyboard Navigation — Design Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-03-05T17:44:11.706Z",
+      "trigger": "approved",
+      "approvalId": "approval_1772731694161_7oll0i11u",
+      "approvalTitle": "Day View Keyboard Navigation — Design Document"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/day-view-keyboard-navigation/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-05T17:51:07.712Z",
+      "trigger": "initial",
+      "approvalId": "approval_1772733067705_ujg51sjko",
+      "approvalTitle": "Day View Keyboard Navigation — Tasks Document"
+    }
+  ]
+}

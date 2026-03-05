@@ -1,12 +1,20 @@
 {
   "filePath": ".spec-workflow/specs/day-view-keyboard-navigation/requirements.md",
-  "currentVersion": 1,
+  "currentVersion": 2,
   "snapshots": [
     {
       "version": 1,
       "filename": "snapshot-001.json",
       "timestamp": "2026-03-04T00:45:54.919Z",
       "trigger": "initial",
+      "approvalId": "approval_1772585154896_uk5i2hz87",
+      "approvalTitle": "Day View Keyboard Navigation — Requirements"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-03-05T17:22:13.352Z",
+      "trigger": "approved",
       "approvalId": "approval_1772585154896_uk5i2hz87",
       "approvalTitle": "Day View Keyboard Navigation — Requirements"
     }

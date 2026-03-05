@@ -2764,7 +2764,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // R key: enter resize mode (if resize is enabled)
-    if (_matchesAny(_keyBindings.moveToResize, key) &&
+    if (_matchesAny(_keyBindings.switchToResize, key) &&
         _resolveDragToResize(context)) {
       final dragHandler = _ensureDragHandler;
 
@@ -3040,7 +3040,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     // M key: cancel resize, return to move mode
-    if (_matchesAny(_keyBindings.resizeToMove, key)) {
+    if (_matchesAny(_keyBindings.switchToMove, key)) {
       dragHandler.cancelResize();
       _exitKeyboardResizeMode();
       setState(() {});

@@ -210,9 +210,9 @@ The keyboard navigation system enables desktop and web users to fully operate th
 - The `FutureOr<bool>` pattern on callbacks allows synchronous consumers to return `true` directly, avoiding `Future` microtask overhead.
 
 ### Accessibility
-- Every mode transition SHALL produce a `SemanticsService.sendAnnouncement` so screen readers announce the change.
-- Every event cycle (Tab/Up/Down in Event Mode) SHALL announce the event title and position (e.g., "Team Meeting, 2 of 5").
-- Section transitions (A/T keys in Navigation Mode) SHALL announce the section name (e.g., "All-day section" or "Time grid, 10:00 AM").
+- Every mode transition SHALL produce a `SemanticsService.sendAnnouncement` using localized strings from `MCalLocalizations` so screen readers announce the change.
+- Every event cycle (Tab/Up/Down in Event Mode) SHALL announce the event title and position using localized strings (e.g., "Team Meeting, 2 of 5").
+- Section transitions (A/T keys in Navigation Mode) SHALL announce the section name using localized strings from `MCalLocalizations` (e.g., "All-day section" or "Time grid, 10:00 AM"). Announcement strings SHALL be added to all 5 supported language ARB files (`en`, `ar`, `es`, `fr`, `he`).
 - The keyboard shortcut guide in the example app's Day View Accessibility tab SHALL be organized by mode with localized descriptions in all 5 supported languages.
 
 ### Consistency with Month View

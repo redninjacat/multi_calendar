@@ -78,7 +78,9 @@ Multi Calendar is a Flutter package that provides flexible, customizable calenda
 
 ## Product Principles
 
-1. **Separation of Concerns**: Display logic stays in the package; data management stays external
+1. **Separation of Concerns**: Display logic stays in the package; data management stays external. Event mutations follow one of two patterns:
+   * **Requested pattern** (create, delete, type conversion): The library fires a callback and never mutates. The consumer performs the actual mutation on the controller (e.g., `addEvents`, `removeEvents`). Callbacks include `onCreateEventRequested`, `onDeleteEventRequested`, `onEventTypeConversionRequested`.
+   * **Completed + veto pattern** (move, resize): The library mutates the controller first for immediate visual feedback. The consumer receives a callback (`onEventDropped`, `onEventResized`) to sync to a backend or enforce business rules. Returning `false` reverts the change; the consumer does not perform the mutation.
 2. **Modularity Over Monolith**: Each view is independent, allowing selective use
 3. **Standards Compliance**: RFC 5545 RRULE strings stored in standard compliant format, compatible with rrule Dart libraries for interoperability
 4. **Customization First**: Expose styling and builder callbacks rather than hardcoding appearance

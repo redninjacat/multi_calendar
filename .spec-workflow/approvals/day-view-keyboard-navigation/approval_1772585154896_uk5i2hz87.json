@@ -3,8 +3,10 @@
   "title": "Day View Keyboard Navigation — Requirements",
   "filePath": ".spec-workflow/specs/day-view-keyboard-navigation/requirements.md",
   "type": "document",
-  "status": "pending",
+  "status": "approved",
   "createdAt": "2026-03-04T00:45:54.896Z",
   "category": "spec",
-  "categoryName": "day-view-keyboard-navigation"
+  "categoryName": "day-view-keyboard-navigation",
+  "response": "Approved via dashboard",
+  "respondedAt": "2026-03-05T17:22:13.354Z"
 }

@@ -127,72 +127,72 @@ Focus.onKeyEvent
 - **Design decisions**:
   - `const` constructor for zero-allocation defaults.
   - `matches()` checks both the key and all modifier states. For activators where a modifier is `false`, the corresponding modifier key must NOT be pressed (strict matching). This prevents Shift+Tab from also matching plain Tab.
-  - Implements `==` and `hashCode` for use in `Set<MCalKeyActivator>`.
+  - Implements `==` and `hashCode` for use in `List<MCalKeyActivator>` comparisons.
 
 ### Component 2: `MCalMonthKeyBindings` (NEW — Requirement 6)
 
-- **Purpose**: Holds named `Set<MCalKeyActivator>` properties for every configurable action across all four modes. Provides a `const` default constructor with the current hardcoded bindings as defaults.
+- **Purpose**: Holds named `List<MCalKeyActivator>` properties for every configurable action across all four modes. Provides a `const` default constructor with the current hardcoded bindings as defaults.
 - **File**: `lib/src/models/mcal_month_key_bindings.dart` (same file as `MCalKeyActivator`)
 - **Interfaces**:
   ```dart
   class MCalMonthKeyBindings {
     const MCalMonthKeyBindings({
       // Navigation Mode
-      this.enterEventMode = const { MCalKeyActivator(LogicalKeyboardKey.enter), MCalKeyActivator(LogicalKeyboardKey.space) },
-      this.home = const { MCalKeyActivator(LogicalKeyboardKey.home) },
-      this.end = const { MCalKeyActivator(LogicalKeyboardKey.end) },
-      this.pageUp = const { MCalKeyActivator(LogicalKeyboardKey.pageUp) },
-      this.pageDown = const { MCalKeyActivator(LogicalKeyboardKey.pageDown) },
+      this.enterEventMode = const [ MCalKeyActivator(LogicalKeyboardKey.enter), MCalKeyActivator(LogicalKeyboardKey.space) ],
+      this.home = const [ MCalKeyActivator(LogicalKeyboardKey.home) ],
+      this.end = const [ MCalKeyActivator(LogicalKeyboardKey.end) ],
+      this.pageUp = const [ MCalKeyActivator(LogicalKeyboardKey.pageUp) ],
+      this.pageDown = const [ MCalKeyActivator(LogicalKeyboardKey.pageDown) ],
 
       // Event Mode
-      this.cycleForward = const { MCalKeyActivator(LogicalKeyboardKey.tab), MCalKeyActivator(LogicalKeyboardKey.arrowDown) },
-      this.cycleBackward = const { MCalKeyActivator(LogicalKeyboardKey.tab, shift: true), MCalKeyActivator(LogicalKeyboardKey.arrowUp) },
-      this.activate = const { MCalKeyActivator(LogicalKeyboardKey.enter), MCalKeyActivator(LogicalKeyboardKey.space) },
-      this.delete = const { MCalKeyActivator(LogicalKeyboardKey.keyD), MCalKeyActivator(LogicalKeyboardKey.delete), MCalKeyActivator(LogicalKeyboardKey.backspace) },
-      this.enterMoveMode = const { MCalKeyActivator(LogicalKeyboardKey.keyM) },
-      this.enterResizeMode = const { MCalKeyActivator(LogicalKeyboardKey.keyR) },
-      this.exitEventMode = const { MCalKeyActivator(LogicalKeyboardKey.escape) },
+      this.cycleForward = const [ MCalKeyActivator(LogicalKeyboardKey.tab), MCalKeyActivator(LogicalKeyboardKey.arrowDown) ],
+      this.cycleBackward = const [ MCalKeyActivator(LogicalKeyboardKey.tab, shift: true), MCalKeyActivator(LogicalKeyboardKey.arrowUp) ],
+      this.activate = const [ MCalKeyActivator(LogicalKeyboardKey.enter), MCalKeyActivator(LogicalKeyboardKey.space) ],
+      this.delete = const [ MCalKeyActivator(LogicalKeyboardKey.keyD), MCalKeyActivator(LogicalKeyboardKey.delete), MCalKeyActivator(LogicalKeyboardKey.backspace) ],
+      this.enterMoveMode = const [ MCalKeyActivator(LogicalKeyboardKey.keyM) ],
+      this.enterResizeMode = const [ MCalKeyActivator(LogicalKeyboardKey.keyR) ],
+      this.exitEventMode = const [ MCalKeyActivator(LogicalKeyboardKey.escape) ],
 
       // Move Mode
-      this.confirmMove = const { MCalKeyActivator(LogicalKeyboardKey.enter) },
-      this.cancelMove = const { MCalKeyActivator(LogicalKeyboardKey.escape) },
-      this.moveToResize = const { MCalKeyActivator(LogicalKeyboardKey.keyR) },
+      this.confirmMove = const [ MCalKeyActivator(LogicalKeyboardKey.enter), MCalKeyActivator(LogicalKeyboardKey.space) ],
+      this.cancelMove = const [ MCalKeyActivator(LogicalKeyboardKey.escape) ],
+      this.switchToResize = const [ MCalKeyActivator(LogicalKeyboardKey.keyR) ],
 
       // Resize Mode
-      this.switchToStartEdge = const { MCalKeyActivator(LogicalKeyboardKey.keyS) },
-      this.switchToEndEdge = const { MCalKeyActivator(LogicalKeyboardKey.keyE) },
-      this.confirmResize = const { MCalKeyActivator(LogicalKeyboardKey.enter) },
-      this.resizeToMove = const { MCalKeyActivator(LogicalKeyboardKey.keyM) },
-      this.cancelResize = const { MCalKeyActivator(LogicalKeyboardKey.escape) },
+      this.switchToStartEdge = const [ MCalKeyActivator(LogicalKeyboardKey.keyS) ],
+      this.switchToEndEdge = const [ MCalKeyActivator(LogicalKeyboardKey.keyE) ],
+      this.confirmResize = const [ MCalKeyActivator(LogicalKeyboardKey.enter), MCalKeyActivator(LogicalKeyboardKey.space) ],
+      this.switchToMove = const [ MCalKeyActivator(LogicalKeyboardKey.keyM) ],
+      this.cancelResize = const [ MCalKeyActivator(LogicalKeyboardKey.escape) ],
     });
 
     // Navigation Mode
-    final Set<MCalKeyActivator> enterEventMode;
-    final Set<MCalKeyActivator> home;
-    final Set<MCalKeyActivator> end;
-    final Set<MCalKeyActivator> pageUp;
-    final Set<MCalKeyActivator> pageDown;
+    final List<MCalKeyActivator> enterEventMode;
+    final List<MCalKeyActivator> home;
+    final List<MCalKeyActivator> end;
+    final List<MCalKeyActivator> pageUp;
+    final List<MCalKeyActivator> pageDown;
 
     // Event Mode
-    final Set<MCalKeyActivator> cycleForward;
-    final Set<MCalKeyActivator> cycleBackward;
-    final Set<MCalKeyActivator> activate;
-    final Set<MCalKeyActivator> delete;
-    final Set<MCalKeyActivator> enterMoveMode;
-    final Set<MCalKeyActivator> enterResizeMode;
-    final Set<MCalKeyActivator> exitEventMode;
+    final List<MCalKeyActivator> cycleForward;
+    final List<MCalKeyActivator> cycleBackward;
+    final List<MCalKeyActivator> activate;
+    final List<MCalKeyActivator> delete;
+    final List<MCalKeyActivator> enterMoveMode;
+    final List<MCalKeyActivator> enterResizeMode;
+    final List<MCalKeyActivator> exitEventMode;
 
     // Move Mode
-    final Set<MCalKeyActivator> confirmMove;
-    final Set<MCalKeyActivator> cancelMove;
-    final Set<MCalKeyActivator> moveToResize;
+    final List<MCalKeyActivator> confirmMove;
+    final List<MCalKeyActivator> cancelMove;
+    final List<MCalKeyActivator> switchToResize;
 
     // Resize Mode
-    final Set<MCalKeyActivator> switchToStartEdge;
-    final Set<MCalKeyActivator> switchToEndEdge;
-    final Set<MCalKeyActivator> confirmResize;
-    final Set<MCalKeyActivator> resizeToMove;
-    final Set<MCalKeyActivator> cancelResize;
+    final List<MCalKeyActivator> switchToStartEdge;
+    final List<MCalKeyActivator> switchToEndEdge;
+    final List<MCalKeyActivator> confirmResize;
+    final List<MCalKeyActivator> switchToMove;
+    final List<MCalKeyActivator> cancelResize;
 
     MCalMonthKeyBindings copyWith({ ... });
   }
@@ -201,9 +201,9 @@ Focus.onKeyEvent
 - **Reuses**: Default key mappings mirror the current hardcoded `LogicalKeyboardKey` comparisons in the four mode handlers.
 - **Design decisions**:
   - `const` default constructor: allows `const MCalMonthKeyBindings()` to produce the same behavior as the current hardcoded system with zero allocation.
-  - `Set<MCalKeyActivator>` per action: multiple keys can trigger the same action (e.g., Tab and ArrowDown both cycle forward).
+  - `List<MCalKeyActivator>` per action (not `Set`, because Dart `const` sets have restrictions): multiple keys can trigger the same action (e.g., Tab and ArrowDown both cycle forward).
   - Arrow keys for directional navigation (Navigation Mode cell movement, Move Mode event movement, Resize Mode edge adjustment) are NOT in the bindings — they are hardcoded because they are inherent to directional UI and remapping them would break spatial expectations.
-  - `copyWith` enables selective overrides: `MCalMonthKeyBindings(delete: {MCalKeyActivator(LogicalKeyboardKey.keyX)})` replaces only the delete binding.
+  - `copyWith` enables selective overrides: `MCalMonthKeyBindings(delete: [MCalKeyActivator(LogicalKeyboardKey.keyX)])` replaces only the delete binding.
 
 ### Component 3: `MCalMonthView` modifications (Requirement 6)
 
@@ -212,7 +212,7 @@ Focus.onKeyEvent
 - **Changes**:
   - Add `final MCalMonthKeyBindings? keyBindings;` parameter to `MCalMonthView`.
   - In `_MCalMonthViewState`, resolve effective bindings: `MCalMonthKeyBindings get _keyBindings => widget.keyBindings ?? const MCalMonthKeyBindings();`
-  - Add a helper method `bool _matchesAny(Set<MCalKeyActivator> activators, LogicalKeyboardKey key, KeyEvent event)` that checks if any activator in the set matches the current key + modifier state.
+  - Add a helper method `bool _matchesAny(List<MCalKeyActivator> activators, LogicalKeyboardKey key, KeyEvent event)` that checks if any activator in the list matches the current key + modifier state.
   - Refactor each mode handler to replace hardcoded `key == LogicalKeyboardKey.xxx` checks with `_matchesAny(_keyBindings.xxx, key, event)`.
 - **Dependencies**: `MCalMonthKeyBindings`, `MCalKeyActivator`
 - **Reuses**: All existing mode handler logic, state fields, and helper methods remain unchanged — only the key-matching expressions change.

@@ -168,15 +168,21 @@ class MCalMonthKeyBindings {
     this.exitEventMode = const [MCalKeyActivator(LogicalKeyboardKey.escape)],
 
     // Move Mode
-    this.confirmMove = const [MCalKeyActivator(LogicalKeyboardKey.enter)],
+    this.confirmMove = const [
+      MCalKeyActivator(LogicalKeyboardKey.enter),
+      MCalKeyActivator(LogicalKeyboardKey.space),
+    ],
     this.cancelMove = const [MCalKeyActivator(LogicalKeyboardKey.escape)],
-    this.moveToResize = const [MCalKeyActivator(LogicalKeyboardKey.keyR)],
+    this.switchToResize = const [MCalKeyActivator(LogicalKeyboardKey.keyR)],
 
     // Resize Mode
     this.switchToStartEdge = const [MCalKeyActivator(LogicalKeyboardKey.keyS)],
     this.switchToEndEdge = const [MCalKeyActivator(LogicalKeyboardKey.keyE)],
-    this.confirmResize = const [MCalKeyActivator(LogicalKeyboardKey.enter)],
-    this.resizeToMove = const [MCalKeyActivator(LogicalKeyboardKey.keyM)],
+    this.confirmResize = const [
+      MCalKeyActivator(LogicalKeyboardKey.enter),
+      MCalKeyActivator(LogicalKeyboardKey.space),
+    ],
+    this.switchToMove = const [MCalKeyActivator(LogicalKeyboardKey.keyM)],
     this.cancelResize = const [MCalKeyActivator(LogicalKeyboardKey.escape)],
   });
 
@@ -263,7 +269,7 @@ class MCalMonthKeyBindings {
 
   /// Keys that confirm the current move and exit all keyboard modes.
   ///
-  /// Default: Enter.
+  /// Default: Enter, Space.
   final List<MCalKeyActivator> confirmMove;
 
   /// Keys that cancel the current move (reverting to original position) and
@@ -275,7 +281,7 @@ class MCalMonthKeyBindings {
   /// Keys that switch from Move Mode to Resize Mode.
   ///
   /// Default: R.
-  final List<MCalKeyActivator> moveToResize;
+  final List<MCalKeyActivator> switchToResize;
 
   // ── Resize Mode ───────────────────────────────────────────────────────────
 
@@ -291,13 +297,13 @@ class MCalMonthKeyBindings {
 
   /// Keys that confirm the current resize and exit all keyboard modes.
   ///
-  /// Default: Enter.
+  /// Default: Enter, Space.
   final List<MCalKeyActivator> confirmResize;
 
   /// Keys that switch from Resize Mode to Move Mode.
   ///
   /// Default: M.
-  final List<MCalKeyActivator> resizeToMove;
+  final List<MCalKeyActivator> switchToMove;
 
   /// Keys that cancel the current resize (reverting to original size) and
   /// return to Event Mode.
@@ -324,11 +330,11 @@ class MCalMonthKeyBindings {
     List<MCalKeyActivator>? exitEventMode,
     List<MCalKeyActivator>? confirmMove,
     List<MCalKeyActivator>? cancelMove,
-    List<MCalKeyActivator>? moveToResize,
+    List<MCalKeyActivator>? switchToResize,
     List<MCalKeyActivator>? switchToStartEdge,
     List<MCalKeyActivator>? switchToEndEdge,
     List<MCalKeyActivator>? confirmResize,
-    List<MCalKeyActivator>? resizeToMove,
+    List<MCalKeyActivator>? switchToMove,
     List<MCalKeyActivator>? cancelResize,
   }) {
     return MCalMonthKeyBindings(
@@ -347,11 +353,11 @@ class MCalMonthKeyBindings {
       exitEventMode: exitEventMode ?? this.exitEventMode,
       confirmMove: confirmMove ?? this.confirmMove,
       cancelMove: cancelMove ?? this.cancelMove,
-      moveToResize: moveToResize ?? this.moveToResize,
+      switchToResize: switchToResize ?? this.switchToResize,
       switchToStartEdge: switchToStartEdge ?? this.switchToStartEdge,
       switchToEndEdge: switchToEndEdge ?? this.switchToEndEdge,
       confirmResize: confirmResize ?? this.confirmResize,
-      resizeToMove: resizeToMove ?? this.resizeToMove,
+      switchToMove: switchToMove ?? this.switchToMove,
       cancelResize: cancelResize ?? this.cancelResize,
     );
   }

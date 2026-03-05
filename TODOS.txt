@@ -8,6 +8,9 @@ Month view
  Swipe navigation direction - vertical - edge detection and example snackbar
  drop tile ghost
  Add layoutVisibleCounts handling to examples that have custom weeklayout
+ Drag long press delay
+ Keyboard delete did not delete
+ Keyboard N did nothing
 
 Day view
  make key handling work like month view

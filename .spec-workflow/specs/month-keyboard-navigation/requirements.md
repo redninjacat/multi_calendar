@@ -110,8 +110,8 @@ The keyboard navigation system enables desktop and web users to fully operate th
 6. The following action slots SHALL be configurable:
    - **Navigation Mode**: `enterEventMode` (default: Enter, Space), `home` (default: Home), `end` (default: End), `pageUp` (default: PageUp), `pageDown` (default: PageDown)
    - **Event Mode**: `cycleForward` (default: Tab, ArrowDown), `cycleBackward` (default: Shift+Tab, ArrowUp), `activate` (default: Enter, Space), `delete` (default: D, Delete, Backspace), `enterMoveMode` (default: M), `enterResizeMode` (default: R), `exitEventMode` (default: Escape)
-   - **Move Mode**: `confirmMove` (default: Enter), `cancelMove` (default: Escape), `switchToResize` (default: R)
-   - **Resize Mode**: `switchToStartEdge` (default: S), `switchToEndEdge` (default: E), `confirmResize` (default: Enter), `switchToMove` (default: M), `cancelResize` (default: Escape)
+   - **Move Mode**: `confirmMove` (default: Enter, Space), `cancelMove` (default: Escape), `switchToResize` (default: R)
+   - **Resize Mode**: `switchToStartEdge` (default: S), `switchToEndEdge` (default: E), `confirmResize` (default: Enter, Space), `switchToMove` (default: M), `cancelResize` (default: Escape)
 7. Arrow keys for navigation (Navigation Mode cell movement, Move Mode event movement, Resize Mode edge adjustment) SHALL NOT be configurable — they are inherent to directional navigation.
 8. `MCalMonthKeyBindings` SHALL provide a `copyWith` method for selective overrides.
 9. Key bindings that require modifier detection (Shift+Tab) SHALL be handled via a `Set<MCalKeyActivator>` where `MCalKeyActivator` pairs a `LogicalKeyboardKey` with optional modifier flags, rather than a plain `Set<LogicalKeyboardKey>`.
