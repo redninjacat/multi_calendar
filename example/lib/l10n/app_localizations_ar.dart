@@ -241,6 +241,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'السماح بالإنشاء عبر لوحة المفاتيح (مفتاح N)';
 
   @override
+  String get settingAllowKeyboardConvert =>
+      'السماح بالتحويل عبر لوحة المفاتيح (مفتاح X)';
+
+  @override
   String get settingAutoFocusOnEventTap =>
       'التركيز التلقائي عند النقر على الحدث';
 
@@ -941,6 +945,123 @@ class AppLocalizationsAr extends AppLocalizations {
       'Shift+مفاتيح الأسهم: تغيير حجم الحدث';
 
   @override
+  String get accessibilityDayModeNavigation => 'وضع التنقل';
+
+  @override
+  String get accessibilityDayModeNavigationDesc =>
+      'الوضع الافتراضي. ↑↓ للتنقل بين الفترات الزمنية؛ ↑ من أول فترة للانتقال إلى قسم اليوم الكامل.';
+
+  @override
+  String get accessibilityDayModeEvent => 'وضع الحدث';
+
+  @override
+  String get accessibilityDayModeEventDesc =>
+      'اضغط Enter/Space على فترة زمنية بها أحداث. التنقل بين الأحداث المرئية.';
+
+  @override
+  String get accessibilityDayModeMove => 'وضع النقل';
+
+  @override
+  String get accessibilityDayModeMoveDesc =>
+      'اضغط M في وضع الحدث. لنقل الحدث المحدد.';
+
+  @override
+  String get accessibilityDayModeResize => 'وضع تغيير الحجم';
+
+  @override
+  String get accessibilityDayModeResizeDesc =>
+      'اضغط R في وضع الحدث. لتغيير وقت البداية أو النهاية.';
+
+  @override
+  String get accessibilityDayNavUpDown => 'التنقل بين الفترات الزمنية';
+
+  @override
+  String get accessibilityDayNavEnterSpace =>
+      'الدخول إلى وضع الحدث (إذا كانت الفترة تحتوي أحداثًا)';
+
+  @override
+  String get accessibilityDayNavHome => 'الانتقال إلى أول فترة زمنية';
+
+  @override
+  String get accessibilityDayNavEnd => 'الانتقال إلى آخر فترة زمنية';
+
+  @override
+  String get accessibilityDayNavPageUp => 'اليوم السابق';
+
+  @override
+  String get accessibilityDayNavPageDown => 'اليوم التالي';
+
+  @override
+  String get accessibilityDayNavN =>
+      'إنشاء حدث في الفترة المحددة (إذا توفر معالج)';
+
+  @override
+  String get accessibilityDayNavA => 'الانتقال إلى قسم اليوم الكامل';
+
+  @override
+  String get accessibilityDayNavT =>
+      'الانتقال إلى شبكة الوقت (يستعيد آخر فترة)';
+
+  @override
+  String get accessibilityDayEventUpDown =>
+      'التنقل بين الأحداث المرئية ومؤشر الفائض';
+
+  @override
+  String get accessibilityDayEventEnterSpace =>
+      'تنشيط الحدث/الفائض والعودة إلى التنقل';
+
+  @override
+  String get accessibilityDayEventD => 'حذف الحدث (إذا توفر معالج)';
+
+  @override
+  String get accessibilityDayEventX =>
+      'تحويل الحدث بين اليوم الكامل والمحدد بوقت (إذا توفر معالج)';
+
+  @override
+  String get accessibilityDayEventM => 'الدخول إلى وضع النقل';
+
+  @override
+  String get accessibilityDayEventR =>
+      'الدخول إلى وضع تغيير الحجم (إذا كان مفعّلًا)';
+
+  @override
+  String get accessibilityDayEventEscape => 'العودة إلى وضع التنقل';
+
+  @override
+  String get accessibilityDayMoveArrows =>
+      'نقل الحدث (↑↓ حسب الفترة الزمنية، ←→ حسب اليوم)';
+
+  @override
+  String get accessibilityDayMoveEnter => 'تأكيد النقل';
+
+  @override
+  String get accessibilityDayMoveR =>
+      'إلغاء النقل، التبديل إلى وضع تغيير الحجم';
+
+  @override
+  String get accessibilityDayMoveEscape => 'إلغاء النقل، العودة إلى وضع الحدث';
+
+  @override
+  String get accessibilityDayResizeSE => 'التبديل بين حافة البداية/النهاية';
+
+  @override
+  String get accessibilityDayResizeArrows => 'تغيير حجم الحافة المحددة';
+
+  @override
+  String get accessibilityDayResizeEnter => 'تأكيد تغيير الحجم';
+
+  @override
+  String get accessibilityDayResizeM => 'التبديل إلى وضع النقل';
+
+  @override
+  String get accessibilityDayResizeEscape =>
+      'إلغاء تغيير الحجم، العودة إلى وضع الحدث';
+
+  @override
+  String get accessibilityDayKeyBindingsNote =>
+      'هذه اختصارات المفاتيح هي الافتراضية. يمكن للمطورين تخصيصها أو تعطيلها عبر معامل keyBindings في MCalDayView.';
+
+  @override
   String snackbarCellTap(String date) {
     return 'تم النقر على الخلية: $date';
   }
@@ -1108,6 +1229,11 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String snackbarEventDeleted(String title) {
     return 'تم الحذف: $title';
+  }
+
+  @override
+  String snackbarEventConverted(String title, String type) {
+    return 'تم تحويل \"$title\" إلى $type';
   }
 
   @override

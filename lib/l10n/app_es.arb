@@ -66,5 +66,22 @@
   "announcementEventMoved": "Movido {title} a {date}",
   "announcementResizingProgress": "Redimensionando {title} {edge} a {date}, {days} días",
   "announcementResizeInvalid": "Redimensión cancelada. Redimensión no válida.",
-  "announcementEventResized": "Redimensionado {title} de {start} a {end}"
+  "announcementEventResized": "Redimensionado {title} de {start} a {end}",
+  "announcementDayNavigationMode": "Modo navegación",
+  "announcementDayEventMode": "Modo evento, {count} eventos",
+  "announcementDayEventCycled": "{title}, {position} de {total}",
+  "announcementDayEventSelected": "Seleccionado {title}",
+  "announcementDayMoveMode": "Modo mover para {title}",
+  "announcementDayResizeMode": "Modo redimensión para {title}",
+  "announcementDayMoveCancelled": "Movimiento cancelado para {title}",
+  "announcementDayResizeCancelled": "Redimensión cancelada",
+  "announcementDayMovingEvent": "Moviendo {title} a {time}",
+  "announcementDayResizingEvent": "Redimensionando {title}, borde {edge} en {time}",
+  "announcementDayEventMoved": "{title} movido a {time}",
+  "announcementDayEventResized": "{title} redimensionado",
+  "announcementDayAllDaySection": "Sección de todo el día",
+  "announcementDayTimeGrid": "Cuadrícula de tiempo, {time}",
+  "announcementDayMoveInvalidTarget": "No se puede mover aquí",
+  "announcementDayEventDeleted": "{title} eliminado",
+  "announcementDayEventConversionRequested": "Convirtiendo {title} a {type}"
 }

@@ -132,5 +132,119 @@
       "start": {},
       "end": {}
     }
+  },
+  "announcementDayNavigationMode": "Navigation mode",
+  "@announcementDayNavigationMode": {
+    "description": "Announced when Day View enters Navigation Mode via keyboard"
+  },
+  "announcementDayEventMode": "Event mode, {count} events",
+  "@announcementDayEventMode": {
+    "description": "Announced when Day View enters Event Mode",
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "announcementDayEventCycled": "{title}, {position} of {total}",
+  "@announcementDayEventCycled": {
+    "description": "Announced when cycling through events in Day View Event Mode",
+    "placeholders": {
+      "title": {},
+      "position": {},
+      "total": {}
+    }
+  },
+  "announcementDayEventSelected": "Selected {title}",
+  "@announcementDayEventSelected": {
+    "description": "Announced when an event is selected in Day View Event Mode",
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "announcementDayMoveMode": "Move mode for {title}",
+  "@announcementDayMoveMode": {
+    "description": "Announced when Day View enters Move Mode",
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "announcementDayResizeMode": "Resize mode for {title}",
+  "@announcementDayResizeMode": {
+    "description": "Announced when Day View enters Resize Mode",
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "announcementDayMoveCancelled": "Move cancelled for {title}",
+  "@announcementDayMoveCancelled": {
+    "description": "Announced when a Day View move operation is cancelled",
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "announcementDayResizeCancelled": "Resize cancelled",
+  "@announcementDayResizeCancelled": {
+    "description": "Announced when a Day View resize operation is cancelled"
+  },
+  "announcementDayMovingEvent": "Moving {title} to {time}",
+  "@announcementDayMovingEvent": {
+    "description": "Announced while moving an event in Day View Move Mode",
+    "placeholders": {
+      "title": {},
+      "time": {}
+    }
+  },
+  "announcementDayResizingEvent": "Resizing {title}, {edge} edge at {time}",
+  "@announcementDayResizingEvent": {
+    "description": "Announced while resizing an event in Day View Resize Mode",
+    "placeholders": {
+      "title": {},
+      "edge": {},
+      "time": {}
+    }
+  },
+  "announcementDayEventMoved": "{title} moved to {time}",
+  "@announcementDayEventMoved": {
+    "description": "Announced when a Day View event move is confirmed",
+    "placeholders": {
+      "title": {},
+      "time": {}
+    }
+  },
+  "announcementDayEventResized": "{title} resized",
+  "@announcementDayEventResized": {
+    "description": "Announced when a Day View event resize is confirmed",
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "announcementDayAllDaySection": "All-day section",
+  "@announcementDayAllDaySection": {
+    "description": "Announced when focus jumps to the all-day section in Day View"
+  },
+  "announcementDayTimeGrid": "Time grid, {time}",
+  "@announcementDayTimeGrid": {
+    "description": "Announced when focus jumps to the time grid in Day View",
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "announcementDayMoveInvalidTarget": "Cannot move here",
+  "@announcementDayMoveInvalidTarget": {
+    "description": "Announced when a Day View move target is invalid"
+  },
+  "announcementDayEventDeleted": "{title} deleted",
+  "@announcementDayEventDeleted": {
+    "description": "Announced when a Day View event is deleted via keyboard",
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "announcementDayEventConversionRequested": "Converting {title} to {type}",
+  "@announcementDayEventConversionRequested": {
+    "description": "Announced when a Day View event type conversion is requested",
+    "placeholders": {
+      "title": {},
+      "type": {}
+    }
   }
 }

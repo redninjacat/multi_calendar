@@ -79,6 +79,9 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
   // ============================================================
   bool _enableKeyboardNavigation = true;
   bool _autoFocusOnEventTap = true;
+  bool _allowKeyboardCreate = true;
+  bool _allowKeyboardDelete = true;
+  bool _allowKeyboardConvert = true;
 
   // ============================================================
   // RTL Override Settings
@@ -516,6 +519,21 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               value: _autoFocusOnEventTap,
               onChanged: (v) => setState(() => _autoFocusOnEventTap = v),
             ),
+            ControlWidgets.toggle(
+              label: l10n.settingAllowKeyboardCreate,
+              value: _allowKeyboardCreate,
+              onChanged: (v) => setState(() => _allowKeyboardCreate = v),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingAllowKeyboardDelete,
+              value: _allowKeyboardDelete,
+              onChanged: (v) => setState(() => _allowKeyboardDelete = v),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingAllowKeyboardConvert,
+              value: _allowKeyboardConvert,
+              onChanged: (v) => setState(() => _allowKeyboardConvert = v),
+            ),
           ],
         ),
 
@@ -919,7 +937,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             final end = details.newEndDate;
             final span = end.difference(start);
             final useDate = span.inDays > 6;
-            String _fmtDay(DateTime dt) {
+            String fmtDay(DateTime dt) {
               final weekday = [
                 'Mon',
                 'Tue',
@@ -946,7 +964,7 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               return useDate ? '$month ${dt.day}' : weekday;
             }
 
-            String _fmtTime(DateTime dt) {
+            String fmtTime(DateTime dt) {
               final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
               final m = dt.minute.toString().padLeft(2, '0');
               final ampm = dt.hour < 12 ? 'AM' : 'PM';
@@ -958,8 +976,8 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
                 start.month == end.month &&
                 start.day == end.day;
             final label = isSameDay
-                ? '${_fmtTime(start)} – ${_fmtTime(end)}'
-                : '${_fmtDay(start)} ${_fmtTime(start)} – ${_fmtDay(end)} ${_fmtTime(end)}';
+                ? '${fmtTime(start)} – ${fmtTime(end)}'
+                : '${fmtDay(start)} ${fmtTime(start)} – ${fmtDay(end)} ${fmtTime(end)}';
             _setStatus('Resize: ${details.event.title}  $label');
             return true;
           },
@@ -983,22 +1001,29 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             );
           },
           // Keyboard CRUD Handlers
-          onCreateEventRequested: () {
-            final now = DateTime.now();
-            final nextHour = DateTime(
-              now.year,
-              now.month,
-              now.day,
-              now.hour + 1,
-            );
-            _handleCreateEvent(nextHour);
-          },
-          onEditEventRequested: (event) {
-            _handleEditEvent(event);
-          },
-          onDeleteEventRequested: (event) {
-            _handleDeleteEvent(event);
-          },
+          onCreateEventRequested: _allowKeyboardCreate
+              ? (ctx, startTime) {
+                  _handleCreateEvent(startTime);
+                  return true;
+                }
+              : null,
+          onDeleteEventRequested: _allowKeyboardDelete
+              ? (ctx, details) {
+                  _handleDeleteEvent(details.event);
+                  return true;
+                }
+              : null,
+          onEventTypeConversionRequested: _allowKeyboardConvert
+              ? (ctx, event, toAllDay, suggestedStart) {
+                  final type = toAllDay ? 'all-day' : 'timed';
+                  SnackBarHelper.show(
+                    context,
+                    l10n.snackbarEventConverted(event.title, type),
+                  );
+                  return true;
+                }
+              : null,
+          keyBindings: const MCalDayKeyBindings(),
         );
       },
     );

@@ -187,7 +187,7 @@ void main() {
                   endHour: 18,
                   hourHeight: 80,
                   enableDragToMove: true,
-                  onEventDropped: (_, __) {
+                  onEventDropped: (_, _) {
                     dropCalled = true;
                     return true;
                   },

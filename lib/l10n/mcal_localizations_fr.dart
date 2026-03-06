@@ -241,4 +241,85 @@ class MCalLocalizationsFr extends MCalLocalizations {
   String announcementEventResized(Object title, Object start, Object end) {
     return 'Redimensionné $title de $start à $end';
   }
+
+  @override
+  String get announcementDayNavigationMode => 'Mode navigation';
+
+  @override
+  String announcementDayEventMode(Object count) {
+    return 'Mode événement, $count événements';
+  }
+
+  @override
+  String announcementDayEventCycled(
+    Object title,
+    Object position,
+    Object total,
+  ) {
+    return '$title, $position sur $total';
+  }
+
+  @override
+  String announcementDayEventSelected(Object title) {
+    return 'Sélectionné $title';
+  }
+
+  @override
+  String announcementDayMoveMode(Object title) {
+    return 'Mode déplacement pour $title';
+  }
+
+  @override
+  String announcementDayResizeMode(Object title) {
+    return 'Mode redimensionnement pour $title';
+  }
+
+  @override
+  String announcementDayMoveCancelled(Object title) {
+    return 'Déplacement annulé pour $title';
+  }
+
+  @override
+  String get announcementDayResizeCancelled => 'Redimensionnement annulé';
+
+  @override
+  String announcementDayMovingEvent(Object title, Object time) {
+    return 'Déplacement de $title vers $time';
+  }
+
+  @override
+  String announcementDayResizingEvent(Object title, Object edge, Object time) {
+    return 'Redimensionnement de $title, bord $edge à $time';
+  }
+
+  @override
+  String announcementDayEventMoved(Object title, Object time) {
+    return '$title déplacé vers $time';
+  }
+
+  @override
+  String announcementDayEventResized(Object title) {
+    return '$title redimensionné';
+  }
+
+  @override
+  String get announcementDayAllDaySection => 'Section toute la journée';
+
+  @override
+  String announcementDayTimeGrid(Object time) {
+    return 'Grille horaire, $time';
+  }
+
+  @override
+  String get announcementDayMoveInvalidTarget => 'Impossible de déplacer ici';
+
+  @override
+  String announcementDayEventDeleted(Object title) {
+    return '$title supprimé';
+  }
+
+  @override
+  String announcementDayEventConversionRequested(Object title, Object type) {
+    return 'Conversion de $title en $type';
+  }
 }

@@ -196,7 +196,7 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             ctrl: controller,
-            onTimeSlotTap: (_, __) {},
+            onTimeSlotTap: (_, _) {},
           ),
         );
         await tester.pumpAndSettle();
@@ -217,7 +217,7 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             ctrl: controller,
-            onTimeSlotLongPress: (_, __) {},
+            onTimeSlotLongPress: (_, _) {},
           ),
         );
         await tester.pumpAndSettle();
@@ -238,7 +238,7 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             ctrl: controller,
-            onTimeSlotDoubleTap: (_, __) {},
+            onTimeSlotDoubleTap: (_, _) {},
           ),
         );
         await tester.pumpAndSettle();
@@ -259,9 +259,9 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             ctrl: controller,
-            onTimeSlotTap: (_, __) {},
-            onTimeSlotLongPress: (_, __) {},
-            onTimeSlotDoubleTap: (_, __) {},
+            onTimeSlotTap: (_, _) {},
+            onTimeSlotLongPress: (_, _) {},
+            onTimeSlotDoubleTap: (_, _) {},
           ),
         );
         await tester.pumpAndSettle();
@@ -304,7 +304,7 @@ void main() {
           buildDayView(
             ctrl: controller,
             onEventTap: (_, _) {},
-            onTimeSlotTap: (_, __) {},
+            onTimeSlotTap: (_, _) {},
           ),
         );
         await tester.pumpAndSettle();

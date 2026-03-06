@@ -227,7 +227,7 @@ void main() {
       await tester.pumpWidget(
         buildDayView(
           ctrl: controller,
-          onEventDropped: (_, __) {
+          onEventDropped: (_, _) {
             dropCalled = true;
             return true;
           },
@@ -377,7 +377,7 @@ void main() {
       await tester.pumpWidget(
         buildDayView(
           ctrl: controller,
-          onEventDropped: (_, __) {
+          onEventDropped: (_, _) {
             dropCalled = true;
             return true;
           },

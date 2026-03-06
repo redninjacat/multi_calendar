@@ -66,5 +66,22 @@
   "announcementEventMoved": "تم نقل {title} إلى {date}",
   "announcementResizingProgress": "تغيير حجم {title} {edge} إلى {date}، {days} أيام",
   "announcementResizeInvalid": "تم إلغاء تغيير الحجم. تغيير الحجم غير صالح.",
-  "announcementEventResized": "تم تغيير حجم {title} من {start} إلى {end}"
+  "announcementEventResized": "تم تغيير حجم {title} من {start} إلى {end}",
+  "announcementDayNavigationMode": "وضع التنقل",
+  "announcementDayEventMode": "وضع الحدث، {count} أحداث",
+  "announcementDayEventCycled": "{title}، {position} من {total}",
+  "announcementDayEventSelected": "تم تحديد {title}",
+  "announcementDayMoveMode": "وضع النقل لـ {title}",
+  "announcementDayResizeMode": "وضع تغيير الحجم لـ {title}",
+  "announcementDayMoveCancelled": "تم إلغاء النقل لـ {title}",
+  "announcementDayResizeCancelled": "تم إلغاء تغيير الحجم",
+  "announcementDayMovingEvent": "نقل {title} إلى {time}",
+  "announcementDayResizingEvent": "تغيير حجم {title}، حافة {edge} عند {time}",
+  "announcementDayEventMoved": "تم نقل {title} إلى {time}",
+  "announcementDayEventResized": "تم تغيير حجم {title}",
+  "announcementDayAllDaySection": "قسم طوال اليوم",
+  "announcementDayTimeGrid": "شبكة الوقت، {time}",
+  "announcementDayMoveInvalidTarget": "لا يمكن النقل هنا",
+  "announcementDayEventDeleted": "تم حذف {title}",
+  "announcementDayEventConversionRequested": "تحويل {title} إلى {type}"
 }

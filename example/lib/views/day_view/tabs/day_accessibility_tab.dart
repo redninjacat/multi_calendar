@@ -100,13 +100,6 @@ class _DayAccessibilityTabState extends State<DayAccessibilityTab> {
     }
   }
 
-  Future<void> _handleCreateEventAtDefaultTime() async {
-    final d = _eventController.displayDate;
-    final now = DateTime.now();
-    final defaultTime = DateTime(d.year, d.month, d.day, now.hour + 1, 0);
-    await _handleCreateEvent(defaultTime);
-  }
-
   Future<void> _handleEditEvent(MCalCalendarEvent event) async {
     final l10n = AppLocalizations.of(context)!;
     final edited = await showEventEditDialog(
@@ -154,10 +147,6 @@ class _DayAccessibilityTabState extends State<DayAccessibilityTab> {
     }
   }
 
-  /// Returns modifier key string for keyboard shortcut display.
-  /// MCalDayView supports both Cmd (macOS) and Ctrl (Windows/Linux).
-  String get _modifierKey => 'Cmd/Ctrl';
-
   /// True on platforms that have a hardware keyboard (desktop + web).
   static bool get _supportsKeyboard =>
       kIsWeb ||
@@ -170,24 +159,181 @@ class _DayAccessibilityTabState extends State<DayAccessibilityTab> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     final l10n = AppLocalizations.of(context)!;
-    final modifier = _modifierKey;
     final supportsKeyboard = _supportsKeyboard;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Keyboard shortcuts — hidden on platforms without a hardware keyboard
+        // Keyboard shortcuts organized by mode — hidden on non-keyboard platforms
         if (supportsKeyboard) ...[
-          _SectionHeader(icon: Icons.keyboard, title: l10n.accessibilityKeyboardShortcuts),
+          _SectionHeader(
+            icon: Icons.keyboard,
+            title: l10n.accessibilityDayKeyboardShortcuts,
+          ),
           const SizedBox(height: 8),
-          _ShortcutRow(keys: l10n.accessibilityShortcutArrows, action: l10n.accessibilityShortcutNavigateDays),
-          _ShortcutRow(keys: l10n.accessibilityShortcutTab, action: l10n.accessibilityShortcutCycleEvents),
-          _ShortcutRow(keys: l10n.accessibilityShortcutEnter, action: l10n.accessibilityShortcutActivate),
-          _ShortcutRow(keys: '$modifier+N', action: l10n.accessibilityShortcutCreate),
-          _ShortcutRow(keys: 'E', action: l10n.accessibilityShortcutEdit),
-          _ShortcutRow(keys: l10n.accessibilityShortcutDeleteKeys, action: l10n.accessibilityShortcutDelete),
-          _ShortcutRow(keys: l10n.accessibilityShortcutDrag, action: l10n.accessibilityShortcutDragMove),
-          _ShortcutRow(keys: l10n.accessibilityShortcutResize, action: l10n.accessibilityShortcutResizeEvent),
+
+          // Navigation Mode
+          _ModeSection(
+            title: l10n.accessibilityDayModeNavigation,
+            description: l10n.accessibilityDayModeNavigationDesc,
+          ),
+          _ShortcutRow(
+            keys: '↑ / ↓',
+            action: l10n.accessibilityDayNavUpDown,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEnter,
+            action: l10n.accessibilityDayNavEnterSpace,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutHome,
+            action: l10n.accessibilityDayNavHome,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEnd,
+            action: l10n.accessibilityDayNavEnd,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutPageUp,
+            action: l10n.accessibilityDayNavPageUp,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutPageDown,
+            action: l10n.accessibilityDayNavPageDown,
+          ),
+          _ShortcutRow(
+            keys: 'N',
+            action: l10n.accessibilityDayNavN,
+          ),
+          _ShortcutRow(
+            keys: 'A',
+            action: l10n.accessibilityDayNavA,
+          ),
+          _ShortcutRow(
+            keys: 'T',
+            action: l10n.accessibilityDayNavT,
+          ),
+          const SizedBox(height: 12),
+
+          // Event Mode
+          _ModeSection(
+            title: l10n.accessibilityDayModeEvent,
+            description: l10n.accessibilityDayModeEventDesc,
+          ),
+          _ShortcutRow(
+            keys: '${l10n.accessibilityShortcutTab} / ↑↓',
+            action: l10n.accessibilityDayEventUpDown,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEnter,
+            action: l10n.accessibilityDayEventEnterSpace,
+          ),
+          _ShortcutRow(
+            keys: 'D / Delete',
+            action: l10n.accessibilityDayEventD,
+          ),
+          _ShortcutRow(
+            keys: 'X',
+            action: l10n.accessibilityDayEventX,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutM,
+            action: l10n.accessibilityDayEventM,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutR,
+            action: l10n.accessibilityDayEventR,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEscape,
+            action: l10n.accessibilityDayEventEscape,
+          ),
+          const SizedBox(height: 12),
+
+          // Move Mode
+          _ModeSection(
+            title: l10n.accessibilityDayModeMove,
+            description: l10n.accessibilityDayModeMoveDesc,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutArrows,
+            action: l10n.accessibilityDayMoveArrows,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEnter,
+            action: l10n.accessibilityDayMoveEnter,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutR,
+            action: l10n.accessibilityDayMoveR,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEscape,
+            action: l10n.accessibilityDayMoveEscape,
+          ),
+          const SizedBox(height: 12),
+
+          // Resize Mode
+          _ModeSection(
+            title: l10n.accessibilityDayModeResize,
+            description: l10n.accessibilityDayModeResizeDesc,
+          ),
+          _ShortcutRow(
+            keys: 'S / E',
+            action: l10n.accessibilityDayResizeSE,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutArrows,
+            action: l10n.accessibilityDayResizeArrows,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEnter,
+            action: l10n.accessibilityDayResizeEnter,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutM,
+            action: l10n.accessibilityDayResizeM,
+          ),
+          _ShortcutRow(
+            keys: l10n.accessibilityShortcutEscape,
+            action: l10n.accessibilityDayResizeEscape,
+          ),
+          const SizedBox(height: 12),
+
+          // Configurable bindings note
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.5,
+              ),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: theme.colorScheme.outlineVariant,
+                width: 0.5,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.tune,
+                  size: 14,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    l10n.accessibilityDayKeyBindingsNote,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 20),
         ],
 
@@ -323,9 +469,14 @@ class _DayAccessibilityTabState extends State<DayAccessibilityTab> {
             ));
           }
         },
-        onCreateEventRequested: _handleCreateEventAtDefaultTime,
-        onEditEventRequested: (event) => _handleEditEvent(event),
-        onDeleteEventRequested: (event) => _handleDeleteEvent(event),
+        onCreateEventRequested: (ctx, startTime) {
+          _handleCreateEvent(startTime);
+          return true;
+        },
+        onDeleteEventRequested: (ctx, details) {
+          _handleDeleteEvent(details.event);
+          return true;
+        },
       ),
     );
 
@@ -446,6 +597,48 @@ class _ChecklistItem extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ModeSection extends StatelessWidget {
+  const _ModeSection({required this.title, required this.description});
+
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              description,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

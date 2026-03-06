@@ -7,6 +7,8 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
+import '../models/mcal_day_key_bindings.dart';
+import '../models/mcal_month_key_bindings.dart' show MCalKeyActivator;
 import '../models/mcal_region.dart';
 import '../styles/mcal_theme.dart';
 import '../utils/date_utils.dart';
@@ -22,59 +24,6 @@ import 'mcal_drag_handler.dart';
 import 'mcal_draggable_event_tile.dart';
 import 'mcal_layout_directionality.dart';
 import 'mcal_month_view_contexts.dart' show MCalWeekNumberContext;
-
-// ============================================================================
-// Keyboard Shortcut Intents
-// ============================================================================
-
-/// Intent for the "create new event" keyboard shortcut (Cmd/Ctrl+N).
-///
-/// When [MCalDayView.enableKeyboardNavigation] is true, pressing Cmd+N (Mac)
-/// or Ctrl+N (Windows/Linux) triggers [MCalDayView.onCreateEventRequested].
-///
-/// Override via [MCalDayView.keyboardShortcuts] to customize the activator.
-class MCalDayViewCreateEventIntent extends Intent {
-  const MCalDayViewCreateEventIntent();
-}
-
-/// Intent for the "delete event" keyboard shortcut (Cmd/Ctrl+D, Delete, Backspace).
-///
-/// When [MCalDayView.enableKeyboardNavigation] is true and an event has focus,
-/// pressing Cmd+D, Delete, or Backspace triggers [MCalDayView.onDeleteEventRequested].
-///
-/// Override via [MCalDayView.keyboardShortcuts] to customize the activator.
-class MCalDayViewDeleteEventIntent extends Intent {
-  const MCalDayViewDeleteEventIntent();
-}
-
-/// Intent for the "edit event" keyboard shortcut (Cmd/Ctrl+E).
-///
-/// When [MCalDayView.enableKeyboardNavigation] is true and an event has focus,
-/// pressing Cmd+E (Mac) or Ctrl+E (Windows/Linux) triggers
-/// [MCalDayView.onEditEventRequested].
-///
-/// Override via [MCalDayView.keyboardShortcuts] to customize the activator.
-class MCalDayViewEditEventIntent extends Intent {
-  const MCalDayViewEditEventIntent();
-}
-
-/// Intent for keyboard move mode (Ctrl+M or Cmd+M).
-///
-/// When [MCalDayView.enableKeyboardNavigation] is true and an event has focus,
-/// pressing Ctrl+M (Windows/Linux) or Cmd+M (Mac) enters keyboard move mode.
-/// Arrow keys then move the event; Enter confirms, Escape cancels.
-class MCalDayViewKeyboardMoveIntent extends Intent {
-  const MCalDayViewKeyboardMoveIntent();
-}
-
-/// Intent for keyboard resize mode (Ctrl+R or Cmd+R).
-///
-/// When [MCalDayView.enableKeyboardNavigation] is true and an event has focus,
-/// pressing Ctrl+R (Windows/Linux) or Cmd+R (Mac) enters keyboard resize mode.
-/// Arrow Up/Down adjust time; Tab switches edge; Enter confirms, Escape cancels.
-class MCalDayViewKeyboardResizeIntent extends Intent {
-  const MCalDayViewKeyboardResizeIntent();
-}
 
 // ============================================================================
 // MCalDayView Widget
@@ -161,6 +110,16 @@ class MCalDayViewKeyboardResizeIntent extends Intent {
 /// - [MCalThemeData] for theming options
 /// - [MCalDayViewContexts] for context objects passed to builders
 class MCalDayView extends StatefulWidget {
+  /// Default pixel height per hour when [hourHeight] is not specified.
+  static const double defaultHourHeight = 80.0;
+
+  /// Test-only log for verifying accessibility announcements in widget tests.
+  ///
+  /// Set to a non-null list before pumping, read after key events, and
+  /// nullify in tearDown. Production code never sets this.
+  @visibleForTesting
+  static List<String>? debugAnnouncementLog;
+
   /// Creates a Day View calendar widget.
   const MCalDayView({
     super.key,
@@ -218,7 +177,7 @@ class MCalDayView extends StatefulWidget {
     // Keyboard
     this.enableKeyboardNavigation = true,
     this.autoFocusOnEventTap = true,
-    this.keyboardShortcuts,
+    this.keyBindings,
 
     // Animations
     this.enableAnimations,
@@ -279,7 +238,7 @@ class MCalDayView extends StatefulWidget {
     // Keyboard shortcut callbacks
     this.onCreateEventRequested,
     this.onDeleteEventRequested,
-    this.onEditEventRequested,
+    this.onEventTypeConversionRequested,
 
     // Drag and drop callbacks
     this.onDragWillAccept,
@@ -620,7 +579,15 @@ class MCalDayView extends StatefulWidget {
 
   /// The delay before initiating a long-press drag.
   ///
-  /// Defaults to 200 milliseconds.
+  /// Controls how long the user must hold down on an event tile before a drag
+  /// begins. A shorter delay makes drags start faster; a longer delay reduces
+  /// accidental drags when tapping.
+  ///
+  /// When [enableDragToMove] is true, the long-press gesture is reserved for
+  /// drag initiation and [onEventLongPress] will not fire. Use [onEventTap] or
+  /// [onEventDoubleTap] for event interactions when drag is enabled.
+  ///
+  /// Defaults to 200 milliseconds. Only used when [enableDragToMove] is true.
   final Duration dragLongPressDelay;
 
   /// The delay before edge navigation is triggered during drag.
@@ -704,20 +671,18 @@ class MCalDayView extends StatefulWidget {
   /// Defaults to true.
   final bool autoFocusOnEventTap;
 
-  /// Custom keyboard shortcuts to add or override.
+  /// Configurable key bindings for the Day View keyboard navigation state machine.
   ///
-  /// When non-null, the map is merged with default shortcuts. User entries override
-  /// defaults for the same [ShortcutActivator]. Use [Intent] subclasses for
-  /// [MCalDayViewCreateEventIntent], [MCalDayViewDeleteEventIntent], and
-  /// [MCalDayViewEditEventIntent].
+  /// When null, [MCalDayKeyBindings] defaults are used. Use [MCalDayKeyBindings.copyWith]
+  /// to override specific actions while keeping all other defaults.
   ///
-  /// Example: Override Cmd+N to use a different shortcut:
+  /// Example — disabling keyboard delete:
   /// ```dart
-  /// keyboardShortcuts: {
-  ///   SingleActivator(LogicalKeyboardKey.keyN, meta: true): MCalDayViewCreateEventIntent(),
-  /// }
+  /// MCalDayView(
+  ///   keyBindings: const MCalDayKeyBindings(delete: []),
+  /// )
   /// ```
-  final Map<ShortcutActivator, Intent>? keyboardShortcuts;
+  final MCalDayKeyBindings? keyBindings;
 
   // ============================================================================
   // Animations
@@ -1145,6 +1110,11 @@ class MCalDayView extends StatefulWidget {
   /// Called when an event tile is long-pressed.
   ///
   /// Receives [BuildContext] and [MCalEventTapDetails] with the event and display date.
+  ///
+  /// **Note:** This callback is mutually exclusive with [enableDragToMove].
+  /// When drag-to-move is enabled, the long-press gesture is consumed by the
+  /// drag recognizer and this callback will not fire. Use [onEventTap] or
+  /// [onEventDoubleTap] instead for event interactions when drag is enabled.
   final void Function(BuildContext context, MCalEventTapDetails details)?
   onEventLongPress;
 
@@ -1217,23 +1187,44 @@ class MCalDayView extends StatefulWidget {
   final void Function(BuildContext context, MCalOverflowTapDetails details)?
   onOverflowDoubleTap;
 
-  /// Called when the user requests to create a new event via keyboard shortcut (Cmd/Ctrl+N).
+  /// Called when the user requests to create a new event via the N keyboard shortcut
+  /// in Navigation Mode.
   ///
-  /// Use the controller's [MCalEventController.displayDate] to determine the date
-  /// for the new event.
-  final VoidCallback? onCreateEventRequested;
+  /// Receives the [BuildContext] and a [DateTime] for the focused time slot
+  /// (`_focusedSlotIndex == null` → midnight of the display date; otherwise the
+  /// start of the focused slot).
+  ///
+  /// The return value is **ignored** — the calendar always remains in Navigation Mode
+  /// regardless of whether `true` or `false` is returned (Req 8 AC 6).
+  final FutureOr<bool> Function(BuildContext context, DateTime startTime)?
+  onCreateEventRequested;
 
-  /// Called when the user requests to delete the focused event via keyboard shortcut
-  /// (Cmd/Ctrl+D or Delete/Backspace).
+  /// Called when the user requests to delete the focused event via the D/Delete/Backspace
+  /// keyboard shortcut in Event Mode.
   ///
-  /// Receives the focused event. Only fires when an event has keyboard focus.
-  final void Function(MCalCalendarEvent event)? onDeleteEventRequested;
+  /// Receives the [BuildContext] and [MCalEventTapDetails] for the focused event.
+  ///
+  /// Return `true` (or a `Future<bool>` that resolves to `true`) to confirm deletion
+  /// and return to Navigation Mode. Return `false` to keep the event selected in
+  /// Event Mode.
+  final FutureOr<bool> Function(BuildContext context, MCalEventTapDetails details)?
+  onDeleteEventRequested;
 
-  /// Called when the user requests to edit the focused event via keyboard shortcut
-  /// (Cmd/Ctrl+E).
+  /// Called when the user requests to convert the focused event between all-day and
+  /// timed via the X keyboard shortcut in Event Mode.
   ///
-  /// Receives the focused event. Only fires when an event has keyboard focus.
-  final void Function(MCalCalendarEvent event)? onEditEventRequested;
+  /// Receives the [BuildContext], the focused [MCalCalendarEvent], a [toAllDay] flag
+  /// indicating the requested conversion direction, and an optional [suggestedStartTime]
+  /// for the timed slot when converting from all-day to timed.
+  ///
+  /// Return `true` to confirm the conversion and return to Navigation Mode.
+  /// Return `false` to keep the event selected in Event Mode.
+  final FutureOr<bool> Function(
+    BuildContext context,
+    MCalCalendarEvent event,
+    bool toAllDay,
+    DateTime? suggestedStartTime,
+  )? onEventTypeConversionRequested;
 
   // ============================================================================
   // Drag and Drop Callbacks
@@ -1370,6 +1361,13 @@ class MCalDayView extends StatefulWidget {
 /// - [MCalDayView] — The parent widget
 /// - [MCalEventController] — Manages events and display date
 class MCalDayViewState extends State<MCalDayView> {
+  // ============================================================================
+  // Derived Layout Constants
+  // ============================================================================
+
+  /// Resolved hour height: widget override or [MCalDayView.defaultHourHeight].
+  double get _hourHeight => widget.hourHeight ?? MCalDayView.defaultHourHeight;
+
   // ============================================================================
   // Controller Integration
   // ============================================================================
@@ -1516,11 +1514,6 @@ class MCalDayViewState extends State<MCalDayView> {
   // Layout Cache
   // ============================================================================
 
-  // Measured once when the time grid lays out (via LayoutBuilder) and
-  // used throughout as a fallback when widget.hourHeight is not explicitly set.
-  // A value of 0.0 means not yet measured; callers fall back to widget.hourHeight
-  // or the default of 80.0 px/hour.
-  double _cachedHourHeight = 0.0;
 
   // Drag layout cache — captured once per drag session (or refreshed after
   // page navigation) to avoid repeated RenderBox lookups every frame.
@@ -1557,6 +1550,17 @@ class MCalDayViewState extends State<MCalDayView> {
   // Keyboard resize mode (Task 33)
   bool _isKeyboardResizeMode = false;
   MCalResizeEdge? _keyboardResizeEdge;
+
+  // Keyboard Navigation State Machine (Day View KB Nav spec)
+  // _focusedSlotIndex == null: all-day section focused (initial state)
+  bool _isKeyboardEventMode = false;
+  int? _focusedSlotIndex;
+  int? _lastTimeGridSlotIndex;
+  bool _isKeyboardOverflowFocused = false;
+  int _keyboardEventIndex = 0;
+  /// True once the user has pressed a navigation key, so focus indicators
+  /// are not shown on initial render before keyboard use has begun.
+  bool _keyboardNavigationActive = false;
 
   // ============================================================================
   // Current Time
@@ -1598,6 +1602,85 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Position from the most recent [GestureDetector.onDoubleTapDown].
   /// Used by [onDoubleTap] since it does not receive position.
   Offset? _lastDoubleTapDownPosition;
+
+  // ============================================================================
+  // Key Bindings Computed Property
+  // ============================================================================
+
+  /// Resolved key bindings — uses [widget.keyBindings] if set, else defaults.
+  MCalDayKeyBindings get _keyBindings =>
+      widget.keyBindings ?? const MCalDayKeyBindings();
+
+  // ============================================================================
+  // Keyboard Helper Methods
+  // ============================================================================
+
+  /// Returns true if [key] (with current modifier state) matches any activator
+  /// in [activators]. Reads modifier state from [HardwareKeyboard.instance].
+  bool _matchesAny(List<MCalKeyActivator> activators, LogicalKeyboardKey key) {
+    final hw = HardwareKeyboard.instance;
+    for (final activator in activators) {
+      if (activator.matches(
+        key,
+        isShiftPressed: hw.isLogicalKeyPressed(LogicalKeyboardKey.shift),
+        isControlPressed: hw.isLogicalKeyPressed(LogicalKeyboardKey.control),
+        isMetaPressed: hw.isLogicalKeyPressed(LogicalKeyboardKey.meta),
+        isAltPressed: hw.isLogicalKeyPressed(LogicalKeyboardKey.alt),
+      )) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Exits all keyboard modes and resets all keyboard state to defaults.
+  void _exitAllKeyboardModes() {
+    setState(() {
+      _isKeyboardEventMode = false;
+      _isKeyboardMoveMode = false;
+      _isKeyboardResizeMode = false;
+      _isKeyboardOverflowFocused = false;
+      _focusedEvent = null;
+      _keyboardMoveEvent = null;
+      _keyboardMoveOriginalStart = null;
+      _keyboardMoveOriginalEnd = null;
+      _keyboardMoveProposedStart = null;
+      _keyboardMoveProposedEnd = null;
+      _keyboardResizeEdge = null;
+      _keyboardEventIndex = 0;
+      _keyboardNavigationActive = false;
+      _focusedSlotIndex = null;
+    });
+  }
+
+  /// Processes a [FutureOr<bool>] result from [MCalDayView.onDeleteEventRequested].
+  ///
+  /// If `true` (sync or async), exits all keyboard modes. If `false`, stays in
+  /// Event Mode with the event selected.
+  void _handleDeleteResult(FutureOr<bool> result) {
+    if (result is Future<bool>) {
+      result.then((value) {
+        if (mounted && value) _exitAllKeyboardModes();
+      });
+    } else if (result == true) {
+      _exitAllKeyboardModes();
+    }
+  }
+
+  /// Processes a [FutureOr<bool>] result from
+  /// [MCalDayView.onEventTypeConversionRequested].
+  ///
+  /// If `true` (sync or async), exits all keyboard modes. If `false`, stays in
+  /// Event Mode with the event selected.
+  void _handleConversionResult(FutureOr<bool> result) {
+    if (result is Future<bool>) {
+      result.then((value) {
+        if (mounted && value) _exitAllKeyboardModes();
+      });
+    } else if (result == true) {
+      _exitAllKeyboardModes();
+    }
+  }
 
   // ============================================================================
   // Lifecycle Methods
@@ -2047,8 +2130,7 @@ class MCalDayViewState extends State<MCalDayView> {
     if (_scrollController == null || !_scrollController!.hasClients) return;
 
     final scrollController = _scrollController!;
-    final hourHeight = widget.hourHeight ?? _cachedHourHeight;
-    final effectiveHourHeight = hourHeight > 0 ? hourHeight : 80.0;
+    final effectiveHourHeight = _hourHeight;
 
     final targetDateTime = DateTime(
       _displayDate.year,
@@ -2188,7 +2270,7 @@ class MCalDayViewState extends State<MCalDayView> {
     final sc = _scrollController;
     _cachedScrollOffset = (sc != null && sc.hasClients) ? sc.offset : 0.0;
 
-    final hourHeight = widget.hourHeight ?? 80.0;
+    final hourHeight = _hourHeight;
     _cachedMinuteHeight = hourHeight / 60.0;
 
     _layoutCachedForDrag = true;
@@ -2202,6 +2284,7 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Uses [SemanticsService.sendAnnouncement] to notify screen reader users
   /// of drag, resize, and other state changes.
   void _announceScreenReader(BuildContext context, String message) {
+    MCalDayView.debugAnnouncementLog?.add(message);
     if (!mounted) return;
     try {
       final view = View.of(context);
@@ -2365,22 +2448,18 @@ class MCalDayViewState extends State<MCalDayView> {
     setState(() {});
   }
 
-  /// Handles keyboard events for navigation and shortcuts.
+  /// Handles keyboard events using a four-mode state machine.
   ///
-  /// Arrow up/down scroll by time slot; Page Up/Down by viewport; Home/End to
-  /// start/end. Tab cycles focus between events. Shortcuts (Cmd+N, etc.) are
-  /// handled by [Shortcuts] and [Actions].
-  ///
-  /// When in keyboard move mode (Ctrl+M): arrow keys move event, Enter confirms,
-  /// Escape cancels. When in keyboard resize mode (Ctrl+R): arrow keys adjust
-  /// time, Tab switches edge, Enter confirms, Escape cancels.
+  /// Mode dispatch order: Resize Mode → Move Mode → Event Mode → Navigation Mode.
+  /// Escape is handled before the mode check and works even when
+  /// [MCalDayView.enableKeyboardNavigation] is false.
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
 
-    // Handle Escape key — works even if keyboard navigation is disabled.
-    // Priority: keyboard resize mode > keyboard move mode > pointer drag.
+    // Escape — works even if keyboard navigation is disabled.
+    // Priority: resize > move > event > drag.
     if (event.logicalKey == LogicalKeyboardKey.escape) {
       if (_isKeyboardResizeMode) {
         _ensureDragHandler.cancelResize();
@@ -2393,7 +2472,17 @@ class MCalDayViewState extends State<MCalDayView> {
         setState(() {});
         return KeyEventResult.handled;
       }
-      // Cancel pointer drag if active
+      if (_isKeyboardEventMode) {
+        setState(() {
+          _isKeyboardEventMode = false;
+          _isKeyboardOverflowFocused = false;
+          _focusedEvent = null;
+          _keyboardEventIndex = 0;
+        });
+        final l10n = mcalL10n(context);
+        _announceScreenReader(context, l10n.announcementDayNavigationMode);
+        return KeyEventResult.handled;
+      }
       if (widget.enableDragToMove && _isDragActive) {
         _handleDragCancelled();
         return KeyEventResult.handled;
@@ -2402,191 +2491,636 @@ class MCalDayViewState extends State<MCalDayView> {
 
     if (!widget.enableKeyboardNavigation) return KeyEventResult.ignored;
 
-    // Handle keyboard resize mode (sub-mode of move, checked first)
+    // Four-mode dispatch
     if (_isKeyboardResizeMode) {
-      final result = _handleKeyboardResizeKey(event);
-      if (result != null) return result;
+      return _handleKeyboardResizeModeKey(event);
     }
-
-    // Handle keyboard move mode
     if (_isKeyboardMoveMode) {
-      final result = _handleKeyboardMoveKey(event);
-      if (result != null) return result;
+      return _handleKeyboardMoveModeKey(event);
+    }
+    if (_isKeyboardEventMode) {
+      return _handleKeyboardEventModeKey(event);
+    }
+    return _handleNavigationModeKey(event);
+  }
+
+  /// Navigation Mode key handler — slot focus movement and day navigation.
+  ///
+  /// ↑↓ move the focused slot (null = all-day, 0..n = time grid). Home/End
+  /// jump to first/last time slot. PageUp/PageDown navigate to previous/next
+  /// day. Enter/Space enter Event Mode. N creates an event. A jumps to the
+  /// all-day section. T jumps to the time grid. ←→ are ignored.
+  KeyEventResult _handleNavigationModeKey(KeyEvent event) {
+    final key = event.logicalKey;
+    final l10n = mcalL10n(context);
+    final slotMinutes = widget.timeSlotDuration.inMinutes;
+    final totalSlots =
+        ((widget.endHour - widget.startHour) * 60) ~/ slotMinutes;
+
+    // Activate focus indicators on first navigation key press.
+    if (!_keyboardNavigationActive) {
+      setState(() => _keyboardNavigationActive = true);
     }
 
-    final scrollController = _scrollController;
-    if (scrollController == null || !scrollController.hasClients) {
+    // ── ↑ ────────────────────────────────────────────────────────────────────
+    if (key == LogicalKeyboardKey.arrowUp) {
+      if (_focusedSlotIndex == null) {
+        // Already at all-day section — no further movement upward.
+      } else if (_focusedSlotIndex == 0) {
+        // Transition to all-day section.
+        setState(() => _focusedSlotIndex = null);
+        _announceScreenReader(context, l10n.announcementDayAllDaySection);
+      } else {
+        setState(() {
+          _focusedSlotIndex = (_focusedSlotIndex! - 1).clamp(0, totalSlots - 1);
+          _lastTimeGridSlotIndex = _focusedSlotIndex;
+        });
+        _scrollToFocusedSlot();
+      }
+      return KeyEventResult.handled;
+    }
+
+    // ── ↓ ────────────────────────────────────────────────────────────────────
+    if (key == LogicalKeyboardKey.arrowDown) {
+      if (_focusedSlotIndex == null) {
+        // Transition from all-day to time grid.
+        final target = _lastTimeGridSlotIndex ?? 0;
+        setState(() {
+          _focusedSlotIndex = target;
+          _lastTimeGridSlotIndex = target;
+        });
+        _scrollToFocusedSlot();
+        final focusedTime = _slotIndexToTime(_focusedSlotIndex!);
+        final timeStr = _formatSlotTime(focusedTime);
+        _announceScreenReader(context, l10n.announcementDayTimeGrid(timeStr));
+      } else {
+        final next =
+            (_focusedSlotIndex! + 1).clamp(0, totalSlots - 1);
+        setState(() {
+          _focusedSlotIndex = next;
+          _lastTimeGridSlotIndex = next;
+        });
+        _scrollToFocusedSlot();
+      }
+      return KeyEventResult.handled;
+    }
+
+    // ── Home ─────────────────────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.home, key)) {
+      setState(() {
+        _focusedSlotIndex = 0;
+        _lastTimeGridSlotIndex = 0;
+      });
+      _scrollToFocusedSlot();
+      return KeyEventResult.handled;
+    }
+
+    // ── End ──────────────────────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.end, key)) {
+      final last = totalSlots - 1;
+      setState(() {
+        _focusedSlotIndex = last;
+        _lastTimeGridSlotIndex = last;
+      });
+      _scrollToFocusedSlot();
+      return KeyEventResult.handled;
+    }
+
+    // ── PageUp / PageDown ────────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.pageUp, key)) {
+      _handleNavigatePrevious();
+      return KeyEventResult.handled;
+    }
+    if (_matchesAny(_keyBindings.pageDown, key)) {
+      _handleNavigateNext();
+      return KeyEventResult.handled;
+    }
+
+    // ── ←→ — ignored in Navigation Mode ─────────────────────────────────────
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
       return KeyEventResult.ignored;
     }
 
-    final hourHeight = _cachedHourHeight > 0
-        ? _cachedHourHeight
-        : (widget.hourHeight ?? 80.0);
+    // ── Enter / Space — enter Event Mode ────────────────────────────────────
+    if (_matchesAny(_keyBindings.enterEventMode, key)) {
+      final eventsAtFocus = _eventsAtFocus();
+      if (eventsAtFocus.isNotEmpty) {
+        setState(() {
+          _isKeyboardEventMode = true;
+          _keyboardEventIndex = 0;
+          _focusedEvent = eventsAtFocus[0];
+        });
+        _announceScreenReader(
+          context, l10n.announcementDayEventMode(eventsAtFocus.length));
+      }
+      return KeyEventResult.handled;
+    }
+
+    // ── N — create event ────────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.createEvent, key)) {
+      final startTime = _focusedSlotIndex == null
+          ? dateOnly(_displayDate)
+          : _slotIndexToTime(_focusedSlotIndex!);
+      final result = widget.onCreateEventRequested?.call(context, startTime);
+      // Return value is ignored per Req 8 AC 6 — always stays in Navigation Mode.
+      if (result is Future<bool>) {
+        result.then((_) {});
+      }
+      return KeyEventResult.handled;
+    }
+
+    // ── A — jump to all-day section ──────────────────────────────────────────
+    if (_matchesAny(_keyBindings.jumpToAllDay, key)) {
+      setState(() => _focusedSlotIndex = null);
+      _announceScreenReader(context, l10n.announcementDayAllDaySection);
+      return KeyEventResult.handled;
+    }
+
+    // ── T — jump to time grid ────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.jumpToTimeGrid, key)) {
+      final target = _lastTimeGridSlotIndex ?? _nearestSlotToNow(totalSlots);
+      setState(() {
+        _focusedSlotIndex = target;
+        _lastTimeGridSlotIndex = target;
+      });
+      _scrollToFocusedSlot();
+      final focusedTime = _slotIndexToTime(target);
+      final timeStr = _formatSlotTime(focusedTime);
+      _announceScreenReader(context, l10n.announcementDayTimeGrid(timeStr));
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  /// Returns the events visible at the current focused slot for Event Mode entry.
+  ///
+  /// All-day section (null): visible all-day events.
+  /// Time grid slot: timed events whose time range overlaps the focused slot.
+  List<MCalCalendarEvent> _eventsAtFocus() {
+    if (_focusedSlotIndex == null) {
+      final visibleCount = _allDayVisibleCount ?? _allDayEvents.length;
+      return _allDayEvents.take(visibleCount).toList();
+    }
+    final slotStart = _slotIndexToTime(_focusedSlotIndex!);
+    final slotEnd = slotStart.add(widget.timeSlotDuration);
+    return _timedEvents.where((e) {
+      return e.start.isBefore(slotEnd) && e.end.isAfter(slotStart);
+    }).toList();
+  }
+
+  /// Converts a slot index to a [DateTime] at the start of that slot.
+  DateTime _slotIndexToTime(int slotIndex) {
+    final slotMinutes = widget.timeSlotDuration.inMinutes;
+    final totalMinutes = widget.startHour * 60 + slotIndex * slotMinutes;
+    return DateTime(
+      _displayDate.year,
+      _displayDate.month,
+      _displayDate.day,
+      totalMinutes ~/ 60,
+      totalMinutes % 60,
+    );
+  }
+
+  /// Returns the slot index closest to the current time of day.
+  int _nearestSlotToNow(int totalSlots) {
+    final now = DateTime.now();
+    final minutesSinceStart =
+        (now.hour - widget.startHour) * 60 + now.minute;
+    return (minutesSinceStart ~/ widget.timeSlotDuration.inMinutes)
+        .clamp(0, totalSlots - 1);
+  }
+
+  /// Formats a [DateTime] as a readable time string for announcements.
+  String _formatSlotTime(DateTime time) {
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat.jm(locale).format(time);
+  }
+
+  /// Scrolls the time grid to reveal the currently focused slot.
+  void _scrollToFocusedSlot() {
+    final slotIndex = _focusedSlotIndex;
+    if (slotIndex == null) return;
+    final scrollController = _scrollController;
+    if (scrollController == null || !scrollController.hasClients) return;
+
+    final hourHeight = _hourHeight;
     final slotHeight = (widget.timeSlotDuration.inMinutes / 60.0) * hourHeight;
+    final slotOffset = slotIndex * slotHeight;
     final viewportHeight = scrollController.position.viewportDimension;
     final maxExtent = scrollController.position.maxScrollExtent;
     final minExtent = scrollController.position.minScrollExtent;
     final currentOffset = scrollController.offset;
 
-    double? newOffset;
-    switch (event.logicalKey) {
-      case LogicalKeyboardKey.arrowUp:
-        newOffset = (currentOffset - slotHeight).clamp(minExtent, maxExtent);
-        break;
-      case LogicalKeyboardKey.arrowDown:
-        newOffset = (currentOffset + slotHeight).clamp(minExtent, maxExtent);
-        break;
-      case LogicalKeyboardKey.pageUp:
-        newOffset = (currentOffset - viewportHeight).clamp(
-          minExtent,
-          maxExtent,
-        );
-        break;
-      case LogicalKeyboardKey.pageDown:
-        newOffset = (currentOffset + viewportHeight).clamp(
-          minExtent,
-          maxExtent,
-        );
-        break;
-      case LogicalKeyboardKey.home:
-        newOffset = minExtent;
-        break;
-      case LogicalKeyboardKey.end:
-        newOffset = maxExtent;
-        break;
-      case LogicalKeyboardKey.arrowLeft:
-      case LogicalKeyboardKey.arrowRight:
-        if (widget.showNavigator) {
-          final isLayoutRTL = MCalLayoutDirectionality.of(context);
-          if ((event.logicalKey == LogicalKeyboardKey.arrowLeft &&
-                  !isLayoutRTL) ||
-              (event.logicalKey == LogicalKeyboardKey.arrowRight &&
-                  isLayoutRTL)) {
-            _handleNavigatePrevious();
-          } else {
-            _handleNavigateNext();
-          }
-          return KeyEventResult.handled;
-        }
-        break;
-      case LogicalKeyboardKey.tab:
-        _handleTabNavigation(
-          HardwareKeyboard.instance.isLogicalKeyPressed(
-            LogicalKeyboardKey.shift,
-          ),
-        );
-        return KeyEventResult.handled;
-      default:
-        break;
+    // Only scroll if slot is outside the visible area.
+    if (slotOffset < currentOffset) {
+      scrollController.jumpTo(slotOffset.clamp(minExtent, maxExtent));
+    } else if (slotOffset + slotHeight > currentOffset + viewportHeight) {
+      final target = slotOffset + slotHeight - viewportHeight;
+      scrollController.jumpTo(target.clamp(minExtent, maxExtent));
     }
-
-    if (newOffset != null && newOffset != currentOffset) {
-      scrollController.jumpTo(newOffset);
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
   }
 
-  /// Handles key events when in keyboard move mode. Returns handled/ignored
-  /// if the key was consumed, or null to fall through to normal handling.
-  KeyEventResult? _handleKeyboardMoveKey(KeyEvent event) {
+  /// Scrolls the time grid to reveal a timed event during Event Mode cycling.
+  ///
+  /// All-day events live in the fixed header, so no scroll is needed for them.
+  void _scrollToRevealEvent(MCalCalendarEvent event) {
+    if (event.isAllDay) return;
+    final scrollController = _scrollController;
+    if (scrollController == null || !scrollController.hasClients) return;
+
+    final hourHeight = _hourHeight;
+    final eventTop = timeToOffset(
+      time: event.start,
+      startHour: widget.startHour,
+      hourHeight: hourHeight,
+    );
+    final eventBottom = timeToOffset(
+      time: event.end,
+      startHour: widget.startHour,
+      hourHeight: hourHeight,
+    );
+    final viewportHeight = scrollController.position.viewportDimension;
+    final maxExtent = scrollController.position.maxScrollExtent;
+    final minExtent = scrollController.position.minScrollExtent;
+    final currentOffset = scrollController.offset;
+
+    if (eventTop < currentOffset) {
+      scrollController.jumpTo(eventTop.clamp(minExtent, maxExtent));
+    } else if (eventBottom > currentOffset + viewportHeight) {
+      final target = eventBottom - viewportHeight;
+      scrollController.jumpTo(target.clamp(minExtent, maxExtent));
+    }
+  }
+
+  /// Event Mode key handler — cycle events, activate, delete, move/resize, convert.
+  ///
+  /// Cycles through: visible all-day events → overflow indicator (if present) →
+  /// timed events. Enter/Space activates. D/Delete deletes. X converts type.
+  /// M enters Move Mode. R enters Resize Mode (if enabled). Escape exits to
+  /// Navigation Mode (handled in [_handleKeyEvent] Escape block).
+  KeyEventResult _handleKeyboardEventModeKey(KeyEvent event) {
+    final key = event.logicalKey;
+    final l10n = mcalL10n(context);
+
+    // Build the unified focusable list.
+    final visibleAllDay = _allDayVisibleCount != null
+        ? _allDayEvents.take(_allDayVisibleCount!).toList()
+        : _allDayEvents;
+    final hasOverflow = _allDayVisibleCount != null &&
+        _allDayEvents.length > _allDayVisibleCount!;
+    final allFocusable = [...visibleAllDay, ..._timedEvents];
+    final overflowIndex = visibleAllDay.length; // index of overflow in cycle
+    final totalCyclable = allFocusable.length + (hasOverflow ? 1 : 0);
+
+    if (totalCyclable == 0) {
+      // No events — exit Event Mode.
+      setState(() {
+        _isKeyboardEventMode = false;
+        _isKeyboardOverflowFocused = false;
+        _focusedEvent = null;
+        _keyboardEventIndex = 0;
+      });
+      return KeyEventResult.handled;
+    }
+
+    /// Updates focus state for the given cycle index.
+    void applyFocusAtIndex(int index) {
+      if (hasOverflow && index == overflowIndex) {
+        setState(() {
+          _isKeyboardOverflowFocused = true;
+          _focusedEvent = null;
+          _keyboardEventIndex = index;
+        });
+      } else {
+        // Adjust for overflow slot offset if after overflow.
+        final eventListIndex =
+            (hasOverflow && index > overflowIndex) ? index - 1 : index;
+        final focusedEv = allFocusable[eventListIndex];
+        setState(() {
+          _isKeyboardOverflowFocused = false;
+          _focusedEvent = focusedEv;
+          _keyboardEventIndex = index;
+        });
+        _scrollToRevealEvent(focusedEv);
+        _announceScreenReader(
+          context,
+          l10n.announcementDayEventCycled(
+            focusedEv.title,
+            index + 1,
+            totalCyclable,
+          ),
+        );
+      }
+    }
+
+    // ── Cycle Forward ─────────────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.cycleForward, key)) {
+      final next = (_keyboardEventIndex + 1) % totalCyclable;
+      applyFocusAtIndex(next);
+      return KeyEventResult.handled;
+    }
+
+    // ── Cycle Backward ────────────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.cycleBackward, key)) {
+      final prev =
+          (_keyboardEventIndex - 1 + totalCyclable) % totalCyclable;
+      applyFocusAtIndex(prev);
+      return KeyEventResult.handled;
+    }
+
+    // ── Activate (Enter / Space) ───────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.activate, key)) {
+      if (_isKeyboardOverflowFocused) {
+        final overflowEvents = _allDayEvents.skip(visibleAllDay.length).toList();
+        widget.onOverflowTap?.call(context, overflowEvents, _displayDate);
+        _exitAllKeyboardModes();
+      } else if (_focusedEvent != null) {
+        final details = MCalEventTapDetails(
+          event: _focusedEvent!,
+          displayDate: _displayDate,
+        );
+        widget.onEventTap?.call(context, details);
+        _exitAllKeyboardModes();
+      }
+      return KeyEventResult.handled;
+    }
+
+    // ── Delete ────────────────────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.delete, key)) {
+      if (!_isKeyboardOverflowFocused && _focusedEvent != null) {
+        final ev = _focusedEvent!;
+        if (widget.onDeleteEventRequested != null) {
+          final details = MCalEventTapDetails(
+            event: ev,
+            displayDate: _displayDate,
+          );
+          final result = widget.onDeleteEventRequested!(context, details);
+          _announceScreenReader(
+              context, l10n.announcementDayEventDeleted(ev.title));
+          _handleDeleteResult(result);
+        }
+      }
+      return KeyEventResult.handled;
+    }
+
+    // ── Convert Event Type (X) ────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.convertEventType, key)) {
+      if (!_isKeyboardOverflowFocused && _focusedEvent != null) {
+        final ev = _focusedEvent!;
+        if (widget.onEventTypeConversionRequested != null) {
+          final toAllDay = !ev.isAllDay;
+          // When converting all-day → timed, suggest current time clamped to range.
+          DateTime? suggestedStartTime;
+          if (!toAllDay) {
+            final now = DateTime.now();
+            final suggestedHour = now.hour.clamp(
+              widget.startHour,
+              widget.endHour - 1,
+            );
+            suggestedStartTime = DateTime(
+              _displayDate.year,
+              _displayDate.month,
+              _displayDate.day,
+              suggestedHour,
+              now.minute,
+            );
+          }
+          _announceScreenReader(
+            context,
+            l10n.announcementDayEventConversionRequested(
+              ev.title,
+              toAllDay ? l10n.allDay : l10n.timeGrid,
+            ),
+          );
+          final result = widget.onEventTypeConversionRequested!(
+            context,
+            ev,
+            toAllDay,
+            suggestedStartTime,
+          );
+          _handleConversionResult(result);
+        }
+      }
+      return KeyEventResult.handled;
+    }
+
+    // ── Enter Move Mode (M) ────────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.enterMoveMode, key)) {
+      if (!_isKeyboardOverflowFocused && _focusedEvent != null) {
+        _enterKeyboardMoveMode();
+      }
+      return KeyEventResult.handled;
+    }
+
+    // ── Enter Resize Mode (R) — only if resize is enabled ─────────────────────
+    if (_matchesAny(_keyBindings.enterResizeMode, key)) {
+      if (!_isKeyboardOverflowFocused &&
+          _focusedEvent != null &&
+          _resolveDragToResize()) {
+        _enterKeyboardResizeMode();
+      }
+      // If resize is disabled, absorb the R key with no action (Req 1.5).
+      return KeyEventResult.handled;
+    }
+
+    // ── Exit Event Mode (Escape) ───────────────────────────────────────────────
+    // Handled in _handleKeyEvent Escape block — but handle here too for fallback.
+    if (_matchesAny(_keyBindings.exitEventMode, key)) {
+      setState(() {
+        _isKeyboardEventMode = false;
+        _isKeyboardOverflowFocused = false;
+        _focusedEvent = null;
+        _keyboardEventIndex = 0;
+      });
+      _announceScreenReader(context, l10n.announcementDayNavigationMode);
+      return KeyEventResult.handled;
+    }
+
+    // Absorb all other keys in Event Mode (Req 1.7).
+    return KeyEventResult.handled;
+  }
+
+  /// Handles key events when in keyboard Move Mode.
+  ///
+  /// Configurable keys (via [_keyBindings]): confirmMove, cancelMove,
+  /// switchToResize. Arrow keys for direction remain hardcoded.
+  KeyEventResult _handleKeyboardMoveModeKey(KeyEvent event) {
+    final key = event.logicalKey;
+    final l10n = mcalL10n(context);
     final ev = _keyboardMoveEvent;
     final proposedStart = _keyboardMoveProposedStart;
     final proposedEnd = _keyboardMoveProposedEnd;
-    if (ev == null || proposedStart == null || proposedEnd == null) return null;
+    if (ev == null || proposedStart == null || proposedEnd == null) {
+      return KeyEventResult.ignored;
+    }
 
     final isLayoutRTL = MCalLayoutDirectionality.of(context);
     final rtlMult = isLayoutRTL ? -1 : 1;
 
-    switch (event.logicalKey) {
-      case LogicalKeyboardKey.enter:
-      case LogicalKeyboardKey.numpadEnter:
-        _confirmKeyboardMove();
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.arrowUp:
-        _keyboardMoveBySlots(-1);
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.arrowDown:
-        _keyboardMoveBySlots(1);
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.arrowLeft:
-        _keyboardMoveByDays(-1 * rtlMult);
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.arrowRight:
-        _keyboardMoveByDays(1 * rtlMult);
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.keyR:
-        if (_resolveDragToResize()) {
-          if (_ensureDragHandler.isDragging) {
-            _ensureDragHandler.cancelDrag();
-          }
-          _enterKeyboardResizeMode();
-        }
-        return KeyEventResult.handled;
-      default:
-        return null;
+    // ── Confirm Move ──────────────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.confirmMove, key)) {
+      _confirmKeyboardMove();
+      return KeyEventResult.handled;
     }
+
+    // ── Cancel Move → return to Event Mode ────────────────────────────────────
+    if (_matchesAny(_keyBindings.cancelMove, key)) {
+      _exitKeyboardMoveMode(cancel: true);
+      // Return to Event Mode with same focused event.
+      setState(() {
+        _isKeyboardEventMode = true;
+        _focusedEvent = ev;
+      });
+      _announceScreenReader(
+          context, l10n.announcementDayMoveCancelled(ev.title));
+      return KeyEventResult.handled;
+    }
+
+    // ── Switch to Resize Mode (R) ─────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.switchToResize, key)) {
+      if (_resolveDragToResize()) {
+        _exitKeyboardMoveMode(cancel: true);
+        _enterKeyboardResizeMode();
+      }
+      return KeyEventResult.handled;
+    }
+
+    // ── Arrow keys (hardcoded) ────────────────────────────────────────────────
+    // Up/Down move timed events by one slot. All-day events have no time
+    // component, so Up/Down are absorbed with no action (Req 4.3).
+    if (key == LogicalKeyboardKey.arrowUp) {
+      if (_keyboardMoveEvent?.isAllDay != true) _keyboardMoveBySlots(-1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown) {
+      if (_keyboardMoveEvent?.isAllDay != true) _keyboardMoveBySlots(1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      _keyboardMoveByDays(-1 * rtlMult);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) {
+      _keyboardMoveByDays(1 * rtlMult);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
   }
 
-  /// Handles key events when in keyboard resize mode.
-  KeyEventResult? _handleKeyboardResizeKey(KeyEvent event) {
+  /// Handles key events when in keyboard Resize Mode.
+  ///
+  /// Configurable keys (via [_keyBindings]): switchToStartEdge, switchToEndEdge,
+  /// confirmResize, cancelResize, switchToMove. Arrow keys remain hardcoded.
+  KeyEventResult _handleKeyboardResizeModeKey(KeyEvent event) {
+    final key = event.logicalKey;
     final l10n = mcalL10n(context);
+    final focusedEv = _focusedEvent;
+    final isLayoutRTL = MCalLayoutDirectionality.of(context);
+    final rtlMult = isLayoutRTL ? -1 : 1;
 
-    switch (event.logicalKey) {
-      case LogicalKeyboardKey.enter:
-      case LogicalKeyboardKey.numpadEnter:
-        _confirmKeyboardResize();
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.keyS:
+    // ── Confirm Resize ────────────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.confirmResize, key)) {
+      _confirmKeyboardResize();
+      return KeyEventResult.handled;
+    }
+
+    // ── Cancel Resize → return to Event Mode ──────────────────────────────────
+    if (_matchesAny(_keyBindings.cancelResize, key)) {
+      _ensureDragHandler.cancelResize();
+      _exitKeyboardResizeMode(cancel: true);
+      if (focusedEv != null) {
+        setState(() {
+          _isKeyboardEventMode = true;
+          _focusedEvent = focusedEv;
+        });
+        _announceScreenReader(context, l10n.announcementDayResizeCancelled);
+      }
+      return KeyEventResult.handled;
+    }
+
+    // ── Switch to Start Edge (S) ──────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.switchToStartEdge, key)) {
+      if (focusedEv != null) {
         _keyboardResizeEdge = MCalResizeEdge.start;
         _ensureDragHandler.cancelResize();
-        _ensureDragHandler.startResize(_focusedEvent!, MCalResizeEdge.start);
-        _updateKeyboardResizePreview();
-        if (mounted) {
-          SemanticsService.sendAnnouncement(
-            View.of(context),
-            l10n.announcementResizingStartEdge,
-            Directionality.of(context),
+        _ensureDragHandler.startResize(focusedEv, MCalResizeEdge.start);
+        if (focusedEv.isAllDay) {
+          final start = _keyboardResizeProposedStart ?? focusedEv.start;
+          final end = _keyboardResizeProposedEnd ?? focusedEv.end;
+          final isValid = _validateResize(focusedEv, start, end,
+              MCalResizeEdge.start);
+          _ensureDragHandler.updateResize(
+            proposedStart: start, proposedEnd: end,
+            isValid: isValid, cells: const [],
           );
+        } else {
+          _updateKeyboardResizePreview();
         }
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.keyE:
+        _announceScreenReader(context, l10n.announcementResizingStartEdge);
+      }
+      return KeyEventResult.handled;
+    }
+
+    // ── Switch to End Edge (E) ────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.switchToEndEdge, key)) {
+      if (focusedEv != null) {
         _keyboardResizeEdge = MCalResizeEdge.end;
         _ensureDragHandler.cancelResize();
-        _ensureDragHandler.startResize(_focusedEvent!, MCalResizeEdge.end);
-        _updateKeyboardResizePreview();
-        if (mounted) {
-          SemanticsService.sendAnnouncement(
-            View.of(context),
-            l10n.announcementResizingEndEdge,
-            Directionality.of(context),
+        _ensureDragHandler.startResize(focusedEv, MCalResizeEdge.end);
+        if (focusedEv.isAllDay) {
+          final start = _keyboardResizeProposedStart ?? focusedEv.start;
+          final end = _keyboardResizeProposedEnd ?? focusedEv.end;
+          final isValid = _validateResize(focusedEv, start, end,
+              MCalResizeEdge.end);
+          _ensureDragHandler.updateResize(
+            proposedStart: start, proposedEnd: end,
+            isValid: isValid, cells: const [],
           );
+        } else {
+          _updateKeyboardResizePreview();
         }
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.keyM:
-        _ensureDragHandler.cancelResize();
-        _exitKeyboardResizeMode(cancel: true);
-        if (mounted) {
-          SemanticsService.sendAnnouncement(
-            View.of(context),
-            l10n.announcementMoveMode,
-            Directionality.of(context),
-          );
-        }
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.arrowUp:
-        _keyboardResizeBySlots(-1);
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.arrowDown:
-        _keyboardResizeBySlots(1);
-        return KeyEventResult.handled;
-      case LogicalKeyboardKey.arrowLeft:
-      case LogicalKeyboardKey.arrowRight:
-        // Consume these keys in resize mode to prevent fall-through to move handler
-        return KeyEventResult.handled;
-      default:
-        return null;
+        _announceScreenReader(context, l10n.announcementResizingEndEdge);
+      }
+      return KeyEventResult.handled;
     }
+
+    // ── Switch to Move Mode (M) ────────────────────────────────────────────────
+    if (_matchesAny(_keyBindings.switchToMove, key)) {
+      _ensureDragHandler.cancelResize();
+      _exitKeyboardResizeMode(cancel: true);
+      if (focusedEv != null) {
+        _focusedEvent = focusedEv;
+        _enterKeyboardMoveMode();
+        _announceScreenReader(
+            context, l10n.announcementDayMoveMode(focusedEv.title));
+      }
+      return KeyEventResult.handled;
+    }
+
+    // ── Arrow keys (hardcoded) ────────────────────────────────────────────────
+    // Up/Down adjust by time slot for timed events; absorbed for all-day.
+    if (key == LogicalKeyboardKey.arrowUp) {
+      if (focusedEv?.isAllDay != true) _keyboardResizeBySlots(-1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown) {
+      if (focusedEv?.isAllDay != true) _keyboardResizeBySlots(1);
+      return KeyEventResult.handled;
+    }
+    // Left/Right adjust by one day, respecting RTL.
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      _keyboardResizeByDays(-1 * rtlMult);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) {
+      _keyboardResizeByDays(1 * rtlMult);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
   }
 
   /// Enters keyboard move mode for the focused event (Ctrl+M).
@@ -2625,8 +3159,9 @@ class MCalDayViewState extends State<MCalDayView> {
     final ev = _keyboardMoveEvent;
     final start = _keyboardMoveProposedStart;
     final end = _keyboardMoveProposedEnd;
-    if (dragHandler == null || ev == null || start == null || end == null)
+    if (dragHandler == null || ev == null || start == null || end == null) {
       return;
+    }
 
     final isValid = _validateDropForEvent(ev, start, end);
     dragHandler.updateProposedDropRange(
@@ -2725,9 +3260,7 @@ class MCalDayViewState extends State<MCalDayView> {
       end.minute + deltaMins,
     );
 
-    final hourHeight = _cachedHourHeight > 0
-        ? _cachedHourHeight
-        : (widget.hourHeight ?? 80.0);
+    final hourHeight = _hourHeight;
     final minOffset = 0.0;
     final maxOffset = (widget.endHour - widget.startHour) * hourHeight;
     final startOffset = timeToOffset(
@@ -2820,9 +3353,7 @@ class MCalDayViewState extends State<MCalDayView> {
       feedbackWidth: 0,
       feedbackHeight: 0,
     );
-    final hourHeight = _cachedHourHeight > 0
-        ? _cachedHourHeight
-        : (widget.hourHeight ?? 80.0);
+    final hourHeight = _hourHeight;
     final localY = timeToOffset(
       time: proposedStart,
       startHour: widget.startHour,
@@ -2859,23 +3390,34 @@ class MCalDayViewState extends State<MCalDayView> {
     setState(() {});
   }
 
-  /// Enters keyboard resize mode for the focused event (Ctrl+R).
+  /// Enters keyboard resize mode for the focused event.
   void _enterKeyboardResizeMode() {
     final event = _focusedEvent;
     if (event == null || !_resolveDragToResize()) return;
-    if (event.isAllDay) return;
 
     _isKeyboardResizeMode = true;
     _keyboardResizeEdge = MCalResizeEdge.end;
     _ensureDragHandler.startResize(event, MCalResizeEdge.end);
-    _keyboardResizeEdgeOffset = timeToOffset(
-      time: event.end,
-      startHour: widget.startHour,
-      hourHeight: _cachedHourHeight > 0
-          ? _cachedHourHeight
-          : (widget.hourHeight ?? 80.0),
-    );
-    _updateKeyboardResizePreview();
+
+    if (event.isAllDay) {
+      _keyboardResizeProposedStart = event.start;
+      _keyboardResizeProposedEnd = event.end;
+      final isValid = _validateResize(event, event.start, event.end,
+          MCalResizeEdge.end);
+      _ensureDragHandler.updateResize(
+        proposedStart: event.start,
+        proposedEnd: event.end,
+        isValid: isValid,
+        cells: const [],
+      );
+    } else {
+      _keyboardResizeEdgeOffset = timeToOffset(
+        time: event.end,
+        startHour: widget.startHour,
+        hourHeight: _hourHeight,
+      );
+      _updateKeyboardResizePreview();
+    }
 
     if (mounted) {
       final l10n = mcalL10n(context);
@@ -2887,6 +3429,10 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Offset of the edge being resized (for keyboard resize mode).
   double _keyboardResizeEdgeOffset = 0.0;
 
+  /// Proposed start/end for all-day keyboard resize (date-based, not pixel-based).
+  DateTime? _keyboardResizeProposedStart;
+  DateTime? _keyboardResizeProposedEnd;
+
   /// Updates the drag handler with current keyboard resize proposed range.
   void _updateKeyboardResizePreview() {
     final dragHandler = _dragHandler;
@@ -2894,9 +3440,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
     final event = dragHandler.resizingEvent!;
     final edge = _keyboardResizeEdge ?? MCalResizeEdge.end;
-    final hourHeight = _cachedHourHeight > 0
-        ? _cachedHourHeight
-        : (widget.hourHeight ?? 80.0);
+    final hourHeight = _hourHeight;
     final proposedStart = edge == MCalResizeEdge.start
         ? snapToTimeSlot(
             time: offsetToTime(
@@ -2951,9 +3495,7 @@ class MCalDayViewState extends State<MCalDayView> {
     if (dragHandler == null || !dragHandler.isResizing) return;
 
     final slotMins = widget.timeSlotDuration.inMinutes;
-    final hourHeight = _cachedHourHeight > 0
-        ? _cachedHourHeight
-        : (widget.hourHeight ?? 80.0);
+    final hourHeight = _hourHeight;
     final deltaPx = (deltaSlots * slotMins / 60.0) * hourHeight;
     final minOffset = 0.0;
     final maxOffset = (widget.endHour - widget.startHour) * hourHeight;
@@ -2967,6 +3509,82 @@ class MCalDayViewState extends State<MCalDayView> {
           ? 'start'
           : 'end';
       _announceScreenReader(context, 'Adjusted $edge time');
+    }
+    setState(() {});
+  }
+
+  /// Adjusts keyboard resize by N days (positive = later). Used for Left/Right
+  /// in Resize Mode. Navigates the display date to follow the active edge.
+  void _keyboardResizeByDays(int deltaDays) {
+    final dragHandler = _dragHandler;
+    if (dragHandler == null || !dragHandler.isResizing) return;
+    final event = dragHandler.resizingEvent;
+    if (event == null) return;
+
+    final edge = _keyboardResizeEdge ?? MCalResizeEdge.end;
+    final hourHeight = _hourHeight;
+
+    if (event.isAllDay) {
+      // All-day: shift the active edge date, clamp so start <= end.
+      var start = _keyboardResizeProposedStart ?? event.start;
+      var end = _keyboardResizeProposedEnd ?? event.end;
+      if (edge == MCalResizeEdge.end) {
+        end = addDays(end, deltaDays);
+        if (end.isBefore(start)) end = dateOnly(start);
+      } else {
+        start = addDays(start, deltaDays);
+        if (start.isAfter(end)) start = dateOnly(end);
+      }
+      _keyboardResizeProposedStart = start;
+      _keyboardResizeProposedEnd = end;
+
+      final isValid = _validateResize(event, start, end, edge);
+      dragHandler.updateResize(
+        proposedStart: start,
+        proposedEnd: end,
+        isValid: isValid,
+        cells: const [],
+      );
+      final activeDate = edge == MCalResizeEdge.end ? end : start;
+      widget.controller.setDisplayDate(dateOnly(activeDate));
+    } else {
+      // Timed: determine current edge time, shift by days, update offset.
+      final currentEdgeTime = edge == MCalResizeEdge.end
+          ? offsetToTime(
+              offset: _keyboardResizeEdgeOffset,
+              date: _displayDate,
+              startHour: widget.startHour,
+              hourHeight: hourHeight,
+            )
+          : offsetToTime(
+              offset: _keyboardResizeEdgeOffset,
+              date: _displayDate,
+              startHour: widget.startHour,
+              hourHeight: hourHeight,
+            );
+      final newEdgeTime = addDays(currentEdgeTime, deltaDays);
+      widget.controller.setDisplayDate(dateOnly(newEdgeTime));
+      _keyboardResizeEdgeOffset = timeToOffset(
+        time: newEdgeTime,
+        startHour: widget.startHour,
+        hourHeight: hourHeight,
+      );
+      _updateKeyboardResizePreview();
+    }
+
+    if (mounted) {
+      final edgeName = edge == MCalResizeEdge.start ? 'start' : 'end';
+      final l10n = mcalL10n(context);
+      final locale = widget.locale ?? Localizations.localeOf(context);
+      final activeDate = edge == MCalResizeEdge.end
+          ? (_keyboardResizeProposedEnd ?? event.end)
+          : (_keyboardResizeProposedStart ?? event.start);
+      final dateStr =
+          DateFormat.yMMMMEEEEd(locale.toString()).format(activeDate);
+      _announceScreenReader(
+        context,
+        l10n.announcementDayResizingEvent(event.title, edgeName, dateStr),
+      );
     }
     setState(() {});
   }
@@ -2990,6 +3608,8 @@ class MCalDayViewState extends State<MCalDayView> {
   void _exitKeyboardResizeMode({required bool cancel}) {
     _isKeyboardResizeMode = false;
     _keyboardResizeEdge = null;
+    _keyboardResizeProposedStart = null;
+    _keyboardResizeProposedEnd = null;
     _ensureDragHandler.cancelResize();
     if (mounted && cancel) {
       final l10n = mcalL10n(context);
@@ -3003,32 +3623,6 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Only includes all-day events that are actually visible (not hidden
   /// behind the overflow indicator). Uses [_allDayVisibleCount] reported
   /// by [_AllDayEventsSection] during build.
-  void _handleTabNavigation(bool shift) {
-    final visibleAllDay = _allDayVisibleCount != null
-        ? _allDayEvents.take(_allDayVisibleCount!).toList()
-        : _allDayEvents;
-    final allFocusable = [...visibleAllDay, ..._timedEvents];
-    if (allFocusable.isEmpty) return;
-
-    int nextIndex;
-    if (_focusedEvent == null) {
-      nextIndex = shift ? allFocusable.length - 1 : 0;
-    } else {
-      final idx = allFocusable.indexWhere((e) => e.id == _focusedEvent!.id);
-      if (idx < 0) {
-        nextIndex = shift ? allFocusable.length - 1 : 0;
-      } else {
-        nextIndex = shift
-            ? (idx - 1 + allFocusable.length) % allFocusable.length
-            : (idx + 1) % allFocusable.length;
-      }
-    }
-
-    setState(() {
-      _focusedEvent = allFocusable[nextIndex];
-    });
-  }
-
   /// Handles event tap - forwards to widget callback and optionally sets keyboard focus.
   void _handleEventTap(BuildContext context, MCalEventTapDetails details) {
     if (widget.autoFocusOnEventTap && widget.enableKeyboardNavigation) {
@@ -3166,9 +3760,7 @@ class MCalDayViewState extends State<MCalDayView> {
     // Populate the drag layout cache so _checkVerticalScrollEdge has the
     // viewport bounds it needs for auto-scroll edge detection during resize.
     _cacheLayoutForDrag();
-    final hourHeight = _cachedHourHeight > 0
-        ? _cachedHourHeight
-        : (widget.hourHeight ?? 80.0);
+    final hourHeight = _hourHeight;
     _ensureDragHandler.startResize(event, edge);
     _resizeEdgeOffset = edge == MCalResizeEdge.start
         ? timeToOffset(
@@ -3220,9 +3812,7 @@ class MCalDayViewState extends State<MCalDayView> {
     // for the current (possibly post-scroll) scroll offset.
     final newEdgeOffset = (pointerGlobal.dy - viewportTop) + sc.offset;
 
-    final hourHeight = _cachedHourHeight > 0
-        ? _cachedHourHeight
-        : (widget.hourHeight ?? 80.0);
+    final hourHeight = _hourHeight;
     final maxOffset = (widget.endHour - widget.startHour) * hourHeight;
     final clampedOffset = newEdgeOffset.clamp(0.0, maxOffset);
 
@@ -3289,9 +3879,7 @@ class MCalDayViewState extends State<MCalDayView> {
     final dragHandler = _dragHandler;
     if (dragHandler == null || !dragHandler.isResizing) return;
 
-    final hourHeight = _cachedHourHeight > 0
-        ? _cachedHourHeight
-        : (widget.hourHeight ?? 80.0);
+    final hourHeight = _hourHeight;
     final minOffset = 0.0;
     final maxOffset = (widget.endHour - widget.startHour) * hourHeight;
     final eventMinDuration = widget.timeSlotDuration.inMinutes >= 15
@@ -3668,7 +4256,7 @@ class MCalDayViewState extends State<MCalDayView> {
     // Convert pixel offset to time (pure, no slot rounding).
     // Snapping is applied separately by _applySnapping so that timeSlotDuration
     // and gridlineInterval remain fully independent concerns.
-    final hourHeight = widget.hourHeight ?? 80.0;
+    final hourHeight = _hourHeight;
     final proposedStart = offsetToTime(
       offset: localPosition.dy,
       date: _displayDate,
@@ -3784,7 +4372,7 @@ class MCalDayViewState extends State<MCalDayView> {
         preserveTime: true,
       );
     } else {
-      final hourHeight = widget.hourHeight ?? 80.0;
+      final hourHeight = _hourHeight;
       final proposedStart = offsetToTime(
         offset: localPosition.dy,
         date: _displayDate,
@@ -4238,9 +4826,7 @@ class MCalDayViewState extends State<MCalDayView> {
     final sc = _scrollController;
     if (sc == null || !sc.hasClients) return;
 
-    final hourHeight = _cachedHourHeight > 0
-        ? _cachedHourHeight
-        : (widget.hourHeight ?? 80.0);
+    final hourHeight = _hourHeight;
 
     // Viewport screen-top is invariant for the current page.
     final viewportTop = _cachedTimeGridGlobalTop + _cachedScrollOffset;
@@ -4975,16 +5561,12 @@ class MCalDayViewState extends State<MCalDayView> {
     final topOffset = timeToOffset(
       time: proposedStart,
       startHour: widget.startHour,
-      hourHeight: _cachedHourHeight > 0
-          ? _cachedHourHeight
-          : (widget.hourHeight ?? 80.0),
+      hourHeight: _hourHeight,
     );
 
     final height = durationToHeight(
       duration: proposedEnd.difference(proposedStart),
-      hourHeight: _cachedHourHeight > 0
-          ? _cachedHourHeight
-          : (widget.hourHeight ?? 80.0),
+      hourHeight: _hourHeight,
     );
 
     // Create tile context for the phantom tile
@@ -5085,16 +5667,12 @@ class MCalDayViewState extends State<MCalDayView> {
     final topOffset = timeToOffset(
       time: proposedStart,
       startHour: widget.startHour,
-      hourHeight: _cachedHourHeight > 0
-          ? _cachedHourHeight
-          : (widget.hourHeight ?? 80.0),
+      hourHeight: _hourHeight,
     );
 
     final height = durationToHeight(
       duration: proposedEnd.difference(proposedStart),
-      hourHeight: _cachedHourHeight > 0
-          ? _cachedHourHeight
-          : (widget.hourHeight ?? 80.0),
+      hourHeight: _hourHeight,
     );
 
     final defaultOverlay = Positioned(
@@ -5183,7 +5761,7 @@ class MCalDayViewState extends State<MCalDayView> {
             _TimeLegendColumn(
               startHour: widget.startHour,
               endHour: widget.endHour,
-              hourHeight: widget.hourHeight ?? 80.0,
+              hourHeight: _hourHeight,
               timeLabelFormat: widget.timeLabelFormat,
               timeLabelBuilder: widget.timeLabelBuilder,
               theme: _resolveTheme(context),
@@ -5202,7 +5780,7 @@ class MCalDayViewState extends State<MCalDayView> {
             _TimeLegendColumn(
               startHour: widget.startHour,
               endHour: widget.endHour,
-              hourHeight: widget.hourHeight ?? 80.0,
+              hourHeight: _hourHeight,
               timeLabelFormat: widget.timeLabelFormat,
               timeLabelBuilder: widget.timeLabelBuilder,
               theme: _resolveTheme(context),
@@ -5225,13 +5803,51 @@ class MCalDayViewState extends State<MCalDayView> {
   /// - Layer 4: Drop target overlay (highlighted time slots) when [showDropTargetOverlay]
   ///
   /// Layer order is controlled by [dropTargetTilesAboveOverlay].
+  /// Builds a positioned highlight for the currently focused time slot
+  /// in Navigation Mode.
+  Widget _buildFocusedSlotIndicator(double hourHeight) {
+    final slotIndex = _focusedSlotIndex;
+    if (slotIndex == null) return const SizedBox.shrink();
+
+    final slotHeight = (widget.timeSlotDuration.inMinutes / 60.0) * hourHeight;
+    final topOffset = slotIndex * slotHeight;
+    final theme = _resolveTheme(context);
+    final dayTheme = theme.dayTheme;
+
+    final decoration = dayTheme?.focusedSlotDecoration ??
+        (dayTheme?.focusedSlotBackgroundColor != null
+            ? BoxDecoration(color: dayTheme!.focusedSlotBackgroundColor)
+            : BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.08),
+                border: Border(
+                  left: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 3,
+                  ),
+                ),
+              ));
+
+    return Positioned(
+      top: topOffset,
+      left: 0,
+      right: 0,
+      height: slotHeight,
+      child: IgnorePointer(
+        child: Container(decoration: decoration),
+      ),
+    );
+  }
+
   Widget _buildTimeGrid(
     BuildContext context,
     Locale locale,
     DateTime date,
     List<MCalCalendarEvent> timedEvents,
   ) {
-    final hourHeight = widget.hourHeight ?? 80.0;
+    final hourHeight = _hourHeight;
     final contentHeight =
         (widget.endHour - widget.startHour).clamp(0, 24) * hourHeight;
 
@@ -5272,6 +5888,13 @@ class MCalDayViewState extends State<MCalDayView> {
           );
     final mainContent = Stack(
       children: [
+        // Focused slot indicator — Navigation Mode only, not in Event/Move/Resize.
+        if (_keyboardNavigationActive &&
+            _focusedSlotIndex != null &&
+            !_isKeyboardEventMode &&
+            !_isKeyboardMoveMode &&
+            !_isKeyboardResizeMode)
+          _buildFocusedSlotIndicator(hourHeight),
         gridlinesLayer,
         // Disabled time slots overlay (rendered with 0.5 opacity)
         if (widget.timeSlotInteractivityCallback != null)
@@ -5753,98 +6376,6 @@ class MCalDayViewState extends State<MCalDayView> {
     return false;
   }
 
-  /// Builds the default keyboard shortcuts map.
-  Map<ShortcutActivator, Intent> _buildDefaultShortcuts() {
-    return <ShortcutActivator, Intent>{
-      // Cmd/Ctrl+N: Create new event
-      const SingleActivator(LogicalKeyboardKey.keyN, control: true):
-          MCalDayViewCreateEventIntent(),
-      const SingleActivator(LogicalKeyboardKey.keyN, meta: true):
-          MCalDayViewCreateEventIntent(),
-      // Cmd/Ctrl+D: Delete focused event
-      const SingleActivator(LogicalKeyboardKey.keyD, control: true):
-          MCalDayViewDeleteEventIntent(),
-      const SingleActivator(LogicalKeyboardKey.keyD, meta: true):
-          MCalDayViewDeleteEventIntent(),
-      // Cmd/Ctrl+E: Edit focused event
-      const SingleActivator(LogicalKeyboardKey.keyE, control: true):
-          MCalDayViewEditEventIntent(),
-      const SingleActivator(LogicalKeyboardKey.keyE, meta: true):
-          MCalDayViewEditEventIntent(),
-      // Delete/Backspace: Delete focused event
-      const SingleActivator(LogicalKeyboardKey.delete):
-          MCalDayViewDeleteEventIntent(),
-      const SingleActivator(LogicalKeyboardKey.backspace):
-          MCalDayViewDeleteEventIntent(),
-      // Ctrl/Cmd+M: Keyboard move mode
-      const SingleActivator(LogicalKeyboardKey.keyM, control: true):
-          MCalDayViewKeyboardMoveIntent(),
-      const SingleActivator(LogicalKeyboardKey.keyM, meta: true):
-          MCalDayViewKeyboardMoveIntent(),
-      // Ctrl/Cmd+R: Keyboard resize mode
-      const SingleActivator(LogicalKeyboardKey.keyR, control: true):
-          MCalDayViewKeyboardResizeIntent(),
-      const SingleActivator(LogicalKeyboardKey.keyR, meta: true):
-          MCalDayViewKeyboardResizeIntent(),
-    };
-  }
-
-  /// Builds the merged shortcuts map (defaults + user overrides).
-  Map<ShortcutActivator, Intent> _buildShortcutsMap() {
-    final shortcuts = Map<ShortcutActivator, Intent>.from(
-      _buildDefaultShortcuts(),
-    );
-    if (widget.keyboardShortcuts != null) {
-      shortcuts.addAll(widget.keyboardShortcuts!);
-    }
-    return shortcuts;
-  }
-
-  /// Builds the Actions map for keyboard shortcut intents.
-  Map<Type, Action<Intent>> _buildActionsMap() {
-    return <Type, Action<Intent>>{
-      MCalDayViewCreateEventIntent:
-          CallbackAction<MCalDayViewCreateEventIntent>(
-            onInvoke: (_) {
-              widget.onCreateEventRequested?.call();
-              return null;
-            },
-          ),
-      MCalDayViewDeleteEventIntent:
-          CallbackAction<MCalDayViewDeleteEventIntent>(
-            onInvoke: (_) {
-              final event = _focusedEvent;
-              if (event != null) {
-                widget.onDeleteEventRequested?.call(event);
-              }
-              return null;
-            },
-          ),
-      MCalDayViewEditEventIntent: CallbackAction<MCalDayViewEditEventIntent>(
-        onInvoke: (_) {
-          final event = _focusedEvent;
-          if (event != null) {
-            widget.onEditEventRequested?.call(event);
-          }
-          return null;
-        },
-      ),
-      MCalDayViewKeyboardMoveIntent:
-          CallbackAction<MCalDayViewKeyboardMoveIntent>(
-            onInvoke: (_) {
-              _enterKeyboardMoveMode();
-              return null;
-            },
-          ),
-      MCalDayViewKeyboardResizeIntent:
-          CallbackAction<MCalDayViewKeyboardResizeIntent>(
-            onInvoke: (_) {
-              _enterKeyboardResizeMode();
-              return null;
-            },
-          ),
-    };
-  }
 
   // ============================================================================
   // Default Builder Methods (Task 10)
@@ -5914,39 +6445,67 @@ class MCalDayViewState extends State<MCalDayView> {
 
         // All-Day Events Section — always rendered so timed→all-day drag targets
         // are available even when no all-day events exist.
-        _AllDayEventsSection(
-            events: pageEvents.allDay,
-            displayDate: date,
-            maxRows: widget.allDaySectionMaxRows,
-            theme: _resolveTheme(context),
-            locale: locale,
-            allDayEventTileBuilder: widget.allDayEventTileBuilder,
-            allDayOverflowBuilder: widget.allDayOverflowBuilder,
-            enableDragToMove: widget.enableDragToMove,
-            dragHandler: _dragHandler,
-            isDragActive: _isDragActive,
-            onEventTap: _handleEventTap,
-            onEventLongPress: widget.onEventLongPress,
-            onEventDoubleTap: widget.onEventDoubleTap,
-            keyboardFocusedEventId: _focusedEvent?.id,
-            onOverflowTap: widget.onOverflowTap,
-            onOverflowLongPress: widget.onOverflowLongPress,
-            onOverflowDoubleTap: widget.onOverflowDoubleTap,
-            onHoverOverflow: widget.onHoverOverflow,
-            onHoverEvent: _wrapOnHoverEvent(),
-            onVisibleCountChanged: (count) {
-              _allDayVisibleCount = count;
-            },
-            onTimeSlotTap: widget.onTimeSlotTap,
-            onTimeSlotLongPress: widget.onTimeSlotLongPress,
-            onDragStarted: _handleDragStarted,
-            onDragEnded: _handleDragEnded,
-            onDragCancelled: _handleDragCancelled,
-            regions: widget.controller.getRegionsForDate(date),
-            draggedTileBuilder: widget.draggedTileBuilder,
-            dragSourceTileBuilder: widget.dragSourceTileBuilder,
-            dragLongPressDelay: widget.dragLongPressDelay,
-          ),
+        // Highlight the section when it is keyboard-focused in Navigation Mode.
+        Stack(
+          children: [
+            _AllDayEventsSection(
+              events: pageEvents.allDay,
+              displayDate: date,
+              maxRows: widget.allDaySectionMaxRows,
+              theme: _resolveTheme(context),
+              locale: locale,
+              allDayEventTileBuilder: widget.allDayEventTileBuilder,
+              allDayOverflowBuilder: widget.allDayOverflowBuilder,
+              enableDragToMove: widget.enableDragToMove,
+              dragHandler: _dragHandler,
+              isDragActive: _isDragActive,
+              onEventTap: _handleEventTap,
+              onEventLongPress: widget.onEventLongPress,
+              onEventDoubleTap: widget.onEventDoubleTap,
+              keyboardFocusedEventId: _focusedEvent?.id,
+              onOverflowTap: widget.onOverflowTap,
+              onOverflowLongPress: widget.onOverflowLongPress,
+              onOverflowDoubleTap: widget.onOverflowDoubleTap,
+              onHoverOverflow: widget.onHoverOverflow,
+              onHoverEvent: _wrapOnHoverEvent(),
+              onVisibleCountChanged: (count) {
+                _allDayVisibleCount = count;
+              },
+              onTimeSlotTap: widget.onTimeSlotTap,
+              onTimeSlotLongPress: widget.onTimeSlotLongPress,
+              onDragStarted: _handleDragStarted,
+              onDragEnded: _handleDragEnded,
+              onDragCancelled: _handleDragCancelled,
+              regions: widget.controller.getRegionsForDate(date),
+              draggedTileBuilder: widget.draggedTileBuilder,
+              dragSourceTileBuilder: widget.dragSourceTileBuilder,
+              dragLongPressDelay: widget.dragLongPressDelay,
+            ),
+            if (_keyboardNavigationActive &&
+                _focusedSlotIndex == null &&
+                !_isKeyboardEventMode &&
+                !_isKeyboardMoveMode &&
+                !_isKeyboardResizeMode)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 3,
+                        ),
+                      ),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.04),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
 
         // Main content area with Time Legend and Events.
         Expanded(
@@ -6267,11 +6826,6 @@ class MCalDayViewState extends State<MCalDayView> {
       ),
     );
 
-    final shortcutsContent = Shortcuts(
-      shortcuts: _buildShortcutsMap(),
-      child: Actions(actions: _buildActionsMap(), child: focusContent),
-    );
-
     // Wrap in two layers:
     // • Outer Directionality(textDirection): drives text rendering direction
     //   for all Text widgets — event titles, time labels, day header, etc.
@@ -6290,7 +6844,7 @@ class MCalDayViewState extends State<MCalDayView> {
           label:
               widget.semanticsLabel ??
               'Day view for ${DateFormat.yMMMMEEEEd(locale.toString()).format(_displayDate)}',
-          child: shortcutsContent,
+          child: focusContent,
         ),
       ),
     );
@@ -7628,11 +8182,12 @@ class _AllDayEventsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveMaxRows = theme.dayTheme?.allDaySectionMaxRows ?? maxRows;
+    final effectiveMaxRows = maxRows;
     final tileWidth = theme.dayTheme?.allDayTileWidth ?? _defaultTileWidth;
     final tileHeight = theme.dayTheme?.allDayTileHeight ?? _defaultTileHeight;
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(
         horizontal: _sectionHPadding,
         vertical: 4.0,
@@ -7745,7 +8300,36 @@ class _AllDayEventsSection extends StatelessWidget {
       child: tile,
     );
 
-    if (enableDragToMove && onDragStarted != null) {
+    final dragEnabled = enableDragToMove && onDragStarted != null;
+    if (onEventTap != null ||
+        (!dragEnabled && onEventLongPress != null) ||
+        onEventDoubleTap != null) {
+      tile = GestureDetector(
+        onTap: onEventTap != null
+            ? () => onEventTap!(
+                context,
+                MCalEventTapDetails(event: event, displayDate: displayDate),
+              )
+            : null,
+        // When drag is enabled, long-press is consumed by LongPressDraggable
+        // to initiate drag — omit onLongPress to avoid gesture arena conflict.
+        onLongPress: !dragEnabled && onEventLongPress != null
+            ? () => onEventLongPress!(
+                context,
+                MCalEventTapDetails(event: event, displayDate: displayDate),
+              )
+            : null,
+        onDoubleTap: onEventDoubleTap != null
+            ? () => onEventDoubleTap!(
+                context,
+                MCalEventTapDetails(event: event, displayDate: displayDate),
+              )
+            : null,
+        child: tile,
+      );
+    }
+
+    if (dragEnabled) {
       final hSpacing = theme.eventTileHorizontalSpacing ?? 2.0;
       tile = MCalDraggableEventTile(
         event: event,
@@ -7765,30 +8349,6 @@ class _AllDayEventsSection extends StatelessWidget {
         onDragStarted: () => onDragStarted!(event, displayDate),
         onDragEnded: onDragEnded,
         onDragCanceled: onDragCancelled,
-        child: tile,
-      );
-    } else if (onEventTap != null ||
-        onEventLongPress != null ||
-        onEventDoubleTap != null) {
-      tile = GestureDetector(
-        onTap: onEventTap != null
-            ? () => onEventTap!(
-                context,
-                MCalEventTapDetails(event: event, displayDate: displayDate),
-              )
-            : null,
-        onLongPress: onEventLongPress != null
-            ? () => onEventLongPress!(
-                context,
-                MCalEventTapDetails(event: event, displayDate: displayDate),
-              )
-            : null,
-        onDoubleTap: onEventDoubleTap != null
-            ? () => onEventDoubleTap!(
-                context,
-                MCalEventTapDetails(event: event, displayDate: displayDate),
-              )
-            : null,
         child: tile,
       );
     }
@@ -8401,23 +8961,45 @@ class _TimeGridEventsLayer extends StatelessWidget {
       );
     }
 
-    // Step 1 (INNER): Wrap with drag-and-drop or gesture detector.
-    // MCalDraggableEventTile (LongPressDraggable) must be the inner layer so
-    // that the resize handles placed on top in Step 2 receive pointer events
-    // first. This mirrors Month View's layering: draggable tile is inner,
-    // resize handles sit above it in the Stack — an opaque Listener on each
-    // handle absorbs the press before it ever reaches LongPressDraggable.
+    // Step 1 (INNER): Wrap with gesture handlers then drag-and-drop.
+    // GestureDetector goes first (innermost) so taps resolve even when drag
+    // is enabled — LongPressDraggable only claims the arena after the delay.
+    // When drag is enabled, onLongPress is omitted so it doesn't compete
+    // with LongPressDraggable in the gesture arena (matches Layer 2 pattern).
+    // Resize handles placed on top in Step 2 receive pointer events first,
+    // mirroring Month View's layering.
+    if (onEventTap != null ||
+        (!enableDragToMove && onEventLongPress != null) ||
+        onEventDoubleTap != null) {
+      tile = GestureDetector(
+        onTap: onEventTap != null
+            ? () => onEventTap!(
+                context,
+                MCalEventTapDetails(event: event, displayDate: displayDate),
+              )
+            : null,
+        onLongPress: !enableDragToMove && onEventLongPress != null
+            ? () => onEventLongPress!(
+                context,
+                MCalEventTapDetails(event: event, displayDate: displayDate),
+              )
+            : null,
+        onDoubleTap: onEventDoubleTap != null
+            ? () => onEventDoubleTap!(
+                context,
+                MCalEventTapDetails(event: event, displayDate: displayDate),
+              )
+            : null,
+        child: tile,
+      );
+    }
+
     if (enableDragToMove) {
       final hSpacing = theme.eventTileHorizontalSpacing ?? 2.0;
       tile = MCalDraggableEventTile(
         event: event,
         sourceDate: displayDate,
-        // dayWidth = column width (may be a fraction when events overlap).
-        // This drives the feedback SizedBox so the dragged tile matches the
-        // source tile width exactly — even for overlapping events.
         dayWidth: width,
-        // tileHeight constrains the feedback to the exact pixel height of the
-        // source tile so the dragged appearance matches the original.
         tileHeight: height,
         horizontalSpacing: hSpacing,
         enabled: enableDragToMove,
@@ -8435,30 +9017,6 @@ class _TimeGridEventsLayer extends StatelessWidget {
             : null,
         onDragEnded: onDragEnded,
         onDragCanceled: onDragCancelled,
-        child: tile,
-      );
-    } else if (onEventTap != null ||
-        onEventLongPress != null ||
-        onEventDoubleTap != null) {
-      tile = GestureDetector(
-        onTap: onEventTap != null
-            ? () => onEventTap!(
-                context,
-                MCalEventTapDetails(event: event, displayDate: displayDate),
-              )
-            : null,
-        onLongPress: onEventLongPress != null
-            ? () => onEventLongPress!(
-                context,
-                MCalEventTapDetails(event: event, displayDate: displayDate),
-              )
-            : null,
-        onDoubleTap: onEventDoubleTap != null
-            ? () => onEventDoubleTap!(
-                context,
-                MCalEventTapDetails(event: event, displayDate: displayDate),
-              )
-            : null,
         child: tile,
       );
     }

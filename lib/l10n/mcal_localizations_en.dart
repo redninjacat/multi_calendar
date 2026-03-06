@@ -236,4 +236,85 @@ class MCalLocalizationsEn extends MCalLocalizations {
   String announcementEventResized(Object title, Object start, Object end) {
     return 'Resized $title to $start through $end';
   }
+
+  @override
+  String get announcementDayNavigationMode => 'Navigation mode';
+
+  @override
+  String announcementDayEventMode(Object count) {
+    return 'Event mode, $count events';
+  }
+
+  @override
+  String announcementDayEventCycled(
+    Object title,
+    Object position,
+    Object total,
+  ) {
+    return '$title, $position of $total';
+  }
+
+  @override
+  String announcementDayEventSelected(Object title) {
+    return 'Selected $title';
+  }
+
+  @override
+  String announcementDayMoveMode(Object title) {
+    return 'Move mode for $title';
+  }
+
+  @override
+  String announcementDayResizeMode(Object title) {
+    return 'Resize mode for $title';
+  }
+
+  @override
+  String announcementDayMoveCancelled(Object title) {
+    return 'Move cancelled for $title';
+  }
+
+  @override
+  String get announcementDayResizeCancelled => 'Resize cancelled';
+
+  @override
+  String announcementDayMovingEvent(Object title, Object time) {
+    return 'Moving $title to $time';
+  }
+
+  @override
+  String announcementDayResizingEvent(Object title, Object edge, Object time) {
+    return 'Resizing $title, $edge edge at $time';
+  }
+
+  @override
+  String announcementDayEventMoved(Object title, Object time) {
+    return '$title moved to $time';
+  }
+
+  @override
+  String announcementDayEventResized(Object title) {
+    return '$title resized';
+  }
+
+  @override
+  String get announcementDayAllDaySection => 'All-day section';
+
+  @override
+  String announcementDayTimeGrid(Object time) {
+    return 'Time grid, $time';
+  }
+
+  @override
+  String get announcementDayMoveInvalidTarget => 'Cannot move here';
+
+  @override
+  String announcementDayEventDeleted(Object title) {
+    return '$title deleted';
+  }
+
+  @override
+  String announcementDayEventConversionRequested(Object title, Object type) {
+    return 'Converting $title to $type';
+  }
 }

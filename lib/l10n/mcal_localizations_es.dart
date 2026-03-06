@@ -239,4 +239,85 @@ class MCalLocalizationsEs extends MCalLocalizations {
   String announcementEventResized(Object title, Object start, Object end) {
     return 'Redimensionado $title de $start a $end';
   }
+
+  @override
+  String get announcementDayNavigationMode => 'Modo navegación';
+
+  @override
+  String announcementDayEventMode(Object count) {
+    return 'Modo evento, $count eventos';
+  }
+
+  @override
+  String announcementDayEventCycled(
+    Object title,
+    Object position,
+    Object total,
+  ) {
+    return '$title, $position de $total';
+  }
+
+  @override
+  String announcementDayEventSelected(Object title) {
+    return 'Seleccionado $title';
+  }
+
+  @override
+  String announcementDayMoveMode(Object title) {
+    return 'Modo mover para $title';
+  }
+
+  @override
+  String announcementDayResizeMode(Object title) {
+    return 'Modo redimensión para $title';
+  }
+
+  @override
+  String announcementDayMoveCancelled(Object title) {
+    return 'Movimiento cancelado para $title';
+  }
+
+  @override
+  String get announcementDayResizeCancelled => 'Redimensión cancelada';
+
+  @override
+  String announcementDayMovingEvent(Object title, Object time) {
+    return 'Moviendo $title a $time';
+  }
+
+  @override
+  String announcementDayResizingEvent(Object title, Object edge, Object time) {
+    return 'Redimensionando $title, borde $edge en $time';
+  }
+
+  @override
+  String announcementDayEventMoved(Object title, Object time) {
+    return '$title movido a $time';
+  }
+
+  @override
+  String announcementDayEventResized(Object title) {
+    return '$title redimensionado';
+  }
+
+  @override
+  String get announcementDayAllDaySection => 'Sección de todo el día';
+
+  @override
+  String announcementDayTimeGrid(Object time) {
+    return 'Cuadrícula de tiempo, $time';
+  }
+
+  @override
+  String get announcementDayMoveInvalidTarget => 'No se puede mover aquí';
+
+  @override
+  String announcementDayEventDeleted(Object title) {
+    return '$title eliminado';
+  }
+
+  @override
+  String announcementDayEventConversionRequested(Object title, Object type) {
+    return 'Convirtiendo $title a $type';
+  }
 }

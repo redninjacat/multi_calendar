@@ -560,6 +560,12 @@ abstract class AppLocalizations {
   /// **'Allow Keyboard Create (N key)'**
   String get settingAllowKeyboardCreate;
 
+  /// No description provided for @settingAllowKeyboardConvert.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Keyboard Convert (X key)'**
+  String get settingAllowKeyboardConvert;
+
   /// No description provided for @settingAutoFocusOnEventTap.
   ///
   /// In en, this message translates to:
@@ -1844,6 +1850,210 @@ abstract class AppLocalizations {
   /// **'Shift+Arrow keys: Resize event'**
   String get accessibilityDayShortcutResize;
 
+  /// No description provided for @accessibilityDayModeNavigation.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigation Mode'**
+  String get accessibilityDayModeNavigation;
+
+  /// No description provided for @accessibilityDayModeNavigationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Default mode. ↑↓ navigate time slots; ↑ from first slot enters all-day section.'**
+  String get accessibilityDayModeNavigationDesc;
+
+  /// No description provided for @accessibilityDayModeEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Event Mode'**
+  String get accessibilityDayModeEvent;
+
+  /// No description provided for @accessibilityDayModeEventDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter/Space on a slot with events. Cycle through visible events.'**
+  String get accessibilityDayModeEventDesc;
+
+  /// No description provided for @accessibilityDayModeMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Move Mode'**
+  String get accessibilityDayModeMove;
+
+  /// No description provided for @accessibilityDayModeMoveDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Press M in Event Mode. Relocate the selected event.'**
+  String get accessibilityDayModeMoveDesc;
+
+  /// No description provided for @accessibilityDayModeResize.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize Mode'**
+  String get accessibilityDayModeResize;
+
+  /// No description provided for @accessibilityDayModeResizeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Press R in Event Mode. Change the start or end time.'**
+  String get accessibilityDayModeResizeDesc;
+
+  /// No description provided for @accessibilityDayNavUpDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigate between time slots'**
+  String get accessibilityDayNavUpDown;
+
+  /// No description provided for @accessibilityDayNavEnterSpace.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Event Mode (if slot has events)'**
+  String get accessibilityDayNavEnterSpace;
+
+  /// No description provided for @accessibilityDayNavHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump to first time slot'**
+  String get accessibilityDayNavHome;
+
+  /// No description provided for @accessibilityDayNavEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump to last time slot'**
+  String get accessibilityDayNavEnd;
+
+  /// No description provided for @accessibilityDayNavPageUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous day'**
+  String get accessibilityDayNavPageUp;
+
+  /// No description provided for @accessibilityDayNavPageDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Next day'**
+  String get accessibilityDayNavPageDown;
+
+  /// No description provided for @accessibilityDayNavN.
+  ///
+  /// In en, this message translates to:
+  /// **'Create event at focused slot (if handler provided)'**
+  String get accessibilityDayNavN;
+
+  /// No description provided for @accessibilityDayNavA.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump to all-day section'**
+  String get accessibilityDayNavA;
+
+  /// No description provided for @accessibilityDayNavT.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump to time grid (restores last slot)'**
+  String get accessibilityDayNavT;
+
+  /// No description provided for @accessibilityDayEventUpDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Cycle through visible events and overflow indicator'**
+  String get accessibilityDayEventUpDown;
+
+  /// No description provided for @accessibilityDayEventEnterSpace.
+  ///
+  /// In en, this message translates to:
+  /// **'Activate event/overflow and return to Navigation'**
+  String get accessibilityDayEventEnterSpace;
+
+  /// No description provided for @accessibilityDayEventD.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete event (if handler provided)'**
+  String get accessibilityDayEventD;
+
+  /// No description provided for @accessibilityDayEventX.
+  ///
+  /// In en, this message translates to:
+  /// **'Convert event between all-day and timed (if handler provided)'**
+  String get accessibilityDayEventX;
+
+  /// No description provided for @accessibilityDayEventM.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Move Mode'**
+  String get accessibilityDayEventM;
+
+  /// No description provided for @accessibilityDayEventR.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Resize Mode (if resize is enabled)'**
+  String get accessibilityDayEventR;
+
+  /// No description provided for @accessibilityDayEventEscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to Navigation Mode'**
+  String get accessibilityDayEventEscape;
+
+  /// No description provided for @accessibilityDayMoveArrows.
+  ///
+  /// In en, this message translates to:
+  /// **'Move event (↑↓ by time slot, ←→ by day)'**
+  String get accessibilityDayMoveArrows;
+
+  /// No description provided for @accessibilityDayMoveEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm move'**
+  String get accessibilityDayMoveEnter;
+
+  /// No description provided for @accessibilityDayMoveR.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel move, switch to Resize Mode'**
+  String get accessibilityDayMoveR;
+
+  /// No description provided for @accessibilityDayMoveEscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel move, return to Event Mode'**
+  String get accessibilityDayMoveEscape;
+
+  /// No description provided for @accessibilityDayResizeSE.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch between start/end edge'**
+  String get accessibilityDayResizeSE;
+
+  /// No description provided for @accessibilityDayResizeArrows.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize selected edge'**
+  String get accessibilityDayResizeArrows;
+
+  /// No description provided for @accessibilityDayResizeEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm resize'**
+  String get accessibilityDayResizeEnter;
+
+  /// No description provided for @accessibilityDayResizeM.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to Move Mode'**
+  String get accessibilityDayResizeM;
+
+  /// No description provided for @accessibilityDayResizeEscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel resize, return to Event Mode'**
+  String get accessibilityDayResizeEscape;
+
+  /// No description provided for @accessibilityDayKeyBindingsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'These key bindings are the defaults. Developers integrating this calendar can customize or disable any of them via the keyBindings parameter on MCalDayView.'**
+  String get accessibilityDayKeyBindingsNote;
+
   /// Message shown when a cell is tapped
   ///
   /// In en, this message translates to:
@@ -2047,6 +2257,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Deleted: {title}'**
   String snackbarEventDeleted(String title);
+
+  /// Message shown when event type is converted via keyboard
+  ///
+  /// In en, this message translates to:
+  /// **'Converted \"{title}\" to {type}'**
+  String snackbarEventConverted(String title, String type);
 
   /// No description provided for @dialogTitle.
   ///

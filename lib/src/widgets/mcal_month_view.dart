@@ -280,6 +280,11 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// Receives the [BuildContext] and [MCalEventTapDetails] containing the
   /// long-pressed event and the date context for the tile.
+  ///
+  /// **Note:** This callback is mutually exclusive with [enableDragToMove].
+  /// When drag-to-move is enabled, the long-press gesture is consumed by the
+  /// drag recognizer and this callback will not fire. Use [onEventTap] or
+  /// [onEventDoubleTap] instead for event interactions when drag is enabled.
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
 
   /// Callback invoked when a day cell is double-tapped.
@@ -885,13 +890,17 @@ class MCalMonthView extends StatefulWidget {
 
   /// The long-press delay before a drag operation starts.
   ///
-  /// When the user long-presses an event tile, the drag begins after this
-  /// duration. A shorter delay makes drags start faster; a longer delay
-  /// reduces accidental drags when tapping.
+  /// The delay before initiating a long-press drag.
   ///
-  /// Defaults to 200 milliseconds.
+  /// Controls how long the user must hold down on an event tile before a drag
+  /// begins. A shorter delay makes drags start faster; a longer delay reduces
+  /// accidental drags when tapping.
   ///
-  /// Only used when [enableDragToMove] is true.
+  /// When [enableDragToMove] is true, the long-press gesture is reserved for
+  /// drag initiation and [onEventLongPress] will not fire. Use [onEventTap] or
+  /// [onEventDoubleTap] for event interactions when drag is enabled.
+  ///
+  /// Defaults to 200 milliseconds. Only used when [enableDragToMove] is true.
   final Duration dragLongPressDelay;
 
   /// Creates a new [MCalMonthView] widget.
@@ -7189,7 +7198,11 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
         isEndOfSpan: eventSpanInfo.isEnd,
         spanLength: eventSpanInfo.length,
         onEventTap: widget.onEventTap,
-        onEventLongPress: widget.onEventLongPress,
+        // When drag is enabled, long-press is consumed by LongPressDraggable
+        // to initiate drag — suppress onLongPress to avoid gesture arena
+        // conflict (matches Layer 2 / MCalBuilderWrapper pattern).
+        onEventLongPress:
+            widget.enableDragToMove ? null : widget.onEventLongPress,
         onEventDoubleTap: widget.onEventDoubleTap,
         onHoverEvent: widget.onHoverEvent,
         locale: widget.locale,

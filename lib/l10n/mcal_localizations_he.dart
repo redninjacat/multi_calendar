@@ -237,4 +237,85 @@ class MCalLocalizationsHe extends MCalLocalizations {
   String announcementEventResized(Object title, Object start, Object end) {
     return 'שונה גודל $title מ-$start עד $end';
   }
+
+  @override
+  String get announcementDayNavigationMode => 'מצב ניווט';
+
+  @override
+  String announcementDayEventMode(Object count) {
+    return 'מצב אירוע, $count אירועים';
+  }
+
+  @override
+  String announcementDayEventCycled(
+    Object title,
+    Object position,
+    Object total,
+  ) {
+    return '$title, $position מתוך $total';
+  }
+
+  @override
+  String announcementDayEventSelected(Object title) {
+    return 'נבחר $title';
+  }
+
+  @override
+  String announcementDayMoveMode(Object title) {
+    return 'מצב העברה עבור $title';
+  }
+
+  @override
+  String announcementDayResizeMode(Object title) {
+    return 'מצב שינוי גודל עבור $title';
+  }
+
+  @override
+  String announcementDayMoveCancelled(Object title) {
+    return 'העברה בוטלה עבור $title';
+  }
+
+  @override
+  String get announcementDayResizeCancelled => 'שינוי גודל בוטל';
+
+  @override
+  String announcementDayMovingEvent(Object title, Object time) {
+    return 'מעביר את $title ל-$time';
+  }
+
+  @override
+  String announcementDayResizingEvent(Object title, Object edge, Object time) {
+    return 'משנה גודל $title, קצה $edge ב-$time';
+  }
+
+  @override
+  String announcementDayEventMoved(Object title, Object time) {
+    return '$title הועבר ל-$time';
+  }
+
+  @override
+  String announcementDayEventResized(Object title) {
+    return '$title שונה גודלו';
+  }
+
+  @override
+  String get announcementDayAllDaySection => 'מקטע כל היום';
+
+  @override
+  String announcementDayTimeGrid(Object time) {
+    return 'רשת זמן, $time';
+  }
+
+  @override
+  String get announcementDayMoveInvalidTarget => 'לא ניתן להעביר לכאן';
+
+  @override
+  String announcementDayEventDeleted(Object title) {
+    return '$title נמחק';
+  }
+
+  @override
+  String announcementDayEventConversionRequested(Object title, Object type) {
+    return 'ממיר את $title ל-$type';
+  }
 }

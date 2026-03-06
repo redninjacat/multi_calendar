@@ -66,5 +66,22 @@
   "announcementEventMoved": "Déplacé {title} vers {date}",
   "announcementResizingProgress": "Redimensionnement de {title} {edge} vers {date}, {days} jours",
   "announcementResizeInvalid": "Redimensionnement annulé. Redimensionnement invalide.",
-  "announcementEventResized": "Redimensionné {title} de {start} à {end}"
+  "announcementEventResized": "Redimensionné {title} de {start} à {end}",
+  "announcementDayNavigationMode": "Mode navigation",
+  "announcementDayEventMode": "Mode événement, {count} événements",
+  "announcementDayEventCycled": "{title}, {position} sur {total}",
+  "announcementDayEventSelected": "Sélectionné {title}",
+  "announcementDayMoveMode": "Mode déplacement pour {title}",
+  "announcementDayResizeMode": "Mode redimensionnement pour {title}",
+  "announcementDayMoveCancelled": "Déplacement annulé pour {title}",
+  "announcementDayResizeCancelled": "Redimensionnement annulé",
+  "announcementDayMovingEvent": "Déplacement de {title} vers {time}",
+  "announcementDayResizingEvent": "Redimensionnement de {title}, bord {edge} à {time}",
+  "announcementDayEventMoved": "{title} déplacé vers {time}",
+  "announcementDayEventResized": "{title} redimensionné",
+  "announcementDayAllDaySection": "Section toute la journée",
+  "announcementDayTimeGrid": "Grille horaire, {time}",
+  "announcementDayMoveInvalidTarget": "Impossible de déplacer ici",
+  "announcementDayEventDeleted": "{title} supprimé",
+  "announcementDayEventConversionRequested": "Conversion de {title} en {type}"
 }

@@ -19,7 +19,7 @@ class _TestController extends MCalEventController {
 /// Pumps a [MCalMonthView] with the given parameters and settles animations.
 Future<void> pumpMonthView(
   WidgetTester tester, {
-  required _TestController controller,
+  required MCalEventController controller,
   Widget Function(BuildContext, MCalRegionContext, Widget)? dayRegionBuilder,
   bool enableDragToMove = false,
   bool Function(BuildContext, MCalDragWillAcceptDetails)? onDragWillAccept,

@@ -240,6 +240,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingAllowKeyboardCreate => 'Allow Keyboard Create (N key)';
 
   @override
+  String get settingAllowKeyboardConvert => 'Allow Keyboard Convert (X key)';
+
+  @override
   String get settingAutoFocusOnEventTap => 'Auto Focus on Event Tap';
 
   @override
@@ -937,6 +940,121 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accessibilityDayShortcutResize => 'Shift+Arrow keys: Resize event';
 
   @override
+  String get accessibilityDayModeNavigation => 'Navigation Mode';
+
+  @override
+  String get accessibilityDayModeNavigationDesc =>
+      'Default mode. ↑↓ navigate time slots; ↑ from first slot enters all-day section.';
+
+  @override
+  String get accessibilityDayModeEvent => 'Event Mode';
+
+  @override
+  String get accessibilityDayModeEventDesc =>
+      'Enter/Space on a slot with events. Cycle through visible events.';
+
+  @override
+  String get accessibilityDayModeMove => 'Move Mode';
+
+  @override
+  String get accessibilityDayModeMoveDesc =>
+      'Press M in Event Mode. Relocate the selected event.';
+
+  @override
+  String get accessibilityDayModeResize => 'Resize Mode';
+
+  @override
+  String get accessibilityDayModeResizeDesc =>
+      'Press R in Event Mode. Change the start or end time.';
+
+  @override
+  String get accessibilityDayNavUpDown => 'Navigate between time slots';
+
+  @override
+  String get accessibilityDayNavEnterSpace =>
+      'Enter Event Mode (if slot has events)';
+
+  @override
+  String get accessibilityDayNavHome => 'Jump to first time slot';
+
+  @override
+  String get accessibilityDayNavEnd => 'Jump to last time slot';
+
+  @override
+  String get accessibilityDayNavPageUp => 'Previous day';
+
+  @override
+  String get accessibilityDayNavPageDown => 'Next day';
+
+  @override
+  String get accessibilityDayNavN =>
+      'Create event at focused slot (if handler provided)';
+
+  @override
+  String get accessibilityDayNavA => 'Jump to all-day section';
+
+  @override
+  String get accessibilityDayNavT => 'Jump to time grid (restores last slot)';
+
+  @override
+  String get accessibilityDayEventUpDown =>
+      'Cycle through visible events and overflow indicator';
+
+  @override
+  String get accessibilityDayEventEnterSpace =>
+      'Activate event/overflow and return to Navigation';
+
+  @override
+  String get accessibilityDayEventD => 'Delete event (if handler provided)';
+
+  @override
+  String get accessibilityDayEventX =>
+      'Convert event between all-day and timed (if handler provided)';
+
+  @override
+  String get accessibilityDayEventM => 'Enter Move Mode';
+
+  @override
+  String get accessibilityDayEventR =>
+      'Enter Resize Mode (if resize is enabled)';
+
+  @override
+  String get accessibilityDayEventEscape => 'Return to Navigation Mode';
+
+  @override
+  String get accessibilityDayMoveArrows =>
+      'Move event (↑↓ by time slot, ←→ by day)';
+
+  @override
+  String get accessibilityDayMoveEnter => 'Confirm move';
+
+  @override
+  String get accessibilityDayMoveR => 'Cancel move, switch to Resize Mode';
+
+  @override
+  String get accessibilityDayMoveEscape => 'Cancel move, return to Event Mode';
+
+  @override
+  String get accessibilityDayResizeSE => 'Switch between start/end edge';
+
+  @override
+  String get accessibilityDayResizeArrows => 'Resize selected edge';
+
+  @override
+  String get accessibilityDayResizeEnter => 'Confirm resize';
+
+  @override
+  String get accessibilityDayResizeM => 'Switch to Move Mode';
+
+  @override
+  String get accessibilityDayResizeEscape =>
+      'Cancel resize, return to Event Mode';
+
+  @override
+  String get accessibilityDayKeyBindingsNote =>
+      'These key bindings are the defaults. Developers integrating this calendar can customize or disable any of them via the keyBindings parameter on MCalDayView.';
+
+  @override
   String snackbarCellTap(String date) {
     return 'Cell tapped: $date';
   }
@@ -1104,6 +1222,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String snackbarEventDeleted(String title) {
     return 'Deleted: $title';
+  }
+
+  @override
+  String snackbarEventConverted(String title, String type) {
+    return 'Converted \"$title\" to $type';
   }
 
   @override

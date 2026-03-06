@@ -510,6 +510,112 @@ abstract class MCalLocalizations {
   /// In en, this message translates to:
   /// **'Resized {title} to {start} through {end}'**
   String announcementEventResized(Object title, Object start, Object end);
+
+  /// Announced when Day View enters Navigation Mode via keyboard
+  ///
+  /// In en, this message translates to:
+  /// **'Navigation mode'**
+  String get announcementDayNavigationMode;
+
+  /// Announced when Day View enters Event Mode
+  ///
+  /// In en, this message translates to:
+  /// **'Event mode, {count} events'**
+  String announcementDayEventMode(Object count);
+
+  /// Announced when cycling through events in Day View Event Mode
+  ///
+  /// In en, this message translates to:
+  /// **'{title}, {position} of {total}'**
+  String announcementDayEventCycled(
+    Object title,
+    Object position,
+    Object total,
+  );
+
+  /// Announced when an event is selected in Day View Event Mode
+  ///
+  /// In en, this message translates to:
+  /// **'Selected {title}'**
+  String announcementDayEventSelected(Object title);
+
+  /// Announced when Day View enters Move Mode
+  ///
+  /// In en, this message translates to:
+  /// **'Move mode for {title}'**
+  String announcementDayMoveMode(Object title);
+
+  /// Announced when Day View enters Resize Mode
+  ///
+  /// In en, this message translates to:
+  /// **'Resize mode for {title}'**
+  String announcementDayResizeMode(Object title);
+
+  /// Announced when a Day View move operation is cancelled
+  ///
+  /// In en, this message translates to:
+  /// **'Move cancelled for {title}'**
+  String announcementDayMoveCancelled(Object title);
+
+  /// Announced when a Day View resize operation is cancelled
+  ///
+  /// In en, this message translates to:
+  /// **'Resize cancelled'**
+  String get announcementDayResizeCancelled;
+
+  /// Announced while moving an event in Day View Move Mode
+  ///
+  /// In en, this message translates to:
+  /// **'Moving {title} to {time}'**
+  String announcementDayMovingEvent(Object title, Object time);
+
+  /// Announced while resizing an event in Day View Resize Mode
+  ///
+  /// In en, this message translates to:
+  /// **'Resizing {title}, {edge} edge at {time}'**
+  String announcementDayResizingEvent(Object title, Object edge, Object time);
+
+  /// Announced when a Day View event move is confirmed
+  ///
+  /// In en, this message translates to:
+  /// **'{title} moved to {time}'**
+  String announcementDayEventMoved(Object title, Object time);
+
+  /// Announced when a Day View event resize is confirmed
+  ///
+  /// In en, this message translates to:
+  /// **'{title} resized'**
+  String announcementDayEventResized(Object title);
+
+  /// Announced when focus jumps to the all-day section in Day View
+  ///
+  /// In en, this message translates to:
+  /// **'All-day section'**
+  String get announcementDayAllDaySection;
+
+  /// Announced when focus jumps to the time grid in Day View
+  ///
+  /// In en, this message translates to:
+  /// **'Time grid, {time}'**
+  String announcementDayTimeGrid(Object time);
+
+  /// Announced when a Day View move target is invalid
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot move here'**
+  String get announcementDayMoveInvalidTarget;
+
+  /// Announced when a Day View event is deleted via keyboard
+  ///
+  /// In en, this message translates to:
+  /// **'{title} deleted'**
+  String announcementDayEventDeleted(Object title);
+
+  /// Announced when a Day View event type conversion is requested
+  ///
+  /// In en, this message translates to:
+  /// **'Converting {title} to {type}'**
+  String announcementDayEventConversionRequested(Object title, Object type);
 }
 
 class _MCalLocalizationsDelegate

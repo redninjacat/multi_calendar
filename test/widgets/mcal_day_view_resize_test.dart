@@ -210,7 +210,7 @@ void main() {
           buildDayView(
             ctrl: controller,
             enableDragToMove: false,
-            onEventResized: (_, __) => true,
+            onEventResized: (_, _) => true,
             onResizeWillAccept: (_) => true,
           ),
         );
@@ -358,7 +358,7 @@ void main() {
           buildDayView(
             ctrl: controller,
             enableDragToMove: false,
-            onEventResized: (_, __) => true,
+            onEventResized: (_, _) => true,
           ),
         );
         await tester.pumpAndSettle();

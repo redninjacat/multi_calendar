@@ -46,7 +46,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  MCalCalendarEvent _multiDayEvent() => MCalCalendarEvent(
+  MCalCalendarEvent multiDayEvent() => MCalCalendarEvent(
         id: 'multi-day',
         title: 'Multi Day Event',
         start: DateTime(2026, 3, 2),
@@ -59,7 +59,7 @@ void main() {
     testWidgets(
       'resize handles appear when enableDragToResize: true, enableDragToMove: false',
       (tester) async {
-        controller.setEvents([_multiDayEvent()]);
+        controller.setEvents([multiDayEvent()]);
         await pumpMonthView(
           tester,
           controller: controller,
@@ -75,7 +75,7 @@ void main() {
     testWidgets(
       'resize handles appear when enableDragToResize: true, enableDragToMove: true',
       (tester) async {
-        controller.setEvents([_multiDayEvent()]);
+        controller.setEvents([multiDayEvent()]);
         await pumpMonthView(
           tester,
           controller: controller,
@@ -91,7 +91,7 @@ void main() {
     testWidgets(
       'resize handles do NOT appear when enableDragToResize: false, enableDragToMove: true',
       (tester) async {
-        controller.setEvents([_multiDayEvent()]);
+        controller.setEvents([multiDayEvent()]);
         await pumpMonthView(
           tester,
           controller: controller,
@@ -107,7 +107,7 @@ void main() {
     testWidgets(
       'resize handles do NOT appear when enableDragToResize: false, enableDragToMove: false',
       (tester) async {
-        controller.setEvents([_multiDayEvent()]);
+        controller.setEvents([multiDayEvent()]);
         await pumpMonthView(
           tester,
           controller: controller,
@@ -123,7 +123,7 @@ void main() {
     testWidgets(
       'enableDragToMove toggle does not affect resize handles when enableDragToResize: true',
       (tester) async {
-        controller.setEvents([_multiDayEvent()]);
+        controller.setEvents([multiDayEvent()]);
 
         // Start with move=true, resize=true
         await pumpMonthView(
@@ -151,7 +151,7 @@ void main() {
     testWidgets(
       'auto-detect (null) works independently of enableDragToMove on desktop',
       (tester) async {
-        controller.setEvents([_multiDayEvent()]);
+        controller.setEvents([multiDayEvent()]);
 
         // enableDragToResize: null on desktop (linux) should auto-enable
         await pumpMonthView(

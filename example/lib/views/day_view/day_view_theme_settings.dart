@@ -18,7 +18,6 @@ class DayViewThemeSettings {
   const DayViewThemeSettings({
     this.hourHeight = 80.0,
     this.timeSlotDuration = const Duration(minutes: 15),
-    this.allDaySectionMaxRows = 3,
     this.hourGridlineColor,
     this.hourGridlineWidth = 1.0,
     this.majorGridlineColor,
@@ -34,7 +33,6 @@ class DayViewThemeSettings {
 
   final double hourHeight;
   final Duration timeSlotDuration;
-  final int allDaySectionMaxRows;
   final Color? hourGridlineColor;
   final double hourGridlineWidth;
   final Color? majorGridlineColor;
@@ -50,7 +48,6 @@ class DayViewThemeSettings {
   DayViewThemeSettings copyWith({
     double? hourHeight,
     Duration? timeSlotDuration,
-    int? allDaySectionMaxRows,
     Color? hourGridlineColor,
     double? hourGridlineWidth,
     Color? majorGridlineColor,
@@ -66,7 +63,6 @@ class DayViewThemeSettings {
     return DayViewThemeSettings(
       hourHeight: hourHeight ?? this.hourHeight,
       timeSlotDuration: timeSlotDuration ?? this.timeSlotDuration,
-      allDaySectionMaxRows: allDaySectionMaxRows ?? this.allDaySectionMaxRows,
       hourGridlineColor: hourGridlineColor ?? this.hourGridlineColor,
       hourGridlineWidth: hourGridlineWidth ?? this.hourGridlineWidth,
       majorGridlineColor: majorGridlineColor ?? this.majorGridlineColor,
@@ -100,7 +96,6 @@ class DayViewThemeSettings {
         minorGridlineColor:
             minorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.08),
         minorGridlineWidth: minorGridlineWidth,
-        allDaySectionMaxRows: allDaySectionMaxRows,
         timedEventBorderRadius: timedEventBorderRadius,
         timedEventMinHeight: timedEventMinHeight,
         timedEventPadding: timedEventPadding,
@@ -115,7 +110,6 @@ class DayViewThemeSettings {
         minorGridlineColor:
             minorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.08),
         minorGridlineWidth: minorGridlineWidth,
-        allDaySectionMaxRows: allDaySectionMaxRows,
         timedEventBorderRadius: timedEventBorderRadius,
         timedEventMinHeight: timedEventMinHeight,
         timedEventPadding: timedEventPadding,
@@ -135,7 +129,6 @@ class DayViewThemeSettings {
         return DayViewThemeSettings(
           hourHeight: 80.0,
           timeSlotDuration: const Duration(minutes: 15),
-          allDaySectionMaxRows: 3,
           hourGridlineWidth: 1.0,
           majorGridlineWidth: 1.0,
           minorGridlineWidth: 0.5,
@@ -148,7 +141,6 @@ class DayViewThemeSettings {
         return DayViewThemeSettings(
           hourHeight: 48.0,
           timeSlotDuration: const Duration(minutes: 15),
-          allDaySectionMaxRows: 2,
           hourGridlineWidth: 0.5,
           majorGridlineWidth: 0.5,
           minorGridlineWidth: 0.25,
@@ -164,7 +156,6 @@ class DayViewThemeSettings {
         return DayViewThemeSettings(
           hourHeight: 120.0,
           timeSlotDuration: const Duration(minutes: 30),
-          allDaySectionMaxRows: 5,
           hourGridlineWidth: 1.5,
           majorGridlineWidth: 1.0,
           minorGridlineWidth: 0.5,
@@ -177,7 +168,6 @@ class DayViewThemeSettings {
         return DayViewThemeSettings(
           hourHeight: 80.0,
           timeSlotDuration: const Duration(minutes: 15),
-          allDaySectionMaxRows: 3,
           hourGridlineColor: colorScheme.outline,
           hourGridlineWidth: 2.0,
           majorGridlineColor: colorScheme.outline.withValues(alpha: 0.7),
@@ -194,7 +184,6 @@ class DayViewThemeSettings {
         return DayViewThemeSettings(
           hourHeight: 72.0,
           timeSlotDuration: const Duration(minutes: 30),
-          allDaySectionMaxRows: 2,
           hourGridlineColor: colorScheme.outline.withValues(alpha: 0.08),
           hourGridlineWidth: 0.5,
           majorGridlineColor: colorScheme.outline.withValues(alpha: 0.05),
@@ -291,16 +280,6 @@ class DayViewThemeSettingsPanel extends StatelessWidget {
           ],
           onChanged: (v) => onSettingsChanged(
             settings.copyWith(timeSlotDuration: Duration(minutes: v)),
-          ),
-        ),
-        _SliderSetting(
-          label: 'All-day section max rows',
-          value: settings.allDaySectionMaxRows.toDouble(),
-          min: 1,
-          max: 8,
-          divisions: 7,
-          onChanged: (v) => onSettingsChanged(
-            settings.copyWith(allDaySectionMaxRows: v.round()),
           ),
         ),
         const SizedBox(height: 24),
@@ -407,7 +386,6 @@ class DayViewThemeSettingsPanel extends StatelessWidget {
     final p = DayViewThemeSettings.fromPreset(preset, theme);
     return p.hourHeight == settings.hourHeight &&
         p.timeSlotDuration == settings.timeSlotDuration &&
-        p.allDaySectionMaxRows == settings.allDaySectionMaxRows &&
         p.hourGridlineWidth == settings.hourGridlineWidth &&
         p.timedEventBorderRadius == settings.timedEventBorderRadius &&
         p.resizeHandleSize == settings.resizeHandleSize;

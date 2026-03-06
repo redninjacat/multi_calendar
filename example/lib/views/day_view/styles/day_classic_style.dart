@@ -164,9 +164,14 @@ class _DayClassicStyleState extends State<DayClassicStyle>
             handleCreateEvent(DateTime(slotContext.displayDate.year, slotContext.displayDate.month, slotContext.displayDate.day, slotContext.hour ?? 0, slotContext.minute ?? 0));
           }
         },
-        onCreateEventRequested: handleCreateEventAtDefaultTime,
-        onEditEventRequested: (event) => handleEditEvent(event),
-        onDeleteEventRequested: (event) => handleDeleteEvent(event),
+        onCreateEventRequested: (ctx, dateTime) {
+          handleCreateEvent(dateTime);
+          return true;
+        },
+        onDeleteEventRequested: (ctx, details) {
+          handleDeleteEvent(details.event);
+          return true;
+        },
       ),
       ),
     );

@@ -238,6 +238,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get settingAllowKeyboardCreate => 'אפשר יצירה באמצעות מקלדת (מקש N)';
 
   @override
+  String get settingAllowKeyboardConvert => 'אפשר המרה באמצעות מקלדת (מקש X)';
+
+  @override
   String get settingAutoFocusOnEventTap => 'מיקוד אוטומטי בלחיצה על אירוע';
 
   @override
@@ -926,6 +929,117 @@ class AppLocalizationsHe extends AppLocalizations {
       'Shift+מקשי חצים: שנה גודל אירוע';
 
   @override
+  String get accessibilityDayModeNavigation => 'מצב ניווט';
+
+  @override
+  String get accessibilityDayModeNavigationDesc =>
+      'מצב ברירת המחדל. ↑↓ מנווטים בין חריצי זמן; ↑ מהחריץ הראשון עובר לחלק היום-כולו.';
+
+  @override
+  String get accessibilityDayModeEvent => 'מצב אירוע';
+
+  @override
+  String get accessibilityDayModeEventDesc =>
+      'Enter/Space על חריץ עם אירועים. סובב בין האירועים הגלויים.';
+
+  @override
+  String get accessibilityDayModeMove => 'מצב הזזה';
+
+  @override
+  String get accessibilityDayModeMoveDesc =>
+      'לחץ M במצב אירוע. הזז את האירוע הנבחר.';
+
+  @override
+  String get accessibilityDayModeResize => 'מצב שינוי גודל';
+
+  @override
+  String get accessibilityDayModeResizeDesc =>
+      'לחץ R במצב אירוע. שנה את שעת ההתחלה או הסיום.';
+
+  @override
+  String get accessibilityDayNavUpDown => 'נווט בין חריצי זמן';
+
+  @override
+  String get accessibilityDayNavEnterSpace =>
+      'כנס למצב אירוע (אם יש אירועים בחריץ)';
+
+  @override
+  String get accessibilityDayNavHome => 'קפוץ לחריץ הזמן הראשון';
+
+  @override
+  String get accessibilityDayNavEnd => 'קפוץ לחריץ הזמן האחרון';
+
+  @override
+  String get accessibilityDayNavPageUp => 'היום הקודם';
+
+  @override
+  String get accessibilityDayNavPageDown => 'היום הבא';
+
+  @override
+  String get accessibilityDayNavN => 'צור אירוע בחריץ הממוקד (אם קיים מטפל)';
+
+  @override
+  String get accessibilityDayNavA => 'קפוץ לחלק היום-כולו';
+
+  @override
+  String get accessibilityDayNavT => 'קפוץ לרשת הזמן (משחזר את החריץ האחרון)';
+
+  @override
+  String get accessibilityDayEventUpDown =>
+      'סובב בין אירועים גלויים ומחוון גלישה';
+
+  @override
+  String get accessibilityDayEventEnterSpace => 'הפעל אירוע/גלישה וחזור לניווט';
+
+  @override
+  String get accessibilityDayEventD => 'מחק אירוע (אם קיים מטפל)';
+
+  @override
+  String get accessibilityDayEventX =>
+      'המר אירוע בין יום-כולו ומתוזמן (אם קיים מטפל)';
+
+  @override
+  String get accessibilityDayEventM => 'כנס למצב הזזה';
+
+  @override
+  String get accessibilityDayEventR => 'כנס למצב שינוי גודל (אם מופעל)';
+
+  @override
+  String get accessibilityDayEventEscape => 'חזור למצב ניווט';
+
+  @override
+  String get accessibilityDayMoveArrows =>
+      'הזז אירוע (↑↓ לפי חריץ, ←→ לפי יום)';
+
+  @override
+  String get accessibilityDayMoveEnter => 'אשר הזזה';
+
+  @override
+  String get accessibilityDayMoveR => 'בטל הזזה, עבור למצב שינוי גודל';
+
+  @override
+  String get accessibilityDayMoveEscape => 'בטל הזזה, חזור למצב אירוע';
+
+  @override
+  String get accessibilityDayResizeSE => 'החלף בין קצה התחלה/סיום';
+
+  @override
+  String get accessibilityDayResizeArrows => 'שנה גודל הקצה הנבחר';
+
+  @override
+  String get accessibilityDayResizeEnter => 'אשר שינוי גודל';
+
+  @override
+  String get accessibilityDayResizeM => 'עבור למצב הזזה';
+
+  @override
+  String get accessibilityDayResizeEscape => 'בטל שינוי גודל, חזור למצב אירוע';
+
+  @override
+  String get accessibilityDayKeyBindingsNote =>
+      'קיצורי המקלדת הללו הם ברירות המחדל. מפתחים יכולים להתאים אישית או להשבית אותם דרך הפרמטר keyBindings ב-MCalDayView.';
+
+  @override
   String snackbarCellTap(String date) {
     return 'תא נלחץ: $date';
   }
@@ -1093,6 +1207,11 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String snackbarEventDeleted(String title) {
     return 'נמחק: $title';
+  }
+
+  @override
+  String snackbarEventConverted(String title, String type) {
+    return 'הומר \"$title\" ל-$type';
   }
 
   @override

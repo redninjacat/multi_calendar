@@ -84,9 +84,6 @@ class MCalDayThemeData {
   /// Radius of the dot at the start of the current time indicator (in pixels).
   final double? currentTimeIndicatorDotRadius;
 
-  /// Maximum number of rows to display in the Day View all-day events section.
-  final int? allDaySectionMaxRows;
-
   /// Fixed width for all-day event tiles in the Day View (in pixels).
   ///
   /// Using a fixed width enables deterministic layout: the number of tiles
@@ -184,6 +181,31 @@ class MCalDayThemeData {
   /// When null, no hover background is applied to event tiles.
   final Color? hoverEventBackgroundColor;
 
+  /// Background color for the focused time slot in Navigation Mode.
+  ///
+  /// Applied to the time slot that currently holds keyboard focus when the user
+  /// is navigating with the keyboard in Navigation Mode. Provides a simple way
+  /// to indicate focus without a full [BoxDecoration].
+  ///
+  /// When both [focusedSlotBackgroundColor] and [focusedSlotDecoration] are
+  /// set, [focusedSlotDecoration] takes precedence.
+  ///
+  /// When null, a default focus indicator is applied using the theme's primary
+  /// color at reduced opacity.
+  final Color? focusedSlotBackgroundColor;
+
+  /// Decoration for the focused time slot in Navigation Mode.
+  ///
+  /// Applied to the time slot that currently holds keyboard focus when the user
+  /// is navigating with the keyboard in Navigation Mode. Provides full control
+  /// over the focus indicator via [BoxDecoration] (border, gradient, etc.).
+  ///
+  /// Takes precedence over [focusedSlotBackgroundColor] when both are set.
+  ///
+  /// When null, falls back to [focusedSlotBackgroundColor] or the default focus
+  /// indicator.
+  final BoxDecoration? focusedSlotDecoration;
+
   /// Creates a new [MCalDayThemeData] instance.
   const MCalDayThemeData({
     this.dayHeaderDayOfWeekStyle,
@@ -205,7 +227,6 @@ class MCalDayThemeData {
     this.currentTimeIndicatorColor,
     this.currentTimeIndicatorWidth,
     this.currentTimeIndicatorDotRadius,
-    this.allDaySectionMaxRows,
     this.allDayTileWidth,
     this.allDayTileHeight,
     this.allDayOverflowIndicatorWidth,
@@ -222,6 +243,8 @@ class MCalDayThemeData {
     this.timeLabelPosition,
     this.hoverTimeSlotBackgroundColor,
     this.hoverEventBackgroundColor,
+    this.focusedSlotBackgroundColor,
+    this.focusedSlotDecoration,
   });
 
   /// Creates a [MCalDayThemeData] instance with default values derived
@@ -258,7 +281,6 @@ class MCalDayThemeData {
       currentTimeIndicatorColor: colorScheme.primary,
       currentTimeIndicatorWidth: 2.0,
       currentTimeIndicatorDotRadius: 6.0,
-      allDaySectionMaxRows: 3,
       timedEventMinHeight: 20.0,
       timedEventBorderRadius: 4.0,
       timedEventPadding: const EdgeInsets.all(2.0),
@@ -296,7 +318,6 @@ class MCalDayThemeData {
     Color? currentTimeIndicatorColor,
     double? currentTimeIndicatorWidth,
     double? currentTimeIndicatorDotRadius,
-    int? allDaySectionMaxRows,
     double? allDayTileWidth,
     double? allDayTileHeight,
     double? allDayOverflowIndicatorWidth,
@@ -313,6 +334,8 @@ class MCalDayThemeData {
     MCalTimeLabelPosition? timeLabelPosition,
     Color? hoverTimeSlotBackgroundColor,
     Color? hoverEventBackgroundColor,
+    Color? focusedSlotBackgroundColor,
+    BoxDecoration? focusedSlotDecoration,
   }) {
     return MCalDayThemeData(
       dayHeaderDayOfWeekStyle:
@@ -339,7 +362,6 @@ class MCalDayThemeData {
           currentTimeIndicatorWidth ?? this.currentTimeIndicatorWidth,
       currentTimeIndicatorDotRadius:
           currentTimeIndicatorDotRadius ?? this.currentTimeIndicatorDotRadius,
-      allDaySectionMaxRows: allDaySectionMaxRows ?? this.allDaySectionMaxRows,
       allDayTileWidth: allDayTileWidth ?? this.allDayTileWidth,
       allDayTileHeight: allDayTileHeight ?? this.allDayTileHeight,
       allDayOverflowIndicatorWidth:
@@ -364,6 +386,9 @@ class MCalDayThemeData {
           hoverTimeSlotBackgroundColor ?? this.hoverTimeSlotBackgroundColor,
       hoverEventBackgroundColor:
           hoverEventBackgroundColor ?? this.hoverEventBackgroundColor,
+      focusedSlotBackgroundColor:
+          focusedSlotBackgroundColor ?? this.focusedSlotBackgroundColor,
+      focusedSlotDecoration: focusedSlotDecoration ?? this.focusedSlotDecoration,
     );
   }
 
@@ -459,7 +484,6 @@ class MCalDayThemeData {
         other.currentTimeIndicatorDotRadius,
         t,
       ),
-      allDaySectionMaxRows: t < 0.5 ? allDaySectionMaxRows : other.allDaySectionMaxRows,
       allDayTileWidth: _lerpDouble(
         allDayTileWidth,
         other.allDayTileWidth,
@@ -533,6 +557,13 @@ class MCalDayThemeData {
         other.hoverEventBackgroundColor,
         t,
       ),
+      focusedSlotBackgroundColor: Color.lerp(
+        focusedSlotBackgroundColor,
+        other.focusedSlotBackgroundColor,
+        t,
+      ),
+      focusedSlotDecoration:
+          t < 0.5 ? focusedSlotDecoration : other.focusedSlotDecoration,
     );
   }
 
@@ -567,7 +598,6 @@ class MCalDayThemeData {
           currentTimeIndicatorColor == other.currentTimeIndicatorColor &&
           currentTimeIndicatorWidth == other.currentTimeIndicatorWidth &&
           currentTimeIndicatorDotRadius == other.currentTimeIndicatorDotRadius &&
-          allDaySectionMaxRows == other.allDaySectionMaxRows &&
           allDayTileWidth == other.allDayTileWidth &&
           allDayTileHeight == other.allDayTileHeight &&
           allDayOverflowIndicatorWidth == other.allDayOverflowIndicatorWidth &&
@@ -583,7 +613,9 @@ class MCalDayThemeData {
           minResizeDurationMinutes == other.minResizeDurationMinutes &&
           timeLabelPosition == other.timeLabelPosition &&
           hoverTimeSlotBackgroundColor == other.hoverTimeSlotBackgroundColor &&
-          hoverEventBackgroundColor == other.hoverEventBackgroundColor;
+          hoverEventBackgroundColor == other.hoverEventBackgroundColor &&
+          focusedSlotBackgroundColor == other.focusedSlotBackgroundColor &&
+          focusedSlotDecoration == other.focusedSlotDecoration;
 
   @override
   int get hashCode => Object.hashAll([
@@ -606,7 +638,6 @@ class MCalDayThemeData {
         currentTimeIndicatorColor,
         currentTimeIndicatorWidth,
         currentTimeIndicatorDotRadius,
-        allDaySectionMaxRows,
         allDayTileWidth,
         allDayTileHeight,
         allDayOverflowIndicatorWidth,
@@ -623,5 +654,7 @@ class MCalDayThemeData {
         timeLabelPosition,
         hoverTimeSlotBackgroundColor,
         hoverEventBackgroundColor,
+        focusedSlotBackgroundColor,
+        focusedSlotDecoration,
       ]);
 }

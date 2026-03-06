@@ -467,8 +467,8 @@ void main() {
     });
   });
 
-  group('MCalDayView RTL Keyboard Navigation', () {
-    testWidgets('RTL: arrowLeft navigates to next day', (tester) async {
+  group('MCalDayView Keyboard Day Navigation', () {
+    testWidgets('RTL: pageDown navigates to next day', (tester) async {
       final controller = MCalEventController(
         initialDate: DateTime(2024, 6, 15),
       );
@@ -497,21 +497,18 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Focus the day view
       await tester.tap(find.byType(MCalDayView));
       await tester.pumpAndSettle();
 
-      // Simulate arrowLeft key press (should navigate to next day in RTL)
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
       await tester.pumpAndSettle();
 
-      // Verify displayDate advanced by 1 day
       expect(controller.displayDate.day, 16);
 
       controller.dispose();
     });
 
-    testWidgets('RTL: arrowRight navigates to previous day', (tester) async {
+    testWidgets('RTL: pageUp navigates to previous day', (tester) async {
       final controller = MCalEventController(
         initialDate: DateTime(2024, 6, 15),
       );
@@ -540,21 +537,18 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Focus the day view
       await tester.tap(find.byType(MCalDayView));
       await tester.pumpAndSettle();
 
-      // Simulate arrowRight key press (should navigate to previous day in RTL)
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
       await tester.pumpAndSettle();
 
-      // Verify displayDate went back by 1 day
       expect(controller.displayDate.day, 14);
 
       controller.dispose();
     });
 
-    testWidgets('LTR: arrowLeft navigates to previous day', (tester) async {
+    testWidgets('LTR: pageUp navigates to previous day', (tester) async {
       final controller = MCalEventController(
         initialDate: DateTime(2024, 6, 15),
       );
@@ -580,21 +574,18 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Focus the day view
       await tester.tap(find.byType(MCalDayView));
       await tester.pumpAndSettle();
 
-      // Simulate arrowLeft key press (should navigate to previous day in LTR)
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
       await tester.pumpAndSettle();
 
-      // Verify displayDate went back by 1 day
       expect(controller.displayDate.day, 14);
 
       controller.dispose();
     });
 
-    testWidgets('LTR: arrowRight navigates to next day', (tester) async {
+    testWidgets('LTR: pageDown navigates to next day', (tester) async {
       final controller = MCalEventController(
         initialDate: DateTime(2024, 6, 15),
       );
@@ -620,15 +611,12 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Focus the day view
       await tester.tap(find.byType(MCalDayView));
       await tester.pumpAndSettle();
 
-      // Simulate arrowRight key press (should navigate to next day in LTR)
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
       await tester.pumpAndSettle();
 
-      // Verify displayDate advanced by 1 day
       expect(controller.displayDate.day, 16);
 
       controller.dispose();

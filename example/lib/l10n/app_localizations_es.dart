@@ -248,6 +248,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Permitir Creación por Teclado (tecla N)';
 
   @override
+  String get settingAllowKeyboardConvert =>
+      'Permitir Conversión por Teclado (tecla X)';
+
+  @override
   String get settingAutoFocusOnEventTap => 'Enfoque Automático al Tocar Evento';
 
   @override
@@ -978,6 +982,125 @@ class AppLocalizationsEs extends AppLocalizations {
       'Shift+Teclas de flecha: Redimensionar evento';
 
   @override
+  String get accessibilityDayModeNavigation => 'Modo Navegación';
+
+  @override
+  String get accessibilityDayModeNavigationDesc =>
+      'Modo predeterminado. ↑↓ navegan entre franjas horarias; ↑ desde la primera franja entra en la sección de todo el día.';
+
+  @override
+  String get accessibilityDayModeEvent => 'Modo Evento';
+
+  @override
+  String get accessibilityDayModeEventDesc =>
+      'Enter/Space en una franja con eventos. Recorre los eventos visibles.';
+
+  @override
+  String get accessibilityDayModeMove => 'Modo Mover';
+
+  @override
+  String get accessibilityDayModeMoveDesc =>
+      'Presiona M en Modo Evento. Reubica el evento seleccionado.';
+
+  @override
+  String get accessibilityDayModeResize => 'Modo Redimensionar';
+
+  @override
+  String get accessibilityDayModeResizeDesc =>
+      'Presiona R en Modo Evento. Cambia la hora de inicio o fin.';
+
+  @override
+  String get accessibilityDayNavUpDown => 'Navegar entre franjas horarias';
+
+  @override
+  String get accessibilityDayNavEnterSpace =>
+      'Entrar en Modo Evento (si la franja tiene eventos)';
+
+  @override
+  String get accessibilityDayNavHome => 'Ir a la primera franja horaria';
+
+  @override
+  String get accessibilityDayNavEnd => 'Ir a la última franja horaria';
+
+  @override
+  String get accessibilityDayNavPageUp => 'Día anterior';
+
+  @override
+  String get accessibilityDayNavPageDown => 'Día siguiente';
+
+  @override
+  String get accessibilityDayNavN =>
+      'Crear evento en la franja enfocada (si hay controlador)';
+
+  @override
+  String get accessibilityDayNavA => 'Ir a la sección de todo el día';
+
+  @override
+  String get accessibilityDayNavT =>
+      'Ir a la cuadrícula de tiempo (restaura la última franja)';
+
+  @override
+  String get accessibilityDayEventUpDown =>
+      'Recorrer eventos visibles e indicador de desbordamiento';
+
+  @override
+  String get accessibilityDayEventEnterSpace =>
+      'Activar evento/desbordamiento y regresar a Navegación';
+
+  @override
+  String get accessibilityDayEventD => 'Eliminar evento (si hay controlador)';
+
+  @override
+  String get accessibilityDayEventX =>
+      'Convertir evento entre todo el día y con hora (si hay controlador)';
+
+  @override
+  String get accessibilityDayEventM => 'Entrar en Modo Mover';
+
+  @override
+  String get accessibilityDayEventR =>
+      'Entrar en Modo Redimensionar (si está habilitado)';
+
+  @override
+  String get accessibilityDayEventEscape => 'Regresar al Modo Navegación';
+
+  @override
+  String get accessibilityDayMoveArrows =>
+      'Mover evento (↑↓ por franja, ←→ por día)';
+
+  @override
+  String get accessibilityDayMoveEnter => 'Confirmar movimiento';
+
+  @override
+  String get accessibilityDayMoveR =>
+      'Cancelar movimiento, cambiar a Modo Redimensionar';
+
+  @override
+  String get accessibilityDayMoveEscape =>
+      'Cancelar movimiento, regresar a Modo Evento';
+
+  @override
+  String get accessibilityDayResizeSE => 'Cambiar entre borde inicial/final';
+
+  @override
+  String get accessibilityDayResizeArrows =>
+      'Redimensionar el borde seleccionado';
+
+  @override
+  String get accessibilityDayResizeEnter => 'Confirmar redimensionamiento';
+
+  @override
+  String get accessibilityDayResizeM => 'Cambiar a Modo Mover';
+
+  @override
+  String get accessibilityDayResizeEscape =>
+      'Cancelar redimensionamiento, regresar a Modo Evento';
+
+  @override
+  String get accessibilityDayKeyBindingsNote =>
+      'Estos atajos de teclado son los predeterminados. Los desarrolladores pueden personalizarlos o desactivarlos mediante el parámetro keyBindings en MCalDayView.';
+
+  @override
   String snackbarCellTap(String date) {
     return 'Celda tocada: $date';
   }
@@ -1145,6 +1268,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String snackbarEventDeleted(String title) {
     return 'Eliminado: $title';
+  }
+
+  @override
+  String snackbarEventConverted(String title, String type) {
+    return 'Se convirtió \"$title\" a $type';
   }
 
   @override

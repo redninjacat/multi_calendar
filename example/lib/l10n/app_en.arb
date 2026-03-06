@@ -81,6 +81,7 @@
   "settingAutoFocusOnCellTap": "Auto Focus on Cell Tap",
   "settingAllowKeyboardDelete": "Allow Keyboard Delete",
   "settingAllowKeyboardCreate": "Allow Keyboard Create (N key)",
+  "settingAllowKeyboardConvert": "Allow Keyboard Convert (X key)",
   "settingAutoFocusOnEventTap": "Auto Focus on Event Tap",
   "settingEnableBlackoutDays": "Enable Blackout Days",
   "settingCellBackgroundColor": "Cell Background Color",
@@ -350,6 +351,40 @@
   "accessibilityDayShortcutDelete": "D: Delete selected event",
   "accessibilityDayShortcutDragMove": "Arrow keys during drag: Move event",
   "accessibilityDayShortcutResize": "Shift+Arrow keys: Resize event",
+  "accessibilityDayModeNavigation": "Navigation Mode",
+  "accessibilityDayModeNavigationDesc": "Default mode. ↑↓ navigate time slots; ↑ from first slot enters all-day section.",
+  "accessibilityDayModeEvent": "Event Mode",
+  "accessibilityDayModeEventDesc": "Enter/Space on a slot with events. Cycle through visible events.",
+  "accessibilityDayModeMove": "Move Mode",
+  "accessibilityDayModeMoveDesc": "Press M in Event Mode. Relocate the selected event.",
+  "accessibilityDayModeResize": "Resize Mode",
+  "accessibilityDayModeResizeDesc": "Press R in Event Mode. Change the start or end time.",
+  "accessibilityDayNavUpDown": "Navigate between time slots",
+  "accessibilityDayNavEnterSpace": "Enter Event Mode (if slot has events)",
+  "accessibilityDayNavHome": "Jump to first time slot",
+  "accessibilityDayNavEnd": "Jump to last time slot",
+  "accessibilityDayNavPageUp": "Previous day",
+  "accessibilityDayNavPageDown": "Next day",
+  "accessibilityDayNavN": "Create event at focused slot (if handler provided)",
+  "accessibilityDayNavA": "Jump to all-day section",
+  "accessibilityDayNavT": "Jump to time grid (restores last slot)",
+  "accessibilityDayEventUpDown": "Cycle through visible events and overflow indicator",
+  "accessibilityDayEventEnterSpace": "Activate event/overflow and return to Navigation",
+  "accessibilityDayEventD": "Delete event (if handler provided)",
+  "accessibilityDayEventX": "Convert event between all-day and timed (if handler provided)",
+  "accessibilityDayEventM": "Enter Move Mode",
+  "accessibilityDayEventR": "Enter Resize Mode (if resize is enabled)",
+  "accessibilityDayEventEscape": "Return to Navigation Mode",
+  "accessibilityDayMoveArrows": "Move event (↑↓ by time slot, ←→ by day)",
+  "accessibilityDayMoveEnter": "Confirm move",
+  "accessibilityDayMoveR": "Cancel move, switch to Resize Mode",
+  "accessibilityDayMoveEscape": "Cancel move, return to Event Mode",
+  "accessibilityDayResizeSE": "Switch between start/end edge",
+  "accessibilityDayResizeArrows": "Resize selected edge",
+  "accessibilityDayResizeEnter": "Confirm resize",
+  "accessibilityDayResizeM": "Switch to Move Mode",
+  "accessibilityDayResizeEscape": "Cancel resize, return to Event Mode",
+  "accessibilityDayKeyBindingsNote": "These key bindings are the defaults. Developers integrating this calendar can customize or disable any of them via the keyBindings parameter on MCalDayView.",
   
   "snackbarCellTap": "Cell tapped: {date}",
   "@snackbarCellTap": {
@@ -675,7 +710,19 @@
       }
     }
   },
-  
+  "snackbarEventConverted": "Converted \"{title}\" to {type}",
+  "@snackbarEventConverted": {
+    "description": "Message shown when event type is converted via keyboard",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+
   "dialogTitle": "Event Details",
   "dialogTitleCreate": "Create Event",
   "dialogTitleEdit": "Edit Event",

@@ -206,13 +206,6 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
 
     return ResponsiveControlPanel(
       controlPanelTitle: l10n.themeSettings,
-      child: MCalTheme(
-        data: _buildThemeData(),
-        child: MCalMonthView(
-          controller: _controller,
-          showNavigator: true,
-        ),
-      ),
       controlPanel: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -452,6 +445,13 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
             ],
           ),
         ],
+      ),
+      child: MCalTheme(
+        data: _buildThemeData(),
+        child: MCalMonthView(
+          controller: _controller,
+          showNavigator: true,
+        ),
       ),
     );
   }

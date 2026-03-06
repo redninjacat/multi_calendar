@@ -60,6 +60,7 @@ library;
 export 'src/controllers/mcal_event_controller.dart';
 // Export models
 export 'src/models/mcal_calendar_event.dart';
+export 'src/models/mcal_day_key_bindings.dart';
 export 'src/models/mcal_event_change_info.dart';
 export 'src/models/mcal_month_key_bindings.dart';
 export 'src/models/mcal_recurrence_exception.dart';
@@ -83,13 +84,7 @@ export 'src/widgets/mcal_month_default_week_layout.dart'
         MCalMonthOverflowInfo;
 export 'src/widgets/mcal_draggable_event_tile.dart';
 // Export widgets
-export 'src/widgets/mcal_day_view.dart'
-    show
-        MCalDayView,
-        MCalDayViewCreateEventIntent,
-        MCalDayViewDeleteEventIntent,
-        MCalDayViewEditEventIntent,
-        MCalDayViewState;
+export 'src/widgets/mcal_day_view.dart' show MCalDayView, MCalDayViewState;
 export 'src/widgets/mcal_day_view_contexts.dart'
     show
         MCalAllDayEventTileContext,

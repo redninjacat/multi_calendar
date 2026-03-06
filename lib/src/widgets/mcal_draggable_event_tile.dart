@@ -160,6 +160,10 @@ class MCalDraggableEventTile extends StatefulWidget {
   /// The long-press delay before a drag operation starts.
   ///
   /// Defaults to 200 milliseconds. Only used when the tile is enabled for dragging.
+  ///
+  /// Changing this value at runtime forces the internal [LongPressDraggable] to
+  /// be recreated (via a [ValueKey]) because Flutter's gesture recognizer is
+  /// only configured during `initState`.
   final Duration dragLongPressDelay;
 
   /// Creates a new [MCalDraggableEventTile] widget.
@@ -257,6 +261,10 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
         }
       },
       child: LongPressDraggable<MCalDragData>(
+        // Force widget recreation when delay changes. LongPressDraggable
+        // creates its gesture recognizer in initState and never updates it,
+        // so a new key is needed to get a fresh recognizer with the new delay.
+        key: ValueKey<int>(widget.dragLongPressDelay.inMicroseconds),
         data: MCalDragData(
           event: widget.event,
           sourceDate: widget.sourceDate,

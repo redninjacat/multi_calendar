@@ -282,7 +282,7 @@ void main() {
                 autoScrollToCurrentTime: false,
                 initialScrollTime: const TimeOfDay(hour: 9, minute: 0),
                 enableDragToMove: true,
-                onEventDropped: (_, __) {
+                onEventDropped: (_, _) {
                   dropCalled = true;
                   return true;
                 },

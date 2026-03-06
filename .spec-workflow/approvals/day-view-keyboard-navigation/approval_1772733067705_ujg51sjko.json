@@ -3,8 +3,10 @@
   "title": "Day View Keyboard Navigation — Tasks Document",
   "filePath": ".spec-workflow/specs/day-view-keyboard-navigation/tasks.md",
   "type": "document",
-  "status": "pending",
+  "status": "approved",
   "createdAt": "2026-03-05T17:51:07.705Z",
   "category": "spec",
-  "categoryName": "day-view-keyboard-navigation"
+  "categoryName": "day-view-keyboard-navigation",
+  "response": "Approved via dashboard",
+  "respondedAt": "2026-03-05T20:19:34.023Z"
 }

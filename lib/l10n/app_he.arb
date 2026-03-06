@@ -66,5 +66,22 @@
   "announcementEventMoved": "הועבר {title} ל-{date}",
   "announcementResizingProgress": "משנה גודל {title} {edge} ל-{date}, {days} ימים",
   "announcementResizeInvalid": "שינוי גודל בוטל. שינוי גודל לא תקין.",
-  "announcementEventResized": "שונה גודל {title} מ-{start} עד {end}"
+  "announcementEventResized": "שונה גודל {title} מ-{start} עד {end}",
+  "announcementDayNavigationMode": "מצב ניווט",
+  "announcementDayEventMode": "מצב אירוע, {count} אירועים",
+  "announcementDayEventCycled": "{title}, {position} מתוך {total}",
+  "announcementDayEventSelected": "נבחר {title}",
+  "announcementDayMoveMode": "מצב העברה עבור {title}",
+  "announcementDayResizeMode": "מצב שינוי גודל עבור {title}",
+  "announcementDayMoveCancelled": "העברה בוטלה עבור {title}",
+  "announcementDayResizeCancelled": "שינוי גודל בוטל",
+  "announcementDayMovingEvent": "מעביר את {title} ל-{time}",
+  "announcementDayResizingEvent": "משנה גודל {title}, קצה {edge} ב-{time}",
+  "announcementDayEventMoved": "{title} הועבר ל-{time}",
+  "announcementDayEventResized": "{title} שונה גודלו",
+  "announcementDayAllDaySection": "מקטע כל היום",
+  "announcementDayTimeGrid": "רשת זמן, {time}",
+  "announcementDayMoveInvalidTarget": "לא ניתן להעביר לכאן",
+  "announcementDayEventDeleted": "{title} נמחק",
+  "announcementDayEventConversionRequested": "ממיר את {title} ל-{type}"
 }

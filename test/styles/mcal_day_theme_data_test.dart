@@ -26,7 +26,6 @@ void main() {
       expect(theme.currentTimeIndicatorColor, isNull);
       expect(theme.currentTimeIndicatorWidth, isNull);
       expect(theme.currentTimeIndicatorDotRadius, isNull);
-      expect(theme.allDaySectionMaxRows, isNull);
       expect(theme.timedEventMinHeight, isNull);
       expect(theme.timedEventBorderRadius, isNull);
       expect(theme.timedEventPadding, isNull);
@@ -64,7 +63,6 @@ void main() {
         currentTimeIndicatorColor: Colors.purple,
         currentTimeIndicatorWidth: 3.0,
         currentTimeIndicatorDotRadius: 8.0,
-        allDaySectionMaxRows: 5,
         timedEventMinHeight: 24.0,
         timedEventBorderRadius: 6.0,
         timedEventPadding: padding,
@@ -87,7 +85,6 @@ void main() {
       expect(theme.timeLegendTickLength, 12.0);
       expect(theme.hourGridlineColor, Colors.red);
       expect(theme.currentTimeIndicatorColor, Colors.purple);
-      expect(theme.allDaySectionMaxRows, 5);
       expect(theme.timedEventMinHeight, 24.0);
       expect(theme.timedEventPadding, padding);
       expect(theme.resizeHandleSize, 10.0);
@@ -121,7 +118,6 @@ void main() {
       expect(theme.currentTimeIndicatorColor, isNotNull);
       expect(theme.currentTimeIndicatorWidth, 2.0);
       expect(theme.currentTimeIndicatorDotRadius, 6.0);
-      expect(theme.allDaySectionMaxRows, 3);
       expect(theme.timedEventMinHeight, 20.0);
       expect(theme.timedEventBorderRadius, 4.0);
       expect(theme.timedEventPadding, isNotNull);
@@ -262,14 +258,6 @@ void main() {
 
       expect(updated.timeLegendWidth, 100.0);
       expect(updated.timeLegendTickLength, 16.0);
-    });
-
-    test('copyWith updates int properties', () {
-      const original = MCalDayThemeData(allDaySectionMaxRows: 3);
-
-      final updated = original.copyWith(allDaySectionMaxRows: 5);
-
-      expect(updated.allDaySectionMaxRows, 5);
     });
 
     test('copyWith updates bool properties', () {
@@ -480,24 +468,6 @@ void main() {
       final result = theme1.lerp(theme2, 0.5);
 
       expect(result.showTimeLegendTicks, false);
-    });
-
-    test('lerp interpolates int at t<0.5 uses this value', () {
-      const theme1 = MCalDayThemeData(allDaySectionMaxRows: 3);
-      const theme2 = MCalDayThemeData(allDaySectionMaxRows: 5);
-
-      final result = theme1.lerp(theme2, 0.4);
-
-      expect(result.allDaySectionMaxRows, 3);
-    });
-
-    test('lerp interpolates int at t>=0.5 uses other value', () {
-      const theme1 = MCalDayThemeData(allDaySectionMaxRows: 3);
-      const theme2 = MCalDayThemeData(allDaySectionMaxRows: 5);
-
-      final result = theme1.lerp(theme2, 0.5);
-
-      expect(result.allDaySectionMaxRows, 5);
     });
 
     test('lerp interpolates TextStyle', () {
@@ -720,7 +690,6 @@ void main() {
         timeLegendTickColor: Colors.black,
         hourGridlineColor: Colors.red,
         currentTimeIndicatorColor: Colors.purple,
-        allDaySectionMaxRows: 5,
         timedEventMinHeight: 24.0,
         timedEventPadding: EdgeInsets.all(4.0),
         resizeHandleSize: 10.0,
@@ -762,7 +731,6 @@ void main() {
         dayHeaderDayOfWeekStyle: TextStyle(fontSize: 12),
         timeLegendWidth: 60.0,
         showTimeLegendTicks: true,
-        allDaySectionMaxRows: 3,
         timedEventPadding: EdgeInsets.all(2.0),
         hourGridlineColor: Colors.blue,
       );
@@ -770,7 +738,6 @@ void main() {
         dayHeaderDayOfWeekStyle: TextStyle(fontSize: 12),
         timeLegendWidth: 60.0,
         showTimeLegendTicks: true,
-        allDaySectionMaxRows: 3,
         timedEventPadding: EdgeInsets.all(2.0),
         hourGridlineColor: Colors.blue,
       );

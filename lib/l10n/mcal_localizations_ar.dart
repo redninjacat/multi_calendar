@@ -237,4 +237,85 @@ class MCalLocalizationsAr extends MCalLocalizations {
   String announcementEventResized(Object title, Object start, Object end) {
     return 'تم تغيير حجم $title من $start إلى $end';
   }
+
+  @override
+  String get announcementDayNavigationMode => 'وضع التنقل';
+
+  @override
+  String announcementDayEventMode(Object count) {
+    return 'وضع الحدث، $count أحداث';
+  }
+
+  @override
+  String announcementDayEventCycled(
+    Object title,
+    Object position,
+    Object total,
+  ) {
+    return '$title، $position من $total';
+  }
+
+  @override
+  String announcementDayEventSelected(Object title) {
+    return 'تم تحديد $title';
+  }
+
+  @override
+  String announcementDayMoveMode(Object title) {
+    return 'وضع النقل لـ $title';
+  }
+
+  @override
+  String announcementDayResizeMode(Object title) {
+    return 'وضع تغيير الحجم لـ $title';
+  }
+
+  @override
+  String announcementDayMoveCancelled(Object title) {
+    return 'تم إلغاء النقل لـ $title';
+  }
+
+  @override
+  String get announcementDayResizeCancelled => 'تم إلغاء تغيير الحجم';
+
+  @override
+  String announcementDayMovingEvent(Object title, Object time) {
+    return 'نقل $title إلى $time';
+  }
+
+  @override
+  String announcementDayResizingEvent(Object title, Object edge, Object time) {
+    return 'تغيير حجم $title، حافة $edge عند $time';
+  }
+
+  @override
+  String announcementDayEventMoved(Object title, Object time) {
+    return 'تم نقل $title إلى $time';
+  }
+
+  @override
+  String announcementDayEventResized(Object title) {
+    return 'تم تغيير حجم $title';
+  }
+
+  @override
+  String get announcementDayAllDaySection => 'قسم طوال اليوم';
+
+  @override
+  String announcementDayTimeGrid(Object time) {
+    return 'شبكة الوقت، $time';
+  }
+
+  @override
+  String get announcementDayMoveInvalidTarget => 'لا يمكن النقل هنا';
+
+  @override
+  String announcementDayEventDeleted(Object title) {
+    return 'تم حذف $title';
+  }
+
+  @override
+  String announcementDayEventConversionRequested(Object title, Object type) {
+    return 'تحويل $title إلى $type';
+  }
 }
