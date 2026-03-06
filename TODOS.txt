@@ -18,6 +18,10 @@ Day view
  make key handling work like month view
 
 
+Our month view and day view files are too big. I'd like to refactor them to use sub widgets that are private to the package. These sub widgets should located within subfolders based on which of the views they belong to. Shared widgets, if any, can go in a shared folder. See proposed folder names below.
+lib/src/widgets/month_view
+lib/src/widgets/day_view
+lib/src/widgets/view_shared
 
 
 We have re-organized the Month View to use a custom keyboard navigation state machine. Help me create a new spec that changes Day View to use a nearly identical keyboard navigation system. Day View and Month View have different layouts and navigation though. Day view has an all-day section and a time grid, so it needs keys to switch an event between the two. Here is the full list of keys and usages for Month View. This is taken from the Month View Accessibility tab.

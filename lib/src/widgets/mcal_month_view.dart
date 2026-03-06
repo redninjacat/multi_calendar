@@ -25,7 +25,6 @@ import 'mcal_callback_details.dart';
 import 'mcal_layout_directionality.dart';
 import 'mcal_month_default_week_layout.dart';
 import 'mcal_drag_handler.dart';
-import 'mcal_draggable_event_tile.dart';
 import 'mcal_month_view_contexts.dart';
 import 'mcal_month_multi_day_renderer.dart';
 import 'mcal_month_week_layout_contexts.dart';
@@ -5941,13 +5940,10 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           autoFocusOnCellTap: widget.autoFocusOnCellTap,
           onSetFocusedDate: widget.onSetFocusedDate,
           events: allDayEvents,
-          // IMPORTANT: Pass empty list for rendering - events are in Layer 2
-          eventsForRendering: const [],
           theme: widget.theme,
           dayCellBuilder: widget.dayCellBuilder,
-          eventTileBuilder: widget.eventTileBuilder,
-          dateLabelBuilder: null, // Date labels are in Layer 2
-          showDateLabel: false, // Date labels are rendered in Layer 2
+          dateLabelBuilder: widget.dateLabelBuilder,
+          showDateLabel: false,
           dateFormat: widget.dateFormat,
           cellInteractivityCallback: widget.cellInteractivityCallback,
           onCellTap: widget.onCellTap,
@@ -5955,35 +5951,11 @@ class _WeekRowWidgetState extends State<_WeekRowWidget> {
           onDateLabelTap: widget.onDateLabelTap,
           onDateLabelLongPress: widget.onDateLabelLongPress,
           onDateLabelDoubleTap: widget.onDateLabelDoubleTap,
-          onEventTap: widget.onEventTap,
-          onEventLongPress: widget.onEventLongPress,
           onCellDoubleTap: widget.onCellDoubleTap,
-          onEventDoubleTap: widget.onEventDoubleTap,
           onHoverCell: widget.onHoverCell,
-          onHoverEvent: widget.onHoverEvent,
           onHoverDateLabel: widget.onHoverDateLabel,
-          onHoverOverflow: widget.onHoverOverflow,
           locale: widget.locale,
-          maxVisibleEventsPerDay: widget.maxVisibleEventsPerDay,
-          onOverflowTap: widget.onOverflowTap,
-          onOverflowLongPress: widget.onOverflowLongPress,
-          multiDayReservedHeight:
-              0.0, // No reserved height - all events in Layer 2
-          enableDragToMove: widget.enableDragToMove,
-          draggedTileBuilder: widget.draggedTileBuilder,
-          dragSourceTileBuilder: widget.dragSourceTileBuilder,
-          dropTargetCellBuilder: widget.dropTargetCellBuilder,
-          onDragWillAccept: widget.onDragWillAccept,
-          onEventDropped: widget.onEventDropped,
           controller: widget.controller,
-          onDragStartedCallback: widget.onDragStartedCallback,
-          onDragEndedCallback: widget.onDragEndedCallback,
-          onDragCanceledCallback: widget.onDragCanceledCallback,
-          dragLongPressDelay: widget.dragLongPressDelay,
-          enableDragToResize: widget.enableDragToResize,
-          resizeHandleBuilder: widget.resizeHandleBuilder,
-          resizeHandleInset: widget.resizeHandleInset,
-          onResizeHandlePointerDown: widget.onResizeHandlePointerDown,
           dayRegionBuilder: widget.dayRegionBuilder,
         ),
       );
@@ -6497,16 +6469,9 @@ class _DayCellWidget extends StatefulWidget {
   /// All events for this date, used for callbacks.
   final List<MCalCalendarEvent> events;
 
-  /// Events to render as tiles in this cell.
-  /// May exclude multi-day events when they're rendered separately as contiguous tiles.
-  /// If null, defaults to [events].
-  final List<MCalCalendarEvent>? eventsForRendering;
-
   final MCalThemeData theme;
   final Widget Function(BuildContext, MCalDayCellContext, Widget)?
   dayCellBuilder;
-  final Widget Function(BuildContext, MCalEventTileContext, Widget)?
-  eventTileBuilder;
   final Widget Function(BuildContext, MCalDateLabelContext, String)?
   dateLabelBuilder;
   final DateFormat? dateFormat;
@@ -6519,69 +6484,15 @@ class _DayCellWidget extends StatefulWidget {
   onDateLabelLongPress;
   final void Function(BuildContext, MCalDateLabelTapDetails)?
   onDateLabelDoubleTap;
-  final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
-  final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final void Function(BuildContext, MCalCellDoubleTapDetails)? onCellDoubleTap;
-  final void Function(BuildContext, MCalEventDoubleTapDetails)?
-  onEventDoubleTap;
   final void Function(BuildContext, MCalDayCellContext?)? onHoverCell;
-  final void Function(BuildContext, MCalEventTileContext?)? onHoverEvent;
   final void Function(BuildContext, MCalDateLabelContext?)? onHoverDateLabel;
-  final void Function(BuildContext, MCalOverflowTapDetails?)? onHoverOverflow;
   final Locale locale;
-  final int maxVisibleEventsPerDay;
-  final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap;
-  final void Function(BuildContext, MCalOverflowTapDetails)?
-  onOverflowLongPress;
-
-  // Drag-and-drop parameters
-  final bool enableDragToMove;
-  final Widget Function(BuildContext, MCalDraggedTileDetails, Widget)?
-  draggedTileBuilder;
-  final Widget Function(BuildContext, MCalDragSourceDetails, Widget)?
-  dragSourceTileBuilder;
-  final Widget Function(BuildContext, MCalDropTargetCellDetails)?
-  dropTargetCellBuilder;
-  final bool Function(BuildContext, MCalDragWillAcceptDetails)?
-  onDragWillAccept;
-  final bool Function(BuildContext, MCalEventDroppedDetails)? onEventDropped;
   final MCalEventController controller;
-
-  // Drag lifecycle callbacks (Task 21)
-  final void Function(MCalCalendarEvent event, DateTime sourceDate)?
-  onDragStartedCallback;
-  final void Function(bool wasAccepted)? onDragEndedCallback;
-  final VoidCallback? onDragCanceledCallback;
-
-  /// Long-press delay before drag starts.
-  final Duration dragLongPressDelay;
-
-  /// Reserved height for multi-day events above single-day events.
-  /// When > 0, single-day events are pushed down by this amount.
-  final double multiDayReservedHeight;
 
   /// Whether to show date labels in this cell.
   /// Set to false for Layer 1 grid cells when date labels are rendered in Layer 2.
   final bool showDateLabel;
-
-  /// Whether event resize handles should be shown on multi-day event tiles.
-  final bool enableDragToResize;
-
-  /// Optional custom builder for the visual part of resize handles.
-  final Widget Function(BuildContext, MCalResizeHandleContext)?
-  resizeHandleBuilder;
-
-  /// Optional callback returning horizontal inset for a resize handle.
-  final double Function(MCalEventTileContext, MCalResizeEdge)?
-  resizeHandleInset;
-
-  /// Called when a pointer goes down on a resize handle.
-  final void Function(
-    MCalCalendarEvent event,
-    MCalResizeEdge edge,
-    int pointer,
-  )?
-  onResizeHandlePointerDown;
 
   /// Optional custom builder for day region overlays.
   final Widget Function(BuildContext, MCalRegionContext, Widget)?
@@ -6597,10 +6508,8 @@ class _DayCellWidget extends StatefulWidget {
     this.autoFocusOnCellTap = true,
     this.onSetFocusedDate,
     required this.events,
-    this.eventsForRendering,
     required this.theme,
     this.dayCellBuilder,
-    this.eventTileBuilder,
     this.dateLabelBuilder,
     this.dateFormat,
     this.cellInteractivityCallback,
@@ -6609,39 +6518,12 @@ class _DayCellWidget extends StatefulWidget {
     this.onDateLabelTap,
     this.onDateLabelLongPress,
     this.onDateLabelDoubleTap,
-    this.onEventTap,
-    this.onEventLongPress,
     this.onCellDoubleTap,
-    this.onEventDoubleTap,
     this.onHoverCell,
-    this.onHoverEvent,
     this.onHoverDateLabel,
-    this.onHoverOverflow,
     required this.locale,
-    this.maxVisibleEventsPerDay = 5,
-    this.onOverflowTap,
-    this.onOverflowLongPress,
-    this.multiDayReservedHeight = 0.0,
     this.showDateLabel = true,
-    // Drag-and-drop
-    this.enableDragToMove = false,
-    this.draggedTileBuilder,
-    this.dragSourceTileBuilder,
-    this.dropTargetCellBuilder,
-    this.onDragWillAccept,
-    this.onEventDropped,
     required this.controller,
-    // Drag lifecycle callbacks (Task 21)
-    this.onDragStartedCallback,
-    this.onDragEndedCallback,
-    this.onDragCanceledCallback,
-    this.dragLongPressDelay = const Duration(milliseconds: 200),
-    // Resize
-    this.enableDragToResize = false,
-    this.resizeHandleBuilder,
-    this.resizeHandleInset,
-    this.onResizeHandlePointerDown,
-    // Day regions
     this.dayRegionBuilder,
   });
 
@@ -6654,10 +6536,6 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
   /// [onDoubleTap] does not receive position, so we capture it here.
   Offset? _lastDoubleTapDownLocalPosition;
   Offset? _lastDoubleTapDownGlobalPosition;
-
-  /// Gets the events to use for rendering tiles.
-  List<MCalCalendarEvent> get _renderableEvents =>
-      widget.eventsForRendering ?? widget.events;
 
   @override
   Widget build(BuildContext context) {
@@ -6699,53 +6577,6 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
     // The LayoutBuilder dynamically calculates how many events fit
     Widget cell = LayoutBuilder(
       builder: (context, constraints) {
-        // Get theme-based tile height (slot height including margins)
-        final tileHeight = widget.theme.monthTheme?.eventTileHeight ?? 20.0;
-
-        // Calculate available height for events after:
-        // - date label with top padding (theme.dateLabelHeight + 4.0) if showing
-        // - multi-day reserved area (variable)
-        // - cell border (1px top + 1px bottom = 2px)
-        // Note: Event tiles now go edge-to-edge horizontally (no cell padding)
-        // and tiles handle their own margins
-        final dateLabelHeight =
-            widget.theme.monthTheme?.dateLabelHeight ?? 18.0;
-        final dateLabelHeightWithPadding = widget.showDateLabel
-            ? (dateLabelHeight + 4.0)
-            : 0.0;
-        const cellBorderHeight = 2.0; // 1px border on top and bottom
-        final availableEventHeight =
-            constraints.maxHeight -
-            dateLabelHeightWithPadding -
-            widget.multiDayReservedHeight -
-            cellBorderHeight;
-
-        // Calculate how many event tiles can fit
-        final maxTilesByHeight = availableEventHeight > 0
-            ? (availableEventHeight / tileHeight).floor()
-            : 0;
-
-        // Use the smaller of maxVisibleEventsPerDay and what fits by height
-        final effectiveMaxEvents = widget.maxVisibleEventsPerDay == 0
-            ? maxTilesByHeight
-            : (maxTilesByHeight < widget.maxVisibleEventsPerDay
-                  ? maxTilesByHeight
-                  : widget.maxVisibleEventsPerDay);
-
-        // Rebuild event tiles with the effective max, applying consistent sizing
-        final effectiveTiles = _buildEventTilesWithLimit(
-          context,
-          effectiveMaxEvents,
-          tileHeight: tileHeight,
-        );
-
-        // Cell structure:
-        // - Outer container with decoration (cell background/border)
-        // - Column with:
-        //   - Date label (with horizontal padding)
-        //   - Multi-day reserved spacer (full width, no padding)
-        //   - Single-day event tiles (full width, no horizontal padding -
-        //     tiles handle their own margins)
         Widget cellContent = Opacity(
           opacity: isInteractive ? 1.0 : 0.5,
           child: ClipRect(
@@ -6762,23 +6593,17 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
                     ),
                     child: dateLabel,
                   ),
-                if (widget.multiDayReservedHeight > 0)
-                  SizedBox(height: widget.multiDayReservedHeight),
-                ...effectiveTiles,
               ],
             ),
           ),
         );
 
-        // Layer region overlays beneath cell content.
         if (allDayRegions.isNotEmpty) {
           cellContent = Stack(
             fit: StackFit.expand,
             children: [
-              // Region overlays (bottom layer).
               for (final region in allDayRegions)
                 _buildRegionOverlay(context, region),
-              // Cell content on top.
               cellContent,
             ],
           );
@@ -7145,234 +6970,6 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
     );
   }
 
-  /// Builds event tiles for this day cell.
-  /// Builds event tiles with a dynamic limit based on available space.
-  ///
-  /// This method is similar to [_buildEventTiles] but accepts an explicit
-  /// limit to use instead of [maxVisibleEventsPerDay], allowing the layout to
-  /// adapt to the actual available cell height.
-  ///
-  /// The [tileHeight] parameter controls the height of each tile slot
-  /// (including margins which are applied inside the tile).
-  List<Widget> _buildEventTilesWithLimit(
-    BuildContext context,
-    int limit, {
-    double tileHeight = 20.0,
-  }) {
-    final renderEvents = _renderableEvents;
-
-    // If no space for any tiles (limit <= 0), show nothing at all
-    // Even the overflow indicator needs space, so we can't show it either
-    if (renderEvents.isEmpty || limit <= 0) {
-      return [];
-    }
-
-    // If we have more events than can fit, we need to reserve one slot
-    // for the overflow indicator. So we show (limit - 1) tiles + indicator.
-    // This ensures the total items (tiles + indicator) never exceeds limit.
-    //
-    // Edge cases:
-    // - limit = 1, events = 2: Show 0 tiles + "+2 more" (only indicator fits)
-    // - limit = 2, events = 3: Show 1 tile + "+2 more"
-    // - limit = 3, events = 3: Show 3 tiles (no overflow)
-    // - limit = 1, events = 1: Show 1 tile (no overflow)
-    final hasOverflow = renderEvents.length > limit;
-    final tilesLimit = hasOverflow ? (limit - 1).clamp(0, limit) : limit;
-    final visibleEvents = renderEvents.take(tilesLimit).toList();
-    final overflowCount = hasOverflow ? renderEvents.length - tilesLimit : 0;
-
-    final tiles = <Widget>[];
-
-    // Add visible event tiles with consistent sizing
-    for (int i = 0; i < visibleEvents.length; i++) {
-      final event = visibleEvents[i];
-      final eventSpanInfo = _getEventSpanInfo(event);
-
-      Widget tile = _EventTileWidget(
-        event: event,
-        displayDate: widget.date,
-        isAllDay: event.isAllDay,
-        theme: widget.theme,
-        eventTileBuilder: widget.eventTileBuilder,
-        isStartOfSpan: eventSpanInfo.isStart,
-        isEndOfSpan: eventSpanInfo.isEnd,
-        spanLength: eventSpanInfo.length,
-        onEventTap: widget.onEventTap,
-        // When drag is enabled, long-press is consumed by LongPressDraggable
-        // to initiate drag — suppress onLongPress to avoid gesture arena
-        // conflict (matches Layer 2 / MCalBuilderWrapper pattern).
-        onEventLongPress:
-            widget.enableDragToMove ? null : widget.onEventLongPress,
-        onEventDoubleTap: widget.onEventDoubleTap,
-        onHoverEvent: widget.onHoverEvent,
-        locale: widget.locale,
-        controller: widget.controller,
-      );
-
-      // Wrap with MCalDraggableEventTile when drag-and-drop is enabled
-      // Note: This is legacy Layer 1 rendering. Layer 2 (via weekLayoutBuilder)
-      // is the primary path for event rendering in the new architecture.
-      if (widget.enableDragToMove) {
-        // Capture event and date for the callback closures
-        final capturedEvent = event;
-        final capturedDate = widget.date;
-
-        // For Layer 1 rendering, we don't have direct access to dayWidth,
-        // so we use a LayoutBuilder wrapper to get it dynamically
-        tile = LayoutBuilder(
-          builder: (context, constraints) {
-            // Cell width is approximately the available width
-            final cellWidth = constraints.maxWidth > 0
-                ? constraints.maxWidth
-                : 50.0;
-            final hSpacing = widget.theme.eventTileHorizontalSpacing ?? 2.0;
-
-            return MCalDraggableEventTile(
-              event: capturedEvent,
-              sourceDate: capturedDate,
-              dayWidth: cellWidth,
-              horizontalSpacing: hSpacing,
-              enabled: true,
-              dragLongPressDelay: widget.dragLongPressDelay,
-              draggedTileBuilder: widget.draggedTileBuilder,
-              dragSourceTileBuilder: widget.dragSourceTileBuilder,
-              onDragStarted: widget.onDragStartedCallback != null
-                  ? () => widget.onDragStartedCallback!(
-                      capturedEvent,
-                      capturedDate,
-                    )
-                  : null,
-              onDragEnded: widget.onDragEndedCallback,
-              onDragCanceled: widget.onDragCanceledCallback,
-              child: tile,
-            );
-          },
-        );
-      }
-
-      // Wrap with resize handles for all events when resize is enabled
-      // (Legacy Layer 1 rendering path)
-      // Note: In legacy Layer 1, the cell width serves as an approximate
-      // dayWidth since each cell represents one day.
-      // Note: resizeHandleInset is not supported in Layer 1 because
-      // MCalEventTileContext is not available; only the visual builder
-      // is forwarded.
-      if (widget.enableDragToResize) {
-        final capturedEvent = event;
-        final resizeChildren = <Widget>[Positioned.fill(child: tile)];
-        if (eventSpanInfo.isStart) {
-          resizeChildren.add(
-            _ResizeHandle(
-              edge: MCalResizeEdge.start,
-              event: capturedEvent,
-              visualBuilder: widget.resizeHandleBuilder,
-              onPointerDown: (event, edge, pointer) =>
-                  widget.onResizeHandlePointerDown?.call(event, edge, pointer),
-            ),
-          );
-        }
-        if (eventSpanInfo.isEnd) {
-          resizeChildren.add(
-            _ResizeHandle(
-              edge: MCalResizeEdge.end,
-              event: capturedEvent,
-              visualBuilder: widget.resizeHandleBuilder,
-              onPointerDown: (event, edge, pointer) =>
-                  widget.onResizeHandlePointerDown?.call(event, edge, pointer),
-            ),
-          );
-        }
-        if (resizeChildren.length > 1) {
-          tile = Stack(clipBehavior: Clip.none, children: resizeChildren);
-        }
-      }
-
-      // Wrap in SizedBox with Padding to enforce margin at layout level.
-      // The margin space is NOT part of the tile (clicks there go to the cell).
-      // Single-day tiles have margin on all sides.
-      final horizontalMargin = widget.theme.eventTileHorizontalSpacing ?? 1.0;
-      final verticalMargin =
-          widget.theme.monthTheme?.eventTileVerticalSpacing ?? 1.0;
-
-      tiles.add(
-        SizedBox(
-          height: tileHeight,
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: horizontalMargin,
-              right: horizontalMargin,
-              top: verticalMargin,
-              bottom: verticalMargin,
-            ),
-            child: tile,
-          ),
-        ),
-      );
-    }
-
-    // Add overflow indicator if needed - with same height as tiles for consistency
-    if (overflowCount > 0) {
-      final horizontalMargin = widget.theme.eventTileHorizontalSpacing ?? 1.0;
-      final verticalMargin =
-          widget.theme.monthTheme?.eventTileVerticalSpacing ?? 1.0;
-
-      tiles.add(
-        SizedBox(
-          height: tileHeight,
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: horizontalMargin,
-              right: horizontalMargin,
-              top: verticalMargin,
-              bottom: verticalMargin,
-            ),
-            child: _OverflowIndicatorWidget(
-              count: overflowCount,
-              date: widget.date,
-              allEvents: widget.events,
-              theme: widget.theme,
-              locale: widget.locale,
-              onOverflowTap: widget.onOverflowTap,
-              onOverflowLongPress: widget.onOverflowLongPress,
-              onHoverOverflow: widget.onHoverOverflow,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return tiles;
-  }
-
-  /// Gets information about how an event spans across days.
-  ///
-  /// Returns information about whether this date is the start or end
-  /// of a multi-day event, and the total length of the span.
-  _EventSpanInfo _getEventSpanInfo(MCalCalendarEvent event) {
-    final eventStartDate = DateTime(
-      event.start.year,
-      event.start.month,
-      event.start.day,
-    );
-    final eventEndDate = DateTime(
-      event.end.year,
-      event.end.month,
-      event.end.day,
-    );
-    final cellDate = DateTime(
-      widget.date.year,
-      widget.date.month,
-      widget.date.day,
-    );
-
-    final isStart = cellDate.isAtSameMomentAs(eventStartDate);
-    final isEnd = cellDate.isAtSameMomentAs(eventEndDate);
-    // Use DST-safe daysBetween to calculate length
-    final length = daysBetween(eventStartDate, eventEndDate) + 1;
-
-    return _EventSpanInfo(isStart: isStart, isEnd: isEnd, length: length);
-  }
-
   /// Gets the semantic label for accessibility.
   ///
   /// Builds a comprehensive label for screen readers including:
@@ -7427,344 +7024,6 @@ class _DayCellWidgetState extends State<_DayCellWidget> {
     }
 
     return parts.join(', ');
-  }
-}
-
-/// Information about how an event spans across days.
-class _EventSpanInfo {
-  final bool isStart;
-  final bool isEnd;
-  final int length;
-
-  const _EventSpanInfo({
-    required this.isStart,
-    required this.isEnd,
-    required this.length,
-  });
-}
-
-/// Widget for rendering a single event tile within a day cell.
-class _EventTileWidget extends StatefulWidget {
-  final MCalCalendarEvent event;
-  final DateTime displayDate;
-  final bool isAllDay;
-  final MCalThemeData theme;
-  final Widget Function(BuildContext, MCalEventTileContext, Widget)?
-  eventTileBuilder;
-  final bool isStartOfSpan;
-  final bool isEndOfSpan;
-  final int spanLength;
-  final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
-  final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
-  final void Function(BuildContext, MCalEventDoubleTapDetails)?
-  onEventDoubleTap;
-  final void Function(BuildContext, MCalEventTileContext?)? onHoverEvent;
-  final Locale locale;
-  final MCalEventController controller;
-
-  const _EventTileWidget({
-    required this.event,
-    required this.displayDate,
-    required this.isAllDay,
-    required this.theme,
-    this.eventTileBuilder,
-    this.isStartOfSpan = false,
-    this.isEndOfSpan = false,
-    this.spanLength = 1,
-    required this.onEventTap,
-    required this.onEventLongPress,
-    this.onEventDoubleTap,
-    this.onHoverEvent,
-    required this.locale,
-    required this.controller,
-  });
-
-  @override
-  State<_EventTileWidget> createState() => _EventTileWidgetState();
-}
-
-class _EventTileWidgetState extends State<_EventTileWidget> {
-  Offset? _lastDoubleTapLocal;
-  Offset? _lastDoubleTapGlobal;
-
-  @override
-  Widget build(BuildContext context) {
-    // Build default tile with multi-day spanning support
-    // For multi-day events, adjust border radius and content to show continuity
-    BorderRadiusGeometry? borderRadius;
-    EdgeInsetsGeometry padding;
-
-    final bool isMultiDay = widget.spanLength > 1;
-    final bool isContinuation = isMultiDay && !widget.isStartOfSpan;
-
-    if (isMultiDay) {
-      if (widget.isStartOfSpan && widget.isEndOfSpan) {
-        // Single day event (shouldn't happen, but handle it)
-        borderRadius = BorderRadius.circular(4);
-        padding = const EdgeInsets.symmetric(horizontal: 4, vertical: 2);
-      } else if (widget.isStartOfSpan) {
-        // Start of multi-day event - round start corners, no end padding
-        borderRadius = const BorderRadiusDirectional.only(
-          topStart: Radius.circular(4),
-          bottomStart: Radius.circular(4),
-        );
-        padding = const EdgeInsetsDirectional.only(start: 4, top: 2, bottom: 2);
-      } else if (widget.isEndOfSpan) {
-        // End of multi-day event - round end corners, no start padding
-        borderRadius = const BorderRadiusDirectional.only(
-          topEnd: Radius.circular(4),
-          bottomEnd: Radius.circular(4),
-        );
-        padding = const EdgeInsetsDirectional.only(end: 4, top: 2, bottom: 2);
-      } else {
-        // Middle of multi-day event - no rounded corners
-        borderRadius = BorderRadius.zero;
-        padding = const EdgeInsets.symmetric(vertical: 2);
-      }
-    } else {
-      borderRadius = BorderRadius.circular(4);
-      padding = const EdgeInsets.symmetric(horizontal: 4, vertical: 2);
-    }
-
-    // Determine styling based on whether this is an all-day event
-    // Priority: event.color > theme colors > defaults
-    final Color backgroundColor;
-    final TextStyle textStyle;
-    final Color? borderColor;
-    final double borderWidth;
-
-    if (widget.isAllDay) {
-      // Use event color if provided, otherwise fall back to theme/defaults
-      backgroundColor =
-          widget.event.color ??
-          widget.theme.allDayEventBackgroundColor ??
-          widget.theme.eventTileBackgroundColor ??
-          Colors.blue.shade50;
-      textStyle =
-          widget.theme.allDayEventTextStyle ??
-          widget.theme.eventTileTextStyle ??
-          const TextStyle(fontSize: 11, color: Colors.black87);
-      borderColor = widget.theme.allDayEventBorderColor;
-      borderWidth = widget.theme.allDayEventBorderWidth ?? 1.0;
-    } else {
-      // Use event color if provided, otherwise fall back to theme/defaults
-      backgroundColor =
-          widget.event.color ??
-          widget.theme.eventTileBackgroundColor ??
-          Colors.blue.shade100;
-      textStyle =
-          widget.theme.eventTileTextStyle ??
-          const TextStyle(fontSize: 11, color: Colors.black87);
-      borderColor = null;
-      borderWidth = 0.0;
-    }
-
-    // Content: show title on first day, continuation indicator on other days
-    Widget content;
-    if (isContinuation) {
-      // For continuation days, show a subtle continuation indicator
-      content = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.arrow_back,
-            size: 10,
-            color: textStyle.color?.withAlpha(128) ?? Colors.black54,
-          ),
-          const SizedBox(width: 2),
-          Flexible(
-            child: Text(
-              widget.event.title,
-              style: textStyle.copyWith(fontStyle: FontStyle.italic),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-        ],
-      );
-    } else {
-      // Build content with optional all-day indicator icon
-      if (widget.isAllDay && !isMultiDay) {
-        // For single-day all-day events, show a visual indicator
-        content = Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.wb_sunny_outlined,
-              size: 10,
-              color: textStyle.color ?? Colors.black87,
-            ),
-            const SizedBox(width: 3),
-            Flexible(
-              child: Text(
-                widget.event.title,
-                style: textStyle,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ),
-          ],
-        );
-      } else {
-        content = Text(
-          widget.event.title,
-          style: textStyle,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        );
-      }
-    }
-
-    // Note: Margins are enforced by the parent layout (SizedBox + Padding wrapper),
-    // not by this widget. The tile receives its final size and should fill it completely.
-    // This makes the tile the clickable area, with margin space belonging to the cell.
-
-    Widget tile = Container(
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: borderRadius,
-        border: borderColor != null && borderWidth > 0
-            ? Border.all(color: borderColor, width: borderWidth)
-            : null,
-      ),
-      clipBehavior: Clip.hardEdge,
-      padding: padding,
-      alignment: Alignment.centerLeft,
-      child: content,
-    );
-
-    // Apply builder callback if provided (takes precedence over theme styling)
-    if (widget.eventTileBuilder != null) {
-      final meta = _getRecurrenceMetadata(widget.event, widget.controller);
-      final contextObj = MCalEventTileContext(
-        event: widget.event,
-        displayDate: widget.displayDate,
-        isAllDay: widget.isAllDay,
-        isRecurring: meta.isRecurring,
-        seriesId: meta.seriesId,
-        recurrenceRule: meta.recurrenceRule,
-        masterEvent: meta.masterEvent,
-        isException: meta.isException,
-        regions: widget.controller.getRegionsForDate(widget.displayDate),
-      );
-      tile = widget.eventTileBuilder!(context, contextObj, tile);
-    }
-
-    // Wrap in gesture detector for tap/long-press/double-tap
-    final hasEventDoubleTap = widget.onEventDoubleTap != null;
-    Widget result = GestureDetector(
-      onTap: widget.onEventTap != null
-          ? () => widget.onEventTap!(
-              context,
-              MCalEventTapDetails(
-                event: widget.event,
-                displayDate: widget.displayDate,
-              ),
-            )
-          : null,
-      onLongPress: widget.onEventLongPress != null
-          ? () => widget.onEventLongPress!(
-              context,
-              MCalEventTapDetails(
-                event: widget.event,
-                displayDate: widget.displayDate,
-              ),
-            )
-          : null,
-      onDoubleTapDown: hasEventDoubleTap
-          ? (details) {
-              _lastDoubleTapLocal = details.localPosition;
-              _lastDoubleTapGlobal = details.globalPosition;
-            }
-          : null,
-      onDoubleTap: hasEventDoubleTap ? _handleEventDoubleTap : null,
-      child: Semantics(label: _getSemanticLabel(), child: tile),
-    );
-
-    // Wrap in MouseRegion for hover support (only if callback provided)
-    if (widget.onHoverEvent != null) {
-      result = MouseRegion(
-        onEnter: (_) {
-          final meta = _getRecurrenceMetadata(widget.event, widget.controller);
-          final contextObj = MCalEventTileContext(
-            event: widget.event,
-            displayDate: widget.displayDate,
-            isAllDay: widget.isAllDay,
-            isRecurring: meta.isRecurring,
-            seriesId: meta.seriesId,
-            recurrenceRule: meta.recurrenceRule,
-            masterEvent: meta.masterEvent,
-            isException: meta.isException,
-            regions: widget.controller.getRegionsForDate(widget.displayDate),
-          );
-          widget.onHoverEvent!(context, contextObj);
-        },
-        onExit: (_) => widget.onHoverEvent!(context, null),
-        child: result,
-      );
-    }
-
-    return result;
-  }
-
-  void _handleEventDoubleTap() {
-    if (widget.onEventDoubleTap == null) return;
-    final local = _lastDoubleTapLocal;
-    final global = _lastDoubleTapGlobal;
-    if (local == null || global == null) return;
-    widget.onEventDoubleTap!(
-      context,
-      MCalEventDoubleTapDetails(
-        event: widget.event,
-        displayDate: widget.displayDate,
-        localPosition: local,
-        globalPosition: global,
-      ),
-    );
-  }
-
-  /// Gets the semantic label for accessibility.
-  String _getSemanticLabel() {
-    final timeStr = _formatEventTime();
-    var label = '${widget.event.title}, $timeStr';
-
-    if (widget.spanLength > 1) {
-      final l10n = mcalL10n(context);
-      final eventStartDate = DateTime(
-        widget.event.start.year,
-        widget.event.start.month,
-        widget.event.start.day,
-      );
-      final cellDate = DateTime(
-        widget.displayDate.year,
-        widget.displayDate.month,
-        widget.displayDate.day,
-      );
-      final dayPosition = daysBetween(eventStartDate, cellDate) + 1;
-      final spanLabel = MCalDateFormatUtils().formatMultiDaySpanLabel(
-        l10n,
-        widget.spanLength,
-        dayPosition,
-      );
-      label = '$label, $spanLabel';
-    }
-
-    return label;
-  }
-
-  /// Formats the event time for display.
-  String _formatEventTime() {
-    if (widget.isAllDay) {
-      return 'all day';
-    }
-
-    final localizations = MCalDateFormatUtils();
-    final startTime = localizations.formatTime(
-      widget.event.start,
-      widget.locale,
-    );
-    final endTime = localizations.formatTime(widget.event.end, widget.locale);
-    return '$startTime to $endTime';
   }
 }
 
@@ -7875,316 +7134,6 @@ class _ResizeHandle extends StatelessWidget {
             child: Center(child: visual),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Widget for displaying overflow event indicator.
-///
-/// This widget displays a "+N more" indicator when there are more events
-/// than can be shown in a day cell. It supports tap and long-press interactions:
-/// - On tap: calls [onOverflowTap] if provided, otherwise shows a default bottom sheet
-/// - On long-press: calls [onOverflowLongPress] if provided
-///
-/// Drag-and-drop is not supported on the overflow indicator. Only visible
-/// event tiles can be dragged.
-class _OverflowIndicatorWidget extends StatelessWidget {
-  /// The number of hidden events.
-  final int count;
-
-  /// The date this overflow indicator belongs to.
-  final DateTime date;
-
-  /// All events for this date (including visible and hidden).
-  final List<MCalCalendarEvent> allEvents;
-
-  /// The theme for styling.
-  final MCalThemeData theme;
-
-  /// The locale for formatting.
-  final Locale locale;
-
-  /// Callback when the overflow indicator is tapped.
-  /// If null, a default bottom sheet is shown.
-  final void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap;
-
-  /// Callback when the overflow indicator is long-pressed.
-  final void Function(BuildContext, MCalOverflowTapDetails)?
-  onOverflowLongPress;
-
-  /// Callback when the mouse hovers over the overflow indicator.
-  final void Function(BuildContext, MCalOverflowTapDetails?)? onHoverOverflow;
-
-  const _OverflowIndicatorWidget({
-    required this.count,
-    required this.date,
-    required this.allEvents,
-    required this.theme,
-    required this.locale,
-    this.onOverflowTap,
-    this.onOverflowLongPress,
-    this.onHoverOverflow,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final indicatorText = '+$count more';
-
-    final Widget indicator = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      child: Text(
-        indicatorText,
-        style: (theme.eventTileTextStyle ?? const TextStyle(fontSize: 11))
-            .copyWith(
-              fontStyle: FontStyle.italic,
-              color: (theme.eventTileTextStyle?.color ?? Colors.black87)
-                  .withValues(alpha: 0.7),
-            ),
-        overflow: TextOverflow.ellipsis,
-        maxLines: 1,
-      ),
-    );
-
-    // Semantic label for accessibility
-    final semanticLabel = '$count more events, tap to view all';
-
-    Widget result = Semantics(
-      label: semanticLabel,
-      button: true,
-      child: GestureDetector(
-        onTap: () => _handleTap(context),
-        onLongPress: onOverflowLongPress != null
-            ? () {
-                final visibleCount = allEvents.length - count;
-                onOverflowLongPress!(
-                  context,
-                  MCalOverflowTapDetails(
-                    date: date,
-                    hiddenEvents: allEvents.sublist(
-                      visibleCount.clamp(0, allEvents.length),
-                    ),
-                    visibleEvents: allEvents.sublist(
-                      0,
-                      visibleCount.clamp(0, allEvents.length),
-                    ),
-                  ),
-                );
-              }
-            : null,
-        child: indicator,
-      ),
-    );
-
-    // Wrap in MouseRegion for hover support (only if callback provided)
-    if (onHoverOverflow != null) {
-      result = MouseRegion(
-        onEnter: (_) {
-          final visibleCount = allEvents.length - count;
-          onHoverOverflow!(
-            context,
-            MCalOverflowTapDetails(
-              date: date,
-              hiddenEvents: allEvents.sublist(
-                visibleCount.clamp(0, allEvents.length),
-              ),
-              visibleEvents: allEvents.sublist(
-                0,
-                visibleCount.clamp(0, allEvents.length),
-              ),
-            ),
-          );
-        },
-        onExit: (_) => onHoverOverflow!(context, null),
-        child: result,
-      );
-    }
-
-    return result;
-  }
-
-  /// Handles tap on the overflow indicator.
-  ///
-  /// If [onOverflowTap] is provided, calls it with the context and details.
-  /// Otherwise, shows a default bottom sheet with all events for the day.
-  void _handleTap(BuildContext context) {
-    if (onOverflowTap != null) {
-      final visibleCount = allEvents.length - count;
-      onOverflowTap!(
-        context,
-        MCalOverflowTapDetails(
-          date: date,
-          hiddenEvents: allEvents.sublist(
-            visibleCount.clamp(0, allEvents.length),
-          ),
-          visibleEvents: allEvents.sublist(
-            0,
-            visibleCount.clamp(0, allEvents.length),
-          ),
-        ),
-      );
-    } else {
-      _showDefaultBottomSheet(context);
-    }
-  }
-
-  /// Shows the default bottom sheet with all events for the day.
-  void _showDefaultBottomSheet(BuildContext context) {
-    final localizations = MCalDateFormatUtils();
-    final dateStr = localizations.formatDate(date, locale);
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (BuildContext bottomSheetContext) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.5,
-          minChildSize: 0.25,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            return Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header with date
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          dateStr,
-                          style:
-                              theme.navigatorTextStyle?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ) ??
-                              const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
-                        tooltip: 'Close',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${allEvents.length} ${allEvents.length == 1 ? 'event' : 'events'}',
-                    style:
-                        theme.monthTheme?.cellTextStyle?.copyWith(
-                          color: Colors.grey[600],
-                        ) ??
-                        TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  // Scrollable list of events
-                  Expanded(
-                    child: ListView.separated(
-                      controller: scrollController,
-                      itemCount: allEvents.length,
-                      separatorBuilder: (context, index) =>
-                          const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final event = allEvents[index];
-                        return _buildEventListItem(context, event);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  /// Builds a list item for an event in the bottom sheet.
-  Widget _buildEventListItem(BuildContext context, MCalCalendarEvent event) {
-    final l10n = mcalL10n(context);
-    final localizations = MCalDateFormatUtils();
-
-    // Format time string
-    String timeStr;
-    if (event.isAllDay) {
-      timeStr = l10n.allDay;
-    } else {
-      final startTime = localizations.formatTime(event.start, locale);
-      final endTime = localizations.formatTime(event.end, locale);
-      timeStr = '$startTime - $endTime';
-    }
-
-    // Use appropriate color based on whether event is all-day
-    final indicatorColor = event.isAllDay
-        ? (theme.allDayEventBackgroundColor ??
-              theme.eventTileBackgroundColor ??
-              Colors.blue)
-        : (theme.eventTileBackgroundColor ?? Colors.blue);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Color indicator
-          Container(
-            width: 4,
-            height: 40,
-            decoration: BoxDecoration(
-              color: indicatorColor,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Event details with optional all-day icon
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    if (event.isAllDay) ...[
-                      Icon(
-                        Icons.wb_sunny_outlined,
-                        size: 14,
-                        color: Colors.grey[700],
-                      ),
-                      const SizedBox(width: 4),
-                    ],
-                    Expanded(
-                      child: Text(
-                        event.title,
-                        style:
-                            theme.eventTileTextStyle?.copyWith(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ) ??
-                            const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  timeStr,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
