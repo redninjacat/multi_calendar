@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/focused-datetime/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-07T06:32:29.541Z",
+      "trigger": "initial",
+      "approvalId": "approval_1772865149539_5k5q9tqfk",
+      "approvalTitle": "Focused DateTime — Tasks Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-03-07T06:32:57.031Z",
+      "trigger": "approved",
+      "approvalId": "approval_1772865149539_5k5q9tqfk",
+      "approvalTitle": "Focused DateTime — Tasks Document"
+    }
+  ]
+}
