@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../styles/mcal_theme.dart';
 import '../../utils/mcal_date_format_utils.dart';
 import '../../utils/mcal_l10n_helper.dart';
+import '../mcal_gesture_detector.dart';
 import '../mcal_layout_directionality.dart';
 import '../mcal_month_view_contexts.dart';
 import 'week_number_cell.dart';
@@ -17,6 +18,14 @@ class WeekdayHeaderRowWidget extends StatelessWidget {
   final bool showWeekNumbers;
   final void Function(BuildContext, MCalMonthDayHeaderContext?)?
   onHoverDayOfWeekHeader;
+  final void Function(BuildContext, MCalMonthDayHeaderContext)?
+  onDayOfWeekHeaderTap;
+  final void Function(BuildContext, MCalMonthDayHeaderContext)?
+  onDayOfWeekHeaderLongPress;
+  final void Function(BuildContext, MCalMonthDayHeaderContext)?
+  onDayOfWeekHeaderDoubleTap;
+  final void Function(BuildContext, MCalMonthDayHeaderContext)?
+  onDayOfWeekHeaderSecondaryTap;
 
   const WeekdayHeaderRowWidget({
     super.key,
@@ -26,6 +35,10 @@ class WeekdayHeaderRowWidget extends StatelessWidget {
     required this.locale,
     this.showWeekNumbers = false,
     this.onHoverDayOfWeekHeader,
+    this.onDayOfWeekHeaderTap,
+    this.onDayOfWeekHeaderLongPress,
+    this.onDayOfWeekHeaderDoubleTap,
+    this.onDayOfWeekHeaderSecondaryTap,
   });
 
   @override
@@ -86,6 +99,28 @@ class WeekdayHeaderRowWidget extends StatelessWidget {
       if (dayHeaderBuilder != null) {
         headerContent =
             dayHeaderBuilder!(context, headerContextObj, headerContent);
+      }
+
+      if (onDayOfWeekHeaderTap != null ||
+          onDayOfWeekHeaderLongPress != null ||
+          onDayOfWeekHeaderDoubleTap != null ||
+          onDayOfWeekHeaderSecondaryTap != null) {
+        headerContent = MCalGestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onDayOfWeekHeaderTap != null
+              ? () => onDayOfWeekHeaderTap!(context, headerContextObj)
+              : null,
+          onLongPress: onDayOfWeekHeaderLongPress != null
+              ? () => onDayOfWeekHeaderLongPress!(context, headerContextObj)
+              : null,
+          onDoubleTap: onDayOfWeekHeaderDoubleTap != null
+              ? () => onDayOfWeekHeaderDoubleTap!(context, headerContextObj)
+              : null,
+          onSecondaryTap: onDayOfWeekHeaderSecondaryTap != null
+              ? () => onDayOfWeekHeaderSecondaryTap!(context, headerContextObj)
+              : null,
+          child: headerContent,
+        );
       }
 
       if (onHoverDayOfWeekHeader != null) {

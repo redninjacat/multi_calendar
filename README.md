@@ -1,5 +1,8 @@
 # Multi Calendar
 
+> **⚠️ Active Development Warning**
+> This project is in very active development and may be broken at any time. APIs, interfaces, and behavior can change without notice between commits. **Use at your own risk.**
+
 A flexible Flutter package for displaying calendar views with full RFC 5545 RRULE support. This package provides separate widgets for Day, Multi-day, and Month views, offering greater modularity and customization compared to single-widget calendar solutions.
 
 ## Table of Contents
@@ -337,6 +340,8 @@ MCalMonthView(
   },
 )
 ```
+
+> **Tap timing:** When a double-tap callback (e.g. `onCellDoubleTap`) is registered alongside its corresponding single-tap callback (e.g. `onCellTap`), the tap fires after a **200 ms delay** so the widget can determine whether a second tap arrives. Omit the double-tap callback when you do not need it — the single tap then fires immediately with no delay. This applies to all tap/double-tap pairs: `onCellTap`/`onCellDoubleTap`, `onEventTap`/`onEventDoubleTap`, `onDateLabelTap`/`onDateLabelDoubleTap`, `onOverflowTap`/`onOverflowDoubleTap`, and the Day View equivalents (`onTimeSlotTap`/`onTimeSlotDoubleTap`, `onDayHeaderTap`/`onDayHeaderDoubleTap`, etc.).
 
 #### Details Classes
 

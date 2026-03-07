@@ -7,6 +7,7 @@ import '../mcal_callback_details.dart';
 import '../mcal_day_view_contexts.dart';
 import '../mcal_drag_handler.dart';
 import '../mcal_draggable_event_tile.dart';
+import '../mcal_gesture_detector.dart';
 
 /// Widget for displaying all-day events in a flow layout.
 ///
@@ -29,15 +30,20 @@ class AllDayEventsSection extends StatelessWidget {
     this.onEventTap,
     this.onEventLongPress,
     this.onEventDoubleTap,
+    this.onEventSecondaryTap,
     this.keyboardFocusedEventId,
     this.onOverflowTap,
     this.onOverflowLongPress,
     this.onOverflowDoubleTap,
+    this.onOverflowSecondaryTap,
     this.onHoverOverflow,
     this.onHoverEvent,
+    this.onHoverTimeSlot,
     this.onVisibleCountChanged,
     this.onTimeSlotTap,
     this.onTimeSlotLongPress,
+    this.onTimeSlotDoubleTap,
+    this.onTimeSlotSecondaryTap,
     this.onDragStarted,
     this.onDragEnded,
     this.regions = const [],
@@ -71,6 +77,7 @@ class AllDayEventsSection extends StatelessWidget {
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final void Function(BuildContext, MCalEventTapDetails)? onEventDoubleTap;
+  final void Function(BuildContext, MCalEventTapDetails)? onEventSecondaryTap;
   final String? keyboardFocusedEventId;
   final void Function(BuildContext, List<MCalCalendarEvent>, DateTime)?
   onOverflowTap;
@@ -78,11 +85,16 @@ class AllDayEventsSection extends StatelessWidget {
   onOverflowLongPress;
   final void Function(BuildContext, MCalOverflowTapDetails)?
   onOverflowDoubleTap;
+  final void Function(BuildContext, List<MCalCalendarEvent>, DateTime)?
+  onOverflowSecondaryTap;
   final void Function(BuildContext, MCalOverflowTapDetails?)? onHoverOverflow;
   final void Function(BuildContext, MCalCalendarEvent?)? onHoverEvent;
+  final void Function(BuildContext, MCalTimeSlotContext?)? onHoverTimeSlot;
   final void Function(int)? onVisibleCountChanged;
   final void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotTap;
   final void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotLongPress;
+  final void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotDoubleTap;
+  final void Function(BuildContext, MCalTimeSlotContext)? onTimeSlotSecondaryTap;
   final void Function(MCalCalendarEvent, DateTime)? onDragStarted;
   final void Function(bool)? onDragEnded;
   final VoidCallback? onDragCancelled;
@@ -111,13 +123,30 @@ class AllDayEventsSection extends StatelessWidget {
   static const _defaultTileHeight = 28.0;
   static const _defaultOverflowWidth = 80.0;
 
+  /// Builds the [MCalTimeSlotContext] for all-day section background taps.
+  MCalTimeSlotContext _buildAllDaySectionContext() => MCalTimeSlotContext(
+    displayDate: displayDate,
+    hour: null,
+    minute: null,
+    offset: 0.0,
+    isAllDayArea: true,
+    events: events,
+    regions: regions,
+  );
+
   @override
   Widget build(BuildContext context) {
     final effectiveMaxRows = maxRows;
     final tileWidth = theme.dayTheme?.allDayTileWidth ?? _defaultTileWidth;
     final tileHeight = theme.dayTheme?.allDayTileHeight ?? _defaultTileHeight;
 
-    return Container(
+    final hasBackgroundHandlers =
+        onTimeSlotTap != null ||
+        onTimeSlotLongPress != null ||
+        onTimeSlotDoubleTap != null ||
+        onTimeSlotSecondaryTap != null;
+
+    Widget section = Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
         horizontal: _sectionHPadding,
@@ -184,6 +213,37 @@ class AllDayEventsSection extends StatelessWidget {
         ],
       ),
     );
+
+    if (hasBackgroundHandlers) {
+      section = MCalGestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: onTimeSlotTap != null
+            ? () => onTimeSlotTap!(context, _buildAllDaySectionContext())
+            : null,
+        onLongPress: onTimeSlotLongPress != null
+            ? () => onTimeSlotLongPress!(context, _buildAllDaySectionContext())
+            : null,
+        onDoubleTap: onTimeSlotDoubleTap != null
+            ? () => onTimeSlotDoubleTap!(context, _buildAllDaySectionContext())
+            : null,
+        onSecondaryTap: onTimeSlotSecondaryTap != null
+            ? () =>
+                onTimeSlotSecondaryTap!(context, _buildAllDaySectionContext())
+            : null,
+        child: section,
+      );
+    }
+
+    if (onHoverTimeSlot != null) {
+      section = MouseRegion(
+        onEnter: (_) =>
+            onHoverTimeSlot!(context, _buildAllDaySectionContext()),
+        onExit: (_) => onHoverTimeSlot!(context, null),
+        child: section,
+      );
+    }
+
+    return section;
   }
 
   static int _tilesPerRow(double contentWidth, double tileWidth) {
@@ -232,8 +292,9 @@ class AllDayEventsSection extends StatelessWidget {
     final dragEnabled = enableDragToMove && onDragStarted != null;
     if (onEventTap != null ||
         (!dragEnabled && onEventLongPress != null) ||
-        onEventDoubleTap != null) {
-      tile = GestureDetector(
+        onEventDoubleTap != null ||
+        onEventSecondaryTap != null) {
+      tile = MCalGestureDetector(
         onTap: onEventTap != null
             ? () => onEventTap!(
                 context,
@@ -248,6 +309,12 @@ class AllDayEventsSection extends StatelessWidget {
             : null,
         onDoubleTap: onEventDoubleTap != null
             ? () => onEventDoubleTap!(
+                context,
+                MCalEventTapDetails(event: event, displayDate: displayDate),
+              )
+            : null,
+        onSecondaryTap: onEventSecondaryTap != null
+            ? () => onEventSecondaryTap!(
                 context,
                 MCalEventTapDetails(event: event, displayDate: displayDate),
               )
@@ -367,7 +434,7 @@ class AllDayEventsSection extends StatelessWidget {
     indicator = Semantics(
       label: '$count more all-day events',
       button: true,
-      child: GestureDetector(
+      child: MCalGestureDetector(
         onTap: onOverflowTap != null
             ? () => onOverflowTap!(context, overflowEvents, displayDate)
             : null,
@@ -385,6 +452,13 @@ class AllDayEventsSection extends StatelessWidget {
                   ),
                 );
               }
+            : null,
+        onSecondaryTap: onOverflowSecondaryTap != null
+            ? () => onOverflowSecondaryTap!(
+                context,
+                overflowEvents,
+                displayDate,
+              )
             : null,
         child: indicator,
       ),

@@ -759,6 +759,12 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               ),
             );
           },
+          onDayHeaderSecondaryTap: (context, headerContext) {
+            SnackBarHelper.show(
+              context,
+              'Right-click on day header: ${headerContext.date.toString().split(' ')[0]}',
+            );
+          },
           onTimeLabelTap: (context, labelContext) {
             final t = labelContext.time;
             SnackBarHelper.show(
@@ -786,28 +792,48 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               ),
             );
           },
-          onTimeSlotTap: (context, slotContext) {
-            final hour = slotContext.hour ?? 0;
-            final minute = slotContext.minute ?? 0;
+          onTimeLabelSecondaryTap: (context, labelContext) {
+            final t = labelContext.time;
             SnackBarHelper.show(
               context,
-              l10n.snackbarTimeSlotTap(
-                '$hour:${minute.toString().padLeft(2, '0')}',
-              ),
+              'Right-click on time label: ${t.hour}:${t.minute.toString().padLeft(2, '0')}',
             );
+          },
+          onTimeSlotTap: (context, slotContext) {
+            if (slotContext.isAllDayArea) {
+              SnackBarHelper.show(context, 'Tap on all-day section');
+              _setStatus('onTimeSlotTap — all-day area');
+            } else {
+              final hour = slotContext.hour ?? 0;
+              final minute = slotContext.minute ?? 0;
+              SnackBarHelper.show(
+                context,
+                l10n.snackbarTimeSlotTap(
+                  '$hour:${minute.toString().padLeft(2, '0')}',
+                ),
+              );
+            }
           },
           onTimeSlotLongPress: (context, slotContext) {
-            final hour = slotContext.hour ?? 0;
-            final minute = slotContext.minute ?? 0;
-            SnackBarHelper.show(
-              context,
-              l10n.snackbarTimeSlotLongPress(
-                '$hour:${minute.toString().padLeft(2, '0')}',
-              ),
-            );
+            if (slotContext.isAllDayArea) {
+              SnackBarHelper.show(context, 'Long-press on all-day section');
+              _setStatus('onTimeSlotLongPress — all-day area');
+            } else {
+              final hour = slotContext.hour ?? 0;
+              final minute = slotContext.minute ?? 0;
+              SnackBarHelper.show(
+                context,
+                l10n.snackbarTimeSlotLongPress(
+                  '$hour:${minute.toString().padLeft(2, '0')}',
+                ),
+              );
+            }
           },
           onTimeSlotDoubleTap: (context, slotContext) {
-            if (!slotContext.isAllDayArea) {
+            if (slotContext.isAllDayArea) {
+              SnackBarHelper.show(context, 'Double-tap on all-day section');
+              _setStatus('onTimeSlotDoubleTap — all-day area');
+            } else {
               final time = DateTime(
                 slotContext.displayDate.year,
                 slotContext.displayDate.month,
@@ -824,6 +850,22 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               _handleCreateEvent(time);
             }
           },
+          onTimeSlotSecondaryTap: (context, slotContext) {
+            if (slotContext.isAllDayArea) {
+              SnackBarHelper.show(
+                context,
+                'Right-click on all-day section',
+              );
+              _setStatus('onTimeSlotSecondaryTap — all-day area');
+            } else {
+              final hour = slotContext.hour ?? 0;
+              final minute = slotContext.minute ?? 0;
+              SnackBarHelper.show(
+                context,
+                'Right-click on time slot: $hour:${minute.toString().padLeft(2, '0')}',
+              );
+            }
+          },
           onEventTap: (context, details) => _handleEventTap(context, details),
           onEventLongPress: (context, details) {
             SnackBarHelper.show(
@@ -837,6 +879,12 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               l10n.snackbarEventDoubleTap(details.event.title),
             );
           },
+          onEventSecondaryTap: (context, details) {
+            SnackBarHelper.show(
+              context,
+              'Right-click on event: ${details.event.title}',
+            );
+          },
           onHoverEvent: (context, event) {
             if (event != null) {
               _setStatus('Event: ${event.title}');
@@ -845,7 +893,16 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             }
           },
           onHoverTimeSlot: (context, slotContext) {
-            if (slotContext != null) {
+            if (slotContext == null) {
+              _setStatus('—');
+            } else if (slotContext.isAllDayArea) {
+              final eventCount = slotContext.events.length;
+              _setStatus(
+                eventCount > 0
+                    ? 'All-day area ($eventCount event${eventCount == 1 ? '' : 's'})'
+                    : 'All-day area',
+              );
+            } else {
               final hour = slotContext.hour ?? 0;
               final minute = slotContext.minute ?? 0;
               final timeStr = '$hour:${minute.toString().padLeft(2, '0')}';
@@ -861,8 +918,6 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               } else {
                 _setStatus('Time slot: $timeStr');
               }
-            } else {
-              _setStatus('—');
             }
           },
           onHoverDayHeader: (context, headerContext) {
@@ -912,6 +967,18 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
             SnackBarHelper.show(
               context,
               l10n.snackbarOverflowDoubleTap(details.hiddenEventCount),
+            );
+          },
+          onAllDayEventSecondaryTap: (context, details) {
+            SnackBarHelper.show(
+              context,
+              'Right-click on all-day event: ${details.event.title}',
+            );
+          },
+          onAllDayOverflowSecondaryTap: (context, events, date) {
+            SnackBarHelper.show(
+              context,
+              'Right-click on all-day overflow: ${events.length} events',
             );
           },
           onDragWillAccept: (details) {

@@ -38,11 +38,15 @@ class WeekRowWidget extends StatefulWidget {
   cellInteractivityCallback;
   final void Function(BuildContext, MCalCellTapDetails)? onCellTap;
   final void Function(BuildContext, MCalCellTapDetails)? onCellLongPress;
+  final void Function(BuildContext, MCalCellTapDetails)? onCellSecondaryTap;
   final void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelTap;
   final void Function(BuildContext, MCalDateLabelTapDetails)?
   onDateLabelLongPress;
+  final void Function(BuildContext, MCalDateLabelTapDetails)?
+  onDateLabelSecondaryTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
+  final void Function(BuildContext, MCalEventTapDetails)? onEventSecondaryTap;
   final void Function(BuildContext, MCalCellDoubleTapDetails)? onCellDoubleTap;
   final void Function(BuildContext, MCalEventDoubleTapDetails)?
   onEventDoubleTap;
@@ -59,6 +63,8 @@ class WeekRowWidget extends StatefulWidget {
   onOverflowLongPress;
   final void Function(BuildContext, MCalOverflowTapDetails)?
   onOverflowDoubleTap;
+  final void Function(BuildContext, MCalOverflowTapDetails)?
+  onOverflowSecondaryTap;
   final bool showWeekNumbers;
   final Widget Function(BuildContext, MCalWeekNumberContext)? weekNumberBuilder;
 
@@ -158,11 +164,14 @@ class WeekRowWidget extends StatefulWidget {
     this.cellInteractivityCallback,
     this.onCellTap,
     this.onCellLongPress,
+    this.onCellSecondaryTap,
     this.onDateLabelTap,
     this.onDateLabelLongPress,
     this.onDateLabelDoubleTap,
+    this.onDateLabelSecondaryTap,
     this.onEventTap,
     this.onEventLongPress,
+    this.onEventSecondaryTap,
     this.onCellDoubleTap,
     this.onEventDoubleTap,
     this.onHoverCell,
@@ -174,6 +183,7 @@ class WeekRowWidget extends StatefulWidget {
     this.onOverflowTap,
     this.onOverflowLongPress,
     this.onOverflowDoubleTap,
+    this.onOverflowSecondaryTap,
     this.showWeekNumbers = false,
     this.weekNumberBuilder,
     // Week layout customization
@@ -325,9 +335,11 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
           cellInteractivityCallback: widget.cellInteractivityCallback,
           onCellTap: widget.onCellTap,
           onCellLongPress: widget.onCellLongPress,
+          onCellSecondaryTap: widget.onCellSecondaryTap,
           onDateLabelTap: widget.onDateLabelTap,
           onDateLabelLongPress: widget.onDateLabelLongPress,
           onDateLabelDoubleTap: widget.onDateLabelDoubleTap,
+          onDateLabelSecondaryTap: widget.onDateLabelSecondaryTap,
           onCellDoubleTap: widget.onCellDoubleTap,
           onHoverCell: widget.onHoverCell,
           onHoverDateLabel: widget.onHoverDateLabel,
@@ -381,6 +393,7 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
       onEventTap: widget.onEventTap,
       onEventLongPress: widget.onEventLongPress,
       onEventDoubleTap: widget.onEventDoubleTap,
+      onEventSecondaryTap: widget.onEventSecondaryTap,
       onHoverEvent: widget.onHoverEvent,
       controller: widget.controller,
       enableDragToMove: widget.enableDragToMove,
@@ -404,6 +417,7 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
       onDateLabelTap: widget.onDateLabelTap,
       onDateLabelLongPress: widget.onDateLabelLongPress,
       onDateLabelDoubleTap: widget.onDateLabelDoubleTap,
+      onDateLabelSecondaryTap: widget.onDateLabelSecondaryTap,
       onHoverDateLabel: widget.onHoverDateLabel,
     );
 
@@ -414,6 +428,7 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
           onOverflowTap: widget.onOverflowTap,
           onOverflowLongPress: widget.onOverflowLongPress,
           onOverflowDoubleTap: widget.onOverflowDoubleTap,
+          onOverflowSecondaryTap: widget.onOverflowSecondaryTap,
         );
 
     // Wrap overflow builder to add a keyboard-focus highlight when the

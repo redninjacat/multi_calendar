@@ -20,6 +20,7 @@ import '../utils/time_utils.dart';
 import 'mcal_callback_details.dart';
 import 'mcal_day_view_contexts.dart';
 import 'mcal_drag_handler.dart';
+import 'mcal_gesture_detector.dart';
 import 'mcal_layout_directionality.dart';
 import 'mcal_month_view_contexts.dart' show MCalWeekNumberContext;
 import 'day_subwidgets/all_day_events_section.dart';
@@ -225,15 +226,19 @@ class MCalDayView extends StatefulWidget {
     this.onDayHeaderTap,
     this.onDayHeaderLongPress,
     this.onDayHeaderDoubleTap,
+    this.onDayHeaderSecondaryTap,
     this.onTimeLabelTap,
     this.onTimeLabelLongPress,
     this.onTimeLabelDoubleTap,
+    this.onTimeLabelSecondaryTap,
     this.onTimeSlotTap,
     this.onTimeSlotLongPress,
     this.onTimeSlotDoubleTap,
+    this.onTimeSlotSecondaryTap,
     this.onEventTap,
     this.onEventLongPress,
     this.onEventDoubleTap,
+    this.onEventSecondaryTap,
     this.onHoverEvent,
     this.onHoverTimeSlot,
     this.onHoverDayHeader,
@@ -242,6 +247,8 @@ class MCalDayView extends StatefulWidget {
     this.onOverflowTap,
     this.onOverflowLongPress,
     this.onOverflowDoubleTap,
+    this.onAllDayEventSecondaryTap,
+    this.onAllDayOverflowSecondaryTap,
 
     // Keyboard shortcut callbacks
     this.onCreateEventRequested,
@@ -1062,8 +1069,19 @@ class MCalDayView extends StatefulWidget {
   /// Called when the day header is double-tapped.
   ///
   /// Receives [BuildContext] and [MCalDayHeaderContext] with the display date.
+  ///
+  /// **Tap delay:** When set alongside [onDayHeaderTap], the tap handler waits
+  /// up to 200 ms before firing to allow double-tap disambiguation. Omit this
+  /// callback if you do not need double-tap and want [onDayHeaderTap] to fire
+  /// immediately.
   final void Function(BuildContext context, MCalDayHeaderContext headerContext)?
   onDayHeaderDoubleTap;
+
+  /// Called when the day header is secondary-tapped (right-clicked on desktop).
+  ///
+  /// Receives [BuildContext] and [MCalDayHeaderContext] with the display date.
+  final void Function(BuildContext context, MCalDayHeaderContext headerContext)?
+  onDayHeaderSecondaryTap;
 
   /// Called when a time label in the time legend is tapped.
   ///
@@ -1080,8 +1098,19 @@ class MCalDayView extends StatefulWidget {
   /// Called when a time label in the time legend is double-tapped.
   ///
   /// Receives [BuildContext] and [MCalTimeLabelContext].
+  ///
+  /// **Tap delay:** When set alongside [onTimeLabelTap], the tap handler waits
+  /// up to 200 ms before firing to allow double-tap disambiguation. Omit this
+  /// callback if you do not need double-tap and want [onTimeLabelTap] to fire
+  /// immediately.
   final void Function(BuildContext context, MCalTimeLabelContext labelContext)?
   onTimeLabelDoubleTap;
+
+  /// Called when a time label in the time legend is secondary-tapped (right-clicked on desktop).
+  ///
+  /// Receives [BuildContext] and [MCalTimeLabelContext].
+  final void Function(BuildContext context, MCalTimeLabelContext labelContext)?
+  onTimeLabelSecondaryTap;
 
   /// Called when an empty time slot is tapped.
   ///
@@ -1101,13 +1130,25 @@ class MCalDayView extends StatefulWidget {
 
   /// Called when empty time slot space is double-tapped.
   ///
-  /// Receives [BuildContext] and [MCalTimeSlotContext] at the double-tap position (snapped to time slot).
-  /// Typical use case: Show create event dialog at the tapped time.
+  /// Receives [BuildContext] and [MCalTimeSlotContext] at the double-tap
+  /// position (snapped to the nearest time slot). Also fires when
+  /// double-tapping the all-day section background
+  /// ([MCalTimeSlotContext.isAllDayArea] will be `true` in that case).
   ///
-  /// Double-tap does not conflict with single tap; Flutter's gesture arena
-  /// ensures only one gesture wins.
+  /// Typical use case: Show a create-event dialog at the tapped time.
+  ///
+  /// **Tap delay:** When set alongside [onTimeSlotTap], the tap handler waits
+  /// up to 200 ms before firing to allow double-tap disambiguation. Omit this
+  /// callback if you do not need double-tap and want [onTimeSlotTap] to fire
+  /// immediately.
   final void Function(BuildContext context, MCalTimeSlotContext slotContext)?
   onTimeSlotDoubleTap;
+
+  /// Called when an empty time slot is secondary-tapped (right-clicked on desktop).
+  ///
+  /// Receives [BuildContext] and [MCalTimeSlotContext] with the date and time of the tapped slot.
+  final void Function(BuildContext context, MCalTimeSlotContext slotContext)?
+  onTimeSlotSecondaryTap;
 
   /// Called when an event tile is tapped.
   ///
@@ -1128,9 +1169,21 @@ class MCalDayView extends StatefulWidget {
 
   /// Called when an event tile is double-tapped.
   ///
-  /// Receives [BuildContext] and [MCalEventTapDetails] with the event and display date.
+  /// Receives [BuildContext] and [MCalEventTapDetails] with the event and
+  /// display date.
+  ///
+  /// **Tap delay:** When set alongside [onEventTap], the tap handler waits up
+  /// to 200 ms before firing to allow double-tap disambiguation. Omit this
+  /// callback if you do not need double-tap and want [onEventTap] to fire
+  /// immediately.
   final void Function(BuildContext context, MCalEventTapDetails details)?
   onEventDoubleTap;
+
+  /// Called when an event tile is secondary-tapped (right-clicked on desktop).
+  ///
+  /// Receives [BuildContext] and [MCalEventTapDetails] with the event and display date.
+  final void Function(BuildContext context, MCalEventTapDetails details)?
+  onEventSecondaryTap;
 
   /// Called when the pointer hovers over an event.
   ///
@@ -1191,9 +1244,31 @@ class MCalDayView extends StatefulWidget {
 
   /// Called when the all-day section overflow indicator is double-tapped.
   ///
-  /// Receives [BuildContext] and [MCalOverflowTapDetails] with overflow event data.
+  /// Receives [BuildContext] and [MCalOverflowTapDetails] with overflow event
+  /// data.
+  ///
+  /// **Tap delay:** When set alongside [onOverflowTap], the tap handler waits
+  /// up to 200 ms before firing to allow double-tap disambiguation. Omit this
+  /// callback if you do not need double-tap and want [onOverflowTap] to fire
+  /// immediately.
   final void Function(BuildContext context, MCalOverflowTapDetails details)?
   onOverflowDoubleTap;
+
+  /// Called when an all-day event tile is secondary-tapped (right-clicked on desktop).
+  ///
+  /// Receives [BuildContext] and [MCalEventTapDetails] with the event and display date.
+  final void Function(BuildContext context, MCalEventTapDetails details)?
+  onAllDayEventSecondaryTap;
+
+  /// Called when the all-day section overflow indicator is secondary-tapped (right-clicked on desktop).
+  ///
+  /// Receives [BuildContext], the list of overflowing events, and the display date.
+  final void Function(
+    BuildContext context,
+    List<MCalCalendarEvent> events,
+    DateTime date,
+  )?
+  onAllDayOverflowSecondaryTap;
 
   /// Called when the user requests to create a new event via the N keyboard shortcut
   /// in Navigation Mode.
@@ -5777,6 +5852,7 @@ class MCalDayViewState extends State<MCalDayView> {
               onTimeLabelTap: widget.onTimeLabelTap,
               onTimeLabelLongPress: widget.onTimeLabelLongPress,
               onTimeLabelDoubleTap: widget.onTimeLabelDoubleTap,
+              onTimeLabelSecondaryTap: widget.onTimeLabelSecondaryTap,
               onHoverTimeLabel: widget.onHoverTimeLabel,
               displayDate: date,
               showSubHourLabels: widget.showSubHourLabels,
@@ -5796,6 +5872,7 @@ class MCalDayViewState extends State<MCalDayView> {
               onTimeLabelTap: widget.onTimeLabelTap,
               onTimeLabelLongPress: widget.onTimeLabelLongPress,
               onTimeLabelDoubleTap: widget.onTimeLabelDoubleTap,
+              onTimeLabelSecondaryTap: widget.onTimeLabelSecondaryTap,
               onHoverTimeLabel: widget.onHoverTimeLabel,
               displayDate: date,
               showSubHourLabels: widget.showSubHourLabels,
@@ -5936,6 +6013,7 @@ class MCalDayViewState extends State<MCalDayView> {
           onEventTap: _handleEventTap,
           onEventLongPress: widget.onEventLongPress,
           onEventDoubleTap: widget.onEventDoubleTap,
+          onEventSecondaryTap: widget.onEventSecondaryTap,
           onHoverEvent: _wrapOnHoverEvent(),
           keyboardFocusedEventId: _focusedEvent?.id,
           enableDragToMove: widget.enableDragToMove,
@@ -6007,7 +6085,8 @@ class MCalDayViewState extends State<MCalDayView> {
     final hasEmptySlotCallbacks =
         widget.onTimeSlotTap != null ||
         widget.onTimeSlotLongPress != null ||
-        widget.onTimeSlotDoubleTap != null;
+        widget.onTimeSlotDoubleTap != null ||
+        widget.onTimeSlotSecondaryTap != null;
     final dateStr = DateFormat.yMMMMEEEEd(
       locale.toString(),
     ).format(_displayDate);
@@ -6015,7 +6094,7 @@ class MCalDayViewState extends State<MCalDayView> {
     final scheduleLabel = l10n.scheduleFor(dateStr);
     final doubleTapHint = l10n.doubleTapToCreateEvent;
     final gestureChild = hasEmptySlotCallbacks
-        ? GestureDetector(
+        ? MCalGestureDetector(
             key: const ValueKey('day_view_schedule'),
             behavior: HitTestBehavior.opaque,
             onTapDown: (details) =>
@@ -6027,6 +6106,12 @@ class MCalDayViewState extends State<MCalDayView> {
             onDoubleTapDown: (details) =>
                 _lastDoubleTapDownPosition = details.localPosition,
             onDoubleTap: () => _handleTimeSlotDoubleTap(hourHeight),
+            onSecondaryTapUp: widget.onTimeSlotSecondaryTap != null
+                ? (details) => _handleTimeSlotSecondaryTap(
+                    details.localPosition,
+                    hourHeight,
+                  )
+                : null,
             child: Semantics(
               label: scheduleLabel,
               hint: doubleTapHint,
@@ -6256,6 +6341,57 @@ class MCalDayViewState extends State<MCalDayView> {
     widget.onTimeSlotDoubleTap!(context, slotContext);
   }
 
+  /// Handles secondary tap (right-click) on empty time slot area.
+  ///
+  /// Same logic as [_handleTimeSlotTap] but for secondary tap, firing
+  /// [onTimeSlotSecondaryTap] callback.
+  void _handleTimeSlotSecondaryTap(Offset localPosition, double hourHeight) {
+    if (widget.onTimeSlotSecondaryTap == null) return;
+
+    if (_didTapHitEvent(localPosition, hourHeight)) return;
+
+    final tappedTime = snapToTimeSlot(
+      time: offsetToTime(
+        offset: localPosition.dy,
+        date: _displayDate,
+        startHour: widget.startHour,
+        hourHeight: hourHeight,
+      ),
+      timeSlotDuration: widget.timeSlotDuration,
+    );
+
+    if (widget.timeSlotInteractivityCallback != null) {
+      final slotEndTime = tappedTime.add(widget.timeSlotDuration);
+      final interactivityDetails = MCalTimeSlotInteractivityDetails(
+        date: dateOnly(_displayDate),
+        hour: tappedTime.hour,
+        minute: tappedTime.minute,
+        startTime: tappedTime,
+        endTime: slotEndTime,
+      );
+      final isInteractive = widget.timeSlotInteractivityCallback!(
+        context,
+        interactivityDetails,
+      );
+      if (!isInteractive) return;
+    }
+
+    final allRegions = widget.controller.getRegionsForDate(_displayDate);
+    final slotContext = MCalTimeSlotContext(
+      displayDate: _displayDate,
+      hour: tappedTime.hour,
+      minute: tappedTime.minute,
+      offset: localPosition.dy,
+      isAllDayArea: false,
+      regions: [
+        for (final r in allRegions)
+          if (r.isAllDay || r.contains(tappedTime)) r,
+      ],
+    );
+
+    widget.onTimeSlotSecondaryTap!(context, slotContext);
+  }
+
   /// Wraps [MCalDayView.onHoverEvent] to also track [_hoveredEvent].
   ///
   /// Returns a callback that updates [_hoveredEvent] on enter/exit and
@@ -6448,6 +6584,20 @@ class MCalDayViewState extends State<MCalDayView> {
                   ),
                 )
               : null,
+          onSecondaryTap: widget.onDayHeaderSecondaryTap != null
+              ? () => widget.onDayHeaderSecondaryTap!(
+                  context,
+                  MCalDayHeaderContext(
+                    date: date,
+                    weekNumber: widget.showWeekNumbers
+                        ? getWeekNumber(
+                            date,
+                            widget.controller.resolvedFirstDayOfWeek,
+                          )
+                        : null,
+                  ),
+                )
+              : null,
           onHover: widget.onHoverDayHeader,
         ),
 
@@ -6470,17 +6620,22 @@ class MCalDayViewState extends State<MCalDayView> {
               onEventTap: _handleEventTap,
               onEventLongPress: widget.onEventLongPress,
               onEventDoubleTap: widget.onEventDoubleTap,
+              onEventSecondaryTap: widget.onAllDayEventSecondaryTap,
               keyboardFocusedEventId: _focusedEvent?.id,
               onOverflowTap: widget.onOverflowTap,
               onOverflowLongPress: widget.onOverflowLongPress,
               onOverflowDoubleTap: widget.onOverflowDoubleTap,
+              onOverflowSecondaryTap: widget.onAllDayOverflowSecondaryTap,
               onHoverOverflow: widget.onHoverOverflow,
               onHoverEvent: _wrapOnHoverEvent(),
+              onHoverTimeSlot: widget.onHoverTimeSlot,
               onVisibleCountChanged: (count) {
                 _allDayVisibleCount = count;
               },
               onTimeSlotTap: widget.onTimeSlotTap,
               onTimeSlotLongPress: widget.onTimeSlotLongPress,
+              onTimeSlotDoubleTap: widget.onTimeSlotDoubleTap,
+              onTimeSlotSecondaryTap: widget.onTimeSlotSecondaryTap,
               onDragStarted: _handleDragStarted,
               onDragEnded: _handleDragEnded,
               onDragCancelled: _handleDragCancelled,

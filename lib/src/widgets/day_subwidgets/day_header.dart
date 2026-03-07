@@ -4,6 +4,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../../styles/mcal_theme.dart';
 import '../../utils/date_utils.dart';
 import '../mcal_day_view_contexts.dart';
+import '../mcal_gesture_detector.dart';
 import '../mcal_month_view_contexts.dart' show MCalWeekNumberContext;
 
 /// Widget for the day header with optional week number.
@@ -24,6 +25,7 @@ class DayHeader extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.onDoubleTap,
+    this.onSecondaryTap,
     this.onHover,
   });
 
@@ -44,6 +46,7 @@ class DayHeader extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final VoidCallback? onDoubleTap;
+  final VoidCallback? onSecondaryTap;
   final void Function(BuildContext, MCalDayHeaderContext?)? onHover;
 
   @override
@@ -179,11 +182,15 @@ class DayHeader extends StatelessWidget {
   ) {
     Widget result = child;
 
-    if (onTap != null || onLongPress != null || onDoubleTap != null) {
-      result = GestureDetector(
+    if (onTap != null ||
+        onLongPress != null ||
+        onDoubleTap != null ||
+        onSecondaryTap != null) {
+      result = MCalGestureDetector(
         onTap: onTap,
         onLongPress: onLongPress,
         onDoubleTap: onDoubleTap,
+        onSecondaryTap: onSecondaryTap,
         child: result,
       );
     }

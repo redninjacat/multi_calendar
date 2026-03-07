@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:multi_calendar/multi_calendar.dart';
+import 'package:multi_calendar/src/widgets/mcal_gesture_detector.dart';
 
 /// ScrollBehavior that disables drag scrolling so tap/long-press gestures win.
 class _NoDragScrollBehavior extends ScrollBehavior {
@@ -176,7 +177,7 @@ void main() {
 
   group('MCalDayView empty space callbacks', () {
     // Widget tests cannot reliably trigger gestures on nested GestureDetectors
-    // inside scrollables. We verify the schedule GestureDetector exists and
+    // inside scrollables. We verify the schedule MCalGestureDetector exists and
     // callbacks are correctly wired.
     late MockMCalEventController controller;
 
@@ -189,7 +190,7 @@ void main() {
     });
 
     testWidgets(
-      'schedule GestureDetector has onTapUp when onTimeSlotTap provided',
+      'schedule MCalGestureDetector has onTapUp when onTimeSlotTap provided',
       (tester) async {
         controller.setMockEvents([]);
 
@@ -204,13 +205,13 @@ void main() {
         final scheduleFinder = find.byKey(_scheduleKey);
         expect(scheduleFinder, findsOneWidget);
 
-        final gestureDetector = tester.widget<GestureDetector>(scheduleFinder);
-        expect(gestureDetector.onTapUp, isNotNull);
+        final detector = tester.widget<MCalGestureDetector>(scheduleFinder);
+        expect(detector.onTapUp, isNotNull);
       },
     );
 
     testWidgets(
-      'schedule GestureDetector has onLongPressStart when onTimeSlotLongPress provided',
+      'schedule MCalGestureDetector has onLongPressStart when onTimeSlotLongPress provided',
       (tester) async {
         controller.setMockEvents([]);
 
@@ -225,13 +226,13 @@ void main() {
         final scheduleFinder = find.byKey(_scheduleKey);
         expect(scheduleFinder, findsOneWidget);
 
-        final gestureDetector = tester.widget<GestureDetector>(scheduleFinder);
-        expect(gestureDetector.onLongPressStart, isNotNull);
+        final detector = tester.widget<MCalGestureDetector>(scheduleFinder);
+        expect(detector.onLongPressStart, isNotNull);
       },
     );
 
     testWidgets(
-      'schedule GestureDetector has onDoubleTap when onTimeSlotDoubleTap provided',
+      'schedule MCalGestureDetector has onDoubleTap when onTimeSlotDoubleTap provided',
       (tester) async {
         controller.setMockEvents([]);
 
@@ -246,13 +247,13 @@ void main() {
         final scheduleFinder = find.byKey(_scheduleKey);
         expect(scheduleFinder, findsOneWidget);
 
-        final gestureDetector = tester.widget<GestureDetector>(scheduleFinder);
-        expect(gestureDetector.onDoubleTap, isNotNull);
+        final detector = tester.widget<MCalGestureDetector>(scheduleFinder);
+        expect(detector.onDoubleTap, isNotNull);
       },
     );
 
     testWidgets(
-      'schedule GestureDetector has all tap handlers when all callbacks provided',
+      'schedule MCalGestureDetector has all tap handlers when all callbacks provided',
       (tester) async {
         controller.setMockEvents([]);
 
@@ -269,10 +270,10 @@ void main() {
         final scheduleFinder = find.byKey(_scheduleKey);
         expect(scheduleFinder, findsOneWidget);
 
-        final gestureDetector = tester.widget<GestureDetector>(scheduleFinder);
-        expect(gestureDetector.onTapUp, isNotNull);
-        expect(gestureDetector.onLongPressStart, isNotNull);
-        expect(gestureDetector.onDoubleTap, isNotNull);
+        final detector = tester.widget<MCalGestureDetector>(scheduleFinder);
+        expect(detector.onTapUp, isNotNull);
+        expect(detector.onLongPressStart, isNotNull);
+        expect(detector.onDoubleTap, isNotNull);
       },
     );
   });
@@ -312,11 +313,11 @@ void main() {
         // Event tile exists (event taps take precedence over schedule)
         expect(find.text('Precedence Test'), findsOneWidget);
 
-        // Schedule GestureDetector exists for empty space taps with onTapUp
+        // Schedule MCalGestureDetector exists for empty space taps with onTapUp
         final scheduleFinder = find.byKey(_scheduleKey);
         expect(scheduleFinder, findsOneWidget);
-        final gestureDetector = tester.widget<GestureDetector>(scheduleFinder);
-        expect(gestureDetector.onTapUp, isNotNull);
+        final detector = tester.widget<MCalGestureDetector>(scheduleFinder);
+        expect(detector.onTapUp, isNotNull);
       },
     );
   });

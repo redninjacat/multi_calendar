@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+
 import '../controllers/mcal_event_controller.dart';
 import '../models/mcal_calendar_event.dart';
 import 'mcal_callback_details.dart';
+import 'mcal_drag_handler.dart';
 import 'mcal_draggable_event_tile.dart';
+import 'mcal_gesture_detector.dart';
 import 'mcal_month_view_contexts.dart';
 import 'mcal_month_week_layout_contexts.dart';
-import 'mcal_drag_handler.dart';
 
 /// Utility class that wraps developer-provided builders with interaction handlers.
 ///
@@ -29,13 +31,16 @@ class MCalBuilderWrapper {
     void Function(BuildContext, MCalEventTapDetails)? onEventTap,
     void Function(BuildContext, MCalEventTapDetails)? onEventLongPress,
     void Function(BuildContext, MCalEventDoubleTapDetails)? onEventDoubleTap,
+    void Function(BuildContext, MCalEventTapDetails)? onEventSecondaryTap,
     void Function(BuildContext, MCalEventTileContext?)? onHoverEvent,
     MCalEventController? controller,
     bool enableDragToMove = false,
     MCalDragHandler? dragHandler,
     // Drag-related parameters
-    Widget Function(BuildContext, MCalDraggedTileDetails, Widget)? draggedTileBuilder,
-    Widget Function(BuildContext, MCalDragSourceDetails, Widget)? dragSourceTileBuilder,
+    Widget Function(BuildContext, MCalDraggedTileDetails, Widget)?
+    draggedTileBuilder,
+    Widget Function(BuildContext, MCalDragSourceDetails, Widget)?
+    dragSourceTileBuilder,
     void Function(MCalCalendarEvent, DateTime)? onDragStartedCallback,
     void Function(bool)? onDragEndedCallback,
     VoidCallback? onDragCanceledCallback,
@@ -63,10 +68,7 @@ class MCalBuilderWrapper {
         if (onHoverEvent == null) return child;
         return MouseRegion(
           onEnter: (_) {
-            final hoverContext = _buildHoverContext(
-              tileContext,
-              controller,
-            );
+            final hoverContext = _buildHoverContext(tileContext, controller);
             onHoverEvent(context, hoverContext);
           },
           onExit: (_) => onHoverEvent(context, null),
@@ -78,9 +80,18 @@ class MCalBuilderWrapper {
       if (enableDragToMove) {
         // When drag is enabled, wrap with draggable widget
         // The MCalDraggableEventTile handles both dragging and passes through taps
-        Widget tileWithTapHandlers = GestureDetector(
+        Widget tileWithTapHandlers = MCalGestureDetector(
           onTap: onEventTap != null
               ? () => onEventTap(
+                  context,
+                  MCalEventTapDetails(
+                    event: tileContext.event,
+                    displayDate: tileContext.displayDate,
+                  ),
+                )
+              : null,
+          onSecondaryTap: onEventSecondaryTap != null
+              ? () => onEventSecondaryTap(
                   context,
                   MCalEventTapDetails(
                     event: tileContext.event,
@@ -176,7 +187,7 @@ class MCalBuilderWrapper {
 
       // Drag is disabled - wrap with gesture detector for tap/long-press/double-tap
       return wrapWithHover(
-        GestureDetector(
+        MCalGestureDetector(
           onTap: onEventTap != null
               ? () => onEventTap(
                   context,
@@ -188,6 +199,15 @@ class MCalBuilderWrapper {
               : null,
           onLongPress: onEventLongPress != null
               ? () => onEventLongPress(
+                  context,
+                  MCalEventTapDetails(
+                    event: tileContext.event,
+                    displayDate: tileContext.displayDate,
+                  ),
+                )
+              : null,
+          onSecondaryTap: onEventSecondaryTap != null
+              ? () => onEventSecondaryTap(
                   context,
                   MCalEventTapDetails(
                     event: tileContext.event,
@@ -262,7 +282,8 @@ class MCalBuilderWrapper {
     final masterEvent = controller.getEventById(seriesId);
     final exceptions = controller.getExceptions(seriesId);
     final normalizedOccDate = DateTime.tryParse(occId);
-    final isException = normalizedOccDate != null &&
+    final isException =
+        normalizedOccDate != null &&
         exceptions.any((e) {
           final d = e.originalDate;
           return d.year == normalizedOccDate.year &&
@@ -300,6 +321,7 @@ class MCalBuilderWrapper {
     void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelTap,
     void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelLongPress,
     void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelDoubleTap,
+    void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelSecondaryTap,
     void Function(BuildContext, MCalDateLabelContext?)? onHoverDateLabel,
   }) {
     return (BuildContext context, MCalDateLabelContext labelContext) {
@@ -316,8 +338,11 @@ class MCalBuilderWrapper {
       Widget result = visualWidget;
 
       // If any gesture handlers are provided, wrap in GestureDetector
-      if (onDateLabelTap != null || onDateLabelLongPress != null || onDateLabelDoubleTap != null) {
-        result = GestureDetector(
+      if (onDateLabelTap != null ||
+          onDateLabelLongPress != null ||
+          onDateLabelDoubleTap != null ||
+          onDateLabelSecondaryTap != null) {
+        result = MCalGestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onDateLabelTap != null
               ? () => onDateLabelTap(
@@ -341,6 +366,16 @@ class MCalBuilderWrapper {
               : null,
           onDoubleTap: onDateLabelDoubleTap != null
               ? () => onDateLabelDoubleTap(
+                  context,
+                  MCalDateLabelTapDetails(
+                    date: labelContext.date,
+                    isToday: labelContext.isToday,
+                    isCurrentMonth: labelContext.isCurrentMonth,
+                  ),
+                )
+              : null,
+          onSecondaryTap: onDateLabelSecondaryTap != null
+              ? () => onDateLabelSecondaryTap(
                   context,
                   MCalDateLabelTapDetails(
                     date: labelContext.date,
@@ -382,6 +417,7 @@ class MCalBuilderWrapper {
     void Function(BuildContext, MCalOverflowTapDetails)? onOverflowTap,
     void Function(BuildContext, MCalOverflowTapDetails)? onOverflowLongPress,
     void Function(BuildContext, MCalOverflowTapDetails)? onOverflowDoubleTap,
+    void Function(BuildContext, MCalOverflowTapDetails)? onOverflowSecondaryTap,
   }) {
     return (
       BuildContext context,
@@ -393,8 +429,8 @@ class MCalBuilderWrapper {
           ? developerBuilder(context, overflowContext, defaultWidget)
           : defaultWidget;
 
-      // Wrap with gesture detector for tap, long-press, and double-tap
-      return GestureDetector(
+      // Wrap with gesture detector for tap, long-press, double-tap, and secondary tap
+      return MCalGestureDetector(
         onTap: onOverflowTap != null
             ? () => onOverflowTap(
                 context,
@@ -417,6 +453,16 @@ class MCalBuilderWrapper {
             : null,
         onDoubleTap: onOverflowDoubleTap != null
             ? () => onOverflowDoubleTap(
+                context,
+                MCalOverflowTapDetails(
+                  date: overflowContext.date,
+                  hiddenEvents: overflowContext.hiddenEvents,
+                  visibleEvents: overflowContext.visibleEvents,
+                ),
+              )
+            : null,
+        onSecondaryTap: onOverflowSecondaryTap != null
+            ? () => onOverflowSecondaryTap(
                 context,
                 MCalOverflowTapDetails(
                   date: overflowContext.date,

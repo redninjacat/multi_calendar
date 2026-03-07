@@ -119,11 +119,15 @@ class MonthPageWidget extends StatefulWidget {
   cellInteractivityCallback;
   final void Function(BuildContext, MCalCellTapDetails)? onCellTap;
   final void Function(BuildContext, MCalCellTapDetails)? onCellLongPress;
+  final void Function(BuildContext, MCalCellTapDetails)? onCellSecondaryTap;
   final void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelTap;
   final void Function(BuildContext, MCalDateLabelTapDetails)?
   onDateLabelLongPress;
+  final void Function(BuildContext, MCalDateLabelTapDetails)?
+  onDateLabelSecondaryTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
+  final void Function(BuildContext, MCalEventTapDetails)? onEventSecondaryTap;
   final void Function(BuildContext, MCalCellDoubleTapDetails)? onCellDoubleTap;
   final void Function(BuildContext, MCalEventDoubleTapDetails)?
   onEventDoubleTap;
@@ -137,6 +141,8 @@ class MonthPageWidget extends StatefulWidget {
   onOverflowLongPress;
   final void Function(BuildContext, MCalOverflowTapDetails)?
   onOverflowDoubleTap;
+  final void Function(BuildContext, MCalOverflowTapDetails)?
+  onOverflowSecondaryTap;
   final void Function(BuildContext, MCalDateLabelTapDetails)?
   onDateLabelDoubleTap;
   final bool showWeekNumbers;
@@ -249,10 +255,13 @@ class MonthPageWidget extends StatefulWidget {
     this.cellInteractivityCallback,
     this.onCellTap,
     this.onCellLongPress,
+    this.onCellSecondaryTap,
     this.onDateLabelTap,
     this.onDateLabelLongPress,
+    this.onDateLabelSecondaryTap,
     this.onEventTap,
     this.onEventLongPress,
+    this.onEventSecondaryTap,
     this.onCellDoubleTap,
     this.onEventDoubleTap,
     this.onHoverCell,
@@ -263,6 +272,7 @@ class MonthPageWidget extends StatefulWidget {
     this.onOverflowTap,
     this.onOverflowLongPress,
     this.onOverflowDoubleTap,
+    this.onOverflowSecondaryTap,
     this.onDateLabelDoubleTap,
     this.showWeekNumbers = false,
     this.weekNumberBuilder,
@@ -1374,11 +1384,14 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
             cellInteractivityCallback: widget.cellInteractivityCallback,
             onCellTap: widget.onCellTap,
             onCellLongPress: widget.onCellLongPress,
+            onCellSecondaryTap: widget.onCellSecondaryTap,
             onDateLabelTap: widget.onDateLabelTap,
             onDateLabelLongPress: widget.onDateLabelLongPress,
             onDateLabelDoubleTap: widget.onDateLabelDoubleTap,
+            onDateLabelSecondaryTap: widget.onDateLabelSecondaryTap,
             onEventTap: widget.onEventTap,
             onEventLongPress: widget.onEventLongPress,
+            onEventSecondaryTap: widget.onEventSecondaryTap,
             onCellDoubleTap: widget.onCellDoubleTap,
             onEventDoubleTap: widget.onEventDoubleTap,
             onHoverCell: widget.onHoverCell,
@@ -1390,6 +1403,7 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
             onOverflowTap: widget.onOverflowTap,
             onOverflowLongPress: widget.onOverflowLongPress,
             onOverflowDoubleTap: widget.onOverflowDoubleTap,
+            onOverflowSecondaryTap: widget.onOverflowSecondaryTap,
             showWeekNumbers: widget.showWeekNumbers,
             weekNumberBuilder: widget.weekNumberBuilder,
             weekLayoutBuilder: widget.weekLayoutBuilder,

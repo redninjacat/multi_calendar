@@ -4,6 +4,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../../styles/mcal_theme.dart';
 import '../../utils/time_utils.dart';
 import '../mcal_day_view_contexts.dart';
+import '../mcal_gesture_detector.dart';
 import '../mcal_layout_directionality.dart';
 
 /// Widget for the time legend column with hour labels.
@@ -24,6 +25,7 @@ class TimeLegendColumn extends StatelessWidget {
     this.onTimeLabelTap,
     this.onTimeLabelLongPress,
     this.onTimeLabelDoubleTap,
+    this.onTimeLabelSecondaryTap,
     this.onHoverTimeLabel,
     required this.displayDate,
     this.showSubHourLabels = false,
@@ -42,6 +44,7 @@ class TimeLegendColumn extends StatelessWidget {
   final void Function(BuildContext, MCalTimeLabelContext)? onTimeLabelTap;
   final void Function(BuildContext, MCalTimeLabelContext)? onTimeLabelLongPress;
   final void Function(BuildContext, MCalTimeLabelContext)? onTimeLabelDoubleTap;
+  final void Function(BuildContext, MCalTimeLabelContext)? onTimeLabelSecondaryTap;
   final void Function(BuildContext, MCalTimeLabelContext?)? onHoverTimeLabel;
   final DateTime displayDate;
   final bool showSubHourLabels;
@@ -212,8 +215,9 @@ class TimeLegendColumn extends StatelessWidget {
 
     if (onTimeLabelTap != null ||
         onTimeLabelLongPress != null ||
-        onTimeLabelDoubleTap != null) {
-      label = GestureDetector(
+        onTimeLabelDoubleTap != null ||
+        onTimeLabelSecondaryTap != null) {
+      label = MCalGestureDetector(
         onTap: onTimeLabelTap != null
             ? () => onTimeLabelTap!(context, labelContext)
             : null,
@@ -222,6 +226,9 @@ class TimeLegendColumn extends StatelessWidget {
             : null,
         onDoubleTap: onTimeLabelDoubleTap != null
             ? () => onTimeLabelDoubleTap!(context, labelContext)
+            : null,
+        onSecondaryTap: onTimeLabelSecondaryTap != null
+            ? () => onTimeLabelSecondaryTap!(context, labelContext)
             : null,
         child: label,
       );
@@ -240,7 +247,8 @@ class TimeLegendColumn extends StatelessWidget {
       button:
           onTimeLabelTap != null ||
           onTimeLabelLongPress != null ||
-          onTimeLabelDoubleTap != null,
+          onTimeLabelDoubleTap != null ||
+          onTimeLabelSecondaryTap != null,
       child: label,
     );
   }

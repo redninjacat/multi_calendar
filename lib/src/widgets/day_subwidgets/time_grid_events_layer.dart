@@ -9,6 +9,7 @@ import '../../utils/time_utils.dart';
 import '../mcal_callback_details.dart';
 import '../mcal_day_view_contexts.dart';
 import '../mcal_draggable_event_tile.dart';
+import '../mcal_gesture_detector.dart';
 import '../shared_subwidgets/time_resize_handle.dart';
 
 /// Widget for rendering timed events with overlap-aware column layout.
@@ -41,6 +42,7 @@ class TimeGridEventsLayer extends StatelessWidget {
     this.onEventTap,
     this.onEventLongPress,
     this.onEventDoubleTap,
+    this.onEventSecondaryTap,
     this.onHoverEvent,
     this.keyboardFocusedEventId,
     this.enableDragToMove = false,
@@ -79,6 +81,7 @@ class TimeGridEventsLayer extends StatelessWidget {
   final void Function(BuildContext, MCalEventTapDetails)? onEventTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventLongPress;
   final void Function(BuildContext, MCalEventTapDetails)? onEventDoubleTap;
+  final void Function(BuildContext, MCalEventTapDetails)? onEventSecondaryTap;
   final void Function(BuildContext, MCalCalendarEvent?)? onHoverEvent;
   final String? keyboardFocusedEventId;
   final bool enableDragToMove;
@@ -241,8 +244,9 @@ class TimeGridEventsLayer extends StatelessWidget {
 
     if (onEventTap != null ||
         (!enableDragToMove && onEventLongPress != null) ||
-        onEventDoubleTap != null) {
-      tile = GestureDetector(
+        onEventDoubleTap != null ||
+        onEventSecondaryTap != null) {
+      tile = MCalGestureDetector(
         onTap: onEventTap != null
             ? () => onEventTap!(
                 context,
@@ -257,6 +261,12 @@ class TimeGridEventsLayer extends StatelessWidget {
             : null,
         onDoubleTap: onEventDoubleTap != null
             ? () => onEventDoubleTap!(
+                context,
+                MCalEventTapDetails(event: event, displayDate: displayDate),
+              )
+            : null,
+        onSecondaryTap: onEventSecondaryTap != null
+            ? () => onEventSecondaryTap!(
                 context,
                 MCalEventTapDetails(event: event, displayDate: displayDate),
               )

@@ -267,7 +267,13 @@ class MCalMonthView extends StatefulWidget {
   /// Callback invoked when a date label is double-tapped.
   ///
   /// When set, date labels respond to double-tap with this handler.
-  /// Receives [BuildContext] and [MCalDateLabelTapDetails] with the date information.
+  /// Receives [BuildContext] and [MCalDateLabelTapDetails] with the date
+  /// information.
+  ///
+  /// **Tap delay:** When set alongside [onDateLabelTap], the tap handler waits
+  /// up to 200 ms before firing to allow double-tap disambiguation. Omit this
+  /// callback if you do not need double-tap and want [onDateLabelTap] to fire
+  /// immediately.
   final void Function(BuildContext, MCalDateLabelTapDetails)?
   onDateLabelDoubleTap;
 
@@ -293,12 +299,22 @@ class MCalMonthView extends StatefulWidget {
   /// Receives the [BuildContext] and [MCalCellDoubleTapDetails] containing the
   /// double-tapped date, events, and tap position. Use this to create new
   /// events at the tapped location.
+  ///
+  /// **Tap delay:** When set alongside [onCellTap], the tap handler waits up
+  /// to 200 ms before firing to allow double-tap disambiguation. Omit this
+  /// callback if you do not need double-tap and want [onCellTap] to fire
+  /// immediately.
   final void Function(BuildContext, MCalCellDoubleTapDetails)? onCellDoubleTap;
 
   /// Callback invoked when an event tile is double-tapped.
   ///
   /// Receives the [BuildContext] and [MCalEventDoubleTapDetails] containing the
   /// double-tapped event and tap position. Use this to open event editors.
+  ///
+  /// **Tap delay:** When set alongside [onEventTap], the tap handler waits up
+  /// to 200 ms before firing to allow double-tap disambiguation. Omit this
+  /// callback if you do not need double-tap and want [onEventTap] to fire
+  /// immediately.
   final void Function(BuildContext, MCalEventDoubleTapDetails)?
   onEventDoubleTap;
 
@@ -531,8 +547,74 @@ class MCalMonthView extends StatefulWidget {
   ///
   /// **Note:** The overflow indicator does not support drag-and-drop. Only
   /// visible event tiles can be dragged.
+  ///
+  /// **Tap delay:** When set alongside [onOverflowTap], the tap handler waits
+  /// up to 200 ms before firing to allow double-tap disambiguation. Omit this
+  /// callback if you do not need double-tap and want [onOverflowTap] to fire
+  /// immediately.
   final void Function(BuildContext, MCalOverflowTapDetails)?
   onOverflowDoubleTap;
+
+  /// Callback invoked when a day cell is right-clicked or two-finger tapped.
+  ///
+  /// Receives the [BuildContext] and [MCalCellTapDetails] containing the
+  /// date, list of events, and whether the date is in the current month.
+  final void Function(BuildContext, MCalCellTapDetails)? onCellSecondaryTap;
+
+  /// Callback invoked when a date label is right-clicked or two-finger tapped.
+  ///
+  /// Receives the [BuildContext] and [MCalDateLabelTapDetails] containing the
+  /// date information for the label that was secondary-tapped.
+  final void Function(BuildContext, MCalDateLabelTapDetails)?
+  onDateLabelSecondaryTap;
+
+  /// Callback invoked when an event tile is right-clicked or two-finger tapped.
+  ///
+  /// Receives the [BuildContext] and [MCalEventTapDetails] containing the
+  /// event and the date context for the tile.
+  final void Function(BuildContext, MCalEventTapDetails)? onEventSecondaryTap;
+
+  /// Callback invoked when the overflow indicator ("+N more") is right-clicked
+  /// or two-finger tapped.
+  ///
+  /// Receives the [BuildContext] and [MCalOverflowTapDetails] containing the
+  /// date, hidden events, and visible events.
+  final void Function(BuildContext, MCalOverflowTapDetails)?
+  onOverflowSecondaryTap;
+
+  /// Callback invoked when a day-of-week header is tapped.
+  ///
+  /// Receives [BuildContext] and [MCalMonthDayHeaderContext] with the day of
+  /// week index and the localized day name.
+  final void Function(BuildContext, MCalMonthDayHeaderContext)?
+  onDayOfWeekHeaderTap;
+
+  /// Callback invoked when a day-of-week header is long-pressed.
+  ///
+  /// Receives [BuildContext] and [MCalMonthDayHeaderContext] with the day of
+  /// week index and the localized day name.
+  final void Function(BuildContext, MCalMonthDayHeaderContext)?
+  onDayOfWeekHeaderLongPress;
+
+  /// Callback invoked when a day-of-week header is double-tapped.
+  ///
+  /// Receives [BuildContext] and [MCalMonthDayHeaderContext] with the day of
+  /// week index and the localized day name.
+  ///
+  /// **Tap delay:** When set alongside [onDayOfWeekHeaderTap], the tap handler
+  /// waits up to 200 ms before firing to allow double-tap disambiguation. Omit
+  /// this callback if you do not need double-tap and want
+  /// [onDayOfWeekHeaderTap] to fire immediately.
+  final void Function(BuildContext, MCalMonthDayHeaderContext)?
+  onDayOfWeekHeaderDoubleTap;
+
+  /// Callback invoked when a day-of-week header is right-clicked or
+  /// two-finger tapped.
+  ///
+  /// Receives [BuildContext] and [MCalMonthDayHeaderContext] with the day of
+  /// week index and the localized day name.
+  final void Function(BuildContext, MCalMonthDayHeaderContext)?
+  onDayOfWeekHeaderSecondaryTap;
 
   // ============ Animation ============
 
@@ -958,6 +1040,16 @@ class MCalMonthView extends StatefulWidget {
     this.onOverflowTap,
     this.onOverflowLongPress,
     this.onOverflowDoubleTap,
+    // Secondary tap handlers
+    this.onCellSecondaryTap,
+    this.onDateLabelSecondaryTap,
+    this.onEventSecondaryTap,
+    this.onOverflowSecondaryTap,
+    // Day-of-week header tap handlers
+    this.onDayOfWeekHeaderTap,
+    this.onDayOfWeekHeaderLongPress,
+    this.onDayOfWeekHeaderDoubleTap,
+    this.onDayOfWeekHeaderSecondaryTap,
     // Animation
     this.enableAnimations,
     this.animationDuration = const Duration(milliseconds: 300),
@@ -1713,7 +1805,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           onOverflowTap: widget.onOverflowTap,
           onOverflowLongPress: widget.onOverflowLongPress,
           onOverflowDoubleTap: null, // Not used in PageView mode yet
+          onOverflowSecondaryTap: widget.onOverflowSecondaryTap,
           onDateLabelDoubleTap: null, // Not used in PageView mode yet
+          onCellSecondaryTap: widget.onCellSecondaryTap,
+          onDateLabelSecondaryTap: widget.onDateLabelSecondaryTap,
+          onEventSecondaryTap: widget.onEventSecondaryTap,
           showWeekNumbers: widget.showWeekNumbers,
           weekNumberBuilder: widget.weekNumberBuilder,
           autoFocusOnCellTap: widget.autoFocusOnCellTap,
@@ -1851,6 +1947,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
             locale: locale,
             showWeekNumbers: widget.showWeekNumbers,
             onHoverDayOfWeekHeader: widget.onHoverDayOfWeekHeader,
+            onDayOfWeekHeaderTap: widget.onDayOfWeekHeaderTap,
+            onDayOfWeekHeaderLongPress: widget.onDayOfWeekHeaderLongPress,
+            onDayOfWeekHeaderDoubleTap: widget.onDayOfWeekHeaderDoubleTap,
+            onDayOfWeekHeaderSecondaryTap:
+                widget.onDayOfWeekHeaderSecondaryTap,
           ),
           Expanded(
             key: _gridAreaKey,

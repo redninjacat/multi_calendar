@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/mcal_calendar_event.dart';
 import '../styles/mcal_theme.dart';
 import 'mcal_callback_details.dart';
+import 'mcal_gesture_detector.dart';
 
 /// A widget that renders a segment of a multi-day event tile in Month View.
 ///
@@ -91,7 +92,7 @@ class MCalMonthMultiDayTile extends StatelessWidget {
       return child;
     }
 
-    return GestureDetector(
+    return MCalGestureDetector(
       onTap: onTap != null
           ? () => onTap!(
                 context,

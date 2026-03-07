@@ -368,6 +368,68 @@ class _MonthFeaturesTabState extends State<MonthFeaturesTab> {
                   _setStatus('—');
                 }
               },
+              onCellSecondaryTap: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  'Right-click on cell: ${_formatDate(details.date, locale)}',
+                );
+                _setStatus(
+                  'Cell right-click: ${_formatDate(details.date, locale)}',
+                );
+              },
+              onDateLabelSecondaryTap: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  'Right-click on date label: ${_formatDate(details.date, locale)}',
+                );
+                _setStatus(
+                  'Date label right-click: ${_formatDate(details.date, locale)}',
+                );
+              },
+              onEventSecondaryTap: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  'Right-click on event: ${details.event.title}',
+                );
+                _setStatus('Event right-click: ${details.event.title}');
+              },
+              onOverflowSecondaryTap: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  'Right-click on overflow: ${details.hiddenEventCount} hidden (${_formatDate(details.date, locale)})',
+                );
+                _setStatus(
+                  'Overflow right-click: ${_formatDate(details.date, locale)}',
+                );
+              },
+              onDayOfWeekHeaderTap: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  'Tap on day header: ${details.dayName}',
+                );
+                _setStatus('Day header tap: ${details.dayName}');
+              },
+              onDayOfWeekHeaderLongPress: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  'Long-press on day header: ${details.dayName}',
+                );
+                _setStatus('Day header long-press: ${details.dayName}');
+              },
+              onDayOfWeekHeaderDoubleTap: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  'Double-tap on day header: ${details.dayName}',
+                );
+                _setStatus('Day header double-tap: ${details.dayName}');
+              },
+              onDayOfWeekHeaderSecondaryTap: (ctx, details) {
+                SnackBarHelper.show(
+                  context,
+                  'Right-click on day header: ${details.dayName}',
+                );
+                _setStatus('Day header right-click: ${details.dayName}');
+              },
               onDragWillAccept: (ctx, details) {
                 // Blocked days are rejected by the library before this callback is
                 // reached, so any date arriving here is already allowed.

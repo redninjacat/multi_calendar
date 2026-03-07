@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' hide TextDirection;
+import 'package:multi_calendar/src/widgets/mcal_gesture_detector.dart';
 
 import '../../controllers/mcal_event_controller.dart';
 import '../../models/mcal_calendar_event.dart';
@@ -35,11 +36,14 @@ class DayCellWidget extends StatefulWidget {
   cellInteractivityCallback;
   final void Function(BuildContext, MCalCellTapDetails)? onCellTap;
   final void Function(BuildContext, MCalCellTapDetails)? onCellLongPress;
+  final void Function(BuildContext, MCalCellTapDetails)? onCellSecondaryTap;
   final void Function(BuildContext, MCalDateLabelTapDetails)? onDateLabelTap;
   final void Function(BuildContext, MCalDateLabelTapDetails)?
   onDateLabelLongPress;
   final void Function(BuildContext, MCalDateLabelTapDetails)?
   onDateLabelDoubleTap;
+  final void Function(BuildContext, MCalDateLabelTapDetails)?
+  onDateLabelSecondaryTap;
   final void Function(BuildContext, MCalCellDoubleTapDetails)? onCellDoubleTap;
   final void Function(BuildContext, MCalDayCellContext?)? onHoverCell;
   final void Function(BuildContext, MCalDateLabelContext?)? onHoverDateLabel;
@@ -72,9 +76,11 @@ class DayCellWidget extends StatefulWidget {
     this.cellInteractivityCallback,
     this.onCellTap,
     this.onCellLongPress,
+    this.onCellSecondaryTap,
     this.onDateLabelTap,
     this.onDateLabelLongPress,
     this.onDateLabelDoubleTap,
+    this.onDateLabelSecondaryTap,
     this.onCellDoubleTap,
     this.onHoverCell,
     this.onHoverDateLabel,
@@ -116,6 +122,7 @@ class DayCellWidgetState extends State<DayCellWidget> {
       onDateLabelTap: widget.onDateLabelTap,
       onDateLabelLongPress: widget.onDateLabelLongPress,
       onDateLabelDoubleTap: widget.onDateLabelDoubleTap,
+      onDateLabelSecondaryTap: widget.onDateLabelSecondaryTap,
       onHoverDateLabel: widget.onHoverDateLabel,
     );
 
@@ -195,7 +202,7 @@ class DayCellWidgetState extends State<DayCellWidget> {
     // Wrap in gesture detector for tap/long-press/double-tap (Day View pattern)
     final l10n = mcalL10n(context);
     final hasCellDoubleTap = isInteractive && widget.onCellDoubleTap != null;
-    Widget result = GestureDetector(
+    Widget result = MCalGestureDetector(
       onDoubleTapDown: hasCellDoubleTap
           ? (details) {
               _lastDoubleTapDownLocalPosition = details.localPosition;
@@ -224,6 +231,16 @@ class DayCellWidgetState extends State<DayCellWidget> {
           : null,
       onLongPress: isInteractive && widget.onCellLongPress != null
           ? () => widget.onCellLongPress!(
+              context,
+              MCalCellTapDetails(
+                date: widget.date,
+                events: widget.events,
+                isCurrentMonth: widget.isCurrentMonth,
+              ),
+            )
+          : null,
+      onSecondaryTap: isInteractive && widget.onCellSecondaryTap != null
+          ? () => widget.onCellSecondaryTap!(
               context,
               MCalCellTapDetails(
                 date: widget.date,
@@ -350,7 +367,11 @@ class DayCellWidgetState extends State<DayCellWidget> {
     );
 
     if (widget.dayRegionBuilder != null) {
-      defaultWidget = widget.dayRegionBuilder!(context, regionContext, defaultWidget);
+      defaultWidget = widget.dayRegionBuilder!(
+        context,
+        regionContext,
+        defaultWidget,
+      );
     }
 
     return Positioned.fill(child: defaultWidget);
