@@ -99,10 +99,17 @@ This design replaces the controller's `focusedDate` (date-only) with `focusedDat
 │  → setFocusedDateTime│  └─────────────────────────┘
 │    (isAllDay: true)  │
 │                      │
-│ WRITE (keyboard):    │
+│ WRITE (keyboard       │
+│  ↑↓ Home End A T):  │
 │  _slotIndexToTime    │
 │  → setFocusedDateTime│
 │    (isAllDay per key)│
+│                      │
+│ WRITE (keyboard ←→): │
+│  addDays(±1) [DST]   │
+│  setDisplayDate      │
+│  → setFocusedDateTime│
+│    (same slot/allday)│
 │                      │
 │ CALLBACK:            │
 │  onFocusedDateTime   │
@@ -176,6 +183,49 @@ This design replaces the controller's `focusedDate` (date-only) with `focusedDat
 
   **Modified — `_handleNavigationModeKey`** (line 2596):
   After each slot index mutation (Up, Down, Home, End, A, T), add `widget.controller.setFocusedDateTime(...)` with the computed time. For `null` (all-day), use midnight with `isAllDay: true`. For time grid slots, use `isAllDay: false` (the default). The equality guard prevents redundant notifications.
+
+  **New — Left/Right day navigation (RTL-aware):**
+  The current code returns `KeyEventResult.ignored` for Left/Right keys. This is replaced with RTL-aware, DST-safe day navigation that preserves the current focus position. Mirrors the Month View's `rtlMult` pattern:
+
+  ```
+  // ── ← / → Navigate Between Days (RTL-aware) ──────────────────────────
+  if (key == arrowLeft || key == arrowRight) {
+    final isRTL = _isLayoutRTL(context);
+    final dayOffset = (isLeft ? -1 : 1) * (isRTL ? -1 : 1);
+    // LTR: left = −1, right = +1. RTL: left = +1, right = −1.
+    _navigateToDayPreservingFocus(dayOffset) → handled
+  }
+  ```
+
+  **New private helper — `_navigateToDayPreservingFocus(int dayOffset)`:**
+  ```
+  void _navigateToDayPreservingFocus(int dayOffset) {
+    final newDate = addDays(_displayDate, dayOffset);   // DST-safe
+    widget.controller.setDisplayDate(newDate);
+    if (_focusedSlotIndex == null) {
+      // All-day section — stay in all-day on new day
+      widget.controller.setFocusedDateTime(
+        DateTime(newDate.year, newDate.month, newDate.day),
+        isAllDay: true,
+      );
+    } else {
+      // Time grid — same slot index (= same hour:minute) on new day
+      // DateTime constructor arithmetic is DST-safe (not Duration-based).
+      final slotMinutes = widget.timeSlotDuration.inMinutes;
+      final totalMinutes = widget.startHour * 60 + _focusedSlotIndex! * slotMinutes;
+      widget.controller.setFocusedDateTime(
+        DateTime(
+          newDate.year, newDate.month, newDate.day,
+          totalMinutes ~/ 60, totalMinutes % 60,
+        ),
+      );
+    }
+  }
+  ```
+
+  **DST safety:** `addDays` from `date_utils.dart` shifts by calendar day (preserving time-of-day across DST boundaries). The hour/minute for the new slot is computed from the slot index via integer arithmetic, then passed to the `DateTime` constructor — not added via `Duration`, so DST boundaries do not cause the wrong calendar day to be produced.
+
+  **Slot index preservation:** The `_focusedSlotIndex` (stored as an integer within `[0, totalSlots-1]`) represents a relative position in the time grid. Since `startHour` and `timeSlotDuration` are fixed per widget, the same slot index always maps to the same hour:minute pair on any day. There is no need to update `_focusedSlotIndex` itself — only `controller.focusedDateTime` (the date part) changes.
 
   **New parameter — `onFocusedDateTimeChanged`:**
   `ValueChanged<DateTime?>?` on `MCalDayView`. Fired from `_onControllerChanged` when `focusedDateTime` changes.
@@ -295,6 +345,13 @@ This design replaces the controller's `focusedDate` (date-only) with `focusedDat
   - Press Down → `controller.focusedDateTime` updated with correct time
   - Press A → `controller.focusedDateTime` set to midnight, `isFocusedOnAllDay` true
   - Press T → `controller.focusedDateTime` set to time grid slot
+
+- **Day View left/right day navigation** (`test/widgets/mcal_day_view_focus_test.dart`):
+  - Focus time slot, press Left → `controller.displayDate` moves to previous day, `controller.focusedDateTime` same hour:minute on new day
+  - Focus time slot, press Right → `controller.displayDate` moves to next day, `controller.focusedDateTime` same hour:minute on new day
+  - Focus all-day section, press Left → all-day on previous day (`isFocusedOnAllDay == true`)
+  - Focus all-day section, press Right → all-day on next day (`isFocusedOnAllDay == true`)
+  - Multiple consecutive Left presses → navigates correctly across multiple days
 
 - **Month View backward compat** (`test/widgets/mcal_month_view_test.dart`):
   - Cell tap with `autoFocusOnCellTap` → `controller.focusedDateTime` set to midnight, `isFocusedOnAllDay` true

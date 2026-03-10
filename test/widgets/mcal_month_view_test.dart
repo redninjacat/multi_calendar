@@ -1590,14 +1590,14 @@ void main() {
 
     /// Helper function to focus the calendar widget and send a key event.
     /// Accepts an optional [controller] so that the focused date can be
-    /// preserved across the tap (tapping a cell changes focusedDate as a
+    /// preserved across the tap (tapping a cell changes focusedDateTime as a
     /// side-effect).
     Future<void> focusAndSendKeyEvent(
       WidgetTester tester,
       LogicalKeyboardKey key, {
       MCalEventController? controller,
     }) async {
-      final savedFocusedDate = controller?.focusedDate;
+      final savedFocusedDateTime = controller?.focusedDateTime;
 
       // Tap to request focus
       await tester.tap(find.byType(MCalMonthView));
@@ -1605,7 +1605,7 @@ void main() {
 
       // Restore focused date if a controller was provided
       if (controller != null) {
-        controller.setFocusedDate(savedFocusedDate);
+        controller.setFocusedDateTime(savedFocusedDateTime, isAllDay: true);
         await tester.pumpAndSettle();
       }
 
@@ -1619,7 +1619,7 @@ void main() {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 1, 15));
+      testController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1640,14 +1640,14 @@ void main() {
       await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowRight, controller: testController);
 
       // Verify focused date moved to next day
-      expect(testController.focusedDate, equals(DateTime(2025, 1, 16)));
+      expect(testController.focusedDateTime, equals(DateTime(2025, 1, 16)));
     });
 
     testWidgets('arrow left moves focus to previous day', (tester) async {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 1, 15));
+      testController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1666,14 +1666,14 @@ void main() {
 
       await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowLeft, controller: testController);
 
-      expect(testController.focusedDate, equals(DateTime(2025, 1, 14)));
+      expect(testController.focusedDateTime, equals(DateTime(2025, 1, 14)));
     });
 
     testWidgets('arrow up moves focus to previous week', (tester) async {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 1, 15));
+      testController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1693,14 +1693,14 @@ void main() {
       await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowUp, controller: testController);
 
       // 15 - 7 = 8
-      expect(testController.focusedDate, equals(DateTime(2025, 1, 8)));
+      expect(testController.focusedDateTime, equals(DateTime(2025, 1, 8)));
     });
 
     testWidgets('arrow down moves focus to next week', (tester) async {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 1, 15));
+      testController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1720,14 +1720,14 @@ void main() {
       await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowDown, controller: testController);
 
       // 15 + 7 = 22
-      expect(testController.focusedDate, equals(DateTime(2025, 1, 22)));
+      expect(testController.focusedDateTime, equals(DateTime(2025, 1, 22)));
     });
 
     testWidgets('home key moves focus to first day of month', (tester) async {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 1, 15));
+      testController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1746,14 +1746,14 @@ void main() {
 
       await focusAndSendKeyEvent(tester, LogicalKeyboardKey.home, controller: testController);
 
-      expect(testController.focusedDate, equals(DateTime(2025, 1, 1)));
+      expect(testController.focusedDateTime, equals(DateTime(2025, 1, 1)));
     });
 
     testWidgets('end key moves focus to last day of month', (tester) async {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 1, 15));
+      testController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1773,14 +1773,14 @@ void main() {
       await focusAndSendKeyEvent(tester, LogicalKeyboardKey.end, controller: testController);
 
       // January has 31 days
-      expect(testController.focusedDate, equals(DateTime(2025, 1, 31)));
+      expect(testController.focusedDateTime, equals(DateTime(2025, 1, 31)));
     });
 
     testWidgets('page up navigates to previous month', (tester) async {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 1, 15));
+      testController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1800,7 +1800,7 @@ void main() {
       await focusAndSendKeyEvent(tester, LogicalKeyboardKey.pageUp, controller: testController);
 
       // Should move to December 2024, same day (15th)
-      expect(testController.focusedDate, equals(DateTime(2024, 12, 15)));
+      expect(testController.focusedDateTime, equals(DateTime(2024, 12, 15)));
       expect(testController.displayDate.month, equals(12));
       expect(testController.displayDate.year, equals(2024));
     });
@@ -1809,7 +1809,7 @@ void main() {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 1, 15));
+      testController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1829,7 +1829,7 @@ void main() {
       await focusAndSendKeyEvent(tester, LogicalKeyboardKey.pageDown, controller: testController);
 
       // Should move to February 2025, same day (15th)
-      expect(testController.focusedDate, equals(DateTime(2025, 2, 15)));
+      expect(testController.focusedDateTime, equals(DateTime(2025, 2, 15)));
       expect(testController.displayDate.month, equals(2));
       expect(testController.displayDate.year, equals(2025));
     });
@@ -1841,7 +1841,7 @@ void main() {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 3, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 3, 31));
+      testController.setFocusedDateTime(DateTime(2025, 3, 31), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1863,14 +1863,14 @@ void main() {
       await focusAndSendKeyEvent(tester, LogicalKeyboardKey.pageUp, controller: testController);
 
       // February 2025 has 28 days, so should move to Feb 28
-      expect(testController.focusedDate, equals(DateTime(2025, 2, 28)));
+      expect(testController.focusedDateTime, equals(DateTime(2025, 2, 28)));
     });
 
     testWidgets('enter key triggers onCellTap', (tester) async {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 1, 15));
+      testController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       DateTime? tappedDate;
       bool? isCurrent;
@@ -1904,7 +1904,7 @@ void main() {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 1, 20));
+      testController.setFocusedDateTime(DateTime(2025, 1, 20), isAllDay: true);
 
       DateTime? tappedDate;
 
@@ -1940,7 +1940,7 @@ void main() {
         initialDate: DateTime(2025, 1, 1),
       );
       final minDate = DateTime(2025, 1, 10);
-      testController.setFocusedDate(DateTime(2025, 1, 10));
+      testController.setFocusedDateTime(DateTime(2025, 1, 10), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1964,7 +1964,7 @@ void main() {
       await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowLeft, controller: testController);
 
       // Should not move before minDate
-      expect(testController.focusedDate, equals(DateTime(2025, 1, 10)));
+      expect(testController.focusedDateTime, equals(DateTime(2025, 1, 10)));
     });
 
     testWidgets('maxDate boundary prevents navigation after maxDate', (
@@ -1974,7 +1974,7 @@ void main() {
         initialDate: DateTime(2025, 1, 1),
       );
       final maxDate = DateTime(2025, 1, 25);
-      testController.setFocusedDate(DateTime(2025, 1, 25));
+      testController.setFocusedDateTime(DateTime(2025, 1, 25), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1998,7 +1998,7 @@ void main() {
       await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowRight, controller: testController);
 
       // Should not move after maxDate
-      expect(testController.focusedDate, equals(DateTime(2025, 1, 25)));
+      expect(testController.focusedDateTime, equals(DateTime(2025, 1, 25)));
     });
 
     testWidgets('enableKeyboardNavigation=false disables keyboard shortcuts', (
@@ -2007,7 +2007,7 @@ void main() {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 1, 15));
+      testController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -2024,10 +2024,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap — the tap may change focusedDate as a side-effect, so restore it
+      // Tap — the tap may change focusedDateTime as a side-effect, so restore it
       await tester.tap(find.byType(MCalMonthView));
       await tester.pumpAndSettle();
-      testController.setFocusedDate(DateTime(2025, 1, 15));
+      testController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
       await tester.pumpAndSettle();
 
       // Try to navigate with arrow keys
@@ -2035,7 +2035,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Focus should NOT have changed
-      expect(testController.focusedDate, equals(DateTime(2025, 1, 15)));
+      expect(testController.focusedDateTime, equals(DateTime(2025, 1, 15)));
     });
 
     testWidgets(
@@ -2045,7 +2045,7 @@ void main() {
         final testController = MockMCalEventController(
           initialDate: DateTime(2025, 1, 1),
         );
-        testController.setFocusedDate(DateTime(2025, 1, 1));
+        testController.setFocusedDateTime(DateTime(2025, 1, 1), isAllDay: true);
 
         await tester.pumpWidget(
           MaterialApp(
@@ -2068,7 +2068,7 @@ void main() {
         await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowLeft, controller: testController);
 
         // Focus should move to December 31
-        expect(testController.focusedDate, equals(DateTime(2024, 12, 31)));
+        expect(testController.focusedDateTime, equals(DateTime(2024, 12, 31)));
         // Display should auto-navigate to December
         expect(testController.displayDate.month, equals(12));
         expect(testController.displayDate.year, equals(2024));
@@ -2076,9 +2076,9 @@ void main() {
     );
 
     testWidgets(
-      'initial focus is set to displayDate on first keyboard event if no focusedDate',
+      'initial focus is set to displayDate on first keyboard event if no focusedDateTime',
       (tester) async {
-        // Do not set focusedDate initially
+        // Do not set focusedDateTime initially
         final testController = MockMCalEventController(
           initialDate: DateTime(2025, 1, 15),
         );
@@ -2098,15 +2098,15 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Verify no focusedDate initially
-        expect(testController.focusedDate, isNull);
+        // Verify no focusedDateTime initially
+        expect(testController.focusedDateTime, isNull);
 
-        // Focus and send key event - this should initialize focusedDate
+        // Focus and send key event - this should initialize focusedDateTime
         await focusAndSendKeyEvent(tester, LogicalKeyboardKey.arrowRight, controller: testController);
 
         // Focus should be set (displayDate + 1 day since we pressed right)
-        expect(testController.focusedDate, isNotNull);
-        expect(testController.focusedDate, equals(DateTime(2025, 1, 16)));
+        expect(testController.focusedDateTime, isNotNull);
+        expect(testController.focusedDateTime, equals(DateTime(2025, 1, 16)));
       },
     );
 
@@ -2114,7 +2114,7 @@ void main() {
       final testController = MockMCalEventController(
         initialDate: DateTime(2025, 1, 1),
       );
-      testController.setFocusedDate(DateTime(2025, 1, 15));
+      testController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       DateTime? tappedDate;
 

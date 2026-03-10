@@ -532,7 +532,7 @@ void main() {
         tester,
       ) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
         await tester.pumpWidget(
           MaterialApp(
@@ -555,33 +555,33 @@ void main() {
         await tester.pumpAndSettle();
 
         // Reset focused date to the known starting point regardless of tap result
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
         await tester.pump();
 
         // Move right
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
         await tester.pumpAndSettle();
-        expect(controller.focusedDate, equals(DateTime(2025, 1, 16)));
+        expect(controller.focusedDateTime, equals(DateTime(2025, 1, 16)));
 
         // Move left
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
         await tester.pumpAndSettle();
-        expect(controller.focusedDate, equals(DateTime(2025, 1, 15)));
+        expect(controller.focusedDateTime, equals(DateTime(2025, 1, 15)));
 
         // Move up (previous week)
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
         await tester.pumpAndSettle();
-        expect(controller.focusedDate, equals(DateTime(2025, 1, 8)));
+        expect(controller.focusedDateTime, equals(DateTime(2025, 1, 8)));
 
         // Move down (next week)
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
         await tester.pumpAndSettle();
-        expect(controller.focusedDate, equals(DateTime(2025, 1, 15)));
+        expect(controller.focusedDateTime, equals(DateTime(2025, 1, 15)));
       });
 
       testWidgets('Home key moves focus to first day of month', (tester) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
         await tester.pumpWidget(
           MaterialApp(
@@ -605,12 +605,12 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.home);
         await tester.pumpAndSettle();
 
-        expect(controller.focusedDate, equals(DateTime(2025, 1, 1)));
+        expect(controller.focusedDateTime, equals(DateTime(2025, 1, 1)));
       });
 
       testWidgets('End key moves focus to last day of month', (tester) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
         await tester.pumpWidget(
           MaterialApp(
@@ -634,12 +634,12 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.end);
         await tester.pumpAndSettle();
 
-        expect(controller.focusedDate, equals(DateTime(2025, 1, 31)));
+        expect(controller.focusedDateTime, equals(DateTime(2025, 1, 31)));
       });
 
       testWidgets('focused state is visually indicated', (tester) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
         await tester.pumpWidget(
           MaterialApp(
@@ -675,7 +675,7 @@ void main() {
 
       testWidgets('Enter key activates focused cell', (tester) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
         DateTime? tappedDate;
 
@@ -703,7 +703,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Reset focused date to the known starting point regardless of tap result
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
         await tester.pump();
 
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
@@ -714,7 +714,7 @@ void main() {
 
       testWidgets('Space key activates focused cell', (tester) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 20));
+        controller.setFocusedDateTime(DateTime(2025, 1, 20), isAllDay: true);
 
         DateTime? tappedDate;
 
@@ -752,7 +752,7 @@ void main() {
       ) async {
         final minDate = DateTime(2025, 1, 10);
         controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 10));
+        controller.setFocusedDateTime(DateTime(2025, 1, 10), isAllDay: true);
 
         await tester.pumpWidget(
           MaterialApp(
@@ -780,7 +780,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Should stay at minDate
-        expect(controller.focusedDate, equals(DateTime(2025, 1, 10)));
+        expect(controller.focusedDateTime, equals(DateTime(2025, 1, 10)));
       });
 
       testWidgets('keyboard navigation respects maxDate boundary', (
@@ -788,7 +788,7 @@ void main() {
       ) async {
         final maxDate = DateTime(2025, 1, 25);
         controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 25));
+        controller.setFocusedDateTime(DateTime(2025, 1, 25), isAllDay: true);
 
         await tester.pumpWidget(
           MaterialApp(
@@ -816,14 +816,14 @@ void main() {
         await tester.pumpAndSettle();
 
         // Should stay at maxDate
-        expect(controller.focusedDate, equals(DateTime(2025, 1, 25)));
+        expect(controller.focusedDateTime, equals(DateTime(2025, 1, 25)));
       });
 
       testWidgets(
         'focus automatically navigates to new month when crossing boundary',
         (tester) async {
           controller.setDisplayDate(DateTime(2025, 1, 1));
-          controller.setFocusedDate(DateTime(2025, 1, 1));
+          controller.setFocusedDateTime(DateTime(2025, 1, 1), isAllDay: true);
 
           await tester.pumpWidget(
             MaterialApp(
@@ -850,7 +850,7 @@ void main() {
           await tester.pumpAndSettle();
 
           // Should move to December 31, 2024 and auto-navigate
-          expect(controller.focusedDate, equals(DateTime(2024, 12, 31)));
+          expect(controller.focusedDateTime, equals(DateTime(2024, 12, 31)));
           expect(controller.displayDate.month, equals(12));
         },
       );
@@ -861,7 +861,7 @@ void main() {
         tester,
       ) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
         final focusChanges = <DateTime?>[];
 
@@ -889,7 +889,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Reset focused date to the known starting point regardless of tap result
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
         await tester.pump();
 
         // Navigate
@@ -909,7 +909,7 @@ void main() {
         tester,
       ) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
         final displayChanges = <DateTime>[];
 
@@ -984,7 +984,7 @@ void main() {
 
       testWidgets('focus clears when null is set', (tester) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
         DateTime? lastFocusedDate = DateTime(2025, 1, 15);
         bool focusCleared = false;
@@ -1011,7 +1011,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Clear focus
-        controller.setFocusedDate(null);
+        controller.setFocusedDateTime(null);
         await tester.pumpAndSettle();
 
         expect(focusCleared, isTrue);
@@ -1146,7 +1146,7 @@ void main() {
         tester,
       ) async {
         controller.setDisplayDate(DateTime(2025, 1, 1));
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
         await tester.pumpWidget(
           MaterialApp(
@@ -1173,14 +1173,14 @@ void main() {
         await tester.pumpAndSettle();
 
         // Reset focused date to the known starting point regardless of tap result
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
         await tester.pump();
 
         // In RTL mode, ArrowRight moves to the previous day (visual right = chronological backward)
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
         await tester.pumpAndSettle();
 
-        expect(controller.focusedDate, equals(DateTime(2025, 1, 14)));
+        expect(controller.focusedDateTime, equals(DateTime(2025, 1, 14)));
       });
     });
   });

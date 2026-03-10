@@ -651,7 +651,7 @@ void main() {
           end: DateTime(2025, 1, 15, 11, 0),
         );
         controller.setMockEvents([event]);
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
         await pumpMonthView(
           tester,
@@ -663,7 +663,7 @@ void main() {
         // Tap to get focus, then restore focused date to Jan 15
         await tester.tap(find.byType(MCalMonthView));
         await tester.pumpAndSettle();
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
         await tester.pumpAndSettle();
 
         // Enter: immediately enters Event Mode (event selected)
@@ -703,7 +703,7 @@ void main() {
         end: DateTime(2025, 1, 15, 11, 0),
       );
       controller.setMockEvents([event]);
-      controller.setFocusedDate(DateTime(2025, 1, 15));
+      controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       await pumpMonthView(
         tester,
@@ -715,7 +715,7 @@ void main() {
       // Tap to get focus, then restore focused date
       await tester.tap(find.byType(MCalMonthView));
       await tester.pumpAndSettle();
-      controller.setFocusedDate(DateTime(2025, 1, 15));
+      controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
       await tester.pumpAndSettle();
 
       // Enter Event Mode, M to enter Move Mode, move right, then cancel with Escape
@@ -754,7 +754,7 @@ void main() {
         end: DateTime(2025, 1, 15, 11, 0),
       );
       controller.setMockEvents([event]);
-      controller.setFocusedDate(DateTime(2025, 1, 15));
+      controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       MCalEventDroppedDetails? droppedDetails;
 
@@ -772,7 +772,7 @@ void main() {
       // Tap to get focus, then restore focused date
       await tester.tap(find.byType(MCalMonthView));
       await tester.pumpAndSettle();
-      controller.setFocusedDate(DateTime(2025, 1, 15));
+      controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
       await tester.pumpAndSettle();
 
       // Enter Event Mode, M to enter Move Mode, ArrowRight to move, Enter to confirm
@@ -809,7 +809,7 @@ void main() {
           ),
         ];
         controller.setMockEvents(events);
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
         await pumpMonthView(
           tester,
@@ -821,7 +821,7 @@ void main() {
         // Tap to get focus, then restore focused date
         await tester.tap(find.byType(MCalMonthView));
         await tester.pumpAndSettle();
-        controller.setFocusedDate(DateTime(2025, 1, 15));
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
         await tester.pumpAndSettle();
 
         // Enter selection mode – should enter event cycling
@@ -869,7 +869,7 @@ void main() {
         isAllDay: true,
       );
       controller.setMockEvents([event]);
-      controller.setFocusedDate(DateTime(2025, 1, 6));
+      controller.setFocusedDateTime(DateTime(2025, 1, 6), isAllDay: true);
 
       await pumpMonthView(
         tester,
@@ -882,7 +882,7 @@ void main() {
       // Tap to get focus, then restore focused date to Jan 6
       await tester.tap(find.byType(MCalMonthView));
       await tester.pumpAndSettle();
-      controller.setFocusedDate(DateTime(2025, 1, 6));
+      controller.setFocusedDateTime(DateTime(2025, 1, 6), isAllDay: true);
       await tester.pumpAndSettle();
 
       // Enter: immediately enters Event Mode (event selected)
@@ -920,7 +920,7 @@ void main() {
         isAllDay: true,
       );
       controller.setMockEvents([event]);
-      controller.setFocusedDate(DateTime(2025, 1, 6));
+      controller.setFocusedDateTime(DateTime(2025, 1, 6), isAllDay: true);
 
       await pumpMonthView(
         tester,
@@ -933,7 +933,7 @@ void main() {
       // Tap to get focus, then restore focused date
       await tester.tap(find.byType(MCalMonthView));
       await tester.pumpAndSettle();
-      controller.setFocusedDate(DateTime(2025, 1, 6));
+      controller.setFocusedDateTime(DateTime(2025, 1, 6), isAllDay: true);
       await tester.pumpAndSettle();
 
       // Enter selection → resize mode
@@ -972,7 +972,7 @@ void main() {
         isAllDay: true,
       );
       controller.setMockEvents([event]);
-      controller.setFocusedDate(DateTime(2025, 1, 6));
+      controller.setFocusedDateTime(DateTime(2025, 1, 6), isAllDay: true);
 
       await pumpMonthView(
         tester,
@@ -985,7 +985,7 @@ void main() {
       // Tap to get focus, then restore focused date
       await tester.tap(find.byType(MCalMonthView));
       await tester.pumpAndSettle();
-      controller.setFocusedDate(DateTime(2025, 1, 6));
+      controller.setFocusedDateTime(DateTime(2025, 1, 6), isAllDay: true);
       await tester.pumpAndSettle();
 
       // Enter selection → resize mode
@@ -1027,7 +1027,7 @@ void main() {
         isAllDay: true,
       );
       controller.setMockEvents([event]);
-      controller.setFocusedDate(DateTime(2025, 1, 6));
+      controller.setFocusedDateTime(DateTime(2025, 1, 6), isAllDay: true);
 
       await pumpMonthView(
         tester,
@@ -1040,7 +1040,7 @@ void main() {
       // Tap to get focus, then restore focused date
       await tester.tap(find.byType(MCalMonthView));
       await tester.pumpAndSettle();
-      controller.setFocusedDate(DateTime(2025, 1, 6));
+      controller.setFocusedDateTime(DateTime(2025, 1, 6), isAllDay: true);
       await tester.pumpAndSettle();
 
       // Enter selection → resize mode
@@ -1083,7 +1083,7 @@ void main() {
           isAllDay: true,
         );
         controller.setMockEvents([event]);
-        controller.setFocusedDate(DateTime(2025, 1, 6));
+        controller.setFocusedDateTime(DateTime(2025, 1, 6), isAllDay: true);
 
         MCalEventResizedDetails? resizedDetails;
 
@@ -1102,7 +1102,7 @@ void main() {
         // Tap to get focus, then restore focused date
         await tester.tap(find.byType(MCalMonthView));
         await tester.pumpAndSettle();
-        controller.setFocusedDate(DateTime(2025, 1, 6));
+        controller.setFocusedDateTime(DateTime(2025, 1, 6), isAllDay: true);
         await tester.pumpAndSettle();
 
         // Enter selection → resize mode → extend end → confirm

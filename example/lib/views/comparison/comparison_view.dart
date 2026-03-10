@@ -3,6 +3,7 @@ import 'package:multi_calendar/multi_calendar.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../shared/utils/sample_events.dart';
+import '../../shared/widgets/day_events_bottom_sheet.dart';
 import '../../shared/widgets/event_detail_dialog.dart';
 
 /// Comparison view showing Month View and Day View side by side.
@@ -224,9 +225,19 @@ class _MonthViewPanel extends StatelessWidget {
             locale: locale,
             showNavigator: true,
             enableSwipeNavigation: true,
+            enableKeyboardNavigation: true,
+            autoFocusOnCellTap: true,
             onCellTap: onCellTap,
             onEventTap: (context, details) {
               showEventDetailDialog(context, details.event, locale);
+            },
+            onOverflowTap: (context, details) {
+              showDayEventsBottomSheet(
+                context,
+                details.date,
+                details.allEvents,
+                locale,
+              );
             },
           ),
         ),
@@ -273,6 +284,7 @@ class _DayViewPanel extends StatelessWidget {
             showCurrentTimeIndicator: true,
             enableDragToMove: true,
             enableDragToResize: true,
+            enableKeyboardNavigation: true,
             snapToTimeSlots: true,
             timeSlotDuration: const Duration(minutes: 15),
             onEventTap: (context, details) {

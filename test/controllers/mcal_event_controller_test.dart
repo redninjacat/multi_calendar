@@ -185,10 +185,10 @@ void main() {
     });
 
     // ============================================================
-    // Task 1: displayDate and focusedDate tests
+    // Task 1: displayDate and focusedDateTime tests
     // ============================================================
 
-    group('displayDate and focusedDate', () {
+    group('displayDate and focusedDateTime', () {
       test('displayDate getter returns DateTime.now() initially (same day)', () {
         final controller = MCalEventController();
         final now = DateTime.now();
@@ -198,9 +198,14 @@ void main() {
         expect(controller.displayDate.day, equals(now.day));
       });
 
-      test('focusedDate getter returns null initially', () {
+      test('focusedDateTime getter returns null initially', () {
         final controller = MCalEventController();
-        expect(controller.focusedDate, isNull);
+        expect(controller.focusedDateTime, isNull);
+      });
+
+      test('isFocusedOnAllDay returns false initially', () {
+        final controller = MCalEventController();
+        expect(controller.isFocusedOnAllDay, isFalse);
       });
 
       test('setDisplayDate() updates displayDate', () {
@@ -231,87 +236,123 @@ void main() {
         expect(notifyCount, equals(2));
       });
 
-      test('setFocusedDate() updates focusedDate', () {
+      test('setFocusedDateTime() updates focusedDateTime', () {
         final controller = MCalEventController();
-        final focusDate = DateTime(2024, 6, 15);
+        final focusDateTime = DateTime(2024, 6, 15, 10, 30);
 
-        controller.setFocusedDate(focusDate);
+        controller.setFocusedDateTime(focusDateTime);
 
-        expect(controller.focusedDate, equals(focusDate));
+        expect(controller.focusedDateTime, equals(focusDateTime));
+        expect(controller.isFocusedOnAllDay, isFalse);
       });
 
-      test('setFocusedDate(null) clears focusedDate', () {
+      test('setFocusedDateTime(null) clears focusedDateTime', () {
         final controller = MCalEventController();
-        final focusDate = DateTime(2024, 6, 15);
+        final focusDateTime = DateTime(2024, 6, 15, 10, 30);
 
-        // Set a focus date first
-        controller.setFocusedDate(focusDate);
-        expect(controller.focusedDate, equals(focusDate));
+        controller.setFocusedDateTime(focusDateTime);
+        expect(controller.focusedDateTime, equals(focusDateTime));
 
-        // Clear it
-        controller.setFocusedDate(null);
-        expect(controller.focusedDate, isNull);
+        controller.setFocusedDateTime(null);
+        expect(controller.focusedDateTime, isNull);
       });
 
-      test('setFocusedDate() notifies only when value changes', () {
+      test('setFocusedDateTime(dt, isAllDay: true) sets both fields', () {
         final controller = MCalEventController();
-        final focusDate = DateTime(2024, 6, 15);
+        final focusDateTime = DateTime(2024, 6, 15);
+
+        controller.setFocusedDateTime(focusDateTime, isAllDay: true);
+
+        expect(controller.focusedDateTime, equals(focusDateTime));
+        expect(controller.isFocusedOnAllDay, isTrue);
+      });
+
+      test('setFocusedDateTime() notifies only when value changes', () {
+        final controller = MCalEventController();
+        final focusDateTime = DateTime(2024, 6, 15, 10, 30);
         var notifyCount = 0;
         controller.addListener(() => notifyCount++);
 
         // First call should notify
-        controller.setFocusedDate(focusDate);
+        controller.setFocusedDateTime(focusDateTime);
         expect(notifyCount, equals(1));
 
-        // Same value should NOT notify
-        controller.setFocusedDate(focusDate);
+        // Same value AND same isAllDay should NOT notify
+        controller.setFocusedDateTime(focusDateTime);
         expect(notifyCount, equals(1));
 
         // Different value should notify
-        controller.setFocusedDate(DateTime(2024, 7, 20));
+        controller.setFocusedDateTime(DateTime(2024, 7, 20, 14, 0));
         expect(notifyCount, equals(2));
 
         // Setting to null should notify
-        controller.setFocusedDate(null);
+        controller.setFocusedDateTime(null);
         expect(notifyCount, equals(3));
 
         // Setting to null again should NOT notify
-        controller.setFocusedDate(null);
+        controller.setFocusedDateTime(null);
         expect(notifyCount, equals(3));
       });
 
-      test('navigateToDate(date, focus: true) sets both displayDate and focusedDate', () {
+      test(
+          'setFocusedDateTime() notifies when same DateTime but different isAllDay (midnight disambiguation)',
+          () {
         final controller = MCalEventController();
-        final navDate = DateTime(2024, 6, 15);
+        final midnight = DateTime(2024, 6, 15);
+        var notifyCount = 0;
+        controller.addListener(() => notifyCount++);
+
+        // Set midnight as time slot (isAllDay: false)
+        controller.setFocusedDateTime(midnight);
+        expect(notifyCount, equals(1));
+        expect(controller.isFocusedOnAllDay, isFalse);
+
+        // Same DateTime but isAllDay: true — MUST notify (midnight disambiguation)
+        controller.setFocusedDateTime(midnight, isAllDay: true);
+        expect(notifyCount, equals(2));
+        expect(controller.isFocusedOnAllDay, isTrue);
+
+        // Same DateTime and same isAllDay: true — must NOT notify
+        controller.setFocusedDateTime(midnight, isAllDay: true);
+        expect(notifyCount, equals(2));
+      });
+
+      test(
+          'navigateToDate(date, focus: true) sets displayDate (date-only) and focusedDateTime (full)',
+          () {
+        final controller = MCalEventController();
+        final navDate = DateTime(2026, 3, 1, 14, 30);
 
         controller.navigateToDate(navDate, focus: true);
 
-        expect(controller.displayDate, equals(navDate));
-        expect(controller.focusedDate, equals(navDate));
+        expect(controller.displayDate, equals(DateTime(2026, 3, 1)));
+        expect(controller.focusedDateTime, equals(navDate));
+        expect(controller.isFocusedOnAllDay, isFalse);
       });
 
       test('navigateToDate(date, focus: false) sets only displayDate', () {
         final controller = MCalEventController();
-        final navDate = DateTime(2024, 6, 15);
+        final navDate = DateTime(2026, 3, 1, 14, 30);
 
-        // Set an initial focused date
-        controller.setFocusedDate(DateTime(2024, 5, 10));
-        final originalFocused = controller.focusedDate;
+        // Set an initial focused date-time
+        controller.setFocusedDateTime(DateTime(2024, 5, 10, 9, 0));
+        final originalFocused = controller.focusedDateTime;
 
         // Navigate without focus
         controller.navigateToDate(navDate, focus: false);
 
-        expect(controller.displayDate, equals(navDate));
-        expect(controller.focusedDate, equals(originalFocused));
+        expect(controller.displayDate, equals(DateTime(2026, 3, 1)));
+        expect(controller.focusedDateTime, equals(originalFocused));
+        expect(controller.isFocusedOnAllDay, isFalse);
       });
 
       test('navigateToDate() only notifies once even when setting both', () {
         final controller = MCalEventController();
-        final navDate = DateTime(2024, 6, 15);
+        final navDate = DateTime(2026, 3, 1, 14, 30);
         var notifyCount = 0;
         controller.addListener(() => notifyCount++);
 
-        // Navigate with focus: true (setting both displayDate and focusedDate)
+        // Navigate with focus: true (setting both displayDate and focusedDateTime)
         controller.navigateToDate(navDate, focus: true);
 
         expect(notifyCount, equals(1));
@@ -319,7 +360,7 @@ void main() {
 
       test('navigateToDate() does not notify when nothing changes', () {
         final controller = MCalEventController();
-        final navDate = DateTime(2024, 6, 15);
+        final navDate = DateTime(2026, 3, 1, 14, 30);
 
         // Set up initial state
         controller.navigateToDate(navDate, focus: true);
@@ -327,7 +368,7 @@ void main() {
         var notifyCount = 0;
         controller.addListener(() => notifyCount++);
 
-        // Navigate to same date - should not notify
+        // Navigate to same date-time with same focus - should not notify
         controller.navigateToDate(navDate, focus: true);
 
         expect(notifyCount, equals(0));
@@ -335,12 +376,28 @@ void main() {
 
       test('navigateToDate() defaults to focus: true', () {
         final controller = MCalEventController();
-        final navDate = DateTime(2024, 6, 15);
+        final navDate = DateTime(2026, 3, 1, 14, 30);
 
         controller.navigateToDate(navDate);
 
-        expect(controller.displayDate, equals(navDate));
-        expect(controller.focusedDate, equals(navDate));
+        expect(controller.displayDate, equals(DateTime(2026, 3, 1)));
+        expect(controller.focusedDateTime, equals(navDate));
+      });
+
+      test('navigateToDate(focus: false) does not notify if only focus was different', () {
+        final controller = MCalEventController();
+        final navDate = DateTime(2026, 3, 1);
+
+        // Navigate to establish displayDate
+        controller.navigateToDate(navDate, focus: false);
+
+        var notifyCount = 0;
+        controller.addListener(() => notifyCount++);
+
+        // Navigate again to same date with focus: false — nothing changes
+        controller.navigateToDate(navDate, focus: false);
+
+        expect(notifyCount, equals(0));
       });
     });
 

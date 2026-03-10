@@ -37,7 +37,7 @@ void main() {
       FutureOr<bool> Function(BuildContext, DateTime)? onCreateEventRequested,
       MCalMonthKeyBindings? keyBindings,
     }) async {
-      controller.setFocusedDate(DateTime(2025, 3, 15));
+      controller.setFocusedDateTime(DateTime(2025, 3, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -64,10 +64,10 @@ void main() {
       WidgetTester tester,
       LogicalKeyboardKey key,
     ) async {
-      final savedDate = controller.focusedDate;
+      final savedDate = controller.focusedDateTime;
       await tester.tap(find.byType(MCalMonthView));
       await tester.pumpAndSettle();
-      controller.setFocusedDate(savedDate);
+      controller.setFocusedDateTime(savedDate, isAllDay: true);
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(key);
       await tester.pumpAndSettle();

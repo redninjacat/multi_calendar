@@ -110,6 +110,22 @@ The immediate consumer of the time component is the Day View, which gains tap-to
 4. `onFocusedDateTimeChanged` SHALL fire for both tap-initiated and keyboard-initiated focus changes.
 5. `onFocusedDateTimeChanged` SHALL NOT fire when the value has not actually changed (deduplication via equality comparison).
 
+### Requirement 8: Day View — Left/Right Arrow Day Navigation in Navigation Mode
+
+**User Story:** As a keyboard user navigating the Day View, I want to press Left and Right arrow keys to move between days while preserving my current focus position (time slot index or all-day section), so I can scan the same time slot across multiple days without restarting navigation from the top.
+
+#### Acceptance Criteria
+
+1. WHEN the user presses the Left arrow key in Navigation Mode THEN the Day View SHALL navigate to the previous calendar day using DST-safe date arithmetic (`addDays(_displayDate, -1)`).
+2. WHEN the user presses the Right arrow key in Navigation Mode THEN the Day View SHALL navigate to the next calendar day using DST-safe date arithmetic (`addDays(_displayDate, 1)`).
+3. WHEN navigating to the previous or next day WHILE focused on a time grid slot THEN the same slot index SHALL remain focused on the new day. The resulting `focusedDateTime` SHALL have the same hour and minute as the current slot, but with the new day's date, computed via the `DateTime(y, m, d, h, min)` constructor (DST-safe, not `Duration`-based).
+4. WHEN navigating to the previous or next day WHILE focused on the all-day section (`_focusedSlotIndex == null`) THEN the all-day section on the new day SHALL remain focused, with `controller.setFocusedDateTime(DateTime(newDay.year, newDay.month, newDay.day), isAllDay: true)`.
+5. After left/right navigation, `controller.focusedDateTime` SHALL reflect the new day's date with the preserved time component (or midnight with `isAllDay: true` if all-day was active).
+6. After left/right navigation, `controller.displayDate` SHALL be updated to the new day (via `controller.setDisplayDate`).
+7. Left/right navigation SHALL be consumed (`KeyEventResult.handled`) so it does not propagate to parent widgets.
+8. DST boundaries SHALL be handled correctly: `addDays` from `date_utils.dart` MUST be used for day arithmetic, NOT `Duration(days: ±1)`.
+9. Left/right navigation SHALL be RTL-aware: in RTL layout mode (`MCalLayoutDirectionality.of(context) == true`), the Left key SHALL navigate to the next day and the Right key to the previous day — mirroring the Month View's RTL behavior.
+
 ### Requirement 7: Non-Functional Requirements
 
 #### Code Architecture and Modularity

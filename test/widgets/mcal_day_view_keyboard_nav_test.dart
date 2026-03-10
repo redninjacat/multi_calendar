@@ -110,11 +110,19 @@ void main() {
     }
 
     /// Taps the view to give it focus and sends [key].
+    ///
+    /// Tap-to-focus activates keyboard nav on an arbitrary time slot, so we
+    /// normalise to a known starting state (all-day section, slot 0 as the
+    /// last time-grid slot) before delivering [key].
     Future<void> sendKey(
       WidgetTester tester,
       LogicalKeyboardKey key,
     ) async {
       await tester.tap(find.byType(MCalDayView));
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.home);  // → slot 0
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);  // → all-day
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(key);
       await tester.pumpAndSettle();
@@ -185,13 +193,13 @@ void main() {
         // No exception = pass.
       });
 
-      testWidgets('ArrowLeft and ArrowRight are ignored in Navigation Mode',
+      testWidgets('ArrowLeft and ArrowRight navigate between days in Navigation Mode',
           (tester) async {
         final before = controller.displayDate;
         await pumpCalendar(tester);
         await sendKey(tester, LogicalKeyboardKey.arrowLeft);
         await sendKeyOnly(tester, LogicalKeyboardKey.arrowRight);
-        // Display date should not change (←→ are not bound in Navigation Mode).
+        // ← then → returns to the original day (navigates back and then forward).
         expect(controller.displayDate, equals(before));
       });
 

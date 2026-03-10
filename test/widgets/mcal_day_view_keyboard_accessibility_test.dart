@@ -99,6 +99,14 @@ void main() {
     ) async {
       await tester.tap(find.byType(MCalDayView));
       await tester.pumpAndSettle();
+      // Tap-to-focus now activates keyboard nav on an arbitrary time slot.
+      // Reset to a known state (all-day section, _lastTimeGridSlotIndex = 0)
+      // so subsequent keys start from the same position the tests originally
+      // relied on (null slot, nav inactive before tap-to-focus was added).
+      await tester.sendKeyEvent(LogicalKeyboardKey.home);  // slot 0
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);  // → all-day
+      await tester.pumpAndSettle();
       await tester.sendKeyEvent(key);
       await tester.pumpAndSettle();
     }

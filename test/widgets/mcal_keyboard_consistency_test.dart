@@ -65,7 +65,10 @@ void main() {
   Future<void> enterMoveMode(WidgetTester tester) async {
     await tester.tap(find.byType(MCalDayView));
     await tester.pumpAndSettle();
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    // After the tap, keyboard navigation is active but on some time slot.
+    // Press Home to jump to slot 0 (startHour), where the test event lives,
+    // restoring the same state the tests had before tap-to-focus was added.
+    await tester.sendKeyEvent(LogicalKeyboardKey.home);
     await tester.pumpAndSettle();
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();

@@ -1305,7 +1305,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
 
     // Initialize tracking variables
     _previousDisplayDate = _currentMonth;
-    _previousFocusedDate = widget.controller.focusedDate;
+    _previousFocusedDate = widget.controller.focusedDateTime;
 
     // Initialize PageView controller for swipe navigation (Task 8)
     // Set the reference month to the current display date
@@ -1437,12 +1437,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Handles controller change notifications.
   ///
   /// Called when the [MCalEventController] notifies listeners of changes.
-  /// Reacts to displayDate and focusedDate changes.
+  /// Reacts to displayDate and focusedDateTime changes.
   void _onControllerChanged() {
     if (!mounted) return;
 
     final currentDisplayDate = _currentMonth;
-    final currentFocusedDate = widget.controller.focusedDate;
+    final currentFocusedDateTime = widget.controller.focusedDateTime;
 
     // Check if display date changed
     final displayDateChanged =
@@ -1450,8 +1450,13 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         currentDisplayDate.year != _previousDisplayDate!.year ||
         currentDisplayDate.month != _previousDisplayDate!.month;
 
-    // Check if focused date changed
-    final focusedDateChanged = _previousFocusedDate != currentFocusedDate;
+    // Check if focused DATE changed (ignore time-only changes from Day View).
+    // dateOnly() takes non-nullable DateTime, so use a null-safe pattern.
+    final previousDateOnly =
+        _previousFocusedDate != null ? dateOnly(_previousFocusedDate!) : null;
+    final currentDateOnly =
+        currentFocusedDateTime != null ? dateOnly(currentFocusedDateTime) : null;
+    final focusedDateChanged = previousDateOnly != currentDateOnly;
 
     if (displayDateChanged) {
       _previousDisplayDate = currentDisplayDate;
@@ -1480,23 +1485,20 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     }
 
     if (focusedDateChanged) {
-      _previousFocusedDate = currentFocusedDate;
+      // Store full precision for accurate future diffs.
+      _previousFocusedDate = currentFocusedDateTime;
 
-      // Fire onFocusedDateChanged callback
-      widget.onFocusedDateChanged?.call(currentFocusedDate);
+      // Fire onFocusedDateChanged with the date-only value (existing API).
+      widget.onFocusedDateChanged?.call(currentDateOnly);
 
       // Fire onFocusedRangeChanged callback (single date range when focused)
-      if (currentFocusedDate != null) {
+      if (currentDateOnly != null) {
         final focusedRange = DateTimeRange(
-          start: DateTime(
-            currentFocusedDate.year,
-            currentFocusedDate.month,
-            currentFocusedDate.day,
-          ),
+          start: currentDateOnly,
           end: DateTime(
-            currentFocusedDate.year,
-            currentFocusedDate.month,
-            currentFocusedDate.day,
+            currentDateOnly.year,
+            currentDateOnly.month,
+            currentDateOnly.day,
             23,
             59,
             59,
@@ -1575,8 +1577,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     if (_isKeyboardMoveMode) return _keyboardMoveEvent?.id;
     if (!_isKeyboardEventSelectionMode) return null;
     if (_isKeyboardOverflowFocused) return null;
-    final focusedDate =
-        widget.controller.focusedDate ?? widget.controller.displayDate;
+    final focusedDate = widget.controller.focusedDateTime != null
+        ? dateOnly(widget.controller.focusedDateTime!)
+        : widget.controller.displayDate;
     final dayEvents = _getSortedEventsForDate(focusedDate);
     final visibleCount = _visibleCountForDate(focusedDate, dayEvents);
     if (dayEvents.isEmpty || visibleCount == 0) return null;
@@ -1855,8 +1858,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           keyboardSelectedEventId: _keyboardSelectedEventId,
           keyboardOverflowFocusedDate:
               (_isKeyboardEventSelectionMode && _isKeyboardOverflowFocused)
-                  ? (widget.controller.focusedDate ??
-                        widget.controller.displayDate)
+                  ? (widget.controller.focusedDateTime != null
+                        ? dateOnly(widget.controller.focusedDateTime!)
+                        : widget.controller.displayDate)
                   : null,
           layoutVisibleCounts: _layoutVisibleCounts,
           // Day regions
@@ -2167,13 +2171,14 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       return _handleKeyboardMoveModeKey(event);
     }
 
-    // Get or initialize the focused date
-    DateTime focusedDate =
-        widget.controller.focusedDate ?? widget.controller.displayDate;
+    // Get or initialize the focused date (date-only; Month View has no time concept)
+    DateTime focusedDate = widget.controller.focusedDateTime != null
+        ? dateOnly(widget.controller.focusedDateTime!)
+        : widget.controller.displayDate;
 
-    // If no focused date was set, set it now
-    if (widget.controller.focusedDate == null) {
-      widget.controller.setFocusedDate(focusedDate);
+    // If no focused date-time was set, set it now (Month View always passes isAllDay: true)
+    if (widget.controller.focusedDateTime == null) {
+      widget.controller.setFocusedDateTime(focusedDate, isAllDay: true);
     }
 
     final key = event.logicalKey;
@@ -2303,8 +2308,20 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         }
       }
 
-      // Update focused date
-      widget.controller.setFocusedDate(newFocusedDate);
+      // Preserve the existing time component and isFocusedOnAllDay so that a
+      // shared Day View continues to highlight the same time slot on the new
+      // day. If no prior focus exists the values default to midnight / true.
+      final existingFocused = widget.controller.focusedDateTime;
+      widget.controller.setFocusedDateTime(
+        DateTime(
+          newFocusedDate.year,
+          newFocusedDate.month,
+          newFocusedDate.day,
+          existingFocused?.hour ?? 0,
+          existingFocused?.minute ?? 0,
+        ),
+        isAllDay: widget.controller.isFocusedOnAllDay,
+      );
 
       // Auto-navigate if focus moves outside visible month
       final newFocusMonth = DateTime(
@@ -2492,8 +2509,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   KeyEventResult _handleKeyboardEventModeKey(KeyEvent event) {
     final l10n = mcalL10n(context);
     final key = event.logicalKey;
-    final focusedDate =
-        widget.controller.focusedDate ?? widget.controller.displayDate;
+    final focusedDate = widget.controller.focusedDateTime != null
+        ? dateOnly(widget.controller.focusedDateTime!)
+        : widget.controller.displayDate;
     final allEvents = _getSortedEventsForDate(focusedDate);
 
     if (allEvents.isEmpty) {
@@ -2860,8 +2878,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         _navigateToMonth(newMonth);
       }
 
-      // Track focus on the proposed date
-      widget.controller.setFocusedDate(newProposed);
+      // Track focus on the proposed date (Month View always passes isAllDay: true)
+      widget.controller.setFocusedDateTime(newProposed, isAllDay: true);
 
       // Screen reader announcement
       final dateStr = DateFormat.yMMMd().format(newProposed);
@@ -3235,8 +3253,8 @@ class _MCalMonthViewState extends State<MCalMonthView> {
         _navigateToMonth(activeMonth);
       }
 
-      // Track focus on the active edge date
-      widget.controller.setFocusedDate(activeDate);
+      // Track focus on the active edge date (Month View always passes isAllDay: true)
+      widget.controller.setFocusedDateTime(activeDate, isAllDay: true);
 
       setState(() {});
       return KeyEventResult.handled;

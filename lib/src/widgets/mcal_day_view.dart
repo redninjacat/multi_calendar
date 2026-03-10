@@ -264,6 +264,7 @@ class MCalDayView extends StatefulWidget {
     // State change callbacks
     this.onDisplayDateChanged,
     this.onScrollChanged,
+    this.onFocusedDateTimeChanged,
 
     // Accessibility
     this.semanticsLabel,
@@ -1385,6 +1386,19 @@ class MCalDayView extends StatefulWidget {
   /// Receives the current scroll offset.
   final void Function(double offset)? onScrollChanged;
 
+  /// Called when the focused date-time changes.
+  ///
+  /// Fires when the user taps a time slot, taps the all-day section, or uses
+  /// keyboard navigation (arrow keys, A, T, Home, End). Also fires when a
+  /// consumer calls [MCalEventController.setFocusedDateTime] or
+  /// [MCalEventController.navigateToDate] programmatically.
+  ///
+  /// The [DateTime] argument carries full time precision so the consuming app
+  /// can map it to a time slot. Use [MCalEventController.isFocusedOnAllDay] to
+  /// distinguish an all-day tap from a midnight time-slot tap when [startHour]
+  /// is 0. Receives null when focus is cleared.
+  final ValueChanged<DateTime?>? onFocusedDateTimeChanged;
+
   // ============================================================================
   // Accessibility
   // ============================================================================
@@ -1645,6 +1659,11 @@ class MCalDayViewState extends State<MCalDayView> {
   /// are not shown on initial render before keyboard use has begun.
   bool _keyboardNavigationActive = false;
 
+  // Focused DateTime Sync (Focused DateTime spec)
+  // Previous snapshot used to detect changes in _onControllerChanged.
+  DateTime? _previousFocusedDateTime;
+  bool _previousIsFocusedOnAllDay = false;
+
   // ============================================================================
   // Current Time
   // ============================================================================
@@ -1789,6 +1808,9 @@ class MCalDayViewState extends State<MCalDayView> {
         initialPage: _initialSwipePageIndex,
       );
     }
+
+    _previousFocusedDateTime = widget.controller.focusedDateTime;
+    _previousIsFocusedOnAllDay = widget.controller.isFocusedOnAllDay;
 
     widget.controller.addListener(_onControllerChanged);
     _loadEvents();
@@ -2090,6 +2112,51 @@ class MCalDayViewState extends State<MCalDayView> {
     // same date) update the controller but leave _timedEvents stale, causing
     // the event to visually snap back to its original position after a drop.
     _loadEvents();
+
+    // Focused DateTime sync: react to programmatic setFocusedDateTime calls.
+    // Uses _previousFocusedDateTime/_previousIsFocusedOnAllDay to detect
+    // changes so local tap/keyboard mutations (which already set state) don't
+    // cause a double-rebuild loop (the equality guard in setFocusedDateTime
+    // ensures this is safe, but we also avoid redundant setState calls).
+    final currentFocusedDateTime = widget.controller.focusedDateTime;
+    final currentIsFocusedOnAllDay = widget.controller.isFocusedOnAllDay;
+
+    if (currentFocusedDateTime != _previousFocusedDateTime ||
+        currentIsFocusedOnAllDay != _previousIsFocusedOnAllDay) {
+      _previousFocusedDateTime = currentFocusedDateTime;
+      _previousIsFocusedOnAllDay = currentIsFocusedOnAllDay;
+
+      // Fire the consumer callback
+      widget.onFocusedDateTimeChanged?.call(currentFocusedDateTime);
+
+      // Map to _focusedSlotIndex. Only apply when the focus date matches
+      // _displayDate (focus on a different day is ignored for slot mapping).
+      if (currentFocusedDateTime == null) {
+        // Focus cleared
+        setState(() {
+          _focusedSlotIndex = null;
+          _keyboardNavigationActive = false;
+        });
+      } else {
+        final focusedDay = dateOnly(currentFocusedDateTime);
+        if (focusedDay == _displayDate) {
+          if (currentIsFocusedOnAllDay) {
+            // All-day section focused
+            setState(() {
+              _focusedSlotIndex = null;
+              _keyboardNavigationActive = true;
+            });
+          } else {
+            // Time slot focused — use _timeToSlotIndex (midnight is slot 0
+            // when startHour == 0, NOT treated as all-day)
+            setState(() {
+              _focusedSlotIndex = _timeToSlotIndex(currentFocusedDateTime);
+              _keyboardNavigationActive = true;
+            });
+          }
+        }
+      }
+    }
   }
 
   void _loadEvents() {
@@ -2612,12 +2679,17 @@ class MCalDayViewState extends State<MCalDayView> {
       } else if (_focusedSlotIndex == 0) {
         // Transition to all-day section.
         setState(() => _focusedSlotIndex = null);
+        widget.controller.setFocusedDateTime(
+          DateTime(_displayDate.year, _displayDate.month, _displayDate.day),
+          isAllDay: true,
+        );
         _announceScreenReader(context, l10n.announcementDayAllDaySection);
       } else {
         setState(() {
           _focusedSlotIndex = (_focusedSlotIndex! - 1).clamp(0, totalSlots - 1);
           _lastTimeGridSlotIndex = _focusedSlotIndex;
         });
+        widget.controller.setFocusedDateTime(_slotIndexToTime(_focusedSlotIndex!));
         _scrollToFocusedSlot();
       }
       return KeyEventResult.handled;
@@ -2632,6 +2704,7 @@ class MCalDayViewState extends State<MCalDayView> {
           _focusedSlotIndex = target;
           _lastTimeGridSlotIndex = target;
         });
+        widget.controller.setFocusedDateTime(_slotIndexToTime(_focusedSlotIndex!));
         _scrollToFocusedSlot();
         final focusedTime = _slotIndexToTime(_focusedSlotIndex!);
         final timeStr = _formatSlotTime(focusedTime);
@@ -2643,6 +2716,7 @@ class MCalDayViewState extends State<MCalDayView> {
           _focusedSlotIndex = next;
           _lastTimeGridSlotIndex = next;
         });
+        widget.controller.setFocusedDateTime(_slotIndexToTime(_focusedSlotIndex!));
         _scrollToFocusedSlot();
       }
       return KeyEventResult.handled;
@@ -2654,6 +2728,7 @@ class MCalDayViewState extends State<MCalDayView> {
         _focusedSlotIndex = 0;
         _lastTimeGridSlotIndex = 0;
       });
+      widget.controller.setFocusedDateTime(_slotIndexToTime(_focusedSlotIndex!));
       _scrollToFocusedSlot();
       return KeyEventResult.handled;
     }
@@ -2665,6 +2740,7 @@ class MCalDayViewState extends State<MCalDayView> {
         _focusedSlotIndex = last;
         _lastTimeGridSlotIndex = last;
       });
+      widget.controller.setFocusedDateTime(_slotIndexToTime(_focusedSlotIndex!));
       _scrollToFocusedSlot();
       return KeyEventResult.handled;
     }
@@ -2679,10 +2755,17 @@ class MCalDayViewState extends State<MCalDayView> {
       return KeyEventResult.handled;
     }
 
-    // ── ←→ — ignored in Navigation Mode ─────────────────────────────────────
+    // ── ← / → Navigate Between Days (RTL-aware) ─────────────────────────────
+    // In RTL layout, left means "later" (next day) and right means "earlier"
+    // (previous day), mirroring how the Month View handles arrow keys.
     if (key == LogicalKeyboardKey.arrowLeft ||
         key == LogicalKeyboardKey.arrowRight) {
-      return KeyEventResult.ignored;
+      final isRTL = _isLayoutRTL(context);
+      final isLeft = key == LogicalKeyboardKey.arrowLeft;
+      // LTR: left = −1, right = +1. RTL: left = +1, right = −1.
+      final dayOffset = (isLeft ? -1 : 1) * (isRTL ? -1 : 1);
+      _navigateToDayPreservingFocus(dayOffset);
+      return KeyEventResult.handled;
     }
 
     // ── Enter / Space — enter Event Mode ────────────────────────────────────
@@ -2716,6 +2799,10 @@ class MCalDayViewState extends State<MCalDayView> {
     // ── A — jump to all-day section ──────────────────────────────────────────
     if (_matchesAny(_keyBindings.jumpToAllDay, key)) {
       setState(() => _focusedSlotIndex = null);
+      widget.controller.setFocusedDateTime(
+        DateTime(_displayDate.year, _displayDate.month, _displayDate.day),
+        isAllDay: true,
+      );
       _announceScreenReader(context, l10n.announcementDayAllDaySection);
       return KeyEventResult.handled;
     }
@@ -2727,6 +2814,7 @@ class MCalDayViewState extends State<MCalDayView> {
         _focusedSlotIndex = target;
         _lastTimeGridSlotIndex = target;
       });
+      widget.controller.setFocusedDateTime(_slotIndexToTime(_focusedSlotIndex!));
       _scrollToFocusedSlot();
       final focusedTime = _slotIndexToTime(target);
       final timeStr = _formatSlotTime(focusedTime);
@@ -2764,6 +2852,23 @@ class MCalDayViewState extends State<MCalDayView> {
       totalMinutes ~/ 60,
       totalMinutes % 60,
     );
+  }
+
+  /// Converts a [DateTime] (with time) to the nearest slot index.
+  ///
+  /// This is the inverse of [_slotIndexToTime]. The result is clamped to
+  /// `[0, totalSlots - 1]`.
+  ///
+  /// Does NOT use midnight as a sentinel for all-day — all-day detection is
+  /// handled by [MCalEventController.isFocusedOnAllDay] exclusively.
+  int _timeToSlotIndex(DateTime time) {
+    final totalSlots =
+        ((widget.endHour - widget.startHour) * 60) ~/
+        widget.timeSlotDuration.inMinutes;
+    final totalMinutesFromStart =
+        (time.hour * 60 + time.minute) - widget.startHour * 60;
+    final index = totalMinutesFromStart ~/ widget.timeSlotDuration.inMinutes;
+    return index.clamp(0, totalSlots - 1);
   }
 
   /// Returns the slot index closest to the current time of day.
@@ -5538,6 +5643,45 @@ class MCalDayViewState extends State<MCalDayView> {
     _schedulePostNavLayoutRefresh();
   }
 
+  /// Navigates to an adjacent day (−1 = previous, +1 = next) while preserving
+  /// the current focus position — same time-grid slot index, or all-day section
+  /// if that was focused.
+  ///
+  /// Uses DST-safe [addDays] for day arithmetic and the [DateTime] constructor
+  /// (not [Duration]) for time composition, per project date-handling rules.
+  void _navigateToDayPreservingFocus(int dayOffset) {
+    final newDate = addDays(_displayDate, dayOffset);
+    widget.controller.setDisplayDate(newDate);
+
+    if (_focusedSlotIndex == null) {
+      // Was in all-day section — stay in all-day on the new day.
+      widget.controller.setFocusedDateTime(
+        DateTime(newDate.year, newDate.month, newDate.day),
+        isAllDay: true,
+      );
+    } else {
+      // Was in a time-grid slot — preserve the same hour:minute on the new day.
+      // DateTime constructor arithmetic is DST-safe (not Duration-based).
+      final slotMinutes = widget.timeSlotDuration.inMinutes;
+      final totalMinutes =
+          widget.startHour * 60 + _focusedSlotIndex! * slotMinutes;
+      widget.controller.setFocusedDateTime(
+        DateTime(
+          newDate.year,
+          newDate.month,
+          newDate.day,
+          totalMinutes ~/ 60,
+          totalMinutes % 60,
+        ),
+      );
+      // The all-day section height can vary between days. Scroll to keep the
+      // focused slot visible after the new page has laid out.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _scrollToFocusedSlot();
+      });
+    }
+  }
+
   /// After a page navigation during drag, the new page's time grid
   /// hasn't laid out yet when `_cacheLayoutForDrag()` first runs. Schedule
   /// post-frame callbacks to invalidate the cache and retry until the new
@@ -6081,12 +6225,15 @@ class MCalDayViewState extends State<MCalDayView> {
 
     final stack = Stack(children: [mainContent, firstLayer, secondLayer]);
 
-    // Wrap in GestureDetector for empty time slot tap/long-press/double-tap (Task 28)
+    // Wrap in GestureDetector for empty time slot tap/long-press/double-tap (Task 28).
+    // Also required when keyboard navigation is enabled so that tapping a slot
+    // activates tap-to-focus even when no user callbacks are registered.
     final hasEmptySlotCallbacks =
         widget.onTimeSlotTap != null ||
         widget.onTimeSlotLongPress != null ||
         widget.onTimeSlotDoubleTap != null ||
-        widget.onTimeSlotSecondaryTap != null;
+        widget.onTimeSlotSecondaryTap != null ||
+        widget.enableKeyboardNavigation;
     final dateStr = DateFormat.yMMMMEEEEd(
       locale.toString(),
     ).format(_displayDate);
@@ -6183,9 +6330,7 @@ class MCalDayViewState extends State<MCalDayView> {
   /// tap did not hit an event (event taps take precedence), and fires
   /// [onTimeSlotTap] callback if provided.
   void _handleTimeSlotTap(Offset localPosition, double hourHeight) {
-    if (widget.onTimeSlotTap == null) return;
-
-    // Don't fire if tap hit an event (event tap takes precedence)
+    // Don't fire if tap hit an event (event tap takes precedence, Req 2.6)
     if (_didTapHitEvent(localPosition, hourHeight)) return;
 
     final tappedTime = snapToTimeSlot(
@@ -6228,7 +6373,31 @@ class MCalDayViewState extends State<MCalDayView> {
       ],
     );
 
-    widget.onTimeSlotTap!(context, slotContext);
+    // Fire user callback if provided
+    widget.onTimeSlotTap?.call(context, slotContext);
+
+    // Tap-to-focus: always update focus regardless of whether callback was set
+    final slotIndex = _timeToSlotIndex(tappedTime);
+    _focusedSlotIndex = slotIndex;
+    _lastTimeGridSlotIndex = slotIndex;
+    _keyboardNavigationActive = true;
+    widget.controller.setFocusedDateTime(tappedTime);
+    _scrollToFocusedSlot();
+    setState(() {});
+  }
+
+  /// Sets focus to the all-day section when the user taps the all-day area.
+  ///
+  /// Called from the [AllDayEventsSection] tap wrapper. The [isAllDay: true]
+  /// flag disambiguates this from a midnight time-slot tap (Req 3.1).
+  void _handleAllDayTapToFocus() {
+    _focusedSlotIndex = null;
+    _keyboardNavigationActive = true;
+    widget.controller.setFocusedDateTime(
+      DateTime(_displayDate.year, _displayDate.month, _displayDate.day),
+      isAllDay: true,
+    );
+    setState(() {});
   }
 
   /// Handles long-press on empty time slot area.
@@ -6632,7 +6801,11 @@ class MCalDayViewState extends State<MCalDayView> {
               onVisibleCountChanged: (count) {
                 _allDayVisibleCount = count;
               },
-              onTimeSlotTap: widget.onTimeSlotTap,
+              onTimeSlotTap: (ctx, slotCtx) {
+                // Fire user callback if provided, then set all-day focus
+                widget.onTimeSlotTap?.call(ctx, slotCtx);
+                _handleAllDayTapToFocus();
+              },
               onTimeSlotLongPress: widget.onTimeSlotLongPress,
               onTimeSlotDoubleTap: widget.onTimeSlotDoubleTap,
               onTimeSlotSecondaryTap: widget.onTimeSlotSecondaryTap,

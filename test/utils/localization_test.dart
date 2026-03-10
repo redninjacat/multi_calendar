@@ -269,7 +269,7 @@ void main() {
         initialDate: DateTime(2024, 6, 15),
       );
       // Set initial focused date
-      controller.setFocusedDate(DateTime(2024, 6, 15));
+      controller.setFocusedDateTime(DateTime(2024, 6, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -300,7 +300,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify focused date advanced by 1 day
-      expect(controller.focusedDate?.day, 16);
+      expect(controller.focusedDateTime?.day, 16);
 
       controller.dispose();
     });
@@ -310,7 +310,7 @@ void main() {
         initialDate: DateTime(2024, 6, 15),
       );
       // Set initial focused date
-      controller.setFocusedDate(DateTime(2024, 6, 15));
+      controller.setFocusedDateTime(DateTime(2024, 6, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -341,7 +341,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify focused date went back by 1 day
-      expect(controller.focusedDate?.day, 14);
+      expect(controller.focusedDateTime?.day, 14);
 
       controller.dispose();
     });
@@ -351,7 +351,7 @@ void main() {
         initialDate: DateTime(2024, 6, 15),
       );
       // Set initial focused date
-      controller.setFocusedDate(DateTime(2024, 6, 15));
+      controller.setFocusedDateTime(DateTime(2024, 6, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -380,12 +380,12 @@ void main() {
       // Simulate arrowDown key press (should advance by 7 days)
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
-      expect(controller.focusedDate?.day, 22);
+      expect(controller.focusedDateTime?.day, 22);
 
       // Simulate arrowUp key press (should go back by 7 days)
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await tester.pumpAndSettle();
-      expect(controller.focusedDate?.day, 15);
+      expect(controller.focusedDateTime?.day, 15);
 
       controller.dispose();
     });
@@ -395,7 +395,7 @@ void main() {
         initialDate: DateTime(2024, 6, 15),
       );
       // Set initial focused date
-      controller.setFocusedDate(DateTime(2024, 6, 15));
+      controller.setFocusedDateTime(DateTime(2024, 6, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -423,7 +423,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify focused date went back by 1 day
-      expect(controller.focusedDate?.day, 14);
+      expect(controller.focusedDateTime?.day, 14);
 
       controller.dispose();
     });
@@ -433,7 +433,7 @@ void main() {
         initialDate: DateTime(2024, 6, 15),
       );
       // Set initial focused date
-      controller.setFocusedDate(DateTime(2024, 6, 15));
+      controller.setFocusedDateTime(DateTime(2024, 6, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -461,7 +461,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify focused date advanced by 1 day
-      expect(controller.focusedDate?.day, 16);
+      expect(controller.focusedDateTime?.day, 16);
 
       controller.dispose();
     });

@@ -105,11 +105,20 @@ class MCalEventController extends ChangeNotifier {
   /// Initialized from the constructor's initialDate parameter, defaults to today.
   DateTime _displayDate;
 
-  /// The currently focused date in the calendar view.
+  /// The currently focused date-time in the calendar view.
   ///
-  /// This represents a specific date that has focus (e.g., user selection).
-  /// Can be null if no specific date is focused.
-  DateTime? _focusedDate;
+  /// This represents a specific date and time that has focus (e.g., user
+  /// selection). Includes full time precision so views with time grids can
+  /// map it to a slot. Can be null if no date-time is focused.
+  DateTime? _focusedDateTime;
+
+  /// Whether the current focus is on the all-day section (as opposed to a
+  /// specific time slot).
+  ///
+  /// This flag disambiguates the case where [_focusedDateTime] is midnight
+  /// (00:00) — which would otherwise be indistinguishable from a genuine
+  /// midnight time-slot tap when [startHour] is 0.
+  bool _isFocusedOnAllDay = false;
 
   // ============================================================
   // Task 2: Loading and Error State
@@ -214,8 +223,21 @@ class MCalEventController extends ChangeNotifier {
   /// Gets the currently displayed date.
   DateTime get displayDate => _displayDate;
 
-  /// Gets the currently focused date, or null if none.
-  DateTime? get focusedDate => _focusedDate;
+  /// Gets the currently focused date-time, or null if none.
+  ///
+  /// Includes full time precision. Day View maps this to a time slot index;
+  /// Month View extracts only the date part.
+  DateTime? get focusedDateTime => _focusedDateTime;
+
+  /// Whether the current focus is on the all-day section.
+  ///
+  /// When true, [focusedDateTime] points to the all-day section of its day
+  /// (the time component should be ignored for slot-mapping purposes).
+  /// When false, [focusedDateTime] points to a specific time slot.
+  ///
+  /// This flag disambiguates midnight (00:00) from the all-day section when
+  /// a Day View has [startHour] of 0.
+  bool get isFocusedOnAllDay => _isFocusedOnAllDay;
 
   // ============================================================
   // Task 2: Loading and Error State Getters
@@ -297,36 +319,55 @@ class MCalEventController extends ChangeNotifier {
     }
   }
 
-  /// Sets the focused date.
+  /// Sets the focused date-time.
   ///
-  /// Updates the focused date and notifies listeners only if the value changed.
+  /// Updates [focusedDateTime] and [isFocusedOnAllDay] and notifies listeners
+  /// only when either value changes. The equality guard checks both fields, so
+  /// calling with the same [dateTime] but a different [isAllDay] WILL notify.
   ///
   /// Parameters:
-  /// - [date]: The new focused date, or null to clear focus
-  void setFocusedDate(DateTime? date) {
-    if (_focusedDate != date) {
-      _focusedDate = date;
+  /// - [dateTime]: The new focused date-time, or null to clear focus
+  /// - [isAllDay]: Whether focus is on the all-day section (defaults to false).
+  ///   Set to true when the user taps the all-day header or Month View focuses
+  ///   a day, and false when the user taps or navigates to a time grid slot.
+  void setFocusedDateTime(DateTime? dateTime, {bool isAllDay = false}) {
+    if (_focusedDateTime != dateTime || _isFocusedOnAllDay != isAllDay) {
+      _focusedDateTime = dateTime;
+      _isFocusedOnAllDay = isAllDay;
       notifyListeners();
     }
   }
 
   /// Navigates to a specific date.
   ///
-  /// Updates the display date and optionally sets the focused date.
-  /// Notifies listeners only if something changed.
+  /// Always updates the display date. When [focus] is true, also updates
+  /// [focusedDateTime] (preserving the caller's time precision) and resets
+  /// [isFocusedOnAllDay] to false. When [focus] is false, [focusedDateTime]
+  /// and [isFocusedOnAllDay] are left unchanged.
+  ///
+  /// Uses a single [notifyListeners] call regardless of how many fields change
+  /// (atomic notification).
   ///
   /// Parameters:
-  /// - [date]: The date to navigate to
-  /// - [focus]: Whether to also set this date as focused (defaults to true)
+  /// - [date]: The date (and optional time) to navigate to. [displayDate] is
+  ///   always stored as date-only (midnight); [focusedDateTime] retains the
+  ///   full time when [focus] is true.
+  /// - [focus]: Whether to also update the focused date-time (defaults to true)
   void navigateToDate(DateTime date, {bool focus = true}) {
-    final displayChanged = _displayDate != date;
-    final focusChanged = focus && _focusedDate != date;
+    final newDisplayDate = dateOnly(date);
+    final displayChanged = _displayDate != newDisplayDate;
+
+    bool focusChanged = false;
+    if (focus) {
+      focusChanged = _focusedDateTime != date || _isFocusedOnAllDay != false;
+    }
 
     if (displayChanged) {
-      _displayDate = date;
+      _displayDate = newDisplayDate;
     }
-    if (focusChanged) {
-      _focusedDate = date;
+    if (focus && focusChanged) {
+      _focusedDateTime = date;
+      _isFocusedOnAllDay = false;
     }
 
     if (displayChanged || focusChanged) {

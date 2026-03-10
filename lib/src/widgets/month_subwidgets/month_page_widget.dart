@@ -1372,10 +1372,16 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
             currentMonth: widget.month,
             events: monthEvents,
             theme: widget.theme,
-            focusedDate: widget.controller.focusedDate,
+            focusedDate: widget.controller.focusedDateTime != null
+                ? dateOnly(widget.controller.focusedDateTime!)
+                : null,
             autoFocusOnCellTap: widget.autoFocusOnCellTap,
             onSetFocusedDate: (date) {
-              widget.controller.setFocusedDate(date);
+              // Month View always passes isAllDay: true — it focuses entire days
+              widget.controller.setFocusedDateTime(
+                dateOnly(date),
+                isAllDay: true,
+              );
             },
             dayCellBuilder: widget.dayCellBuilder,
             eventTileBuilder: widget.eventTileBuilder,

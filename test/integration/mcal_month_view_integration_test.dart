@@ -391,7 +391,7 @@ void main() {
       expect(view2DisplayDate?.month, equals(8));
     });
 
-    testWidgets('focusedDate changes on controller synchronize both views', (tester) async {
+    testWidgets('focusedDateTime changes on controller synchronize both views', (tester) async {
       DateTime? view1FocusedDate;
       DateTime? view2FocusedDate;
 
@@ -423,11 +423,11 @@ void main() {
 
       // Set focused date on the shared controller
       final focusDate = DateTime(2024, 6, 20);
-      sharedController.setFocusedDate(focusDate);
+      sharedController.setFocusedDateTime(focusDate, isAllDay: true);
       await tester.pumpAndSettle();
 
       // Both views should show the same focused date
-      expect(sharedController.focusedDate, equals(focusDate));
+      expect(sharedController.focusedDateTime, equals(focusDate));
       expect(view1FocusedDate, equals(focusDate));
       expect(view2FocusedDate, equals(focusDate));
     });
@@ -481,7 +481,7 @@ void main() {
     testWidgets('keyboard navigation on one view affects both views via controller', (tester) async {
       // Set initial state
       sharedController.setDisplayDate(DateTime(2025, 1, 1));
-      sharedController.setFocusedDate(DateTime(2025, 1, 15));
+      sharedController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       DateTime? view2FocusedDate;
 
@@ -523,7 +523,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Reset focused date in case the tap changed it (depends on firstDayOfWeek layout)
-      sharedController.setFocusedDate(DateTime(2025, 1, 15));
+      sharedController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
       await tester.pump();
 
       // Send arrow right key to move focus to next day
@@ -531,14 +531,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Controller should update, which notifies the second view
-      expect(sharedController.focusedDate, equals(DateTime(2025, 1, 16)));
+      expect(sharedController.focusedDateTime, equals(DateTime(2025, 1, 16)));
       expect(view2FocusedDate, equals(DateTime(2025, 1, 16)));
     });
 
     testWidgets('Page Up/Down navigation on one view changes both views month', (tester) async {
       // Set initial state
       sharedController.setDisplayDate(DateTime(2025, 1, 1));
-      sharedController.setFocusedDate(DateTime(2025, 1, 15));
+      sharedController.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       DateTime? view2DisplayDate;
 
@@ -694,7 +694,7 @@ void main() {
       expect(view2DisplayDate?.month, equals(7));
     });
 
-    testWidgets('cell tap on one view sets focusedDate for both views', (tester) async {
+    testWidgets('cell tap on one view sets focusedDateTime for both views', (tester) async {
       DateTime? view1FocusedDate;
       DateTime? view2FocusedDate;
 
@@ -732,7 +732,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Initially no focused date
-      expect(sharedController.focusedDate, isNull);
+      expect(sharedController.focusedDateTime, isNull);
 
       // Tap on a cell in view1 - find the cell by its text
       // We need to find a cell with a date text. Let's look for "15"
@@ -741,8 +741,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Both views should show the focused date
-      expect(sharedController.focusedDate, isNotNull);
-      expect(sharedController.focusedDate?.day, equals(15));
+      expect(sharedController.focusedDateTime, isNotNull);
+      expect(sharedController.focusedDateTime?.day, equals(15));
       expect(view1FocusedDate?.day, equals(15));
       expect(view2FocusedDate?.day, equals(15));
     });

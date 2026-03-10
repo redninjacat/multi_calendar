@@ -42,7 +42,7 @@ void main() {
       int maxVisibleEventsPerDay = 5,
     }) async {
       controller.setEvents(events);
-      controller.setFocusedDate(DateTime(2025, 1, 15));
+      controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -71,16 +71,16 @@ void main() {
     }
 
     /// Helper: focuses the calendar and sends a key event.
-    /// Saves and restores [controller.focusedDate] across the tap to prevent
+    /// Saves and restores [controller.focusedDateTime] across the tap to prevent
     /// the tap's cell-focus side-effect from interfering with the test.
     Future<void> focusAndSendKey(
       WidgetTester tester,
       LogicalKeyboardKey key,
     ) async {
-      final savedFocusedDate = controller.focusedDate;
+      final savedFocusedDate = controller.focusedDateTime;
       await tester.tap(find.byType(MCalMonthView));
       await tester.pumpAndSettle();
-      controller.setFocusedDate(savedFocusedDate);
+      controller.setFocusedDateTime(savedFocusedDate, isAllDay: true);
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(key);
       await tester.pumpAndSettle();
@@ -643,7 +643,7 @@ void main() {
       MCalWeekLayoutBuilder? weekLayoutBuilder,
     }) async {
       controller.setEvents(events);
-      controller.setFocusedDate(DateTime(2025, 1, 15));
+      controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -675,10 +675,10 @@ void main() {
       WidgetTester tester,
       LogicalKeyboardKey key,
     ) async {
-      final savedFocusedDate = controller.focusedDate;
+      final savedFocusedDate = controller.focusedDateTime;
       await tester.tap(find.byType(MCalMonthView));
       await tester.pumpAndSettle();
-      controller.setFocusedDate(savedFocusedDate);
+      controller.setFocusedDateTime(savedFocusedDate, isAllDay: true);
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(key);
       await tester.pumpAndSettle();

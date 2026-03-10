@@ -83,6 +83,12 @@ void main() {
     ) async {
       await tester.tap(find.byType(MCalDayView));
       await tester.pumpAndSettle();
+      // Normalise to all-day section (slot 0 as last grid slot) so subsequent
+      // keys start from the same state regardless of where tap-to-focus landed.
+      await tester.sendKeyEvent(LogicalKeyboardKey.home);  // → slot 0
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);  // → all-day
+      await tester.pumpAndSettle();
       await tester.sendKeyEvent(key);
       await tester.pumpAndSettle();
     }

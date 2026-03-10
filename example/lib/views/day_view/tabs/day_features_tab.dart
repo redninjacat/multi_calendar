@@ -892,6 +892,17 @@ class _DayFeaturesTabState extends State<DayFeaturesTab> {
               _setStatus('—');
             }
           },
+          onFocusedDateTimeChanged: (dateTime) {
+            if (dateTime == null) {
+              _setStatus('Focus cleared');
+            } else if (_eventController.isFocusedOnAllDay) {
+              _setStatus('Focused: all-day section');
+            } else {
+              final hour = dateTime.hour;
+              final minute = dateTime.minute.toString().padLeft(2, '0');
+              _setStatus('Focused: $hour:$minute');
+            }
+          },
           onHoverTimeSlot: (context, slotContext) {
             if (slotContext == null) {
               _setStatus('—');
