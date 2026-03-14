@@ -318,12 +318,12 @@ class _MonthAccessibilityTabState extends State<MonthAccessibilityTab> {
     final effectiveTheme = _highContrastMode
         ? MCalThemeData(
             eventTileBackgroundColor: Colors.black,
+            cellBorderColor: Colors.black,
+            navigatorBackgroundColor: Colors.grey.shade200,
             monthTheme: MCalMonthThemeData(
               cellBackgroundColor: Colors.white,
-              cellBorderColor: Colors.black,
               todayBackgroundColor: Colors.blue.shade50,
               weekdayHeaderBackgroundColor: Colors.grey.shade100,
-              navigatorBackgroundColor: Colors.grey.shade200,
               dropTargetCellValidColor: Colors.green.shade100,
               dropTargetCellInvalidColor: Colors.red.shade100,
               hoverCellBackgroundColor: Colors.yellow.shade50,

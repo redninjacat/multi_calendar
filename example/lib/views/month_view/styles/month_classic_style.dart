@@ -52,10 +52,10 @@ class MonthClassicStyle extends StatelessWidget {
                 color: colorScheme.onPrimaryContainer,
               ),
               eventTileCornerRadius: 0.0, // Square corners
+              cellBorderColor: colorScheme.outlineVariant,
               ignoreEventColors: true, // Use uniform colors from theme
               monthTheme: MCalMonthThemeData(
                 cellBackgroundColor: colorScheme.surface,
-                cellBorderColor: colorScheme.outlineVariant,
                 todayBackgroundColor: colorScheme.primaryContainer,
                 todayTextStyle: TextStyle(
                   fontWeight: FontWeight.bold,

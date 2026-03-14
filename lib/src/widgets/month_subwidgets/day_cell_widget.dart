@@ -380,9 +380,7 @@ class DayCellWidgetState extends State<DayCellWidget> {
   /// Non-interactive cells may have reduced visual prominence.
   BoxDecoration _getCellDecoration([bool isInteractive = true]) {
     Color? backgroundColor;
-    Color? borderColor =
-        widget.theme.cellBorderColor ??
-        widget.theme.monthTheme?.cellBorderColor;
+    Color? borderColor = widget.theme.cellBorderColor;
 
     // Apply focused styling first (takes priority)
     if (widget.isFocused) {

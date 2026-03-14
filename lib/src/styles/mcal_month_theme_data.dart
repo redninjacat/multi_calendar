@@ -21,9 +21,6 @@ class MCalMonthThemeData {
   /// Background color for calendar day cells.
   final Color? cellBackgroundColor;
 
-  /// Border color for calendar day cells.
-  final Color? cellBorderColor;
-
   /// Text style for day numbers in calendar cells.
   final TextStyle? cellTextStyle;
 
@@ -132,12 +129,6 @@ class MCalMonthThemeData {
   /// Border width for drop target preview tiles.
   final double? dropTargetTileBorderWidth;
 
-  /// Text style for the month navigator (month/year display and controls).
-  final TextStyle? navigatorTextStyle;
-
-  /// Background color for the month navigator.
-  final Color? navigatorBackgroundColor;
-
   /// Background color for all-day event tiles.
   final Color? allDayEventBackgroundColor;
 
@@ -153,7 +144,6 @@ class MCalMonthThemeData {
   /// Creates a new [MCalMonthThemeData] instance.
   const MCalMonthThemeData({
     this.cellBackgroundColor,
-    this.cellBorderColor,
     this.cellTextStyle,
     this.todayBackgroundColor,
     this.todayTextStyle,
@@ -190,8 +180,6 @@ class MCalMonthThemeData {
     this.dropTargetTileCornerRadius,
     this.dropTargetTileBorderColor,
     this.dropTargetTileBorderWidth,
-    this.navigatorTextStyle,
-    this.navigatorBackgroundColor,
     this.allDayEventBackgroundColor,
     this.allDayEventTextStyle,
     this.allDayEventBorderColor,
@@ -206,7 +194,6 @@ class MCalMonthThemeData {
 
     return MCalMonthThemeData(
       cellBackgroundColor: colorScheme.surface,
-      cellBorderColor: colorScheme.outline.withValues(alpha: 0.2),
       cellTextStyle: textTheme.bodyMedium?.copyWith(
         color: colorScheme.onSurface,
       ),
@@ -258,11 +245,6 @@ class MCalMonthThemeData {
       dateLabelPosition: DateLabelPosition.topLeft,
       overflowIndicatorHeight: 14.0,
       eventTileCornerRadius: 3.0,
-      navigatorTextStyle: textTheme.titleMedium?.copyWith(
-        color: colorScheme.onSurface,
-        fontWeight: FontWeight.w600,
-      ),
-      navigatorBackgroundColor: colorScheme.surface,
       allDayEventBackgroundColor: colorScheme.secondaryContainer,
       allDayEventTextStyle: textTheme.labelSmall?.copyWith(
         color: colorScheme.onSecondaryContainer,
@@ -275,7 +257,6 @@ class MCalMonthThemeData {
   /// Creates a copy of this [MCalMonthThemeData] with the given fields replaced.
   MCalMonthThemeData copyWith({
     Color? cellBackgroundColor,
-    Color? cellBorderColor,
     TextStyle? cellTextStyle,
     Color? todayBackgroundColor,
     TextStyle? todayTextStyle,
@@ -312,8 +293,6 @@ class MCalMonthThemeData {
     double? dropTargetTileCornerRadius,
     Color? dropTargetTileBorderColor,
     double? dropTargetTileBorderWidth,
-    TextStyle? navigatorTextStyle,
-    Color? navigatorBackgroundColor,
     Color? allDayEventBackgroundColor,
     TextStyle? allDayEventTextStyle,
     Color? allDayEventBorderColor,
@@ -321,7 +300,6 @@ class MCalMonthThemeData {
   }) {
     return MCalMonthThemeData(
       cellBackgroundColor: cellBackgroundColor ?? this.cellBackgroundColor,
-      cellBorderColor: cellBorderColor ?? this.cellBorderColor,
       cellTextStyle: cellTextStyle ?? this.cellTextStyle,
       todayBackgroundColor: todayBackgroundColor ?? this.todayBackgroundColor,
       todayTextStyle: todayTextStyle ?? this.todayTextStyle,
@@ -382,9 +360,6 @@ class MCalMonthThemeData {
           dropTargetTileBorderColor ?? this.dropTargetTileBorderColor,
       dropTargetTileBorderWidth: dropTargetTileBorderWidth ??
           this.dropTargetTileBorderWidth,
-      navigatorTextStyle: navigatorTextStyle ?? this.navigatorTextStyle,
-      navigatorBackgroundColor:
-          navigatorBackgroundColor ?? this.navigatorBackgroundColor,
       allDayEventBackgroundColor:
           allDayEventBackgroundColor ?? this.allDayEventBackgroundColor,
       allDayEventTextStyle: allDayEventTextStyle ?? this.allDayEventTextStyle,
@@ -405,7 +380,6 @@ class MCalMonthThemeData {
         other.cellBackgroundColor,
         t,
       ),
-      cellBorderColor: Color.lerp(cellBorderColor, other.cellBorderColor, t),
       cellTextStyle: TextStyle.lerp(cellTextStyle, other.cellTextStyle, t),
       todayBackgroundColor: Color.lerp(
         todayBackgroundColor,
@@ -566,16 +540,6 @@ class MCalMonthThemeData {
         other.dropTargetTileBorderWidth,
         t,
       ),
-      navigatorTextStyle: TextStyle.lerp(
-        navigatorTextStyle,
-        other.navigatorTextStyle,
-        t,
-      ),
-      navigatorBackgroundColor: Color.lerp(
-        navigatorBackgroundColor,
-        other.navigatorBackgroundColor,
-        t,
-      ),
       allDayEventBackgroundColor: Color.lerp(
         allDayEventBackgroundColor,
         other.allDayEventBackgroundColor,
@@ -612,7 +576,6 @@ class MCalMonthThemeData {
       other is MCalMonthThemeData &&
           runtimeType == other.runtimeType &&
           cellBackgroundColor == other.cellBackgroundColor &&
-          cellBorderColor == other.cellBorderColor &&
           cellTextStyle == other.cellTextStyle &&
           todayBackgroundColor == other.todayBackgroundColor &&
           todayTextStyle == other.todayTextStyle &&
@@ -650,8 +613,6 @@ class MCalMonthThemeData {
           dropTargetTileCornerRadius == other.dropTargetTileCornerRadius &&
           dropTargetTileBorderColor == other.dropTargetTileBorderColor &&
           dropTargetTileBorderWidth == other.dropTargetTileBorderWidth &&
-          navigatorTextStyle == other.navigatorTextStyle &&
-          navigatorBackgroundColor == other.navigatorBackgroundColor &&
           allDayEventBackgroundColor == other.allDayEventBackgroundColor &&
           allDayEventTextStyle == other.allDayEventTextStyle &&
           allDayEventBorderColor == other.allDayEventBorderColor &&
@@ -660,7 +621,6 @@ class MCalMonthThemeData {
   @override
   int get hashCode => Object.hashAll([
         cellBackgroundColor,
-        cellBorderColor,
         cellTextStyle,
         todayBackgroundColor,
         todayTextStyle,
@@ -697,8 +657,6 @@ class MCalMonthThemeData {
         dropTargetTileCornerRadius,
         dropTargetTileBorderColor,
         dropTargetTileBorderWidth,
-        navigatorTextStyle,
-        navigatorBackgroundColor,
         allDayEventBackgroundColor,
         allDayEventTextStyle,
         allDayEventBorderColor,

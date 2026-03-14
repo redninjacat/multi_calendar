@@ -8,7 +8,6 @@ void main() {
       const theme = MCalMonthThemeData();
 
       expect(theme.cellBackgroundColor, isNull);
-      expect(theme.cellBorderColor, isNull);
       expect(theme.cellTextStyle, isNull);
       expect(theme.todayBackgroundColor, isNull);
       expect(theme.todayTextStyle, isNull);
@@ -16,7 +15,6 @@ void main() {
       expect(theme.eventTileHeight, isNull);
       expect(theme.dateLabelPosition, isNull);
       expect(theme.overflowIndicatorHeight, isNull);
-      expect(theme.navigatorTextStyle, isNull);
       expect(theme.allDayEventBackgroundColor, isNull);
       expect(theme.dropTargetCellValidColor, isNull);
       expect(theme.dragSourceOpacity, isNull);
@@ -27,13 +25,11 @@ void main() {
 
       const theme = MCalMonthThemeData(
         cellBackgroundColor: Colors.white,
-        cellBorderColor: Colors.grey,
         cellTextStyle: cellStyle,
         todayBackgroundColor: Colors.blue,
         eventTileHeight: 24.0,
         dateLabelPosition: DateLabelPosition.topCenter,
         overflowIndicatorHeight: 16.0,
-        navigatorTextStyle: cellStyle,
         dropTargetCellValidColor: Colors.green,
         dragSourceOpacity: 0.5,
       );
@@ -55,7 +51,6 @@ void main() {
       final theme = MCalMonthThemeData.defaults(themeData);
 
       expect(theme.cellBackgroundColor, isNotNull);
-      expect(theme.cellBorderColor, isNotNull);
       expect(theme.cellTextStyle, isNotNull);
       expect(theme.todayBackgroundColor, isNotNull);
       expect(theme.todayTextStyle, isNotNull);
@@ -63,7 +58,6 @@ void main() {
       expect(theme.eventTileHeight, 20.0);
       expect(theme.dateLabelPosition, DateLabelPosition.topLeft);
       expect(theme.overflowIndicatorHeight, 14.0);
-      expect(theme.navigatorTextStyle, isNotNull);
       expect(theme.allDayEventBackgroundColor, isNotNull);
       expect(theme.dropTargetCellValidColor, isNotNull);
       expect(theme.dragSourceOpacity, 0.5);

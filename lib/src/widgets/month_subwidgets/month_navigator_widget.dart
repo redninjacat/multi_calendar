@@ -55,9 +55,7 @@ class MonthNavigatorWidget extends StatelessWidget {
     Widget navigator = Container(
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
       decoration: BoxDecoration(
-        color:
-            theme.navigatorBackgroundColor ??
-            theme.monthTheme?.navigatorBackgroundColor,
+        color: theme.navigatorBackgroundColor,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

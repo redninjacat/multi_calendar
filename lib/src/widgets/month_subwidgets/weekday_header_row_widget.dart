@@ -74,9 +74,7 @@ class WeekdayHeaderRowWidget extends StatelessWidget {
           border: Border(
             bottom: BorderSide(
               color:
-                  theme.cellBorderColor ??
-                  theme.monthTheme?.cellBorderColor ??
-                  Colors.grey.shade300,
+                  theme.cellBorderColor ?? Colors.grey.shade300,
             ),
           ),
         ),
@@ -152,9 +150,7 @@ class WeekdayHeaderRowWidget extends StatelessWidget {
         border: Border(
           bottom: BorderSide(
             color:
-                theme.cellBorderColor ??
-                theme.monthTheme?.cellBorderColor ??
-                Colors.grey.shade300,
+                theme.cellBorderColor ?? Colors.grey.shade300,
           ),
         ),
       ),

@@ -243,7 +243,7 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
 
     return MCalThemeData(
       cellBackgroundColor: colorScheme.surface,
-      cellBorderColor: colorScheme.outline.withValues(alpha: 0.2),
+      cellBorderColor: colorScheme.outlineVariant,
       eventTileBackgroundColor: colorScheme.primaryContainer,
       eventTileTextStyle: textTheme.labelSmall?.copyWith(
         color: colorScheme.onPrimaryContainer,

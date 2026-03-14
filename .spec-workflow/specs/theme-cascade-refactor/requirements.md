@@ -85,7 +85,7 @@ The fix introduces a clear separation: the `MCalThemeData` default constructor l
 
 1. WHEN `ignoreEventColors` is `true` THEN the multi-day event tile SHALL follow the cascade: `theme.allDayEventBackgroundColor` → `theme.eventTileBackgroundColor` → `event.color` → `defaults.allDayEventBackgroundColor` → `defaults.eventTileBackgroundColor` (theme takes priority, event.color is a fallback).
 2. WHEN `ignoreEventColors` is `false` THEN the multi-day event tile SHALL follow the cascade: `event.color` → `theme.allDayEventBackgroundColor` → `theme.eventTileBackgroundColor` → `defaults.allDayEventBackgroundColor` → `defaults.eventTileBackgroundColor` (event.color takes priority).
-3. In both cases, a color SHALL always be resolved — the master defaults guarantee non-null values at the end of the cascade.
+3. In both cases, a color SHALL always be resolved — the master defaults guarantee non-null values at the end of the cascade. In practice, the shared cascade utility collapses the two-level defaults tail (`defaults.allDayEventBackgroundColor` → `defaults.eventTileBackgroundColor`) into a single `defaultColor` parameter. Since master defaults are always fully populated, `defaults.allDayEventBackgroundColor` is never null, so the second level is never reached. Callers pass `defaults.allDayEventBackgroundColor!` (or `defaults.eventTileBackgroundColor!` for non-all-day tiles) as the `defaultColor`.
 
 ### Requirement 6: Remove `_fillNullSubThemes`
 
@@ -106,7 +106,7 @@ The fix introduces a clear separation: the `MCalThemeData` default constructor l
 1. The system SHALL provide a shared utility function (e.g. `resolveEventTileColor`) that encapsulates the standard cascade: when `ignoreEventColors` is `false`, `event.color` → `consumer theme property` → `defaults.property`; when `ignoreEventColors` is `true`, `consumer theme property` → `event.color` → `defaults.property`. In both modes, `event.color` participates in the cascade and is never skipped.
 2. ALL event tile builders (timed event, all-day event, single-day month tile, multi-day month tile) SHALL use this utility instead of implementing the cascade inline.
 3. A variant or parameter SHALL support the drop target tile cascade: `dropTargetTile*` → event tile cascade → `defaults.property`.
-4. The utility SHALL accept the consumer theme, the event (or `event.color`), the master defaults, and any view-specific overrides (e.g. `allDayEventBackgroundColor`).
+4. The utility functions SHALL accept decomposed parameters (individual `Color?` values for theme color, event color, all-day theme color, drop target theme color, and a non-null default color, plus the `ignoreEventColors` flag) rather than full theme/event/defaults objects, so callers can map their specific properties to the correct cascade slots.
 
 ### Requirement 8: Consistent Cascade Ordering Across All Tile Types
 
@@ -154,6 +154,20 @@ The fix introduces a clear separation: the `MCalThemeData` default constructor l
 2. The existing `_getContrastColor` utility (in `time_grid_events_layer.dart` and equivalent logic elsewhere) SHALL use these theme properties instead of hardcoded `Colors.black87` / `Colors.white`, falling through to master defaults when the consumer theme does not set them.
 3. WHEN `ignoreEventColors` is `true` and the consumer has set `eventTileTextStyle` with a color THEN the text style color SHALL take precedence over the contrast color.
 
+### Requirement 11: Sub-Theme Property Consolidation
+
+**User Story:** As a developer, I want each theme property to exist in exactly one place, so that I do not have to wonder whether to set a property on the parent theme or a sub-theme, and so that the cascade is unambiguous.
+
+#### Acceptance Criteria
+
+1. Properties that serve the same purpose across both views SHALL live on `MCalThemeData` (the shared parent), not on sub-themes. The following properties SHALL be **removed from `MCalMonthThemeData`** because they duplicate identically-named properties already on `MCalThemeData`: `cellBackgroundColor`, `allDayEventBackgroundColor`, `allDayEventTextStyle`, `allDayEventBorderColor`, `allDayEventBorderWidth`, `weekNumberTextStyle`, `weekNumberBackgroundColor`, `eventTileCornerRadius`, `eventTileHorizontalSpacing`.
+2. `hoverEventBackgroundColor` SHALL be **moved to `MCalThemeData`** (added as a new shared property) and **removed from both `MCalMonthThemeData` and `MCalDayThemeData`**.
+3. `timedEventBorderRadius` SHALL be **removed from `MCalDayThemeData`**. Day View code SHALL use the shared `eventTileCornerRadius` from `MCalThemeData` instead. This unifies the corner radius concept across both views under a single property.
+4. `weekNumberTextColor` SHALL be **removed from `MCalDayThemeData`**. Day View code SHALL use `weekNumberTextStyle` from `MCalThemeData` (which includes the color) instead. This unifies week number styling under a single shared property.
+5. `weekNumberTextStyle` is already on `MCalThemeData` and SHALL remain there. It SHALL be **removed from `MCalMonthThemeData`** (covered by criterion 1). Both Day View and Month View SHALL resolve week number styling via `theme.weekNumberTextStyle ?? defaults.weekNumberTextStyle!`.
+6. WHEN widgets previously accessed these properties via `theme.monthTheme?.propertyName` or `theme.dayTheme?.propertyName` THEN they SHALL instead use `theme.propertyName ?? defaults.propertyName!` (shared parent cascade).
+7. The `defaults()` and `fromTheme()` factories SHALL be updated: removed properties SHALL no longer be set in sub-theme factories. The shared parent `fromTheme()` factory SHALL set all consolidated properties.
+
 ## Non-Functional Requirements
 
 ### Code Architecture and Modularity
@@ -165,11 +179,10 @@ The fix introduces a clear separation: the `MCalThemeData` default constructor l
   - `Colors.green` — overlay valid color (~2 usages)
   - `Colors.black87` / `Colors.white` — contrast text, scrim, resize handles (~10 usages)
   - `Colors.black` / `Colors.black54` — keyboard selection border, region text (~5 usages)
-  The master defaults factory (`MCalThemeData.fromTheme`) and its sub-theme factories (`MCalMonthThemeData.defaults`, `MCalDayThemeData.defaults`) SHALL be the **single source** for all these values, deriving them from the app's `ColorScheme` and `TextTheme`. No `Colors.*` literal SHALL appear in widget or tile-building code outside these factories.
+  The master defaults factory (`MCalThemeData.fromTheme`) and its sub-theme factories (`MCalMonthThemeData.defaults`, `MCalDayThemeData.defaults`) SHALL be the **single source** for all these values, deriving them from the app's `ColorScheme` and `TextTheme`. No `Colors.*` literal SHALL appear in widget or tile-building code outside these factories. **Exception**: `Colors.transparent` is permitted in widget code as a "no fill" sentinel (e.g. for hit-test areas or conditional backgrounds) — it is not a visual fallback and does not need a theme property.
 - **No Direct `colorScheme` Access**: Widget and tile-building code SHALL NOT use `Theme.of(context).colorScheme` directly for color values. All color resolution SHALL go through the MCal theme cascade (consumer theme → master defaults). The master defaults factories are the only code that reads `colorScheme` to derive values. This ensures a single resolution path and prevents widgets from bypassing the cascade. Current direct usages that must be replaced include: `colorScheme.outline` (time legend tick), `colorScheme.primary` (Day View keyboard focus border, focused slot), and `colorScheme.error` (error icon).
 - **`DropTargetHighlightPainter`**: The `validColor` and `invalidColor` parameters SHALL be `required` (no default values). Callers SHALL always pass theme-derived colors. The current default hex literals (`Color(0x4000FF00)`, `Color(0x40FF0000)`) SHALL be removed from the constructor.
 - **Shared Cascade Utility**: The utility required by Requirement 7 SHALL be the single entry point for resolving tile colors. All tile builders SHALL delegate to it.
-- **Backward Compatibility**: `MCalThemeData.fromTheme()` and the sub-theme `defaults()` factories SHALL continue to work for consumers who explicitly use them. The breaking change is that `MCalTheme.of(context)` no longer auto-fills via `fromTheme()`.
 - **Documentation**: The cascade order and the master defaults concept SHALL be documented in dartdoc on `MCalThemeData`, the relevant theme properties, and the drop target tile builder parameters.
 
 ### Lerp Helpers

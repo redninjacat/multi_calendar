@@ -54,11 +54,11 @@ class MonthColorfulStyle extends StatelessWidget {
             ),
             child: MCalTheme(
               data: MCalThemeData(
+                cellBorderColor: Colors.transparent,
                 eventTileCornerRadius: 4,
                 eventTileHorizontalSpacing: 6.0,
                 monthTheme: MCalMonthThemeData(
                   cellBackgroundColor: Colors.transparent,
-                  cellBorderColor: Colors.transparent,
                   dateLabelHeight: 24.0,
                   todayBackgroundColor: Colors.transparent,
                   weekdayHeaderBackgroundColor: Colors.transparent,

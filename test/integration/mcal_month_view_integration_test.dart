@@ -1451,7 +1451,6 @@ void main() {
           cellBackgroundColor: Colors.lightBlue,
           todayBackgroundColor: Colors.amber,
           weekdayHeaderBackgroundColor: Colors.teal,
-          navigatorBackgroundColor: Colors.indigo,
         ),
       );
 

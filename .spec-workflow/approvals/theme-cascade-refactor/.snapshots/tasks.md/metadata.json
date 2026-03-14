@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/theme-cascade-refactor/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-14T06:03:44.161Z",
+      "trigger": "initial",
+      "approvalId": "approval_1773468224158_2v1n8o495",
+      "approvalTitle": "Theme Cascade Refactor — Tasks"
+    }
+  ]
+}

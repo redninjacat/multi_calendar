@@ -58,9 +58,7 @@ class WeekNumberCell extends StatelessWidget {
             theme.monthTheme?.weekNumberBackgroundColor,
         border: Border.all(
           color:
-              theme.cellBorderColor ??
-              theme.monthTheme?.cellBorderColor ??
-              Colors.grey.shade300,
+              theme.cellBorderColor ?? Colors.grey.shade300,
           width: 0.5,
         ),
       ),

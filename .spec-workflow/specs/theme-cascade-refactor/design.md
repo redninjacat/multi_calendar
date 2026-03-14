@@ -20,6 +20,21 @@ The key architectural changes are:
 - **Performance**: Master defaults computed once per build cycle via `MCalThemeData.fromTheme(Theme.of(context))`. No new computation; just relocation of existing fallback logic. Widgets MAY cache the defaults instance.
 - **Accessibility**: No accessibility changes. Semantic labels are unaffected.
 
+### Material 3 Color Role Alignment
+
+New master default values use M3 semantic color roles:
+- **`primary`** — focus indicators, active borders, valid drop target overlays, current time indicator
+- **`primaryContainer`** — event tile and drop target tile backgrounds (prominent containers)
+- **`errorContainer`** — invalid drop target tile background (error state, less emphasis)
+- **`error`** — error icons, invalid overlay tints (error state, full emphasis)
+- **`tertiary`** — valid drop target cell overlay (contrasting accent for heightened attention)
+- **`scrim`** — modal overlay backgrounds (loading/error scrims)
+- **`onSurface`** — high-emphasis text contrast color (M3 uses full opacity, not M2's 87%)
+- **`onSurfaceVariant`** — lower-emphasis labels (overflow indicator, time legend, week numbers)
+- **`outlineVariant`** — decorative region fills (low-contrast, no 3:1 requirement)
+- **`onSurface` at 12% opacity** — disabled time slot fill (M3 disabled container pattern)
+- **`outlineVariant`** — decorative borders, gridlines, tick marks, and time region borders (low-contrast separators that don't require 3:1 contrast ratio). Sub-hour gridlines use reduced alpha to maintain visual hierarchy (`0.7` for major, `0.4` for minor).
+
 ### Project Structure (structure.md)
 
 - **Naming**: New utility file follows `snake_case.dart` convention; new properties use existing naming patterns (`dropTargetTile*`, `eventTile*`).
@@ -41,9 +56,9 @@ The key architectural changes are:
 
 | File | Change |
 |------|--------|
-| `lib/src/styles/mcal_theme.dart` | Remove `_fillNullSubThemes`; change `of()` step 3; add new shared properties; fix lerp helpers; add new properties to `copyWith`, `lerp`, `==`, `hashCode` |
-| `lib/src/styles/mcal_month_theme_data.dart` | Add 5 new properties; update `defaults()` factory; update `copyWith`, `lerp`, `==`, `hashCode` |
-| `lib/src/styles/mcal_day_theme_data.dart` | Add 14 new properties; update `defaults()` factory; update `copyWith`, `lerp`, `==`, `hashCode` |
+| `lib/src/styles/mcal_theme.dart` | Remove `_fillNullSubThemes`; change `of()` step 3; add `hoverEventBackgroundColor`, `eventTileLightContrastColor`, `eventTileDarkContrastColor`; fix lerp helpers; update `copyWith`, `lerp`, `==`, `hashCode` |
+| `lib/src/styles/mcal_month_theme_data.dart` | Remove 13 duplicated properties (3 pre-applied: `cellBorderColor`, `navigatorBackgroundColor`, `navigatorTextStyle`; 10 additional: `cellBackgroundColor`, `allDayEventBackgroundColor`, `allDayEventTextStyle`, `allDayEventBorderColor`, `allDayEventBorderWidth`, `weekNumberTextStyle`, `weekNumberBackgroundColor`, `eventTileCornerRadius`, `eventTileHorizontalSpacing`, `hoverEventBackgroundColor`); add 5 new properties; update `defaults()` factory; update `copyWith`, `lerp`, `==`, `hashCode` |
+| `lib/src/styles/mcal_day_theme_data.dart` | Remove 3 properties (`hoverEventBackgroundColor`, `timedEventBorderRadius`, `weekNumberTextColor`); add 14 new properties; update `defaults()` factory; update `copyWith`, `lerp`, `==`, `hashCode` |
 | `lib/src/utils/theme_cascade_utils.dart` | **New file** — shared cascade utility |
 | ~18 widget files | Replace inline cascades with utility calls; replace `Colors.*` with master defaults |
 
@@ -156,50 +171,70 @@ MCalMonthThemeData? _lerpMonthTheme(
 ### Component 2: MCalThemeData (modified)
 
 - **Purpose**: Root theme data class, also serves as `ThemeExtension`.
-- **New properties** (Req 10):
+- **New properties** (Req 10, 11):
   - `Color? eventTileLightContrastColor` — text on dark tiles (master default: `Colors.white`)
-  - `Color? eventTileDarkContrastColor` — text on light tiles (master default: `colorScheme.onSurface` at 87% opacity)
-- **`fromTheme` factory**: Add the two new contrast color properties. All existing properties unchanged.
+  - `Color? eventTileDarkContrastColor` — text on light tiles (master default: `colorScheme.onSurface`)
+  - `Color? hoverEventBackgroundColor` — background color for event tiles on hover (master default: `colorScheme.primaryContainer.withValues(alpha: 0.8)`). Moved from both `MCalMonthThemeData` and `MCalDayThemeData` to the shared parent (Req 11.2).
+- **`fromTheme` factory**: Add the three new properties. Existing `cellBorderColor` updated from `colorScheme.outline.withValues(alpha: 0.2)` to `colorScheme.outlineVariant` (M3 alignment — already applied to code).
 - **`copyWith`, `lerp`, `==`, `hashCode`**: Updated to include new properties.
 
 ### Component 3: MCalDayThemeData (modified)
 
 - **Purpose**: Day View specific theme properties.
+- **Removed properties** (Req 11):
+  - `hoverEventBackgroundColor` — moved to shared `MCalThemeData` (Req 11.2). Day View widgets now use `theme.hoverEventBackgroundColor ?? defaults.hoverEventBackgroundColor`.
+  - `timedEventBorderRadius` — removed, unified with the shared `eventTileCornerRadius` on `MCalThemeData` (Req 11.3). Day View code changes from `theme.dayTheme?.timedEventBorderRadius ?? theme.eventTileCornerRadius ?? 3.0` to `theme.eventTileCornerRadius ?? defaults.eventTileCornerRadius!`.
+  - `weekNumberTextColor` — removed (Req 11.4). Day View code changes from `TextStyle(color: theme.dayTheme?.weekNumberTextColor ?? Colors.black54)` to `theme.weekNumberTextStyle ?? defaults.weekNumberTextStyle!`. This unifies week number styling under a single `TextStyle` property on the parent, matching Month View.
 - **New properties** (Req 3, 4, 9):
 
 | Property | Type | Master Default | Req |
 |----------|------|----------------|-----|
 | `dropTargetTileBackgroundColor` | `Color?` | `colorScheme.primaryContainer` | 3 |
-| `dropTargetTileInvalidBackgroundColor` | `Color?` | `colorScheme.error.withValues(alpha: 0.5)` | 3 |
-| `dropTargetTileCornerRadius` | `double?` | `4.0` | 3 |
+| `dropTargetTileInvalidBackgroundColor` | `Color?` | `colorScheme.errorContainer` | 3 |
+| `dropTargetTileCornerRadius` | `double?` | `3.0` (matches shared `eventTileCornerRadius`) | 3 |
 | `dropTargetTileBorderColor` | `Color?` | `colorScheme.primary` | 3 |
 | `dropTargetTileBorderWidth` | `double?` | `2.0` | 3 |
 | `dropTargetOverlayValidColor` | `Color?` | `colorScheme.primary.withValues(alpha: 0.2)` | 4 |
 | `dropTargetOverlayInvalidColor` | `Color?` | `colorScheme.error.withValues(alpha: 0.2)` | 4 |
 | `dropTargetOverlayBorderWidth` | `double?` | `3.0` | 4 |
 | `dropTargetOverlayBorderColor` | `Color?` | `colorScheme.primary` | 4 |
-| `disabledTimeSlotColor` | `Color?` | `colorScheme.outline.withValues(alpha: 0.15)` | 9 |
-| `resizeHandleColor` | `Color?` | `colorScheme.onPrimary.withValues(alpha: 0.7)` | 9 |
+| `disabledTimeSlotColor` | `Color?` | `colorScheme.onSurface.withValues(alpha: 0.12)` | 9 |
+| `resizeHandleColor` | `Color?` | `Colors.white.withValues(alpha: 0.7)` | 9 |
 | `keyboardFocusBorderColor` | `Color?` | `colorScheme.primary` | 9 |
 | `focusedSlotBorderColor` | `Color?` | `colorScheme.primary` | 9 |
 | `focusedSlotBorderWidth` | `double?` | `3.0` | 9 |
 
-- **`defaults` factory**: Populate all new properties from `colorScheme`.
+- **`defaults` factory**: Populate all new properties from `colorScheme`. Also populate the existing `focusedSlotBackgroundColor` property (currently missing from `defaults()`; master default: `colorScheme.primary.withValues(alpha: 0.08)`). Existing outline-based defaults updated to `outlineVariant` (M3 alignment — already applied to code): `timeLegendTickColor` → `outlineVariant`, `hourGridlineColor` → `outlineVariant`, `majorGridlineColor` → `outlineVariant.withValues(alpha: 0.7)`, `minorGridlineColor` → `outlineVariant.withValues(alpha: 0.4)`, `timeRegionBorderColor` → `outlineVariant`.
 - **`copyWith`, `lerp`, `==`, `hashCode`**: Updated.
 
 ### Component 4: MCalMonthThemeData (modified)
 
 - **Purpose**: Month View specific theme properties.
+- **Removed properties** (Req 11):
+  - `cellBorderColor` — duplicated the shared `MCalThemeData.cellBorderColor`. Already applied to code.
+  - `navigatorBackgroundColor` — duplicated the shared `MCalThemeData.navigatorBackgroundColor`. Already applied to code.
+  - `navigatorTextStyle` — duplicated the shared `MCalThemeData.navigatorTextStyle`. Already applied to code.
+  - `cellBackgroundColor` — duplicated the shared `MCalThemeData.cellBackgroundColor` (Req 11.1).
+  - `allDayEventBackgroundColor` — duplicated the shared `MCalThemeData.allDayEventBackgroundColor` (Req 11.1).
+  - `allDayEventTextStyle` — duplicated the shared `MCalThemeData.allDayEventTextStyle` (Req 11.1).
+  - `allDayEventBorderColor` — duplicated the shared `MCalThemeData.allDayEventBorderColor` (Req 11.1).
+  - `allDayEventBorderWidth` — duplicated the shared `MCalThemeData.allDayEventBorderWidth` (Req 11.1).
+  - `weekNumberTextStyle` — duplicated the shared `MCalThemeData.weekNumberTextStyle` (Req 11.1/11.5).
+  - `weekNumberBackgroundColor` — duplicated the shared `MCalThemeData.weekNumberBackgroundColor` (Req 11.1).
+  - `eventTileCornerRadius` — duplicated the shared `MCalThemeData.eventTileCornerRadius` (Req 11.1).
+  - `eventTileHorizontalSpacing` — duplicated the shared `MCalThemeData.eventTileHorizontalSpacing` (Req 11.1).
+  - `hoverEventBackgroundColor` — moved to shared `MCalThemeData` (Req 11.2). Month View widgets now use `theme.hoverEventBackgroundColor ?? defaults.hoverEventBackgroundColor`.
 - **New properties** (Req 9):
 
 | Property | Type | Master Default | Req |
 |----------|------|----------------|-----|
-| `defaultRegionColor` | `Color?` | `colorScheme.outline` | 9 |
-| `resizeHandleColor` | `Color?` | `colorScheme.onPrimary.withValues(alpha: 0.5)` | 9 |
+| `defaultRegionColor` | `Color?` | `colorScheme.outlineVariant` | 9 |
+| `resizeHandleColor` | `Color?` | `Colors.white.withValues(alpha: 0.5)` | 9 |
 | `overlayScrimColor` | `Color?` | `colorScheme.scrim.withValues(alpha: 0.3)` | 9 |
 | `errorIconColor` | `Color?` | `colorScheme.error` | 9 |
 | `overflowIndicatorTextStyle` | `TextStyle?` | `textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)` | 9 |
 
+- **`overflowIndicatorTextStyle` note**: This new property replaces the current fallback through `leadingDatesTextStyle` in `week_row_widget.dart`. The current code uses `theme.monthTheme?.leadingDatesTextStyle ?? TextStyle(fontSize: 10, color: Colors.grey.shade600)` for the "+N more" overflow indicator — this was a hack reusing an unrelated style. After the refactor, the cascade is simply `theme.monthTheme?.overflowIndicatorTextStyle ?? defaults.monthTheme!.overflowIndicatorTextStyle`. The `leadingDatesTextStyle` fallback is removed.
 - **`defaults` factory changes**:
   - Populate all new properties.
   - Replace `Colors.green.withValues(alpha: 0.3)` → `colorScheme.tertiary.withValues(alpha: 0.3)` for `dropTargetCellValidColor`.
@@ -246,9 +281,13 @@ Color resolveEventTileColor({
 /// [dropTargetThemeColor] (e.g. theme.dayTheme?.dropTargetTileBackgroundColor)
 /// takes first priority. If null, falls through to the standard event tile
 /// cascade (which respects [ignoreEventColors]).
+///
+/// Pass [allDayThemeColor] when the dragged event is all-day or multi-day
+/// (e.g. theme.allDayEventBackgroundColor) so the full cascade is respected.
 Color resolveDropTargetTileColor({
   required Color? dropTargetThemeColor,
   required Color? themeColor,
+  Color? allDayThemeColor,
   required Color? eventColor,
   required bool ignoreEventColors,
   required Color defaultColor,
@@ -256,6 +295,7 @@ Color resolveDropTargetTileColor({
   if (dropTargetThemeColor != null) return dropTargetThemeColor;
   return resolveEventTileColor(
     themeColor: themeColor,
+    allDayThemeColor: allDayThemeColor,
     eventColor: eventColor,
     ignoreEventColors: ignoreEventColors,
     defaultColor: defaultColor,
@@ -309,6 +349,44 @@ final dateLabelHeight = theme.monthTheme?.dateLabelHeight
     ?? defaults.monthTheme!.dateLabelHeight;
 ```
 
+**Pattern for drop target corner radius (Req 3.3 intermediate cascade):**
+```dart
+// Drop target tile corner radius has a three-step consumer cascade:
+// dayTheme.dropTargetTileCornerRadius → shared theme.eventTileCornerRadius → defaults
+final cornerRadius = theme.dayTheme?.dropTargetTileCornerRadius
+    ?? theme.eventTileCornerRadius
+    ?? defaults.eventTileCornerRadius!;
+```
+
+**Pattern for deduplicated properties moved to parent (Req 11):**
+```dart
+// Before (Month View accessing monthTheme duplicate):
+final bgColor = theme.cellBackgroundColor ?? theme.monthTheme?.cellBackgroundColor;
+
+// After (parent-only, with master defaults fallback):
+final bgColor = theme.cellBackgroundColor ?? defaults.cellBackgroundColor;
+```
+
+**Pattern for timedEventBorderRadius → eventTileCornerRadius (Req 11.3):**
+```dart
+// Before (Day View):
+final cornerRadius = theme.dayTheme?.timedEventBorderRadius
+    ?? theme.eventTileCornerRadius ?? 3.0;
+
+// After (Day View uses shared eventTileCornerRadius):
+final cornerRadius = theme.eventTileCornerRadius
+    ?? defaults.eventTileCornerRadius!;
+```
+
+**Pattern for weekNumberTextColor → weekNumberTextStyle (Req 11.4):**
+```dart
+// Before (Day View day_header):
+TextStyle(color: theme.dayTheme?.weekNumberTextColor ?? Colors.black54)
+
+// After (Day View uses shared weekNumberTextStyle from parent):
+theme.weekNumberTextStyle ?? defaults.weekNumberTextStyle!
+```
+
 **Pattern for event tile color resolution:**
 ```dart
 // Before (ignoreEventColors: false):
@@ -347,7 +425,7 @@ final tileColor = resolveEventTileColor(
 | `current_time_indicator` | `currentTimeIndicatorColor` | `Colors.red` |
 | `time_regions_layer` | `timeRegionBorderColor`, `timeRegionTextColor` | `Colors.grey`, `Colors.black54` |
 | `time_legend_column` | `timeLegendTickColor`, `timeLegendTextStyle` | `colorScheme.outline`, `Colors.grey[600]` |
-| `day_header` | `weekNumberBackgroundColor`, `weekNumberTextColor`, `dayHeaderDayOfWeekStyle`, `dayHeaderDateStyle` | `Colors.grey`, `Colors.black54`, `Colors.grey[600]`, `Colors.black87` |
+| `day_header` | `weekNumberBackgroundColor`, `weekNumberTextStyle` (replaces `weekNumberTextColor`), `dayHeaderDayOfWeekStyle`, `dayHeaderDateStyle` | `Colors.grey`, `Colors.black54`, `Colors.grey[600]`, `Colors.black87` |
 | `all_day_events_section` | `cellBorderColor`, text style fallbacks | `Colors.grey`, `Colors.black87`, `Colors.grey[700]` |
 | `disabled_time_slots_layer` | `disabledTimeSlotColor` | `Colors.grey.withValues(alpha: 0.3)` |
 | `time_resize_handle` | `resizeHandleColor` | `Colors.white.withValues(alpha: 0.7)` |
@@ -360,6 +438,8 @@ final tileColor = resolveEventTileColor(
 | `month_page_widget` | `dropTargetCellValidColor`, `dropTargetCellInvalidColor` | `Colors.green`, `Colors.red` |
 | `mcal_day_view` (overlay) | `dropTargetOverlayValidColor`, `dropTargetOverlayInvalidColor`, etc. | `Colors.blue`, `Colors.red` |
 | `mcal_day_view` (focus) | `focusedSlotBorderColor`, `focusedSlotBorderWidth`, `keyboardFocusBorderColor` | `colorScheme.primary` |
+| `day_navigator` | `navigatorBackgroundColor`, `navigatorTextStyle` | null (no fill/style when theme is all-null) |
+| `month_navigator_widget` | `navigatorBackgroundColor`, `navigatorTextStyle` | null (no fill/style when theme is all-null) |
 
 **Widgets requiring theme parameter additions:**
 
@@ -388,14 +468,23 @@ class MCalThemeData extends ThemeExtension<MCalThemeData> {
   /// Used by the contrast color resolver when a tile's background
   /// luminance is high. Falls through to master defaults when null.
   final Color? eventTileDarkContrastColor;
+
+  /// Background color for event tiles on hover.
+  /// Shared across Day View and Month View.
+  /// Falls through to master defaults when null.
+  final Color? hoverEventBackgroundColor;
 }
 ```
 
-### MCalDayThemeData — New Properties
+### MCalDayThemeData — Changes
+
+**Removed properties** (Req 11): `hoverEventBackgroundColor` (→ shared parent), `timedEventBorderRadius` (→ use shared `eventTileCornerRadius`), `weekNumberTextColor` (→ use shared `weekNumberTextStyle`).
+
+**New properties:**
 
 ```dart
 class MCalDayThemeData {
-  // ... existing properties ...
+  // ... existing properties (minus removed ones above) ...
 
   // Drop target tile (Req 3)
   final Color? dropTargetTileBackgroundColor;
@@ -419,11 +508,15 @@ class MCalDayThemeData {
 }
 ```
 
-### MCalMonthThemeData — New Properties
+### MCalMonthThemeData — Changes
+
+**Removed properties** (Req 11): `cellBorderColor` (already applied), `navigatorBackgroundColor` (already applied), `navigatorTextStyle` (already applied), `cellBackgroundColor`, `allDayEventBackgroundColor`, `allDayEventTextStyle`, `allDayEventBorderColor`, `allDayEventBorderWidth`, `weekNumberTextStyle`, `weekNumberBackgroundColor`, `eventTileCornerRadius`, `eventTileHorizontalSpacing`, `hoverEventBackgroundColor` — all moved to / already on shared `MCalThemeData`.
+
+**New properties:**
 
 ```dart
 class MCalMonthThemeData {
-  // ... existing properties ...
+  // ... existing properties (minus removed ones above) ...
 
   // Remaining hardcoded colors (Req 9)
   final Color? defaultRegionColor;
@@ -484,6 +577,9 @@ class MCalMonthThemeData {
 - New properties present in `copyWith`, `lerp`, `==`, `hashCode`.
 - `defaults()` factories populate all new properties with non-null values derived from `ColorScheme`.
 - `MCalThemeData()` constructor: all new `Color?` properties default to null.
+- Removed properties (`hoverEventBackgroundColor`, `timedEventBorderRadius`, `weekNumberTextColor` from `MCalDayThemeData`; 13 properties from `MCalMonthThemeData` — 3 pre-applied + 10 additional) are absent from constructors, `copyWith`, `lerp`, `==`, `hashCode`.
+- `MCalDayThemeData.defaults()` no longer sets `hoverEventBackgroundColor`, `timedEventBorderRadius`, or `weekNumberTextColor`.
+- `MCalMonthThemeData.defaults()` no longer sets any of the 13 removed properties.
 
 ### Widget Testing
 
@@ -494,6 +590,7 @@ class MCalMonthThemeData {
 - Drop target tiles (Day + Month): verify `dropTargetTile*` takes precedence, then falls through.
 - Keyboard selection border (Month): verify uses `eventTileLightContrastColor` / `eventTileDarkContrastColor`.
 - Keyboard focus border (Day): verify uses `keyboardFocusBorderColor` from theme.
+- Text style color precedence (Req 10.3): when `ignoreEventColors` is `true` and consumer sets `eventTileTextStyle` with a color, the text style color takes precedence over the luminance-based contrast color.
 
 **No hardcoded colors in widget output:**
 - For each widget with removed `Colors.*` fallbacks: verify that when consumer theme is all-null, the rendered color matches the master defaults value (not a hardcoded constant).

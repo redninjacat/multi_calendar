@@ -44,9 +44,9 @@ class MonthMinimalStyle extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: MCalTheme(
               data: MCalThemeData(
+                cellBorderColor: Colors.transparent,
                 monthTheme: MCalMonthThemeData(
                   cellBackgroundColor: Colors.transparent,
-                  cellBorderColor: Colors.transparent,
                   todayBackgroundColor: Colors.transparent,
                   todayTextStyle: TextStyle(
                     fontWeight: FontWeight.w800,
