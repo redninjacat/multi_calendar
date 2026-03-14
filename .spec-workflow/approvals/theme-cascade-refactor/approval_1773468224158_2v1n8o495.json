@@ -3,8 +3,10 @@
   "title": "Theme Cascade Refactor — Tasks",
   "filePath": ".spec-workflow/specs/theme-cascade-refactor/tasks.md",
   "type": "document",
-  "status": "pending",
+  "status": "approved",
   "createdAt": "2026-03-14T06:03:44.158Z",
   "category": "spec",
-  "categoryName": "theme-cascade-refactor"
+  "categoryName": "theme-cascade-refactor",
+  "response": "Approved via dashboard",
+  "respondedAt": "2026-03-14T21:24:55.427Z"
 }
