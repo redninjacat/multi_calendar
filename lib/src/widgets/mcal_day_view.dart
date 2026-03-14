@@ -5810,39 +5810,34 @@ class MCalDayViewState extends State<MCalDayView> {
     );
 
     final isValid = dragHandler.isProposedDropValid;
+    final theme = MCalTheme.of(context);
+    final tileColor = isValid
+        ? (theme.ignoreEventColors
+                ? null
+                : event.color) ??
+            theme.eventTileBackgroundColor ??
+            Colors.blue
+        : Colors.red;
     final defaultTile = Opacity(
       opacity: isValid ? 0.6 : 0.45,
       child: Container(
         decoration: BoxDecoration(
-          // Invalid: red wash; valid: event colour at low opacity.
           color: isValid
-              ? (event.color ?? Colors.blue).withValues(alpha: 0.3)
+              ? tileColor.withValues(alpha: 0.3)
               : Colors.red.withValues(alpha: 0.25),
           border: Border.all(
-            color: isValid ? Colors.blue : Colors.red,
+            color: isValid ? tileColor : Colors.red,
             width: isValid ? 2 : 2.5,
           ),
           borderRadius: BorderRadius.circular(8),
         ),
         padding: const EdgeInsets.all(4),
-        child: Row(
-          children: [
-            if (!isValid) ...[
-              const Icon(Icons.block, size: 12, color: Colors.red),
-              const SizedBox(width: 4),
-            ],
-            Expanded(
-              child: Text(
-                event.title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isValid ? null : Colors.red,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
+        child: !isValid
+            ? const Align(
+                alignment: Alignment.topLeft,
+                child: Icon(Icons.block, size: 12, color: Colors.red),
+              )
+            : null,
       ),
     );
 

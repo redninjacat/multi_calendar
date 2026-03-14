@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/theme-cascade-refactor/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-14T05:46:15.321Z",
+      "trigger": "initial",
+      "approvalId": "approval_1773467175311_sbg0v3pdr",
+      "approvalTitle": "Theme Cascade Refactor — Design"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-03-14T05:56:26.200Z",
+      "trigger": "approved",
+      "approvalId": "approval_1773467175311_sbg0v3pdr",
+      "approvalTitle": "Theme Cascade Refactor — Design"
+    }
+  ]
+}

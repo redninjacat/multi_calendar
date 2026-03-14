@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/theme-cascade-refactor/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-14T04:58:20.908Z",
+      "trigger": "initial",
+      "approvalId": "approval_1773464300901_ev5z1l2pb",
+      "approvalTitle": "Theme Cascade Refactor — Requirements"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-03-14T05:42:09.705Z",
+      "trigger": "approved",
+      "approvalId": "approval_1773464300901_ev5z1l2pb",
+      "approvalTitle": "Theme Cascade Refactor — Requirements"
+    }
+  ]
+}

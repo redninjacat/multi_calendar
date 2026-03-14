@@ -8,7 +8,6 @@ import '../../models/mcal_calendar_event.dart';
 import '../../models/mcal_recurrence_exception.dart';
 import '../../models/mcal_recurrence_rule.dart';
 import '../../styles/mcal_theme.dart';
-import '../../utils/color_utils.dart';
 import '../../utils/date_utils.dart';
 import '../../utils/mcal_date_format_utils.dart';
 import '../../utils/mcal_l10n_helper.dart';
@@ -27,13 +26,15 @@ import 'week_row_widget.dart';
 
 /// Returns recurrence metadata for an event — forward declaration.
 /// This is passed from the main file via a function reference.
-typedef GetRecurrenceMetadataFn = ({
-  bool isRecurring,
-  String? seriesId,
-  MCalRecurrenceRule? recurrenceRule,
-  MCalCalendarEvent? masterEvent,
-  bool isException,
-}) Function(MCalCalendarEvent event, MCalEventController controller);
+typedef GetRecurrenceMetadataFn =
+    ({
+      bool isRecurring,
+      String? seriesId,
+      MCalRecurrenceRule? recurrenceRule,
+      MCalCalendarEvent? masterEvent,
+      bool isException,
+    })
+    Function(MCalCalendarEvent event, MCalEventController controller);
 
 /// Returns phantom event segments for the proposed drop range (Layer 3).
 ///
@@ -622,18 +623,16 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
       getWeekDates: _getWeekDates,
       validationCallback: (start, end) {
         // Library-level region block check via controller.
-        for (
-          DateTime d = start;
-          !d.isAfter(end);
-          d = addDays(d, 1)
-        ) {
+        for (DateTime d = start; !d.isAfter(end); d = addDays(d, 1)) {
           if (widget.controller.isDateBlocked(d)) {
             return false;
           }
         }
         // Cross-view enforcement: check timed regions for non-all-day events.
         if (!dragData.event.isAllDay) {
-          final eventDuration = dragData.event.end.difference(dragData.event.start);
+          final eventDuration = dragData.event.end.difference(
+            dragData.event.start,
+          );
           final projectedStart = DateTime(
             start.year,
             start.month,
@@ -642,7 +641,10 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
             dragData.event.start.minute,
           );
           final projectedEnd = projectedStart.add(eventDuration);
-          if (widget.controller.isTimeRangeBlocked(projectedStart, projectedEnd)) {
+          if (widget.controller.isTimeRangeBlocked(
+            projectedStart,
+            projectedEnd,
+          )) {
             return false;
           }
         }
@@ -989,11 +991,12 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
 
     final tileColor = valid
         ? (theme.monthTheme?.dropTargetTileBackgroundColor ??
+              (theme.ignoreEventColors
+                  ? null
+                  : event.color) ??
               theme.eventTileBackgroundColor ??
-              event.color ??
               Colors.blue)
         : (theme.monthTheme?.dropTargetTileInvalidBackgroundColor ??
-              theme.eventTileBackgroundColor ??
               Colors.red.withValues(alpha: 0.5));
 
     final isFirstSegment = segment?.isFirstSegment ?? true;
@@ -1039,11 +1042,14 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
         right: rightBorder,
       );
     } else {
-      // Default: 1px border in the tile color, softened opaque fill
-      // that adapts to light/dark mode.
-      final brightness = Theme.of(context).brightness;
-      fillColor = tileColor.soften(brightness);
-      final borderSide = BorderSide(color: tileColor, width: 1.0);
+      // Translucent fill in the event colour with a solid border.
+      // No outer Opacity — Month View tiles are thin bars on a white
+      // background, so they need a stronger fill than the Day View.
+      fillColor = valid
+          ? tileColor.withValues(alpha: 0.35)
+          : Colors.red.withValues(alpha: 0.35);
+      final borderColor = valid ? tileColor : Colors.red;
+      final borderSide = BorderSide(color: borderColor, width: 1.5);
       final leftBorder = isFirstSegment ? borderSide : BorderSide.none;
       final rightBorder = isLastSegment ? borderSide : BorderSide.none;
       tileBorder = Border(
