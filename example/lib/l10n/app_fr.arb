@@ -537,5 +537,10 @@
   "recurrenceScopeThisAndFollowing": "Cet événement et les suivants",
   "recurrenceScopeThisAndFollowingSubtitle": "Modifier cette occurrence et toutes les occurrences futures",
   "recurrenceScopeAllEvents": "Tous les événements",
-  "recurrenceScopeAllEventsSubtitle": "Modifier chaque occurrence de la série"
+  "recurrenceScopeAllEventsSubtitle": "Modifier chaque occurrence de la série",
+  "sectionMultiDayEvents": "Événements sur Plusieurs Jours",
+  "settingMultiDayEventBackgroundColor": "Couleur de Fond d'Événement sur Plusieurs Jours",
+  "settingEventTileBorderColor": "Couleur de Bordure de Tuile d'Événement",
+  "settingEventTilePadding": "Espacement de Tuile d'Événement",
+  "settingAllDayEventPadding": "Espacement d'Événement Toute la Journée"
 }

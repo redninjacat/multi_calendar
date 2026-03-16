@@ -93,7 +93,6 @@ class _DayClassicStyleState extends State<DayClassicStyle>
             fontFamily: 'serif',
             color: colorScheme.onSurfaceVariant,
           ),
-          timedEventBorderRadius: 0.0,
           timedEventPadding: const EdgeInsets.symmetric(
             horizontal: 4,
             vertical: 2,

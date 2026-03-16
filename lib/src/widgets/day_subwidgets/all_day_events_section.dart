@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/mcal_calendar_event.dart';
 import '../../models/mcal_region.dart';
 import '../../styles/mcal_theme.dart';
+import '../../utils/theme_cascade_utils.dart';
 import '../mcal_callback_details.dart';
 import '../mcal_day_view_contexts.dart';
 import '../mcal_drag_handler.dart';
@@ -157,7 +158,8 @@ class AllDayEventsSection extends StatelessWidget {
         border: Border(
           bottom: BorderSide(
             color:
-                theme.cellBorderColor ?? Colors.grey.withValues(alpha: 0.2),
+                theme.cellBorderColor ??
+                MCalThemeData.fromTheme(Theme.of(context)).cellBorderColor!,
             width: 1.0,
           ),
         ),
@@ -172,11 +174,9 @@ class AllDayEventsSection extends StatelessWidget {
               'All-day',
               style:
                   theme.dayTheme?.timeLegendTextStyle ??
-                  TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
+                  MCalThemeData.fromTheme(Theme.of(context))
+                      .dayTheme!
+                      .timeLegendTextStyle,
             ),
           ),
           LayoutBuilder(
@@ -271,12 +271,12 @@ class AllDayEventsSection extends StatelessWidget {
         : defaultWidget;
 
     if (keyboardFocusedEventId == event.id) {
+      final kbDefaults = MCalThemeData.fromTheme(Theme.of(context));
+      final kbBorderColor = theme.dayTheme?.keyboardFocusBorderColor ??
+          kbDefaults.dayTheme!.keyboardFocusBorderColor!;
       tile = Container(
         decoration: BoxDecoration(
-          border: Border.all(
-            color: Theme.of(context).colorScheme.primary,
-            width: 2,
-          ),
+          border: Border.all(color: kbBorderColor, width: 2),
           borderRadius: BorderRadius.circular(4),
         ),
         child: tile,
@@ -359,24 +359,30 @@ class AllDayEventsSection extends StatelessWidget {
   }
 
   Widget _buildDefaultTile(BuildContext context, MCalCalendarEvent event) {
-    final tileColor = theme.ignoreEventColors
-        ? (theme.allDayEventBackgroundColor ??
-              theme.eventTileBackgroundColor ??
-              Colors.blue)
-        : (event.color ??
-              theme.allDayEventBackgroundColor ??
-              theme.eventTileBackgroundColor ??
-              Colors.blue);
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
+    final tileColor = resolveEventTileColor(
+      themeColor: theme.eventTileBackgroundColor,
+      allDayThemeColor: theme.allDayEventBackgroundColor,
+      eventColor: event.color,
+      ignoreEventColors: theme.ignoreEventColors,
+      defaultColor: defaults.eventTileBackgroundColor!,
+    );
+    final cornerRadius =
+        theme.eventTileCornerRadius ?? defaults.eventTileCornerRadius!;
+    final borderWidth =
+        theme.allDayEventBorderWidth ?? defaults.allDayEventBorderWidth!;
+    final textStyle =
+        theme.allDayEventTextStyle ?? defaults.allDayEventTextStyle;
+
+    final tilePadding = theme.dayTheme?.allDayEventPadding ??
+        defaults.dayTheme!.allDayEventPadding!;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+      padding: tilePadding,
       decoration: BoxDecoration(
         color: tileColor.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(theme.eventTileCornerRadius ?? 3.0),
-        border: Border.all(
-          color: tileColor,
-          width: theme.allDayEventBorderWidth ?? 1.0,
-        ),
+        borderRadius: BorderRadius.circular(cornerRadius),
+        border: Border.all(color: tileColor, width: borderWidth),
       ),
       child: Row(
         children: [
@@ -392,13 +398,7 @@ class AllDayEventsSection extends StatelessWidget {
           Expanded(
             child: Text(
               event.title,
-              style:
-                  theme.allDayEventTextStyle ??
-                  TextStyle(
-                    fontSize: 12,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w500,
-                  ),
+              style: textStyle,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
@@ -483,26 +483,23 @@ class AllDayEventsSection extends StatelessWidget {
   }
 
   Widget _buildDefaultOverflowIndicator(BuildContext context, int count) {
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
+    final borderColor = theme.cellBorderColor ?? defaults.cellBorderColor!;
+    final cornerRadius =
+        theme.eventTileCornerRadius ?? defaults.eventTileCornerRadius!;
+    final tilePadding = theme.dayTheme?.allDayEventPadding ??
+        defaults.dayTheme!.allDayEventPadding!;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+      padding: tilePadding,
       decoration: BoxDecoration(
-        color:
-            theme.cellBorderColor?.withValues(alpha: 0.1) ??
-            Colors.grey.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(
-          theme.eventTileCornerRadius ?? 3.0,
-        ),
-        border: Border.all(
-          color:
-              theme.cellBorderColor ?? Colors.grey.withValues(alpha: 0.3),
-          width: 1.0,
-        ),
+        color: borderColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(cornerRadius),
+        border: Border.all(color: borderColor.withValues(alpha: 0.3), width: 1.0),
       ),
       child: Text(
         '+$count more',
-        style: TextStyle(
+        style: defaults.dayTheme!.timeLegendTextStyle?.copyWith(
           fontSize: 11,
-          color: Colors.grey[700],
           fontWeight: FontWeight.w500,
         ),
       ),

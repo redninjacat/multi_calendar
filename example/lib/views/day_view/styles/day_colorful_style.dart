@@ -85,6 +85,7 @@ class _DayColorfulStyleState extends State<DayColorfulStyle>
           allDayEventBorderColor: DayColorfulStyle.gradientEnd.withValues(alpha: 0.5),
           allDayEventBorderWidth: 1.0,
           ignoreEventColors: false,
+          eventTileCornerRadius: 12.0,
           dayTheme: MCalDayThemeData(
             hourGridlineColor: (widget.isDarkMode ? Colors.white : DayColorfulStyle.gradientStart)
                 .withValues(alpha: 0.2),
@@ -105,7 +106,6 @@ class _DayColorfulStyleState extends State<DayColorfulStyle>
               fontWeight: FontWeight.w600,
               color: widget.isDarkMode ? Colors.white70 : DayColorfulStyle.gradientStart,
             ),
-            timedEventBorderRadius: 12.0,
             timedEventPadding: const EdgeInsets.symmetric(
               horizontal: 10,
               vertical: 6,

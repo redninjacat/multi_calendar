@@ -14,9 +14,11 @@ class LoadingOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scrimColor = theme.monthTheme?.overlayScrimColor ??
+        MCalThemeData.fromTheme(Theme.of(context)).monthTheme!.overlayScrimColor!;
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withValues(alpha: 0.3),
+        color: scrimColor,
         child: const Center(child: CircularProgressIndicator()),
       ),
     );
@@ -51,9 +53,14 @@ class ErrorOverlay extends StatelessWidget {
         ? error as String
         : 'Failed to load events. Please try again.';
 
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
+    final scrimColor = theme.monthTheme?.overlayScrimColor ??
+        defaults.monthTheme!.overlayScrimColor!;
+    final errorIconColor = theme.monthTheme?.errorIconColor ??
+        defaults.monthTheme!.errorIconColor!;
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withValues(alpha: 0.3),
+        color: scrimColor,
         child: Center(
           child: Card(
             margin: const EdgeInsets.all(32),
@@ -65,7 +72,7 @@ class ErrorOverlay extends StatelessWidget {
                   Icon(
                     Icons.error_outline,
                     size: 48,
-                    color: Theme.of(context).colorScheme.error,
+                    color: errorIconColor,
                   ),
                   const SizedBox(height: 16),
                   Text(

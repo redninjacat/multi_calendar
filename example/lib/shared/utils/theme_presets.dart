@@ -70,6 +70,7 @@ MCalThemeData getMonthThemePreset(ThemePreset preset, ThemeData materialTheme) {
         monthTheme: MCalMonthThemeData(
           eventTileHeight: 18.0,
           eventTileVerticalSpacing: 1.0,
+          eventTilePadding: const EdgeInsets.symmetric(horizontal: 2.0),
           dateLabelHeight: 20.0,
           overflowIndicatorHeight: 16.0,
           weekdayHeaderTextStyle: textTheme.labelSmall?.copyWith(
@@ -103,6 +104,7 @@ MCalThemeData getMonthThemePreset(ThemePreset preset, ThemeData materialTheme) {
         monthTheme: MCalMonthThemeData(
           eventTileHeight: 32.0,
           eventTileVerticalSpacing: 4.0,
+          eventTilePadding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
           dateLabelHeight: 32.0,
           overflowIndicatorHeight: 28.0,
           weekdayHeaderTextStyle: textTheme.bodyMedium?.copyWith(
@@ -244,12 +246,15 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
           hourGridlineWidth: 0.5,
           majorGridlineWidth: 0.5,
           minorGridlineWidth: 0.25,
+          allDayEventPadding: const EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: 1,
+          ),
           timedEventMinHeight: 16.0,
           timedEventPadding: const EdgeInsets.symmetric(
             horizontal: 3,
             vertical: 1,
           ),
-          timedEventBorderRadius: 2.0,
         ),
       );
 
@@ -283,12 +288,15 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
           minorGridlineWidth: 0.5,
           currentTimeIndicatorWidth: 3.0,
           currentTimeIndicatorDotRadius: 5.0,
+          allDayEventPadding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 4,
+          ),
           timedEventMinHeight: 32.0,
           timedEventPadding: const EdgeInsets.symmetric(
             horizontal: 8,
             vertical: 4,
           ),
-          timedEventBorderRadius: 8.0,
         ),
       );
 
@@ -335,7 +343,6 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
             horizontal: 6,
             vertical: 3,
           ),
-          timedEventBorderRadius: 4.0,
           showTimeLegendTicks: true,
           timeLegendTickColor: colorScheme.onSurface.withValues(alpha: 0.3),
           timeLegendTickWidth: 1.5,
@@ -383,7 +390,6 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
             horizontal: 4,
             vertical: 2,
           ),
-          timedEventBorderRadius: 2.0,
         ),
       );
   }

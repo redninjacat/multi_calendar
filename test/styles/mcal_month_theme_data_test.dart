@@ -7,7 +7,6 @@ void main() {
     test('default constructor creates instance with all null properties', () {
       const theme = MCalMonthThemeData();
 
-      expect(theme.cellBackgroundColor, isNull);
       expect(theme.cellTextStyle, isNull);
       expect(theme.todayBackgroundColor, isNull);
       expect(theme.todayTextStyle, isNull);
@@ -15,7 +14,6 @@ void main() {
       expect(theme.eventTileHeight, isNull);
       expect(theme.dateLabelPosition, isNull);
       expect(theme.overflowIndicatorHeight, isNull);
-      expect(theme.allDayEventBackgroundColor, isNull);
       expect(theme.dropTargetCellValidColor, isNull);
       expect(theme.dragSourceOpacity, isNull);
     });
@@ -24,7 +22,6 @@ void main() {
       const cellStyle = TextStyle(fontSize: 14);
 
       const theme = MCalMonthThemeData(
-        cellBackgroundColor: Colors.white,
         cellTextStyle: cellStyle,
         todayBackgroundColor: Colors.blue,
         eventTileHeight: 24.0,
@@ -34,7 +31,6 @@ void main() {
         dragSourceOpacity: 0.5,
       );
 
-      expect(theme.cellBackgroundColor, Colors.white);
       expect(theme.eventTileHeight, 24.0);
       expect(theme.dateLabelPosition, DateLabelPosition.topCenter);
       expect(theme.dragSourceOpacity, 0.5);
@@ -50,7 +46,6 @@ void main() {
 
       final theme = MCalMonthThemeData.defaults(themeData);
 
-      expect(theme.cellBackgroundColor, isNotNull);
       expect(theme.cellTextStyle, isNotNull);
       expect(theme.todayBackgroundColor, isNotNull);
       expect(theme.todayTextStyle, isNotNull);
@@ -58,7 +53,6 @@ void main() {
       expect(theme.eventTileHeight, 20.0);
       expect(theme.dateLabelPosition, DateLabelPosition.topLeft);
       expect(theme.overflowIndicatorHeight, 14.0);
-      expect(theme.allDayEventBackgroundColor, isNotNull);
       expect(theme.dropTargetCellValidColor, isNotNull);
       expect(theme.dragSourceOpacity, 0.5);
     });
@@ -71,7 +65,6 @@ void main() {
 
       final theme = MCalMonthThemeData.defaults(themeData);
 
-      expect(theme.cellBackgroundColor, themeData.colorScheme.surface);
       expect(theme.todayBackgroundColor, isNotNull);
     });
 
@@ -94,7 +87,6 @@ void main() {
       final light = MCalMonthThemeData.defaults(lightTheme);
       final dark = MCalMonthThemeData.defaults(darkTheme);
 
-      expect(light.cellBackgroundColor, isNot(dark.cellBackgroundColor));
       expect(light.todayBackgroundColor, isNot(dark.todayBackgroundColor));
     });
   });
@@ -103,13 +95,13 @@ void main() {
     test('copyWith with no arguments returns identical instance', () {
       const original = MCalMonthThemeData(
         eventTileHeight: 24.0,
-        cellBackgroundColor: Colors.white,
+        todayBackgroundColor: Colors.blue,
       );
 
       final copied = original.copyWith();
 
       expect(copied.eventTileHeight, 24.0);
-      expect(copied.cellBackgroundColor, Colors.white);
+      expect(copied.todayBackgroundColor, Colors.blue);
       expect(copied, original);
     });
 
@@ -125,14 +117,12 @@ void main() {
     test('copyWith preserves unspecified properties', () {
       const original = MCalMonthThemeData(
         eventTileHeight: 20.0,
-        cellBackgroundColor: Colors.white,
         todayBackgroundColor: Colors.blue,
       );
 
       final updated = original.copyWith(eventTileHeight: 24.0);
 
       expect(updated.eventTileHeight, 24.0);
-      expect(updated.cellBackgroundColor, Colors.white);
       expect(updated.todayBackgroundColor, Colors.blue);
     });
 
@@ -149,11 +139,11 @@ void main() {
     });
 
     test('copyWith updates Color properties', () {
-      const original = MCalMonthThemeData(cellBackgroundColor: Colors.blue);
+      const original = MCalMonthThemeData(todayBackgroundColor: Colors.blue);
 
-      final updated = original.copyWith(cellBackgroundColor: Colors.red);
+      final updated = original.copyWith(todayBackgroundColor: Colors.red);
 
-      expect(updated.cellBackgroundColor, Colors.red);
+      expect(updated.todayBackgroundColor, Colors.red);
     });
 
     test('copyWith updates double properties', () {
@@ -207,44 +197,18 @@ void main() {
     test('copyWith updates event tile properties', () {
       const original = MCalMonthThemeData(
         eventTileHeight: 20.0,
-        eventTileHorizontalSpacing: 1.0,
         eventTileVerticalSpacing: 1.0,
-        eventTileCornerRadius: 3.0,
       );
 
       final updated = original.copyWith(
         eventTileHeight: 24.0,
-        eventTileHorizontalSpacing: 2.0,
         eventTileVerticalSpacing: 2.0,
-        eventTileCornerRadius: 6.0,
       );
 
       expect(updated.eventTileHeight, 24.0);
-      expect(updated.eventTileHorizontalSpacing, 2.0);
       expect(updated.eventTileVerticalSpacing, 2.0);
-      expect(updated.eventTileCornerRadius, 6.0);
     });
 
-    test('copyWith updates all-day event properties', () {
-      const original = MCalMonthThemeData(
-        allDayEventBackgroundColor: Colors.blue,
-        allDayEventTextStyle: TextStyle(fontSize: 12),
-        allDayEventBorderColor: Colors.grey,
-        allDayEventBorderWidth: 1.0,
-      );
-
-      final updated = original.copyWith(
-        allDayEventBackgroundColor: Colors.red,
-        allDayEventTextStyle: TextStyle(fontSize: 14),
-        allDayEventBorderColor: Colors.black,
-        allDayEventBorderWidth: 2.0,
-      );
-
-      expect(updated.allDayEventBackgroundColor, Colors.red);
-      expect(updated.allDayEventTextStyle?.fontSize, 14);
-      expect(updated.allDayEventBorderColor, Colors.black);
-      expect(updated.allDayEventBorderWidth, 2.0);
-    });
   });
 
   group('MCalMonthThemeData lerp', () {
@@ -259,33 +223,33 @@ void main() {
     test('lerp at t=0.0 returns this theme', () {
       const theme1 = MCalMonthThemeData(
         eventTileHeight: 20.0,
-        cellBackgroundColor: Colors.white,
+        todayBackgroundColor: Colors.white,
       );
       const theme2 = MCalMonthThemeData(
         eventTileHeight: 28.0,
-        cellBackgroundColor: Colors.black,
+        todayBackgroundColor: Colors.black,
       );
 
       final result = theme1.lerp(theme2, 0.0);
 
       expect(result.eventTileHeight, 20.0);
-      expect(result.cellBackgroundColor?.toARGB32(), Colors.white.toARGB32());
+      expect(result.todayBackgroundColor?.toARGB32(), Colors.white.toARGB32());
     });
 
     test('lerp at t=1.0 returns other theme', () {
       const theme1 = MCalMonthThemeData(
         eventTileHeight: 20.0,
-        cellBackgroundColor: Colors.white,
+        todayBackgroundColor: Colors.white,
       );
       const theme2 = MCalMonthThemeData(
         eventTileHeight: 28.0,
-        cellBackgroundColor: Colors.black,
+        todayBackgroundColor: Colors.black,
       );
 
       final result = theme1.lerp(theme2, 1.0);
 
       expect(result.eventTileHeight, 28.0);
-      expect(result.cellBackgroundColor?.toARGB32(), Colors.black.toARGB32());
+      expect(result.todayBackgroundColor?.toARGB32(), Colors.black.toARGB32());
     });
 
     test('lerp at t=0.5 interpolates double values', () {
@@ -298,14 +262,14 @@ void main() {
     });
 
     test('lerp interpolates Color values', () {
-      const theme1 = MCalMonthThemeData(cellBackgroundColor: Colors.white);
-      const theme2 = MCalMonthThemeData(cellBackgroundColor: Colors.black);
+      const theme1 = MCalMonthThemeData(todayBackgroundColor: Colors.white);
+      const theme2 = MCalMonthThemeData(todayBackgroundColor: Colors.black);
 
       final atHalf = theme1.lerp(theme2, 0.5);
 
-      expect(atHalf.cellBackgroundColor, isNotNull);
-      expect(atHalf.cellBackgroundColor, isNot(Colors.white));
-      expect(atHalf.cellBackgroundColor, isNot(Colors.black));
+      expect(atHalf.todayBackgroundColor, isNotNull);
+      expect(atHalf.todayBackgroundColor, isNot(Colors.white));
+      expect(atHalf.todayBackgroundColor, isNot(Colors.black));
     });
 
     test('lerp interpolates dateLabelPosition at t<0.5 uses this value', () {
@@ -467,13 +431,13 @@ void main() {
     test('lerp with identical themes returns same values', () {
       const theme = MCalMonthThemeData(
         eventTileHeight: 24.0,
-        cellBackgroundColor: Colors.blue,
+        todayBackgroundColor: Colors.blue,
       );
 
       final result = theme.lerp(theme, 0.5);
 
       expect(result.eventTileHeight, 24.0);
-      expect(result.cellBackgroundColor?.toARGB32(), Colors.blue.toARGB32());
+      expect(result.todayBackgroundColor?.toARGB32(), Colors.blue.toARGB32());
     });
 
     test('defaults factory produces consistent values', () {
@@ -493,35 +457,29 @@ void main() {
       const original = MCalMonthThemeData(
         multiDayEventBackgroundColor: Colors.blue,
         hoverCellBackgroundColor: Colors.grey,
-        hoverEventBackgroundColor: Colors.orange,
       );
 
       final updated = original.copyWith(
         multiDayEventBackgroundColor: Colors.red,
         hoverCellBackgroundColor: Colors.white,
-        hoverEventBackgroundColor: Colors.purple,
       );
 
       expect(updated.multiDayEventBackgroundColor, Colors.red);
       expect(updated.hoverCellBackgroundColor, Colors.white);
-      expect(updated.hoverEventBackgroundColor, Colors.purple);
     });
 
     test('lerp interpolates all Color properties', () {
       const theme1 = MCalMonthThemeData(
-        cellBackgroundColor: Colors.white,
         todayBackgroundColor: Colors.white,
         dropTargetCellValidColor: Colors.white,
       );
       const theme2 = MCalMonthThemeData(
-        cellBackgroundColor: Colors.black,
         todayBackgroundColor: Colors.black,
         dropTargetCellValidColor: Colors.black,
       );
 
       final result = theme1.lerp(theme2, 0.5);
 
-      expect(result.cellBackgroundColor, isNotNull);
       expect(result.todayBackgroundColor, isNotNull);
       expect(result.dropTargetCellValidColor, isNotNull);
     });
@@ -580,6 +538,54 @@ void main() {
       expect(updated.dropTargetTileCornerRadius, 8.0);
       expect(updated.dropTargetTileBorderColor, Colors.black);
       expect(updated.dropTargetTileBorderWidth, 2.0);
+    });
+
+    test('new 5 cascade properties round-trip via copyWith', () {
+      const original = MCalMonthThemeData(
+        overlayScrimColor: Color(0x80000000),
+        errorIconColor: Color(0xFFFF0000),
+        defaultRegionColor: Color(0xFF909090),
+      );
+      final updated = original.copyWith(
+        errorIconColor: const Color(0xFFCC0000),
+        overflowIndicatorTextStyle: const TextStyle(fontSize: 10),
+      );
+
+      expect(updated.overlayScrimColor, const Color(0x80000000));
+      expect(updated.errorIconColor, const Color(0xFFCC0000));
+      expect(updated.defaultRegionColor, const Color(0xFF909090));
+      expect(updated.overflowIndicatorTextStyle?.fontSize, 10);
+      expect(original.errorIconColor, const Color(0xFFFF0000));
+    });
+
+    group('defaults() for new cascade properties', () {
+      test('defaults provides non-null overlayScrimColor and errorIconColor', () {
+        final themeData = ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        );
+        final defaults = MCalMonthThemeData.defaults(themeData);
+
+        expect(defaults.overlayScrimColor, isNotNull);
+        expect(defaults.errorIconColor, isNotNull);
+        expect(defaults.defaultRegionColor, isNotNull);
+        expect(defaults.overflowIndicatorTextStyle, isNotNull);
+      });
+
+      test('defaults dropTargetCellValidColor and InvalidColor use M3 roles not Colors.*', () {
+        final themeData = ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        );
+        final defaults = MCalMonthThemeData.defaults(themeData);
+
+        // Should be non-null
+        expect(defaults.dropTargetCellValidColor, isNotNull);
+        expect(defaults.dropTargetCellInvalidColor, isNotNull);
+        // Should NOT be the old hardcoded Colors.green/red
+        expect(defaults.dropTargetCellValidColor, isNot(Colors.green.withValues(alpha: 0.3)));
+        expect(defaults.dropTargetCellInvalidColor, isNot(Colors.red.withValues(alpha: 0.3)));
+      });
     });
   });
 }

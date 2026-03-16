@@ -24,7 +24,7 @@ class DayViewThemeSettings {
     this.majorGridlineWidth = 1.0,
     this.minorGridlineColor,
     this.minorGridlineWidth = 0.5,
-    this.timedEventBorderRadius = 4.0,
+    this.eventTileCornerRadius = 4.0,
     this.timedEventMinHeight = 20.0,
     this.timedEventPadding = const EdgeInsets.all(2.0),
     this.resizeHandleSize = 8.0,
@@ -39,7 +39,7 @@ class DayViewThemeSettings {
   final double majorGridlineWidth;
   final Color? minorGridlineColor;
   final double minorGridlineWidth;
-  final double timedEventBorderRadius;
+  final double eventTileCornerRadius;
   final double timedEventMinHeight;
   final EdgeInsets timedEventPadding;
   final double resizeHandleSize;
@@ -54,7 +54,7 @@ class DayViewThemeSettings {
     double? majorGridlineWidth,
     Color? minorGridlineColor,
     double? minorGridlineWidth,
-    double? timedEventBorderRadius,
+    double? eventTileCornerRadius,
     double? timedEventMinHeight,
     EdgeInsets? timedEventPadding,
     double? resizeHandleSize,
@@ -69,8 +69,8 @@ class DayViewThemeSettings {
       majorGridlineWidth: majorGridlineWidth ?? this.majorGridlineWidth,
       minorGridlineColor: minorGridlineColor ?? this.minorGridlineColor,
       minorGridlineWidth: minorGridlineWidth ?? this.minorGridlineWidth,
-      timedEventBorderRadius:
-          timedEventBorderRadius ?? this.timedEventBorderRadius,
+      eventTileCornerRadius:
+          eventTileCornerRadius ?? this.eventTileCornerRadius,
       timedEventMinHeight: timedEventMinHeight ?? this.timedEventMinHeight,
       timedEventPadding: timedEventPadding ?? this.timedEventPadding,
       resizeHandleSize: resizeHandleSize ?? this.resizeHandleSize,
@@ -86,6 +86,7 @@ class DayViewThemeSettings {
     return base.copyWith(
       eventTileBackgroundColor:
           eventTileBackgroundColor ?? colorScheme.primaryContainer,
+      eventTileCornerRadius: eventTileCornerRadius,
       dayTheme: base.dayTheme?.copyWith(
         hourGridlineColor:
             hourGridlineColor ?? colorScheme.outline.withValues(alpha: 0.2),
@@ -96,7 +97,6 @@ class DayViewThemeSettings {
         minorGridlineColor:
             minorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.08),
         minorGridlineWidth: minorGridlineWidth,
-        timedEventBorderRadius: timedEventBorderRadius,
         timedEventMinHeight: timedEventMinHeight,
         timedEventPadding: timedEventPadding,
         resizeHandleSize: resizeHandleSize,
@@ -110,7 +110,6 @@ class DayViewThemeSettings {
         minorGridlineColor:
             minorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.08),
         minorGridlineWidth: minorGridlineWidth,
-        timedEventBorderRadius: timedEventBorderRadius,
         timedEventMinHeight: timedEventMinHeight,
         timedEventPadding: timedEventPadding,
         resizeHandleSize: resizeHandleSize,
@@ -132,7 +131,7 @@ class DayViewThemeSettings {
           hourGridlineWidth: 1.0,
           majorGridlineWidth: 1.0,
           minorGridlineWidth: 0.5,
-          timedEventBorderRadius: 4.0,
+          eventTileCornerRadius: 4.0,
           timedEventMinHeight: 20.0,
           timedEventPadding: const EdgeInsets.all(2.0),
           resizeHandleSize: 8.0,
@@ -144,7 +143,7 @@ class DayViewThemeSettings {
           hourGridlineWidth: 0.5,
           majorGridlineWidth: 0.5,
           minorGridlineWidth: 0.25,
-          timedEventBorderRadius: 2.0,
+          eventTileCornerRadius: 2.0,
           timedEventMinHeight: 16.0,
           timedEventPadding: const EdgeInsets.symmetric(
             horizontal: 2,
@@ -159,7 +158,7 @@ class DayViewThemeSettings {
           hourGridlineWidth: 1.5,
           majorGridlineWidth: 1.0,
           minorGridlineWidth: 0.5,
-          timedEventBorderRadius: 8.0,
+          eventTileCornerRadius: 8.0,
           timedEventMinHeight: 32.0,
           timedEventPadding: const EdgeInsets.all(8.0),
           resizeHandleSize: 12.0,
@@ -174,7 +173,7 @@ class DayViewThemeSettings {
           majorGridlineWidth: 1.5,
           minorGridlineColor: colorScheme.outline.withValues(alpha: 0.4),
           minorGridlineWidth: 1.0,
-          timedEventBorderRadius: 2.0,
+          eventTileCornerRadius: 2.0,
           timedEventMinHeight: 24.0,
           timedEventPadding: const EdgeInsets.all(4.0),
           resizeHandleSize: 10.0,
@@ -190,7 +189,7 @@ class DayViewThemeSettings {
           majorGridlineWidth: 0.5,
           minorGridlineColor: Colors.transparent,
           minorGridlineWidth: 0.0,
-          timedEventBorderRadius: 6.0,
+          eventTileCornerRadius: 6.0,
           timedEventMinHeight: 24.0,
           timedEventPadding: const EdgeInsets.symmetric(
             horizontal: 6,
@@ -329,12 +328,12 @@ class DayViewThemeSettingsPanel extends StatelessWidget {
         const SizedBox(height: 8),
         _SliderSetting(
           label: 'Border radius',
-          value: settings.timedEventBorderRadius,
+          value: settings.eventTileCornerRadius,
           min: 0,
           max: 16,
           divisions: 16,
           onChanged: (v) =>
-              onSettingsChanged(settings.copyWith(timedEventBorderRadius: v)),
+              onSettingsChanged(settings.copyWith(eventTileCornerRadius: v)),
         ),
         _SliderSetting(
           label: 'Min height',
@@ -387,7 +386,7 @@ class DayViewThemeSettingsPanel extends StatelessWidget {
     return p.hourHeight == settings.hourHeight &&
         p.timeSlotDuration == settings.timeSlotDuration &&
         p.hourGridlineWidth == settings.hourGridlineWidth &&
-        p.timedEventBorderRadius == settings.timedEventBorderRadius &&
+        p.eventTileCornerRadius == settings.eventTileCornerRadius &&
         p.resizeHandleSize == settings.resizeHandleSize;
   }
 }

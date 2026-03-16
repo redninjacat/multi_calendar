@@ -46,8 +46,8 @@ class DropTargetHighlightPainter extends CustomPainter {
     required this.dropEndWeekRow,
     required this.dropEndCellIndex,
     required this.isValid,
-    this.validColor = const Color(0x4000FF00),
-    this.invalidColor = const Color(0x40FF0000),
+    required this.validColor,
+    required this.invalidColor,
     this.borderRadius = 4.0,
   });
 

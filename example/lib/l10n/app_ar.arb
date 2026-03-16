@@ -537,5 +537,10 @@
   "recurrenceScopeThisAndFollowing": "هذا الحدث والأحداث التالية",
   "recurrenceScopeThisAndFollowingSubtitle": "تغيير هذا وجميع الأحداث المستقبلية",
   "recurrenceScopeAllEvents": "جميع الأحداث",
-  "recurrenceScopeAllEventsSubtitle": "تغيير كل حدوث في السلسلة"
+  "recurrenceScopeAllEventsSubtitle": "تغيير كل حدوث في السلسلة",
+  "sectionMultiDayEvents": "أحداث متعددة الأيام",
+  "settingMultiDayEventBackgroundColor": "لون خلفية حدث متعدد الأيام",
+  "settingEventTileBorderColor": "لون حدود بلاطة الحدث",
+  "settingEventTilePadding": "حشوة بلاطة الحدث",
+  "settingAllDayEventPadding": "حشوة حدث طوال اليوم"
 }

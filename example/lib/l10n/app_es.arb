@@ -537,5 +537,10 @@
   "recurrenceScopeThisAndFollowing": "Este evento y siguientes",
   "recurrenceScopeThisAndFollowingSubtitle": "Cambiar esta y todas las ocurrencias futuras",
   "recurrenceScopeAllEvents": "Todos los eventos",
-  "recurrenceScopeAllEventsSubtitle": "Cambiar cada ocurrencia en la serie"
+  "recurrenceScopeAllEventsSubtitle": "Cambiar cada ocurrencia en la serie",
+  "sectionMultiDayEvents": "Eventos de Varios Días",
+  "settingMultiDayEventBackgroundColor": "Color de Fondo de Evento de Varios Días",
+  "settingEventTileBorderColor": "Color de Borde de Ficha de Evento",
+  "settingEventTilePadding": "Relleno de Ficha de Evento",
+  "settingAllDayEventPadding": "Relleno de Evento de Todo el Día"
 }

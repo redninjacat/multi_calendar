@@ -50,25 +50,18 @@ class WeekNumberCell extends StatelessWidget {
     }
 
     // Default rendering
+    final cellBorderColor = theme.cellBorderColor ??
+        MCalThemeData.fromTheme(Theme.of(context)).cellBorderColor!;
     return Container(
       width: columnWidth,
       decoration: BoxDecoration(
-        color:
-            theme.weekNumberBackgroundColor ??
-            theme.monthTheme?.weekNumberBackgroundColor,
-        border: Border.all(
-          color:
-              theme.cellBorderColor ?? Colors.grey.shade300,
-          width: 0.5,
-        ),
+        color: theme.weekNumberBackgroundColor,
+        border: Border.all(color: cellBorderColor, width: 0.5),
       ),
       child: Center(
         child: Text(
           '$weekNumber',
-          style:
-              theme.weekNumberTextStyle ??
-              theme.monthTheme?.weekNumberTextStyle ??
-              TextStyle(fontSize: 11, color: Colors.grey.shade600),
+          style: theme.weekNumberTextStyle,
         ),
       ),
     );

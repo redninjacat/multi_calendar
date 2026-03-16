@@ -401,9 +401,6 @@ class AppLocalizationsHe extends AppLocalizations {
       'רדיוס נקודת מחוון זמן נוכחי';
 
   @override
-  String get settingTimedEventBorderRadius => 'רדיוס גבול אירוע מתוזמן';
-
-  @override
   String get settingTimedEventMinHeight => 'גובה מינימלי של אירוע מתוזמן';
 
   @override
@@ -417,6 +414,21 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get settingAllDayEventBorderWidth => 'רוחב גבול אירוע כל היום';
+
+  @override
+  String get settingAllDayEventPadding => 'ריפוד אירוע כל היום';
+
+  @override
+  String get settingEventTilePadding => 'ריפוד משבצת אירוע';
+
+  @override
+  String get settingEventTileBorderColor => 'צבע גבול משבצת אירוע';
+
+  @override
+  String get settingMultiDayEventBackgroundColor => 'צבע רקע אירוע מרובה ימים';
+
+  @override
+  String get sectionMultiDayEvents => 'אירועים מרובי ימים';
 
   @override
   String get settingSpecialTimeRegionColor => 'צבע אזור זמן מיוחד';

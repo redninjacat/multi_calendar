@@ -127,18 +127,23 @@ class MCalMonthMultiDayTile extends StatelessWidget {
   /// - Text content rendering
   Widget _buildDefaultTile(BuildContext context) {
     final theme = MCalTheme.of(context);
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
 
-    // Determine background color: event.color > theme.allDayEventBackgroundColor
-    // > theme.eventTileBackgroundColor > fallback
-    final backgroundColor = event.color ??
-        theme.allDayEventBackgroundColor ??
-        theme.eventTileBackgroundColor ??
-        Colors.blue.shade100;
+    // Determine background color respecting ignoreEventColors cascade
+    final backgroundColor = theme.ignoreEventColors
+        ? theme.allDayEventBackgroundColor ??
+              theme.eventTileBackgroundColor ??
+              event.color ??
+              defaults.eventTileBackgroundColor!
+        : event.color ??
+              theme.allDayEventBackgroundColor ??
+              theme.eventTileBackgroundColor ??
+              defaults.eventTileBackgroundColor!;
 
-    // Determine text style
+    // Determine text style using master defaults as final fallback
     final textStyle = theme.allDayEventTextStyle ??
         theme.eventTileTextStyle ??
-        const TextStyle(fontSize: 11, color: Colors.black87);
+        defaults.allDayEventTextStyle!;
 
     // Calculate border radius based on position
     final borderRadius = _calculateBorderRadius(details);

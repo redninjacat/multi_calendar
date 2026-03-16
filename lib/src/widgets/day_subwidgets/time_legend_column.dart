@@ -84,9 +84,9 @@ class TimeLegendColumn extends StatelessWidget {
                 hourHeight: hourHeight,
                 tickColor:
                     theme.dayTheme?.timeLegendTickColor ??
-                    Theme.of(
-                      context,
-                    ).colorScheme.outline.withValues(alpha: 0.3),
+                    MCalThemeData.fromTheme(Theme.of(context))
+                        .dayTheme!
+                        .timeLegendTickColor!,
                 tickWidth: theme.dayTheme?.timeLegendTickWidth ?? 1.0,
                 tickLength: theme.dayTheme?.timeLegendTickLength ?? 8.0,
                 isLayoutRTL: isLayoutRTL,
@@ -205,7 +205,7 @@ class TimeLegendColumn extends StatelessWidget {
 
     final baseStyle =
         theme.dayTheme?.timeLegendTextStyle ??
-        TextStyle(fontSize: 12, color: Colors.grey[600]);
+        MCalThemeData.fromTheme(Theme.of(context)).dayTheme!.timeLegendTextStyle;
 
     final defaultWidget = Text(formattedTime, style: baseStyle);
 
@@ -282,10 +282,14 @@ class TimeLegendColumn extends StatelessWidget {
       time: time,
     );
 
-    final baseStyle = theme.dayTheme?.timeLegendTextStyle;
-    final baseFontSize = baseStyle?.fontSize ?? 12.0;
-    final baseColor = baseStyle?.color ?? Colors.grey[600]!;
-    final subHourStyle = (baseStyle ?? const TextStyle()).copyWith(
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
+    // defaults.dayTheme!.timeLegendTextStyle is guaranteed non-null by the factory.
+    final effectiveStyle =
+        theme.dayTheme?.timeLegendTextStyle ??
+        defaults.dayTheme!.timeLegendTextStyle!;
+    final baseFontSize = effectiveStyle.fontSize ?? 12.0;
+    final baseColor = effectiveStyle.color!;
+    final subHourStyle = effectiveStyle.copyWith(
       fontSize: baseFontSize * 0.8,
       color: baseColor.withValues(alpha: 0.5),
     );

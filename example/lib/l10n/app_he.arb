@@ -537,5 +537,10 @@
   "recurrenceScopeThisAndFollowing": "אירוע זה והבאים",
   "recurrenceScopeThisAndFollowingSubtitle": "שנה את זה ואת כל המופעים העתידיים",
   "recurrenceScopeAllEvents": "כל האירועים",
-  "recurrenceScopeAllEventsSubtitle": "שנה כל מופע בסדרה"
+  "recurrenceScopeAllEventsSubtitle": "שנה כל מופע בסדרה",
+  "sectionMultiDayEvents": "אירועים מרובי ימים",
+  "settingMultiDayEventBackgroundColor": "צבע רקע אירוע מרובה ימים",
+  "settingEventTileBorderColor": "צבע גבול משבצת אירוע",
+  "settingEventTilePadding": "ריפוד משבצת אירוע",
+  "settingAllDayEventPadding": "ריפוד אירוע כל היום"
 }

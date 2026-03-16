@@ -4,6 +4,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../../controllers/mcal_event_controller.dart';
 import '../../models/mcal_calendar_event.dart';
 import '../../styles/mcal_theme.dart';
+import '../../utils/theme_cascade_utils.dart';
 import '../../utils/date_utils.dart';
 import '../mcal_builder_wrapper.dart';
 import '../mcal_callback_details.dart';
@@ -494,6 +495,12 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
         );
 
         final children = <Widget>[Positioned.fill(child: tileWithPadding)];
+        final handleColor = () {
+          final t = widget.theme;
+          final d = MCalThemeData.fromTheme(Theme.of(ctx));
+          return t.dayTheme?.resizeHandleColor ??
+              d.dayTheme!.resizeHandleColor!;
+        }();
         if (segment.isFirstSegment) {
           final startInset =
               widget.resizeHandleInset?.call(
@@ -506,6 +513,7 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
               edge: MCalResizeEdge.start,
               event: tileCtx.event,
               visualBuilder: widget.resizeHandleBuilder,
+              resizeHandleColor: handleColor,
               inset: startInset,
               onPointerDown: (event, edge, pointer) =>
                   widget.onResizeHandlePointerDown?.call(event, edge, pointer),
@@ -524,6 +532,7 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
               edge: MCalResizeEdge.end,
               event: tileCtx.event,
               visualBuilder: widget.resizeHandleBuilder,
+              resizeHandleColor: handleColor,
               inset: endInset,
               onPointerDown: (event, edge, pointer) =>
                   widget.onResizeHandlePointerDown?.call(event, edge, pointer),
@@ -637,10 +646,15 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
     final leftRadius = segment?.isFirstSegment ?? true ? cornerRadius : 0.0;
     final rightRadius = segment?.isLastSegment ?? true ? cornerRadius : 0.0;
 
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
     // Determine tile color - respect ignoreEventColors theme setting
-    final tileColor = theme.ignoreEventColors
-        ? (theme.eventTileBackgroundColor ?? Colors.blue)
-        : (event.color ?? theme.eventTileBackgroundColor ?? Colors.blue);
+    final tileColor = resolveEventTileColor(
+      themeColor: theme.eventTileBackgroundColor,
+      allDayThemeColor: theme.allDayEventBackgroundColor,
+      eventColor: event.color,
+      ignoreEventColors: theme.ignoreEventColors,
+      defaultColor: defaults.eventTileBackgroundColor!,
+    );
 
     // Determine border - only add if both color and width are specified
     // For continuation segments, omit border on the continuation edge
@@ -674,13 +688,16 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
 
     // Extra horizontal padding when resize handles are shown so text does not
     // sit under the handles (rectangle stays full size; content shifts inward).
-    const double basePadding = 4.0;
+    final tilePadding = theme.monthTheme?.eventTilePadding ??
+        defaults.monthTheme!.eventTilePadding!;
     const double handleInset = 4.0;
     final startPadding =
-        basePadding + (tileContext.hasLeadingResizeHandle ? handleInset : 0);
+        tilePadding.left + (tileContext.hasLeadingResizeHandle ? handleInset : 0);
     final endPadding =
-        basePadding + (tileContext.hasTrailingResizeHandle ? handleInset : 0);
+        tilePadding.right + (tileContext.hasTrailingResizeHandle ? handleInset : 0);
     final contentPadding = EdgeInsetsDirectional.only(
+      top: tilePadding.top,
+      bottom: tilePadding.bottom,
       start: startPadding,
       end: endPadding,
     );
@@ -693,8 +710,15 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
     BoxDecoration decoration;
     if (keyboardState != MCalEventKeyboardState.none) {
       // Use a high-contrast border: white or black depending on tile luminance
-      final isLight = tileColor.computeLuminance() > 0.5;
-      final indicatorColor = isLight ? Colors.black : Colors.white;
+      final lightContrast =
+          theme.eventTileLightContrastColor ?? defaults.eventTileLightContrastColor!;
+      final darkContrast =
+          theme.eventTileDarkContrastColor ?? defaults.eventTileDarkContrastColor!;
+      final indicatorColor = resolveContrastColor(
+        backgroundColor: tileColor,
+        lightContrastColor: lightContrast,
+        darkContrastColor: darkContrast,
+      );
       final indicatorWidth = keyboardState == MCalEventKeyboardState.selected
           ? 2.0
           : 1.5;
@@ -744,7 +768,7 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
         event.title,
         style:
             theme.eventTileTextStyle ??
-            const TextStyle(fontSize: 11, color: Colors.white),
+            defaults.eventTileTextStyle,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -760,19 +784,16 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
     final isCurrentMonth = labelContext.isCurrentMonth;
     final isToday = labelContext.isToday;
 
+    final dateLabelDefaults = MCalThemeData.fromTheme(Theme.of(context));
+    final monthDateDefaults = dateLabelDefaults.monthTheme!;
     // Text style - today uses bold but keeps readable color
     final textStyle = isToday
         ? (theme.monthTheme?.todayTextStyle ??
-              TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: isCurrentMonth ? Colors.black87 : Colors.grey.shade600,
-              ))
+              monthDateDefaults.todayTextStyle)
         : (theme.monthTheme?.cellTextStyle ??
-              TextStyle(
-                fontSize: 12,
-                color: isCurrentMonth ? Colors.black87 : Colors.grey,
-              ));
+              (isCurrentMonth
+                  ? monthDateDefaults.cellTextStyle
+                  : monthDateDefaults.leadingDatesTextStyle));
 
     final dateText = Text(
       labelContext.defaultFormattedString,
@@ -793,7 +814,8 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
       decoration: BoxDecoration(
         // Only show the background color for today
         color: isToday
-            ? (theme.monthTheme?.todayBackgroundColor ?? Colors.grey.shade300)
+            ? (theme.monthTheme?.todayBackgroundColor ??
+                monthDateDefaults.todayBackgroundColor!)
             : Colors.transparent,
         shape: BoxShape.circle,
       ),
@@ -813,12 +835,12 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
     MCalMonthOverflowIndicatorContext overflowContext,
   ) {
     final theme = widget.theme;
+    final overflowDefaults = MCalThemeData.fromTheme(Theme.of(context));
     return Center(
       child: Text(
         '+${overflowContext.hiddenEventCount} more',
-        style:
-            theme.monthTheme?.leadingDatesTextStyle ??
-            TextStyle(fontSize: 10, color: Colors.grey.shade600),
+        style: theme.monthTheme?.overflowIndicatorTextStyle ??
+            overflowDefaults.monthTheme!.overflowIndicatorTextStyle,
       ),
     );
   }

@@ -432,10 +432,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Radio de Punto de Indicador de Hora Actual';
 
   @override
-  String get settingTimedEventBorderRadius =>
-      'Radio de Borde de Evento con Hora';
-
-  @override
   String get settingTimedEventMinHeight => 'Altura Mínima de Evento con Hora';
 
   @override
@@ -452,6 +448,22 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get settingAllDayEventBorderWidth =>
       'Ancho de Borde de Evento de Todo el Día';
+
+  @override
+  String get settingAllDayEventPadding => 'Relleno de Evento de Todo el Día';
+
+  @override
+  String get settingEventTilePadding => 'Relleno de Ficha de Evento';
+
+  @override
+  String get settingEventTileBorderColor => 'Color de Borde de Ficha de Evento';
+
+  @override
+  String get settingMultiDayEventBackgroundColor =>
+      'Color de Fondo de Evento de Varios Días';
+
+  @override
+  String get sectionMultiDayEvents => 'Eventos de Varios Días';
 
   @override
   String get settingSpecialTimeRegionColor =>

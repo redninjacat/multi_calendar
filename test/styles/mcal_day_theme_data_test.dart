@@ -9,7 +9,6 @@ void main() {
 
       expect(theme.dayHeaderDayOfWeekStyle, isNull);
       expect(theme.dayHeaderDateStyle, isNull);
-      expect(theme.weekNumberTextColor, isNull);
       expect(theme.timeLegendWidth, isNull);
       expect(theme.timeLegendTextStyle, isNull);
       expect(theme.timeLegendBackgroundColor, isNull);
@@ -27,7 +26,6 @@ void main() {
       expect(theme.currentTimeIndicatorWidth, isNull);
       expect(theme.currentTimeIndicatorDotRadius, isNull);
       expect(theme.timedEventMinHeight, isNull);
-      expect(theme.timedEventBorderRadius, isNull);
       expect(theme.timedEventPadding, isNull);
       expect(theme.specialTimeRegionColor, isNull);
       expect(theme.blockedTimeRegionColor, isNull);
@@ -46,7 +44,6 @@ void main() {
       const theme = MCalDayThemeData(
         dayHeaderDayOfWeekStyle: dayStyle,
         dayHeaderDateStyle: dateStyle,
-        weekNumberTextColor: Colors.blue,
         timeLegendWidth: 72.0,
         timeLegendTextStyle: dayStyle,
         timeLegendBackgroundColor: Colors.grey,
@@ -64,7 +61,6 @@ void main() {
         currentTimeIndicatorWidth: 3.0,
         currentTimeIndicatorDotRadius: 8.0,
         timedEventMinHeight: 24.0,
-        timedEventBorderRadius: 6.0,
         timedEventPadding: padding,
         specialTimeRegionColor: Colors.cyan,
         blockedTimeRegionColor: Colors.amber,
@@ -77,7 +73,6 @@ void main() {
 
       expect(theme.dayHeaderDayOfWeekStyle, dayStyle);
       expect(theme.dayHeaderDateStyle, dateStyle);
-      expect(theme.weekNumberTextColor, Colors.blue);
       expect(theme.timeLegendWidth, 72.0);
       expect(theme.showTimeLegendTicks, true);
       expect(theme.timeLegendTickColor, Colors.black);
@@ -103,7 +98,6 @@ void main() {
 
       expect(theme.dayHeaderDayOfWeekStyle, isNotNull);
       expect(theme.dayHeaderDateStyle, isNotNull);
-      expect(theme.weekNumberTextColor, isNotNull);
       expect(theme.timeLegendWidth, 60.0);
       expect(theme.timeLegendTextStyle, isNotNull);
       expect(theme.timeLegendBackgroundColor, isNotNull);
@@ -119,7 +113,6 @@ void main() {
       expect(theme.currentTimeIndicatorWidth, 2.0);
       expect(theme.currentTimeIndicatorDotRadius, 6.0);
       expect(theme.timedEventMinHeight, 20.0);
-      expect(theme.timedEventBorderRadius, 4.0);
       expect(theme.timedEventPadding, isNotNull);
       expect(theme.specialTimeRegionColor, isNotNull);
       expect(theme.blockedTimeRegionColor, isNotNull);
@@ -535,7 +528,6 @@ void main() {
         currentTimeIndicatorWidth: 1.0,
         currentTimeIndicatorDotRadius: 4.0,
         timedEventMinHeight: 16.0,
-        timedEventBorderRadius: 2.0,
         resizeHandleSize: 4.0,
       );
       const theme2 = MCalDayThemeData(
@@ -546,7 +538,6 @@ void main() {
         currentTimeIndicatorWidth: 5.0,
         currentTimeIndicatorDotRadius: 12.0,
         timedEventMinHeight: 32.0,
-        timedEventBorderRadius: 8.0,
         resizeHandleSize: 16.0,
       );
 
@@ -559,13 +550,11 @@ void main() {
       expect(result.currentTimeIndicatorWidth, 3.0);
       expect(result.currentTimeIndicatorDotRadius, 8.0);
       expect(result.timedEventMinHeight, 24.0);
-      expect(result.timedEventBorderRadius, 5.0);
       expect(result.resizeHandleSize, 10.0);
     });
 
     test('lerp interpolates all Color properties', () {
       const theme1 = MCalDayThemeData(
-        weekNumberTextColor: Colors.white,
         timeLegendBackgroundColor: Colors.white,
         timeLegendTickColor: Colors.white,
         hourGridlineColor: Colors.white,
@@ -578,7 +567,6 @@ void main() {
         timeRegionTextColor: Colors.white,
       );
       const theme2 = MCalDayThemeData(
-        weekNumberTextColor: Colors.black,
         timeLegendBackgroundColor: Colors.black,
         timeLegendTickColor: Colors.black,
         hourGridlineColor: Colors.black,
@@ -593,7 +581,6 @@ void main() {
 
       final result = theme1.lerp(theme2, 0.5);
 
-      expect(result.weekNumberTextColor, isNotNull);
       expect(result.timeLegendBackgroundColor, isNotNull);
       expect(result.timeLegendTickColor, isNotNull);
       expect(result.hourGridlineColor, isNotNull);
@@ -684,7 +671,6 @@ void main() {
       const original = MCalDayThemeData(
         dayHeaderDayOfWeekStyle: TextStyle(fontSize: 12),
         dayHeaderDateStyle: TextStyle(fontSize: 24),
-        weekNumberTextColor: Colors.blue,
         timeLegendWidth: 72.0,
         showTimeLegendTicks: true,
         timeLegendTickColor: Colors.black,
@@ -724,6 +710,50 @@ void main() {
 
       expect(theme1.timeLegendWidth, theme2.timeLegendWidth);
       expect(theme1.showTimeLegendTicks, theme2.showTimeLegendTicks);
+    });
+
+    test('defaults factory populates all 14 new theme-cascade properties', () {
+      final themeData = ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+      );
+      final defaults = MCalDayThemeData.defaults(themeData);
+
+      expect(defaults.dropTargetTileBackgroundColor, isNotNull);
+      expect(defaults.dropTargetTileInvalidBackgroundColor, isNotNull);
+      expect(defaults.dropTargetTileCornerRadius, isNotNull);
+      expect(defaults.dropTargetTileBorderColor, isNotNull);
+      expect(defaults.dropTargetTileBorderWidth, isNotNull);
+      expect(defaults.dropTargetOverlayValidColor, isNotNull);
+      expect(defaults.dropTargetOverlayInvalidColor, isNotNull);
+      expect(defaults.dropTargetOverlayBorderWidth, isNotNull);
+      expect(defaults.dropTargetOverlayBorderColor, isNotNull);
+      expect(defaults.disabledTimeSlotColor, isNotNull);
+      expect(defaults.resizeHandleColor, isNotNull);
+      expect(defaults.keyboardFocusBorderColor, isNotNull);
+      expect(defaults.focusedSlotBorderColor, isNotNull);
+      expect(defaults.focusedSlotBorderWidth, isNotNull);
+      expect(defaults.focusedSlotBackgroundColor, isNotNull);
+    });
+
+    test('new cascade properties round-trip via copyWith', () {
+      const original = MCalDayThemeData(
+        dropTargetTileInvalidBackgroundColor: Color(0xFFFF0000),
+        disabledTimeSlotColor: Color(0x20000000),
+        resizeHandleColor: Color(0xFFFFFFFF),
+        keyboardFocusBorderColor: Color(0xFF0000FF),
+        focusedSlotBorderWidth: 2.5,
+      );
+      final updated = original.copyWith(
+        disabledTimeSlotColor: const Color(0x30000000),
+        focusedSlotBorderWidth: 3.0,
+      );
+
+      expect(updated.dropTargetTileInvalidBackgroundColor, const Color(0xFFFF0000));
+      expect(updated.disabledTimeSlotColor, const Color(0x30000000));
+      expect(updated.resizeHandleColor, const Color(0xFFFFFFFF));
+      expect(updated.focusedSlotBorderWidth, 3.0);
+      expect(original.disabledTimeSlotColor, const Color(0x20000000));
     });
 
     test('equality includes all property types', () {

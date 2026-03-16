@@ -93,7 +93,6 @@ void main() {
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.blue,
         monthTheme: MCalMonthThemeData(
-          cellBackgroundColor: Colors.blue,
           todayBackgroundColor: Colors.red,
         ),
       );
@@ -186,7 +185,6 @@ void main() {
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.blue,
         monthTheme: MCalMonthThemeData(
-          cellBackgroundColor: Colors.blue,
           todayBackgroundColor: Colors.red,
         ),
       );
@@ -208,7 +206,6 @@ void main() {
     testWidgets('applies theme from ThemeData extension', (tester) async {
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.green,
-        monthTheme: MCalMonthThemeData(cellBackgroundColor: Colors.green),
       );
 
       await tester.pumpWidget(
@@ -1201,7 +1198,6 @@ void main() {
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.purple,
         monthTheme: MCalMonthThemeData(
-          cellBackgroundColor: Colors.purple,
           todayBackgroundColor: Colors.orange,
         ),
       );
@@ -1220,8 +1216,7 @@ void main() {
                     // Access theme via MCalTheme.of(context)
                     capturedTheme = MCalTheme.of(context);
                     return Container(
-                      color: MCalTheme.of(context).cellBackgroundColor ??
-                          MCalTheme.of(context).monthTheme?.cellBackgroundColor,
+                      color: MCalTheme.of(context).cellBackgroundColor,
                       child: defaultCell,
                     );
                   },
@@ -1236,7 +1231,7 @@ void main() {
       // Verify MCalTheme.of() works and returns the correct theme
       expect(capturedContext, isNotNull);
       expect(capturedTheme, isNotNull);
-      expect(capturedTheme!.cellBackgroundColor ?? capturedTheme!.monthTheme?.cellBackgroundColor, equals(Colors.purple));
+      expect(capturedTheme!.cellBackgroundColor, equals(Colors.purple));
       expect(capturedTheme!.monthTheme?.todayBackgroundColor, equals(Colors.orange));
     });
 
@@ -1363,7 +1358,6 @@ void main() {
         MCalThemeData? themeResult;
         final customTheme = MCalThemeData(
           cellBackgroundColor: Colors.cyan,
-          monthTheme: MCalMonthThemeData(cellBackgroundColor: Colors.cyan),
         );
 
         await tester.pumpWidget(
@@ -1382,7 +1376,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(themeResult, isNotNull);
-        expect(themeResult!.cellBackgroundColor ?? themeResult!.monthTheme?.cellBackgroundColor, equals(Colors.cyan));
+        expect(themeResult!.cellBackgroundColor, equals(Colors.cyan));
       },
     );
 

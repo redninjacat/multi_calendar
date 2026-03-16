@@ -35,6 +35,8 @@ class MonthNavigatorWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = mcalL10n(context);
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
+
     // Use the ambient Directionality (set by the outer calendar wrapper) for
     // RTL detection. This is more reliable than a locale-string check and
     // ensures the navigator always agrees with the rest of the calendar.
@@ -51,12 +53,15 @@ class MonthNavigatorWidget extends StatelessWidget {
     final year = currentMonth.year.toString();
     final monthYearText = '$monthName $year';
 
+    final bgColor =
+        theme.navigatorBackgroundColor ?? defaults.navigatorBackgroundColor!;
+    final textStyle =
+        theme.navigatorTextStyle ?? defaults.navigatorTextStyle!;
+
     // Build default navigator - use Expanded for text to prevent overflow
     Widget navigator = Container(
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-      decoration: BoxDecoration(
-        color: theme.navigatorBackgroundColor,
-      ),
+      decoration: BoxDecoration(color: bgColor),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -76,7 +81,7 @@ class MonthNavigatorWidget extends StatelessWidget {
               header: true,
               child: Text(
                 monthYearText,
-                style: theme.navigatorTextStyle,
+                style: textStyle,
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
               ),

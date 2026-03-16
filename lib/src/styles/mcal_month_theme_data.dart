@@ -8,6 +8,13 @@ import '../widgets/mcal_month_week_layout_contexts.dart' show DateLabelPosition;
 /// styling. Use [MCalMonthThemeData.defaults] to create a theme with Material 3
 /// defaults.
 ///
+/// Properties previously duplicated from [MCalThemeData] have been removed.
+/// Access the following through the shared parent instead:
+/// `cellBackgroundColor`, `allDayEventBackgroundColor`, `allDayEventTextStyle`,
+/// `allDayEventBorderColor`, `allDayEventBorderWidth`, `weekNumberTextStyle`,
+/// `weekNumberBackgroundColor`, `eventTileCornerRadius`,
+/// `eventTileHorizontalSpacing`, `hoverEventBackgroundColor`.
+///
 /// Example:
 /// ```dart
 /// MCalThemeData(
@@ -18,9 +25,6 @@ import '../widgets/mcal_month_week_layout_contexts.dart' show DateLabelPosition;
 /// )
 /// ```
 class MCalMonthThemeData {
-  /// Background color for calendar day cells.
-  final Color? cellBackgroundColor;
-
   /// Text style for day numbers in calendar cells.
   final TextStyle? cellTextStyle;
 
@@ -54,17 +58,8 @@ class MCalMonthThemeData {
   /// Text style for the focused/selected date.
   final TextStyle? focusedDateTextStyle;
 
-  /// Text style for week numbers.
-  final TextStyle? weekNumberTextStyle;
-
-  /// Background color for the week number column.
-  final Color? weekNumberBackgroundColor;
-
   /// Background color for calendar cells on hover.
   final Color? hoverCellBackgroundColor;
-
-  /// Background color for event tiles on hover.
-  final Color? hoverEventBackgroundColor;
 
   /// Highlight color for valid drop target cell overlay during drag-and-drop.
   final Color? dropTargetCellValidColor;
@@ -90,9 +85,6 @@ class MCalMonthThemeData {
   /// Height of event tile slots (both single-day and multi-day).
   final double? eventTileHeight;
 
-  /// Horizontal spacing around event tiles in pixels.
-  final double? eventTileHorizontalSpacing;
-
   /// Vertical spacing between event tile rows in pixels.
   final double? eventTileVerticalSpacing;
 
@@ -105,8 +97,11 @@ class MCalMonthThemeData {
   /// Height reserved for overflow indicators.
   final double? overflowIndicatorHeight;
 
-  /// Corner radius for event tiles.
-  final double? eventTileCornerRadius;
+  /// Inner content padding for event tiles.
+  ///
+  /// Controls the space between the tile border and its text label.
+  /// When null, the master defaults use `EdgeInsets.symmetric(horizontal: 4.0)`.
+  final EdgeInsets? eventTilePadding;
 
   /// Border color for event tiles.
   final Color? eventTileBorderColor;
@@ -129,21 +124,38 @@ class MCalMonthThemeData {
   /// Border width for drop target preview tiles.
   final double? dropTargetTileBorderWidth;
 
-  /// Background color for all-day event tiles.
-  final Color? allDayEventBackgroundColor;
+  // ── New properties (Req 9) ────────────────────────────────────────────────
 
-  /// Text style for all-day event tiles.
-  final TextStyle? allDayEventTextStyle;
+  /// Default color for region overlays when `region.color` is null.
+  ///
+  /// When null, the master defaults use `colorScheme.outlineVariant`.
+  final Color? defaultRegionColor;
 
-  /// Border color for all-day event tiles.
-  final Color? allDayEventBorderColor;
+  /// Color for resize handle indicators on multi-day event tiles.
+  ///
+  /// When null, the master defaults use `Colors.white.withValues(alpha: 0.5)`.
+  final Color? resizeHandleColor;
 
-  /// Border width for all-day event tiles.
-  final double? allDayEventBorderWidth;
+  /// Background scrim color for loading and error overlays.
+  ///
+  /// When null, the master defaults use
+  /// `colorScheme.scrim.withValues(alpha: 0.3)`.
+  final Color? overlayScrimColor;
+
+  /// Color for the error icon in the error overlay.
+  ///
+  /// When null, the master defaults use `colorScheme.error`.
+  final Color? errorIconColor;
+
+  /// Text style for the "+N more" overflow indicator.
+  ///
+  /// Replaces the previous hack that reused `leadingDatesTextStyle`.
+  /// When null, the master defaults derive this from
+  /// `textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)`.
+  final TextStyle? overflowIndicatorTextStyle;
 
   /// Creates a new [MCalMonthThemeData] instance.
   const MCalMonthThemeData({
-    this.cellBackgroundColor,
     this.cellTextStyle,
     this.todayBackgroundColor,
     this.todayTextStyle,
@@ -155,10 +167,7 @@ class MCalMonthThemeData {
     this.weekdayHeaderBackgroundColor,
     this.focusedDateBackgroundColor,
     this.focusedDateTextStyle,
-    this.weekNumberTextStyle,
-    this.weekNumberBackgroundColor,
     this.hoverCellBackgroundColor,
-    this.hoverEventBackgroundColor,
     this.dropTargetCellValidColor,
     this.dropTargetCellInvalidColor,
     this.dropTargetCellBorderRadius,
@@ -167,12 +176,11 @@ class MCalMonthThemeData {
     this.multiDayEventBackgroundColor,
     this.multiDayEventTextStyle,
     this.eventTileHeight,
-    this.eventTileHorizontalSpacing,
     this.eventTileVerticalSpacing,
     this.dateLabelHeight,
     this.dateLabelPosition,
     this.overflowIndicatorHeight,
-    this.eventTileCornerRadius,
+    this.eventTilePadding,
     this.eventTileBorderColor,
     this.eventTileBorderWidth,
     this.dropTargetTileBackgroundColor,
@@ -180,20 +188,27 @@ class MCalMonthThemeData {
     this.dropTargetTileCornerRadius,
     this.dropTargetTileBorderColor,
     this.dropTargetTileBorderWidth,
-    this.allDayEventBackgroundColor,
-    this.allDayEventTextStyle,
-    this.allDayEventBorderColor,
-    this.allDayEventBorderWidth,
+    this.defaultRegionColor,
+    this.resizeHandleColor,
+    this.overlayScrimColor,
+    this.errorIconColor,
+    this.overflowIndicatorTextStyle,
   });
 
-  /// Creates a [MCalMonthThemeData] instance with default values derived
-  /// from the provided [ThemeData].
+  /// Creates the **master defaults** for Month View theming from the provided [ThemeData].
+  ///
+  /// Called by [MCalThemeData.fromTheme] to populate [MCalThemeData.monthTheme].
+  /// All returned properties are non-null and are derived from the theme's
+  /// [ColorScheme] and [TextTheme] following Material 3 color roles.
+  ///
+  /// Do not call this directly in widget code — use
+  /// `MCalThemeData.fromTheme(Theme.of(context)).monthTheme!` and the
+  /// `theme.monthTheme?.property ?? defaults.monthTheme!.property!` pattern instead.
   factory MCalMonthThemeData.defaults(ThemeData theme) {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
     return MCalMonthThemeData(
-      cellBackgroundColor: colorScheme.surface,
       cellTextStyle: textTheme.bodyMedium?.copyWith(
         color: colorScheme.onSurface,
       ),
@@ -215,48 +230,45 @@ class MCalMonthThemeData {
         fontWeight: FontWeight.w500,
       ),
       weekdayHeaderBackgroundColor: colorScheme.surfaceContainerHighest,
-      focusedDateBackgroundColor: colorScheme.primary.withValues(alpha: 0.2),
+      focusedDateBackgroundColor:
+          colorScheme.primary.withValues(alpha: 0.2),
       focusedDateTextStyle: textTheme.bodyMedium?.copyWith(
         color: colorScheme.primary,
         fontWeight: FontWeight.w600,
       ),
-      weekNumberTextStyle: textTheme.labelSmall?.copyWith(
-        color: colorScheme.onSurface.withValues(alpha: 0.5),
-      ),
-      weekNumberBackgroundColor: colorScheme.surfaceContainerHighest,
-      hoverCellBackgroundColor: colorScheme.primary.withValues(alpha: 0.05),
-      hoverEventBackgroundColor: colorScheme.primaryContainer.withValues(
-        alpha: 0.8,
-      ),
-      dropTargetCellValidColor: Colors.green.withValues(alpha: 0.3),
-      dropTargetCellInvalidColor: Colors.red.withValues(alpha: 0.3),
+      hoverCellBackgroundColor:
+          colorScheme.primary.withValues(alpha: 0.05),
+      dropTargetCellValidColor:
+          colorScheme.tertiary.withValues(alpha: 0.3),
+      dropTargetCellInvalidColor:
+          colorScheme.error.withValues(alpha: 0.3),
       dropTargetCellBorderRadius: 4.0,
       dragSourceOpacity: 0.5,
       draggedTileElevation: 6.0,
-      multiDayEventBackgroundColor: colorScheme.primary.withValues(alpha: 0.8),
+      multiDayEventBackgroundColor:
+          colorScheme.primary.withValues(alpha: 0.8),
       multiDayEventTextStyle: textTheme.labelSmall?.copyWith(
         color: colorScheme.onPrimary,
         fontWeight: FontWeight.w500,
       ),
       eventTileHeight: 20.0,
-      eventTileHorizontalSpacing: 1.0,
       eventTileVerticalSpacing: 1.0,
+      eventTilePadding: const EdgeInsets.symmetric(horizontal: 4.0),
       dateLabelHeight: 18.0,
       dateLabelPosition: DateLabelPosition.topLeft,
       overflowIndicatorHeight: 14.0,
-      eventTileCornerRadius: 3.0,
-      allDayEventBackgroundColor: colorScheme.secondaryContainer,
-      allDayEventTextStyle: textTheme.labelSmall?.copyWith(
-        color: colorScheme.onSecondaryContainer,
+      defaultRegionColor: colorScheme.outlineVariant,
+      resizeHandleColor: Colors.white.withValues(alpha: 0.5),
+      overlayScrimColor: colorScheme.scrim.withValues(alpha: 0.3),
+      errorIconColor: colorScheme.error,
+      overflowIndicatorTextStyle: textTheme.labelSmall?.copyWith(
+        color: colorScheme.onSurfaceVariant,
       ),
-      allDayEventBorderColor: colorScheme.secondary.withValues(alpha: 0.3),
-      allDayEventBorderWidth: 1.0,
     );
   }
 
   /// Creates a copy of this [MCalMonthThemeData] with the given fields replaced.
   MCalMonthThemeData copyWith({
-    Color? cellBackgroundColor,
     TextStyle? cellTextStyle,
     Color? todayBackgroundColor,
     TextStyle? todayTextStyle,
@@ -268,10 +280,7 @@ class MCalMonthThemeData {
     Color? weekdayHeaderBackgroundColor,
     Color? focusedDateBackgroundColor,
     TextStyle? focusedDateTextStyle,
-    TextStyle? weekNumberTextStyle,
-    Color? weekNumberBackgroundColor,
     Color? hoverCellBackgroundColor,
-    Color? hoverEventBackgroundColor,
     Color? dropTargetCellValidColor,
     Color? dropTargetCellInvalidColor,
     double? dropTargetCellBorderRadius,
@@ -280,12 +289,11 @@ class MCalMonthThemeData {
     Color? multiDayEventBackgroundColor,
     TextStyle? multiDayEventTextStyle,
     double? eventTileHeight,
-    double? eventTileHorizontalSpacing,
     double? eventTileVerticalSpacing,
     double? dateLabelHeight,
     DateLabelPosition? dateLabelPosition,
     double? overflowIndicatorHeight,
-    double? eventTileCornerRadius,
+    EdgeInsets? eventTilePadding,
     Color? eventTileBorderColor,
     double? eventTileBorderWidth,
     Color? dropTargetTileBackgroundColor,
@@ -293,13 +301,13 @@ class MCalMonthThemeData {
     double? dropTargetTileCornerRadius,
     Color? dropTargetTileBorderColor,
     double? dropTargetTileBorderWidth,
-    Color? allDayEventBackgroundColor,
-    TextStyle? allDayEventTextStyle,
-    Color? allDayEventBorderColor,
-    double? allDayEventBorderWidth,
+    Color? defaultRegionColor,
+    Color? resizeHandleColor,
+    Color? overlayScrimColor,
+    Color? errorIconColor,
+    TextStyle? overflowIndicatorTextStyle,
   }) {
     return MCalMonthThemeData(
-      cellBackgroundColor: cellBackgroundColor ?? this.cellBackgroundColor,
       cellTextStyle: cellTextStyle ?? this.cellTextStyle,
       todayBackgroundColor: todayBackgroundColor ?? this.todayBackgroundColor,
       todayTextStyle: todayTextStyle ?? this.todayTextStyle,
@@ -318,13 +326,8 @@ class MCalMonthThemeData {
       focusedDateBackgroundColor:
           focusedDateBackgroundColor ?? this.focusedDateBackgroundColor,
       focusedDateTextStyle: focusedDateTextStyle ?? this.focusedDateTextStyle,
-      weekNumberTextStyle: weekNumberTextStyle ?? this.weekNumberTextStyle,
-      weekNumberBackgroundColor:
-          weekNumberBackgroundColor ?? this.weekNumberBackgroundColor,
       hoverCellBackgroundColor:
           hoverCellBackgroundColor ?? this.hoverCellBackgroundColor,
-      hoverEventBackgroundColor:
-          hoverEventBackgroundColor ?? this.hoverEventBackgroundColor,
       dropTargetCellValidColor:
           dropTargetCellValidColor ?? this.dropTargetCellValidColor,
       dropTargetCellInvalidColor:
@@ -338,35 +341,32 @@ class MCalMonthThemeData {
       multiDayEventTextStyle:
           multiDayEventTextStyle ?? this.multiDayEventTextStyle,
       eventTileHeight: eventTileHeight ?? this.eventTileHeight,
-      eventTileHorizontalSpacing:
-          eventTileHorizontalSpacing ?? this.eventTileHorizontalSpacing,
       eventTileVerticalSpacing:
           eventTileVerticalSpacing ?? this.eventTileVerticalSpacing,
       dateLabelHeight: dateLabelHeight ?? this.dateLabelHeight,
       dateLabelPosition: dateLabelPosition ?? this.dateLabelPosition,
       overflowIndicatorHeight:
           overflowIndicatorHeight ?? this.overflowIndicatorHeight,
-      eventTileCornerRadius:
-          eventTileCornerRadius ?? this.eventTileCornerRadius,
+      eventTilePadding: eventTilePadding ?? this.eventTilePadding,
       eventTileBorderColor: eventTileBorderColor ?? this.eventTileBorderColor,
       eventTileBorderWidth: eventTileBorderWidth ?? this.eventTileBorderWidth,
       dropTargetTileBackgroundColor: dropTargetTileBackgroundColor ??
           this.dropTargetTileBackgroundColor,
-      dropTargetTileInvalidBackgroundColor: dropTargetTileInvalidBackgroundColor ??
-          this.dropTargetTileInvalidBackgroundColor,
-      dropTargetTileCornerRadius: dropTargetTileCornerRadius ??
-          this.dropTargetTileCornerRadius,
+      dropTargetTileInvalidBackgroundColor:
+          dropTargetTileInvalidBackgroundColor ??
+              this.dropTargetTileInvalidBackgroundColor,
+      dropTargetTileCornerRadius:
+          dropTargetTileCornerRadius ?? this.dropTargetTileCornerRadius,
       dropTargetTileBorderColor:
           dropTargetTileBorderColor ?? this.dropTargetTileBorderColor,
-      dropTargetTileBorderWidth: dropTargetTileBorderWidth ??
-          this.dropTargetTileBorderWidth,
-      allDayEventBackgroundColor:
-          allDayEventBackgroundColor ?? this.allDayEventBackgroundColor,
-      allDayEventTextStyle: allDayEventTextStyle ?? this.allDayEventTextStyle,
-      allDayEventBorderColor:
-          allDayEventBorderColor ?? this.allDayEventBorderColor,
-      allDayEventBorderWidth:
-          allDayEventBorderWidth ?? this.allDayEventBorderWidth,
+      dropTargetTileBorderWidth:
+          dropTargetTileBorderWidth ?? this.dropTargetTileBorderWidth,
+      defaultRegionColor: defaultRegionColor ?? this.defaultRegionColor,
+      resizeHandleColor: resizeHandleColor ?? this.resizeHandleColor,
+      overlayScrimColor: overlayScrimColor ?? this.overlayScrimColor,
+      errorIconColor: errorIconColor ?? this.errorIconColor,
+      overflowIndicatorTextStyle:
+          overflowIndicatorTextStyle ?? this.overflowIndicatorTextStyle,
     );
   }
 
@@ -375,11 +375,6 @@ class MCalMonthThemeData {
     if (other == null) return this;
 
     return MCalMonthThemeData(
-      cellBackgroundColor: Color.lerp(
-        cellBackgroundColor,
-        other.cellBackgroundColor,
-        t,
-      ),
       cellTextStyle: TextStyle.lerp(cellTextStyle, other.cellTextStyle, t),
       todayBackgroundColor: Color.lerp(
         todayBackgroundColor,
@@ -427,24 +422,9 @@ class MCalMonthThemeData {
         other.focusedDateTextStyle,
         t,
       ),
-      weekNumberTextStyle: TextStyle.lerp(
-        weekNumberTextStyle,
-        other.weekNumberTextStyle,
-        t,
-      ),
-      weekNumberBackgroundColor: Color.lerp(
-        weekNumberBackgroundColor,
-        other.weekNumberBackgroundColor,
-        t,
-      ),
       hoverCellBackgroundColor: Color.lerp(
         hoverCellBackgroundColor,
         other.hoverCellBackgroundColor,
-        t,
-      ),
-      hoverEventBackgroundColor: Color.lerp(
-        hoverEventBackgroundColor,
-        other.hoverEventBackgroundColor,
         t,
       ),
       dropTargetCellValidColor: Color.lerp(
@@ -483,11 +463,6 @@ class MCalMonthThemeData {
         t,
       ),
       eventTileHeight: _lerpDouble(eventTileHeight, other.eventTileHeight, t),
-      eventTileHorizontalSpacing: _lerpDouble(
-        eventTileHorizontalSpacing,
-        other.eventTileHorizontalSpacing,
-        t,
-      ),
       eventTileVerticalSpacing: _lerpDouble(
         eventTileVerticalSpacing,
         other.eventTileVerticalSpacing,
@@ -500,11 +475,7 @@ class MCalMonthThemeData {
         other.overflowIndicatorHeight,
         t,
       ),
-      eventTileCornerRadius: _lerpDouble(
-        eventTileCornerRadius,
-        other.eventTileCornerRadius,
-        t,
-      ),
+      eventTilePadding: EdgeInsets.lerp(eventTilePadding, other.eventTilePadding, t),
       eventTileBorderColor: Color.lerp(
         eventTileBorderColor,
         other.eventTileBorderColor,
@@ -540,24 +511,29 @@ class MCalMonthThemeData {
         other.dropTargetTileBorderWidth,
         t,
       ),
-      allDayEventBackgroundColor: Color.lerp(
-        allDayEventBackgroundColor,
-        other.allDayEventBackgroundColor,
+      defaultRegionColor: Color.lerp(
+        defaultRegionColor,
+        other.defaultRegionColor,
         t,
       ),
-      allDayEventTextStyle: TextStyle.lerp(
-        allDayEventTextStyle,
-        other.allDayEventTextStyle,
+      resizeHandleColor: Color.lerp(
+        resizeHandleColor,
+        other.resizeHandleColor,
         t,
       ),
-      allDayEventBorderColor: Color.lerp(
-        allDayEventBorderColor,
-        other.allDayEventBorderColor,
+      overlayScrimColor: Color.lerp(
+        overlayScrimColor,
+        other.overlayScrimColor,
         t,
       ),
-      allDayEventBorderWidth: _lerpDouble(
-        allDayEventBorderWidth,
-        other.allDayEventBorderWidth,
+      errorIconColor: Color.lerp(
+        errorIconColor,
+        other.errorIconColor,
+        t,
+      ),
+      overflowIndicatorTextStyle: TextStyle.lerp(
+        overflowIndicatorTextStyle,
+        other.overflowIndicatorTextStyle,
         t,
       ),
     );
@@ -575,52 +551,51 @@ class MCalMonthThemeData {
       identical(this, other) ||
       other is MCalMonthThemeData &&
           runtimeType == other.runtimeType &&
-          cellBackgroundColor == other.cellBackgroundColor &&
           cellTextStyle == other.cellTextStyle &&
           todayBackgroundColor == other.todayBackgroundColor &&
           todayTextStyle == other.todayTextStyle &&
           leadingDatesTextStyle == other.leadingDatesTextStyle &&
           trailingDatesTextStyle == other.trailingDatesTextStyle &&
           leadingDatesBackgroundColor == other.leadingDatesBackgroundColor &&
-          trailingDatesBackgroundColor == other.trailingDatesBackgroundColor &&
+          trailingDatesBackgroundColor ==
+              other.trailingDatesBackgroundColor &&
           weekdayHeaderTextStyle == other.weekdayHeaderTextStyle &&
-          weekdayHeaderBackgroundColor == other.weekdayHeaderBackgroundColor &&
+          weekdayHeaderBackgroundColor ==
+              other.weekdayHeaderBackgroundColor &&
           focusedDateBackgroundColor == other.focusedDateBackgroundColor &&
           focusedDateTextStyle == other.focusedDateTextStyle &&
-          weekNumberTextStyle == other.weekNumberTextStyle &&
-          weekNumberBackgroundColor == other.weekNumberBackgroundColor &&
           hoverCellBackgroundColor == other.hoverCellBackgroundColor &&
-          hoverEventBackgroundColor == other.hoverEventBackgroundColor &&
           dropTargetCellValidColor == other.dropTargetCellValidColor &&
           dropTargetCellInvalidColor == other.dropTargetCellInvalidColor &&
           dropTargetCellBorderRadius == other.dropTargetCellBorderRadius &&
           dragSourceOpacity == other.dragSourceOpacity &&
           draggedTileElevation == other.draggedTileElevation &&
-          multiDayEventBackgroundColor == other.multiDayEventBackgroundColor &&
+          multiDayEventBackgroundColor ==
+              other.multiDayEventBackgroundColor &&
           multiDayEventTextStyle == other.multiDayEventTextStyle &&
           eventTileHeight == other.eventTileHeight &&
-          eventTileHorizontalSpacing == other.eventTileHorizontalSpacing &&
           eventTileVerticalSpacing == other.eventTileVerticalSpacing &&
           dateLabelHeight == other.dateLabelHeight &&
           dateLabelPosition == other.dateLabelPosition &&
           overflowIndicatorHeight == other.overflowIndicatorHeight &&
-          eventTileCornerRadius == other.eventTileCornerRadius &&
+          eventTilePadding == other.eventTilePadding &&
           eventTileBorderColor == other.eventTileBorderColor &&
           eventTileBorderWidth == other.eventTileBorderWidth &&
-          dropTargetTileBackgroundColor == other.dropTargetTileBackgroundColor &&
+          dropTargetTileBackgroundColor ==
+              other.dropTargetTileBackgroundColor &&
           dropTargetTileInvalidBackgroundColor ==
               other.dropTargetTileInvalidBackgroundColor &&
           dropTargetTileCornerRadius == other.dropTargetTileCornerRadius &&
           dropTargetTileBorderColor == other.dropTargetTileBorderColor &&
           dropTargetTileBorderWidth == other.dropTargetTileBorderWidth &&
-          allDayEventBackgroundColor == other.allDayEventBackgroundColor &&
-          allDayEventTextStyle == other.allDayEventTextStyle &&
-          allDayEventBorderColor == other.allDayEventBorderColor &&
-          allDayEventBorderWidth == other.allDayEventBorderWidth;
+          defaultRegionColor == other.defaultRegionColor &&
+          resizeHandleColor == other.resizeHandleColor &&
+          overlayScrimColor == other.overlayScrimColor &&
+          errorIconColor == other.errorIconColor &&
+          overflowIndicatorTextStyle == other.overflowIndicatorTextStyle;
 
   @override
   int get hashCode => Object.hashAll([
-        cellBackgroundColor,
         cellTextStyle,
         todayBackgroundColor,
         todayTextStyle,
@@ -632,10 +607,7 @@ class MCalMonthThemeData {
         weekdayHeaderBackgroundColor,
         focusedDateBackgroundColor,
         focusedDateTextStyle,
-        weekNumberTextStyle,
-        weekNumberBackgroundColor,
         hoverCellBackgroundColor,
-        hoverEventBackgroundColor,
         dropTargetCellValidColor,
         dropTargetCellInvalidColor,
         dropTargetCellBorderRadius,
@@ -644,12 +616,11 @@ class MCalMonthThemeData {
         multiDayEventBackgroundColor,
         multiDayEventTextStyle,
         eventTileHeight,
-        eventTileHorizontalSpacing,
         eventTileVerticalSpacing,
         dateLabelHeight,
         dateLabelPosition,
         overflowIndicatorHeight,
-        eventTileCornerRadius,
+        eventTilePadding,
         eventTileBorderColor,
         eventTileBorderWidth,
         dropTargetTileBackgroundColor,
@@ -657,9 +628,10 @@ class MCalMonthThemeData {
         dropTargetTileCornerRadius,
         dropTargetTileBorderColor,
         dropTargetTileBorderWidth,
-        allDayEventBackgroundColor,
-        allDayEventTextStyle,
-        allDayEventBorderColor,
-        allDayEventBorderWidth,
+        defaultRegionColor,
+        resizeHandleColor,
+        overlayScrimColor,
+        errorIconColor,
+        overflowIndicatorTextStyle,
       ]);
 }

@@ -69,6 +69,7 @@ class _DayModernStyleState extends State<DayModernStyle>
           color: colorScheme.onPrimaryContainer,
         ),
         ignoreEventColors: false,
+        eventTileCornerRadius: 8.0,
         dayTheme: MCalDayThemeData(
           hourGridlineColor: colorScheme.outline.withValues(alpha: 0.15),
           hourGridlineWidth: 1.0,
@@ -85,7 +86,6 @@ class _DayModernStyleState extends State<DayModernStyle>
             fontWeight: FontWeight.w500,
             color: colorScheme.onSurfaceVariant,
           ),
-          timedEventBorderRadius: 8.0,
           timedEventPadding: const EdgeInsets.symmetric(
             horizontal: 8,
             vertical: 4,

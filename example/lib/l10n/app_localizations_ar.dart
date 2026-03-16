@@ -407,9 +407,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'نصف قطر نقطة مؤشر الوقت الحالي';
 
   @override
-  String get settingTimedEventBorderRadius => 'نصف قطر حدود الحدث الموقّت';
-
-  @override
   String get settingTimedEventMinHeight => 'الحد الأدنى لارتفاع الحدث الموقّت';
 
   @override
@@ -423,6 +420,22 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get settingAllDayEventBorderWidth => 'عرض حدود حدث طوال اليوم';
+
+  @override
+  String get settingAllDayEventPadding => 'حشوة حدث طوال اليوم';
+
+  @override
+  String get settingEventTilePadding => 'حشوة بلاطة الحدث';
+
+  @override
+  String get settingEventTileBorderColor => 'لون حدود بلاطة الحدث';
+
+  @override
+  String get settingMultiDayEventBackgroundColor =>
+      'لون خلفية حدث متعدد الأيام';
+
+  @override
+  String get sectionMultiDayEvents => 'أحداث متعددة الأيام';
 
   @override
   String get settingSpecialTimeRegionColor => 'لون المنطقة الزمنية الخاصة';

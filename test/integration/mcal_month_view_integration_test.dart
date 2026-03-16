@@ -1380,7 +1380,6 @@ void main() {
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.purple,
         eventTileBackgroundColor: Colors.orange,
-        monthTheme: MCalMonthThemeData(cellBackgroundColor: Colors.purple),
       );
 
       bool dayCellBuilderCalled = false;
@@ -1448,7 +1447,6 @@ void main() {
         cellBackgroundColor: Colors.lightBlue,
         navigatorBackgroundColor: Colors.indigo,
         monthTheme: MCalMonthThemeData(
-          cellBackgroundColor: Colors.lightBlue,
           todayBackgroundColor: Colors.amber,
           weekdayHeaderBackgroundColor: Colors.teal,
         ),
@@ -1500,7 +1498,6 @@ void main() {
               data: MCalThemeData(
                 cellBackgroundColor: Colors.red,
                 monthTheme: MCalMonthThemeData(
-                  cellBackgroundColor: Colors.red,
                   todayBackgroundColor: Colors.green,
                 ),
               ),
@@ -1517,11 +1514,8 @@ void main() {
                   ),
                   Expanded(
                     child: MCalTheme(
-                      data: MCalThemeData(
+                      data: const MCalThemeData(
                         cellBackgroundColor: Colors.blue,
-                        monthTheme: MCalMonthThemeData(
-                          cellBackgroundColor: Colors.blue,
-                        ),
                       ),
                       child: Builder(builder: (context) {
                         innerTheme = MCalTheme.of(context);
@@ -1543,12 +1537,12 @@ void main() {
 
       // Verify outer theme
       expect(outerTheme, isNotNull);
-      expect(outerTheme!.cellBackgroundColor ?? outerTheme!.monthTheme?.cellBackgroundColor, equals(Colors.red));
+      expect(outerTheme!.cellBackgroundColor, equals(Colors.red));
       expect(outerTheme!.monthTheme?.todayBackgroundColor, equals(Colors.green));
 
       // Verify inner theme overrides
       expect(innerTheme, isNotNull);
-      expect(innerTheme!.cellBackgroundColor ?? innerTheme!.monthTheme?.cellBackgroundColor, equals(Colors.blue));
+      expect(innerTheme!.cellBackgroundColor, equals(Colors.blue));
     });
 
     testWidgets('MCalTheme.maybeOf returns null when no MCalTheme ancestor', (tester) async {
@@ -1586,7 +1580,6 @@ void main() {
               MCalThemeData(
                 cellBackgroundColor: Colors.cyan,
                 eventTileBackgroundColor: Colors.pink,
-                monthTheme: MCalMonthThemeData(cellBackgroundColor: Colors.cyan),
               ),
             ],
           ),

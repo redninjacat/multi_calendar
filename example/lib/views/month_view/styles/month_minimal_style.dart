@@ -45,8 +45,8 @@ class MonthMinimalStyle extends StatelessWidget {
             child: MCalTheme(
               data: MCalThemeData(
                 cellBorderColor: Colors.transparent,
+                cellBackgroundColor: Colors.transparent,
                 monthTheme: MCalMonthThemeData(
-                  cellBackgroundColor: Colors.transparent,
                   todayBackgroundColor: Colors.transparent,
                   todayTextStyle: TextStyle(
                     fontWeight: FontWeight.w800,

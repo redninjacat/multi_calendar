@@ -95,7 +95,6 @@ class _DayMinimalStyleState extends State<DayMinimalStyle>
             fontWeight: FontWeight.w400,
             color: colorScheme.onSurface.withValues(alpha: 0.5),
           ),
-          timedEventBorderRadius: 2.0,
           timedEventPadding: const EdgeInsets.symmetric(
             horizontal: 6,
             vertical: 2,

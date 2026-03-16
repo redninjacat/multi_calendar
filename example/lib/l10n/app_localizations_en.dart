@@ -405,9 +405,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Current Time Indicator Dot Radius';
 
   @override
-  String get settingTimedEventBorderRadius => 'Timed Event Border Radius';
-
-  @override
   String get settingTimedEventMinHeight => 'Timed Event Min Height';
 
   @override
@@ -422,6 +419,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingAllDayEventBorderWidth => 'All-Day Event Border Width';
+
+  @override
+  String get settingAllDayEventPadding => 'All-Day Event Padding';
+
+  @override
+  String get settingEventTilePadding => 'Event Tile Padding';
+
+  @override
+  String get settingEventTileBorderColor => 'Event Tile Border Color';
+
+  @override
+  String get settingMultiDayEventBackgroundColor =>
+      'Multi-Day Event Background Color';
+
+  @override
+  String get sectionMultiDayEvents => 'Multi-Day Events';
 
   @override
   String get settingSpecialTimeRegionColor => 'Special Time Region Color';

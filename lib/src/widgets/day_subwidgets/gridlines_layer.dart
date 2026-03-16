@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/mcal_region.dart';
+import '../../styles/mcal_day_theme_data.dart';
 import '../../styles/mcal_theme.dart';
 import '../../utils/mcal_l10n_helper.dart';
 import '../../utils/time_utils.dart';
@@ -45,8 +46,10 @@ class GridlinesLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
+    final dayDefaults = defaults.dayTheme!;
     if (gridlineBuilder != null) {
-      return _buildCustomGridlines(context);
+      return _buildCustomGridlines(context, dayDefaults);
     }
 
     final l10n = mcalL10n(context);
@@ -61,48 +64,45 @@ class GridlinesLayer extends StatelessWidget {
           hourHeight: hourHeight,
           gridlineInterval: gridlineInterval,
           displayDate: displayDate,
-          hourGridlineColor:
-              theme.dayTheme?.hourGridlineColor ??
-              Colors.grey.withValues(alpha: 0.2),
-          hourGridlineWidth: theme.dayTheme?.hourGridlineWidth ?? 1.0,
-          majorGridlineColor:
-              theme.dayTheme?.majorGridlineColor ??
-              Colors.grey.withValues(alpha: 0.15),
-          majorGridlineWidth: theme.dayTheme?.majorGridlineWidth ?? 1.0,
-          minorGridlineColor:
-              theme.dayTheme?.minorGridlineColor ??
-              Colors.grey.withValues(alpha: 0.08),
-          minorGridlineWidth: theme.dayTheme?.minorGridlineWidth ?? 0.5,
+          hourGridlineColor: theme.dayTheme?.hourGridlineColor ??
+              dayDefaults.hourGridlineColor!,
+          hourGridlineWidth: theme.dayTheme?.hourGridlineWidth ??
+              dayDefaults.hourGridlineWidth!,
+          majorGridlineColor: theme.dayTheme?.majorGridlineColor ??
+              dayDefaults.majorGridlineColor!,
+          majorGridlineWidth: theme.dayTheme?.majorGridlineWidth ??
+              dayDefaults.majorGridlineWidth!,
+          minorGridlineColor: theme.dayTheme?.minorGridlineColor ??
+              dayDefaults.minorGridlineColor!,
+          minorGridlineWidth: theme.dayTheme?.minorGridlineWidth ??
+              dayDefaults.minorGridlineWidth!,
         ),
         child: const SizedBox.expand(),
       ),
     );
   }
 
-  Widget _buildDefaultGridline(MCalGridlineContext gridline) {
+  Widget _buildDefaultGridline(
+    MCalGridlineContext gridline,
+    MCalDayThemeData dayDefaults,
+  ) {
     Color color;
     double width;
     switch (gridline.type) {
       case MCalGridlineType.hour:
-        color =
-            theme.dayTheme?.hourGridlineColor ??
-            Colors.grey.withValues(alpha: 0.2);
-        width = theme.dayTheme?.hourGridlineWidth ?? 1.0;
+        color = theme.dayTheme?.hourGridlineColor ?? dayDefaults.hourGridlineColor!;
+        width = theme.dayTheme?.hourGridlineWidth ?? dayDefaults.hourGridlineWidth!;
       case MCalGridlineType.major:
-        color =
-            theme.dayTheme?.majorGridlineColor ??
-            Colors.grey.withValues(alpha: 0.15);
-        width = theme.dayTheme?.majorGridlineWidth ?? 1.0;
+        color = theme.dayTheme?.majorGridlineColor ?? dayDefaults.majorGridlineColor!;
+        width = theme.dayTheme?.majorGridlineWidth ?? dayDefaults.majorGridlineWidth!;
       case MCalGridlineType.minor:
-        color =
-            theme.dayTheme?.minorGridlineColor ??
-            Colors.grey.withValues(alpha: 0.08);
-        width = theme.dayTheme?.minorGridlineWidth ?? 0.5;
+        color = theme.dayTheme?.minorGridlineColor ?? dayDefaults.minorGridlineColor!;
+        width = theme.dayTheme?.minorGridlineWidth ?? dayDefaults.minorGridlineWidth!;
     }
     return Container(height: width, color: color);
   }
 
-  Widget _buildCustomGridlines(BuildContext context) {
+  Widget _buildCustomGridlines(BuildContext context, MCalDayThemeData dayDefaults) {
     final gridlines = _generateGridlines();
 
     return Stack(
@@ -115,7 +115,7 @@ class GridlinesLayer extends StatelessWidget {
             child: gridlineBuilder!(
               context,
               gridline,
-              _buildDefaultGridline(gridline),
+              _buildDefaultGridline(gridline, dayDefaults),
             ),
           ),
       ],

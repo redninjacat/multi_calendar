@@ -47,6 +47,7 @@ class DayNavigator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = mcalL10n(context);
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
 
     final canGoPrevious = _canGoPrevious();
     final canGoNext = _canGoNext();
@@ -54,9 +55,14 @@ class DayNavigator extends StatelessWidget {
     final dateFormat = DateFormat.yMMMMEEEEd(locale.toString());
     final formattedDate = dateFormat.format(displayDate);
 
+    final bgColor =
+        theme.navigatorBackgroundColor ?? defaults.navigatorBackgroundColor!;
+    final textStyle =
+        theme.navigatorTextStyle ?? defaults.navigatorTextStyle!;
+
     Widget navigator = Container(
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-      decoration: BoxDecoration(color: theme.navigatorBackgroundColor),
+      decoration: BoxDecoration(color: bgColor),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: _buildLTRButtons(
@@ -64,6 +70,7 @@ class DayNavigator extends StatelessWidget {
           canGoNext,
           formattedDate,
           l10n,
+          textStyle,
         ),
       ),
     );
@@ -80,6 +87,7 @@ class DayNavigator extends StatelessWidget {
     bool canGoNext,
     String formattedDate,
     MCalLocalizations localizations,
+    TextStyle textStyle,
   ) {
     return [
       Semantics(
@@ -98,7 +106,7 @@ class DayNavigator extends StatelessWidget {
           header: true,
           child: Text(
             formattedDate,
-            style: theme.navigatorTextStyle,
+            style: textStyle,
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
           ),

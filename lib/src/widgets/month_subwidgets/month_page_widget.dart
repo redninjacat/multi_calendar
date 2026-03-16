@@ -9,6 +9,7 @@ import '../../models/mcal_recurrence_exception.dart';
 import '../../models/mcal_recurrence_rule.dart';
 import '../../styles/mcal_theme.dart';
 import '../../utils/date_utils.dart';
+import '../../utils/theme_cascade_utils.dart';
 import '../../utils/mcal_date_format_utils.dart';
 import '../../utils/mcal_l10n_helper.dart';
 import '../mcal_callback_details.dart';
@@ -989,15 +990,18 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
     final leftRadius = segment?.isFirstSegment ?? true ? cornerRadius : 0.0;
     final rightRadius = segment?.isLastSegment ?? true ? cornerRadius : 0.0;
 
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final tileColor = valid
-        ? (theme.monthTheme?.dropTargetTileBackgroundColor ??
-              (theme.ignoreEventColors
-                  ? null
-                  : event.color) ??
-              theme.eventTileBackgroundColor ??
-              Colors.blue)
+        ? resolveDropTargetTileColor(
+            dropTargetThemeColor: theme.monthTheme?.dropTargetTileBackgroundColor,
+            themeColor: theme.eventTileBackgroundColor,
+            allDayThemeColor: theme.allDayEventBackgroundColor,
+            eventColor: event.color,
+            ignoreEventColors: theme.ignoreEventColors,
+            defaultColor: defaults.eventTileBackgroundColor!,
+          )
         : (theme.monthTheme?.dropTargetTileInvalidBackgroundColor ??
-              Colors.red.withValues(alpha: 0.5));
+              defaults.monthTheme!.dropTargetTileInvalidBackgroundColor!);
 
     final isFirstSegment = segment?.isFirstSegment ?? true;
     final isLastSegment = segment?.isLastSegment ?? true;
@@ -1047,8 +1051,11 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
       // background, so they need a stronger fill than the Day View.
       fillColor = valid
           ? tileColor.withValues(alpha: 0.35)
-          : Colors.red.withValues(alpha: 0.35);
-      final borderColor = valid ? tileColor : Colors.red;
+          : tileColor.withValues(alpha: 0.35);
+      final borderColor = valid
+          ? tileColor
+          : (theme.monthTheme?.dropTargetTileInvalidBackgroundColor ??
+              defaults.monthTheme!.dropTargetTileInvalidBackgroundColor!);
       final borderSide = BorderSide(color: borderColor, width: 1.5);
       final leftBorder = isFirstSegment ? borderSide : BorderSide.none;
       final rightBorder = isLastSegment ? borderSide : BorderSide.none;
@@ -1101,13 +1108,15 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
           event: tileContext.event,
           isDropTargetPreview: true,
         );
+        final resizeHandleColor = theme.dayTheme?.resizeHandleColor ??
+            defaults.dayTheme!.resizeHandleColor!;
         final visual = widget.resizeHandleBuilder != null
             ? widget.resizeHandleBuilder!(context, handleContext)
             : Container(
                 width: 2,
                 height: 16,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: resizeHandleColor,
                   borderRadius: BorderRadius.circular(1),
                 ),
               );
@@ -1326,12 +1335,16 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
           dropEndWeekRow: last.weekRowIndex,
           dropEndCellIndex: last.cellIndex,
           isValid: isValid,
-          validColor:
-              widget.theme.monthTheme?.dropTargetCellValidColor ??
-              Colors.green.withValues(alpha: 0.3),
-          invalidColor:
-              widget.theme.monthTheme?.dropTargetCellInvalidColor ??
-              Colors.red.withValues(alpha: 0.3),
+          validColor: () {
+                final d = MCalThemeData.fromTheme(Theme.of(context));
+                return widget.theme.monthTheme?.dropTargetCellValidColor ??
+                    d.monthTheme!.dropTargetCellValidColor!;
+              }(),
+          invalidColor: () {
+                final d = MCalThemeData.fromTheme(Theme.of(context));
+                return widget.theme.monthTheme?.dropTargetCellInvalidColor ??
+                    d.monthTheme!.dropTargetCellInvalidColor!;
+              }(),
           borderRadius:
               widget.theme.monthTheme?.dropTargetCellBorderRadius ?? 4.0,
         ),

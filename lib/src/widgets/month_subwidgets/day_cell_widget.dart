@@ -127,7 +127,7 @@ class DayCellWidgetState extends State<DayCellWidget> {
     );
 
     // Build cell decoration (apply non-interactive styling if needed)
-    final decoration = _getCellDecoration(isInteractive);
+    final decoration = _getCellDecoration(context, isInteractive);
 
     // Build date label (only if showDateLabel is true - Layer 2 handles labels now)
     final dateLabel = widget.showDateLabel ? _buildDateLabel(context) : null;
@@ -338,9 +338,11 @@ class DayCellWidgetState extends State<DayCellWidget> {
                       Icon(
                         region.icon,
                         size: 9.0,
-                        color: (region.color ?? Colors.grey).withValues(
-                          alpha: 1.0,
-                        ),
+                        color: (region.color ??
+                            widget.theme.monthTheme?.defaultRegionColor ??
+                            MCalThemeData.fromTheme(Theme.of(context))
+                                .monthTheme!
+                                .defaultRegionColor!),
                       ),
                     if (region.icon != null && region.text != null)
                       const SizedBox(width: 2),
@@ -352,9 +354,11 @@ class DayCellWidgetState extends State<DayCellWidget> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 8.0,
-                            color: (region.color ?? Colors.grey).withValues(
-                              alpha: 1.0,
-                            ),
+                            color: (region.color ??
+                                widget.theme.monthTheme?.defaultRegionColor ??
+                                MCalThemeData.fromTheme(Theme.of(context))
+                                    .monthTheme!
+                                    .defaultRegionColor!),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -378,9 +382,11 @@ class DayCellWidgetState extends State<DayCellWidget> {
   }
 
   /// Non-interactive cells may have reduced visual prominence.
-  BoxDecoration _getCellDecoration([bool isInteractive = true]) {
+  BoxDecoration _getCellDecoration(BuildContext context, [bool isInteractive = true]) {
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
     Color? backgroundColor;
-    Color? borderColor = widget.theme.cellBorderColor;
+    final borderColor =
+        widget.theme.cellBorderColor ?? defaults.cellBorderColor!;
 
     // Apply focused styling first (takes priority)
     if (widget.isFocused) {
@@ -392,18 +398,14 @@ class DayCellWidgetState extends State<DayCellWidget> {
           widget.theme.monthTheme?.todayBackgroundColor ??
           widget.theme.cellBackgroundColor;
     } else if (widget.isCurrentMonth) {
-      backgroundColor =
-          widget.theme.cellBackgroundColor ??
-          widget.theme.monthTheme?.cellBackgroundColor;
+      backgroundColor = widget.theme.cellBackgroundColor;
     } else {
       // Leading/trailing date
       backgroundColor = widget.isCurrentMonth
-          ? (widget.theme.cellBackgroundColor ??
-                widget.theme.monthTheme?.cellBackgroundColor)
+          ? widget.theme.cellBackgroundColor
           : (widget.theme.monthTheme?.leadingDatesBackgroundColor ??
                 widget.theme.monthTheme?.trailingDatesBackgroundColor ??
-                widget.theme.cellBackgroundColor ??
-                widget.theme.monthTheme?.cellBackgroundColor);
+                widget.theme.cellBackgroundColor);
     }
 
     // Apply reduced opacity for non-interactive cells
@@ -413,10 +415,7 @@ class DayCellWidgetState extends State<DayCellWidget> {
 
     return BoxDecoration(
       color: backgroundColor,
-      border: Border.all(
-        color: borderColor ?? Colors.grey.shade300,
-        width: 1.0,
-      ),
+      border: Border.all(color: borderColor, width: 1.0),
     );
   }
 
@@ -533,7 +532,9 @@ class DayCellWidgetState extends State<DayCellWidget> {
       decoration: BoxDecoration(
         color: labelContext.isToday
             ? (widget.theme.monthTheme?.todayBackgroundColor ??
-                  Colors.grey.shade300)
+                  MCalThemeData.fromTheme(Theme.of(context))
+                      .monthTheme!
+                      .todayBackgroundColor!)
             : Colors.transparent,
         shape: BoxShape.circle,
       ),

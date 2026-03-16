@@ -16,6 +16,7 @@ class TimeResizeHandle extends StatelessWidget {
     required this.handleSize,
     required this.tileWidth,
     required this.tileHeight,
+    required this.resizeHandleColor,
     this.inset = 0.0,
     this.visualBuilder,
     this.onPointerDown,
@@ -26,6 +27,7 @@ class TimeResizeHandle extends StatelessWidget {
   final double handleSize;
   final double tileWidth;
   final double tileHeight;
+  final Color resizeHandleColor;
   final double inset;
   final Widget Function(
     BuildContext,
@@ -43,7 +45,7 @@ class TimeResizeHandle extends StatelessWidget {
       height: 2,
       margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.7),
+        color: resizeHandleColor,
         borderRadius: BorderRadius.circular(1),
       ),
     );

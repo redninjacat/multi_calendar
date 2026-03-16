@@ -319,15 +319,15 @@ class _MonthAccessibilityTabState extends State<MonthAccessibilityTab> {
         ? MCalThemeData(
             eventTileBackgroundColor: Colors.black,
             cellBorderColor: Colors.black,
+            cellBackgroundColor: Colors.white,
             navigatorBackgroundColor: Colors.grey.shade200,
+            hoverEventBackgroundColor: Colors.yellow.shade100,
             monthTheme: MCalMonthThemeData(
-              cellBackgroundColor: Colors.white,
               todayBackgroundColor: Colors.blue.shade50,
               weekdayHeaderBackgroundColor: Colors.grey.shade100,
               dropTargetCellValidColor: Colors.green.shade100,
               dropTargetCellInvalidColor: Colors.red.shade100,
               hoverCellBackgroundColor: Colors.yellow.shade50,
-              hoverEventBackgroundColor: Colors.yellow.shade100,
             ),
           )
         : null;

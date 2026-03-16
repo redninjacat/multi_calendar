@@ -236,10 +236,8 @@ class MCalMonthWeekLayoutConfig {
     return MCalMonthWeekLayoutConfig(
       tileHeight: mt?.eventTileHeight ?? 18.0,
       tileVerticalSpacing: mt?.eventTileVerticalSpacing ?? 2.0,
-      tileHorizontalSpacing:
-          mt?.eventTileHorizontalSpacing ?? theme.eventTileHorizontalSpacing ?? 2.0,
-      eventTileCornerRadius:
-          mt?.eventTileCornerRadius ?? theme.eventTileCornerRadius ?? 3.0,
+      tileHorizontalSpacing: theme.eventTileHorizontalSpacing ?? 2.0,
+      eventTileCornerRadius: theme.eventTileCornerRadius ?? 3.0,
       tileBorderWidth: 0.0,
       dateLabelHeight: mt?.dateLabelHeight ?? 18.0,
       dateLabelPosition: mt?.dateLabelPosition ?? DateLabelPosition.topLeft,

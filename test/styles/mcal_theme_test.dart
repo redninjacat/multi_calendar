@@ -8,7 +8,6 @@ void main() {
       final testThemeData = MCalThemeData(
         cellBackgroundColor: Colors.red,
         monthTheme: MCalMonthThemeData(
-          cellBackgroundColor: Colors.red,
           todayBackgroundColor: Colors.blue,
         ),
       );
@@ -38,7 +37,6 @@ void main() {
       final extensionThemeData = MCalThemeData(
         cellBackgroundColor: Colors.green,
         monthTheme: MCalMonthThemeData(
-          cellBackgroundColor: Colors.green,
           todayBackgroundColor: Colors.orange,
         ),
       );
@@ -83,12 +81,11 @@ void main() {
         ),
       );
 
-      // fromTheme() should provide non-null defaults
+      // MCalTheme.of() returns MCalThemeData() (all nulls) when no theme ancestor
       expect(capturedTheme, isNotNull);
-      expect(capturedTheme!.cellBackgroundColor, isNotNull);
-      expect(capturedTheme!.monthTheme?.todayBackgroundColor, isNotNull);
-      expect(capturedTheme!.monthTheme?.cellTextStyle, isNotNull);
-      expect(capturedTheme!.eventTileBackgroundColor, isNotNull);
+      expect(capturedTheme!.cellBackgroundColor, isNull);
+      expect(capturedTheme!.monthTheme, isNull);
+      expect(capturedTheme!.eventTileBackgroundColor, isNull);
     });
 
     testWidgets('of() prioritizes MCalTheme ancestor over ThemeExtension', (tester) async {
@@ -156,7 +153,6 @@ void main() {
       final testThemeData = MCalThemeData(
         cellBackgroundColor: Colors.purple,
         monthTheme: MCalMonthThemeData(
-          cellBackgroundColor: Colors.purple,
           todayBackgroundColor: Colors.cyan,
         ),
       );
@@ -319,7 +315,6 @@ void main() {
         cellBackgroundColor: Colors.white,
         eventTileBackgroundColor: Colors.green,
         monthTheme: MCalMonthThemeData(
-          cellBackgroundColor: Colors.white,
           todayBackgroundColor: Colors.blue,
         ),
       );
@@ -359,7 +354,6 @@ void main() {
       final original = MCalThemeData(
         cellBackgroundColor: Colors.white,
         monthTheme: MCalMonthThemeData(
-          cellBackgroundColor: Colors.white,
           todayBackgroundColor: Colors.blue,
         ),
       );
@@ -591,7 +585,7 @@ void main() {
       expect(emptyTheme.monthTheme?.focusedDateBackgroundColor, isNull);
       expect(emptyTheme.monthTheme?.focusedDateTextStyle, isNull);
       expect(emptyTheme.monthTheme?.hoverCellBackgroundColor, isNull);
-      expect(emptyTheme.monthTheme?.hoverEventBackgroundColor, isNull);
+      expect(emptyTheme.hoverEventBackgroundColor, isNull);
     });
 
     test('lerp handles null values correctly', () {
@@ -680,24 +674,24 @@ void main() {
 
       test('copyWith overrides hover properties', () {
         final original = MCalThemeData(
+          hoverEventBackgroundColor: Colors.green,
           monthTheme: MCalMonthThemeData(
             hoverCellBackgroundColor: Colors.blue,
-            hoverEventBackgroundColor: Colors.green,
           ),
         );
 
         final updated = original.copyWith(
+          hoverEventBackgroundColor: Colors.orange,
           monthTheme: original.monthTheme?.copyWith(
             hoverCellBackgroundColor: Colors.red,
-            hoverEventBackgroundColor: Colors.orange,
           ),
         );
 
         expect(updated.monthTheme?.hoverCellBackgroundColor, Colors.red);
-        expect(updated.monthTheme?.hoverEventBackgroundColor, Colors.orange);
+        expect(updated.hoverEventBackgroundColor, Colors.orange);
         // Original should be unchanged
         expect(original.monthTheme?.hoverCellBackgroundColor, Colors.blue);
-        expect(original.monthTheme?.hoverEventBackgroundColor, Colors.green);
+        expect(original.hoverEventBackgroundColor, Colors.green);
       });
 
       test('copyWith preserves new properties when not specified', () {
@@ -894,16 +888,16 @@ void main() {
 
       test('lerp interpolates hover Color properties correctly', () {
         final theme1 = MCalThemeData(
+          hoverEventBackgroundColor: Colors.blue,
           monthTheme: MCalMonthThemeData(
             hoverCellBackgroundColor: Colors.white,
-            hoverEventBackgroundColor: Colors.blue,
           ),
         );
 
         final theme2 = MCalThemeData(
+          hoverEventBackgroundColor: Colors.red,
           monthTheme: MCalMonthThemeData(
             hoverCellBackgroundColor: Colors.black,
-            hoverEventBackgroundColor: Colors.red,
           ),
         );
 
@@ -914,7 +908,7 @@ void main() {
           Colors.white.toARGB32(),
         );
         expect(
-          atStart.monthTheme?.hoverEventBackgroundColor?.toARGB32(),
+          atStart.hoverEventBackgroundColor?.toARGB32(),
           Colors.blue.toARGB32(),
         );
 
@@ -925,7 +919,7 @@ void main() {
           Colors.black.toARGB32(),
         );
         expect(
-          atEnd.monthTheme?.hoverEventBackgroundColor?.toARGB32(),
+          atEnd.hoverEventBackgroundColor?.toARGB32(),
           Colors.red.toARGB32(),
         );
 
@@ -1019,7 +1013,70 @@ void main() {
         final calendarTheme = MCalThemeData.fromTheme(themeData);
 
         expect(calendarTheme.monthTheme?.hoverCellBackgroundColor, isNotNull);
-        expect(calendarTheme.monthTheme?.hoverEventBackgroundColor, isNotNull);
+        expect(calendarTheme.hoverEventBackgroundColor, isNotNull);
+      });
+
+      test('fromTheme provides non-null eventTile contrast color defaults', () {
+        final themeData = ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        );
+
+        final calendarTheme = MCalThemeData.fromTheme(themeData);
+
+        expect(calendarTheme.eventTileLightContrastColor, isNotNull);
+        expect(calendarTheme.eventTileDarkContrastColor, isNotNull);
+      });
+
+      test('fromTheme provides non-null day theme drop target defaults', () {
+        final themeData = ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        );
+
+        final calendarTheme = MCalThemeData.fromTheme(themeData);
+        final dayTheme = calendarTheme.dayTheme;
+
+        expect(dayTheme, isNotNull);
+        expect(dayTheme!.dropTargetTileInvalidBackgroundColor, isNotNull);
+        expect(dayTheme.dropTargetOverlayValidColor, isNotNull);
+        expect(dayTheme.dropTargetOverlayInvalidColor, isNotNull);
+        expect(dayTheme.dropTargetOverlayBorderColor, isNotNull);
+        expect(dayTheme.dropTargetOverlayBorderWidth, isNotNull);
+        expect(dayTheme.disabledTimeSlotColor, isNotNull);
+        expect(dayTheme.resizeHandleColor, isNotNull);
+        expect(dayTheme.keyboardFocusBorderColor, isNotNull);
+        expect(dayTheme.focusedSlotBorderColor, isNotNull);
+        expect(dayTheme.focusedSlotBorderWidth, isNotNull);
+        expect(dayTheme.focusedSlotBackgroundColor, isNotNull);
+      });
+
+      test('fromTheme provides non-null month theme overlay/error defaults', () {
+        final themeData = ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        );
+
+        final calendarTheme = MCalThemeData.fromTheme(themeData);
+        final monthTheme = calendarTheme.monthTheme;
+
+        expect(monthTheme, isNotNull);
+        expect(monthTheme!.overlayScrimColor, isNotNull);
+        expect(monthTheme.errorIconColor, isNotNull);
+        expect(monthTheme.overflowIndicatorTextStyle, isNotNull);
+        expect(monthTheme.defaultRegionColor, isNotNull);
+        expect(monthTheme.dropTargetCellValidColor, isNotNull);
+        expect(monthTheme.dropTargetCellInvalidColor, isNotNull);
+      });
+
+      test('MCalTheme.of() returns all-null MCalThemeData when no ancestor', () {
+        // This is tested in the widget test group but validated here for properties
+        const emptyTheme = MCalThemeData();
+        expect(emptyTheme.eventTileLightContrastColor, isNull);
+        expect(emptyTheme.eventTileDarkContrastColor, isNull);
+        expect(emptyTheme.hoverEventBackgroundColor, isNull);
+        expect(emptyTheme.dayTheme, isNull);
+        expect(emptyTheme.monthTheme, isNull);
       });
 
       test('fromTheme month properties differ between light and dark', () {
@@ -1075,7 +1132,7 @@ void main() {
         expect(calendarTheme.allDayEventBackgroundColor, isNotNull);
         expect(calendarTheme.weekNumberBackgroundColor, isNotNull);
         expect(calendarTheme.monthTheme?.hoverCellBackgroundColor, isNotNull);
-        expect(calendarTheme.monthTheme?.hoverEventBackgroundColor, isNotNull);
+        expect(calendarTheme.hoverEventBackgroundColor, isNotNull);
       });
     });
   });

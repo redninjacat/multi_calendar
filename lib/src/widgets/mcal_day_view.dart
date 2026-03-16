@@ -12,6 +12,7 @@ import '../models/mcal_month_key_bindings.dart' show MCalKeyActivator;
 import '../models/mcal_region.dart';
 import '../styles/mcal_theme.dart';
 import '../utils/date_utils.dart';
+import '../utils/theme_cascade_utils.dart';
 import '../utils/mcal_date_format_utils.dart';
 import '../utils/mcal_scroll_behavior.dart';
 import '../utils/mcal_l10n_helper.dart';
@@ -5810,32 +5811,52 @@ class MCalDayViewState extends State<MCalDayView> {
     );
 
     final isValid = dragHandler.isProposedDropValid;
-    final theme = MCalTheme.of(context);
+    final theme = _resolveTheme(context);
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
+    final isAllDay = event.isAllDay;
     final tileColor = isValid
-        ? (theme.ignoreEventColors
-                ? null
-                : event.color) ??
-            theme.eventTileBackgroundColor ??
-            Colors.blue
-        : Colors.red;
+        ? resolveDropTargetTileColor(
+            dropTargetThemeColor: theme.dayTheme?.dropTargetTileBackgroundColor,
+            themeColor: theme.eventTileBackgroundColor,
+            allDayThemeColor: isAllDay ? theme.allDayEventBackgroundColor : null,
+            eventColor: event.color,
+            ignoreEventColors: theme.ignoreEventColors,
+            defaultColor: defaults.eventTileBackgroundColor!,
+          )
+        : theme.dayTheme?.dropTargetTileInvalidBackgroundColor ??
+            defaults.dayTheme!.dropTargetTileInvalidBackgroundColor!;
+    final cornerRadius = theme.dayTheme?.dropTargetTileCornerRadius ??
+        theme.eventTileCornerRadius ??
+        defaults.eventTileCornerRadius!;
+    final borderColor = isValid
+        ? (theme.dayTheme?.dropTargetTileBorderColor ??
+            defaults.dayTheme!.dropTargetTileBorderColor!)
+        : (theme.dayTheme?.dropTargetTileInvalidBackgroundColor ??
+            defaults.dayTheme!.dropTargetTileInvalidBackgroundColor!);
+    final borderWidth =
+        theme.dayTheme?.dropTargetTileBorderWidth ??
+        defaults.dayTheme!.dropTargetTileBorderWidth!;
     final defaultTile = Opacity(
       opacity: isValid ? 0.6 : 0.45,
       child: Container(
         decoration: BoxDecoration(
-          color: isValid
-              ? tileColor.withValues(alpha: 0.3)
-              : Colors.red.withValues(alpha: 0.25),
+          color: tileColor.withValues(alpha: isValid ? 0.3 : 0.25),
           border: Border.all(
-            color: isValid ? tileColor : Colors.red,
-            width: isValid ? 2 : 2.5,
+            color: borderColor,
+            width: isValid ? borderWidth : borderWidth + 0.5,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(cornerRadius),
         ),
         padding: const EdgeInsets.all(4),
         child: !isValid
-            ? const Align(
+            ? Align(
                 alignment: Alignment.topLeft,
-                child: Icon(Icons.block, size: 12, color: Colors.red),
+                child: Icon(
+                  Icons.block,
+                  size: 12,
+                  color: theme.dayTheme?.dropTargetTileInvalidBackgroundColor ??
+                      defaults.dayTheme!.dropTargetTileInvalidBackgroundColor!,
+                ),
               )
             : null,
       ),
@@ -5897,6 +5918,17 @@ class MCalDayViewState extends State<MCalDayView> {
       hourHeight: _hourHeight,
     );
 
+    final theme = _resolveTheme(context);
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
+    final overlayColor = isValid
+        ? (theme.dayTheme?.dropTargetOverlayValidColor ??
+            defaults.dayTheme!.dropTargetOverlayValidColor!)
+        : (theme.dayTheme?.dropTargetOverlayInvalidColor ??
+            defaults.dayTheme!.dropTargetOverlayInvalidColor!);
+    final overlayBorderWidth = theme.dayTheme?.dropTargetOverlayBorderWidth ??
+        defaults.dayTheme!.dropTargetOverlayBorderWidth!;
+    final overlayBorderColor = theme.dayTheme?.dropTargetOverlayBorderColor ??
+        defaults.dayTheme!.dropTargetOverlayBorderColor!;
     final defaultOverlay = Positioned(
       top: topOffset,
       left: 0,
@@ -5904,11 +5936,11 @@ class MCalDayViewState extends State<MCalDayView> {
       height: height,
       child: Container(
         decoration: BoxDecoration(
-          color: (isValid ? Colors.blue : Colors.red).withValues(alpha: 0.2),
+          color: overlayColor,
           border: Border(
             left: BorderSide(
-              color: isValid ? Colors.blue : Colors.red,
-              width: 3,
+              color: overlayBorderColor,
+              width: overlayBorderWidth,
             ),
           ),
         ),
@@ -6036,23 +6068,22 @@ class MCalDayViewState extends State<MCalDayView> {
     final slotHeight = (widget.timeSlotDuration.inMinutes / 60.0) * hourHeight;
     final topOffset = slotIndex * slotHeight;
     final theme = _resolveTheme(context);
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final dayTheme = theme.dayTheme;
+    final borderColor = dayTheme?.focusedSlotBorderColor ??
+        defaults.dayTheme!.focusedSlotBorderColor!;
+    final borderWidth = dayTheme?.focusedSlotBorderWidth ??
+        defaults.dayTheme!.focusedSlotBorderWidth!;
+    final bgColor = dayTheme?.focusedSlotBackgroundColor ??
+        defaults.dayTheme!.focusedSlotBackgroundColor!;
 
     final decoration = dayTheme?.focusedSlotDecoration ??
-        (dayTheme?.focusedSlotBackgroundColor != null
-            ? BoxDecoration(color: dayTheme!.focusedSlotBackgroundColor)
-            : BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.08),
-                border: Border(
-                  left: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 3,
-                  ),
-                ),
-              ));
+        BoxDecoration(
+          color: bgColor,
+          border: Border(
+            left: BorderSide(color: borderColor, width: borderWidth),
+          ),
+        );
 
     return Positioned(
       top: topOffset,
@@ -6129,6 +6160,12 @@ class MCalDayViewState extends State<MCalDayView> {
             timeSlotDuration: widget.timeSlotDuration,
             displayDate: date,
             interactivityCallback: widget.timeSlotInteractivityCallback!,
+            disabledTimeSlotColor: () {
+              final t = _resolveTheme(context);
+              final d = MCalThemeData.fromTheme(Theme.of(context));
+              return t.dayTheme?.disabledTimeSlotColor ??
+                  d.dayTheme!.disabledTimeSlotColor!;
+            }(),
           ),
         if (timedRegions.isNotEmpty)
           TimeRegionsLayer(
@@ -6819,20 +6856,24 @@ class MCalDayViewState extends State<MCalDayView> {
                 !_isKeyboardResizeMode)
               Positioned.fill(
                 child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(
-                          color: Theme.of(context).colorScheme.primary,
-                          width: 3,
+                  child: Builder(builder: (context) {
+                    final t = _resolveTheme(context);
+                    final d = MCalThemeData.fromTheme(Theme.of(context));
+                    final borderColor = t.dayTheme?.focusedSlotBorderColor ??
+                        d.dayTheme!.focusedSlotBorderColor!;
+                    final borderWidth = t.dayTheme?.focusedSlotBorderWidth ??
+                        d.dayTheme!.focusedSlotBorderWidth!;
+                    final bgColor = t.dayTheme?.focusedSlotBackgroundColor ??
+                        d.dayTheme!.focusedSlotBackgroundColor!;
+                    return DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          left: BorderSide(color: borderColor, width: borderWidth),
                         ),
+                        color: bgColor.withValues(alpha: 0.04),
                       ),
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.04),
-                    ),
-                  ),
+                    );
+                  }),
                 ),
               ),
           ],

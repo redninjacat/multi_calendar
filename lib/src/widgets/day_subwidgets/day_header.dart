@@ -7,6 +7,7 @@ import '../mcal_day_view_contexts.dart';
 import '../mcal_gesture_detector.dart';
 import '../mcal_month_view_contexts.dart' show MCalWeekNumberContext;
 
+
 /// Widget for the day header with optional week number.
 ///
 /// Displays day of week, date number, and optional week number.
@@ -70,9 +71,11 @@ class DayHeader extends StatelessWidget {
         ? '$dayOfWeekFull, $monthDayYear, Week $weekNumber'
         : '$dayOfWeekFull, $monthDayYear';
 
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
+
     Widget? resolvedWeekNumWidget;
     if (showWeekNumbers) {
-      final defaultWeekNumWidget = _buildWeekNumber(weekNumber);
+      final defaultWeekNumWidget = _buildWeekNumber(weekNumber, defaults);
       if (weekNumberBuilder != null) {
         final fDow = firstDayOfWeek == 0 ? 7 : firstDayOfWeek;
         final daysSince = (displayDate.weekday - fDow + 7) % 7;
@@ -101,7 +104,7 @@ class DayHeader extends StatelessWidget {
             resolvedWeekNumWidget!,
             const SizedBox(width: 8),
           ],
-          _buildDayAndDate(),
+          _buildDayAndDate(defaults),
           if (showWeekNumbers && textDirection == TextDirection.rtl) ...[
             const SizedBox(width: 8),
             resolvedWeekNumWidget!,
@@ -121,29 +124,23 @@ class DayHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildWeekNumber(int weekNumber) {
+  Widget _buildWeekNumber(int weekNumber, MCalThemeData defaults) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color:
             theme.weekNumberBackgroundColor ??
-            Colors.grey.withValues(alpha: 0.2),
+            defaults.weekNumberBackgroundColor,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         'W$weekNumber',
-        style:
-            theme.weekNumberTextStyle ??
-            TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: theme.dayTheme?.weekNumberTextColor ?? Colors.black54,
-            ),
+        style: theme.weekNumberTextStyle ?? defaults.weekNumberTextStyle,
       ),
     );
   }
 
-  Widget _buildDayAndDate() {
+  Widget _buildDayAndDate(MCalThemeData defaults) {
     final dayOfWeek = DateFormat('EEE', locale.toString()).format(displayDate);
     final dateNum = displayDate.day;
 
@@ -155,21 +152,13 @@ class DayHeader extends StatelessWidget {
           dayOfWeek.toUpperCase(),
           style:
               theme.dayTheme?.dayHeaderDayOfWeekStyle ??
-              TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[600],
-              ),
+              defaults.dayTheme!.dayHeaderDayOfWeekStyle,
         ),
         Text(
           dateNum.toString(),
           style:
               theme.dayTheme?.dayHeaderDateStyle ??
-              TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+              defaults.dayTheme!.dayHeaderDateStyle,
         ),
       ],
     );

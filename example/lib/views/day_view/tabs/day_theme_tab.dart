@@ -29,10 +29,12 @@ class _DayThemeTabState extends State<DayThemeTab> {
   // Event Properties
   // ============================================================
   Color? _eventTileBackgroundColor;
-  double? _timedEventBorderRadius;
+  double? _eventTileCornerRadius;
+  double? _eventTileHorizontalSpacing;
   double? _timedEventMinHeight;
   EdgeInsets? _timedEventPadding;
   bool? _ignoreEventColors;
+  Color? _hoverEventBackgroundColor;
 
   // ============================================================
   // All-Day Event Properties
@@ -40,6 +42,12 @@ class _DayThemeTabState extends State<DayThemeTab> {
   Color? _allDayEventBackgroundColor;
   Color? _allDayEventBorderColor;
   double? _allDayEventBorderWidth;
+  EdgeInsets? _allDayEventPadding;
+
+  // ============================================================
+  // Navigator Properties
+  // ============================================================
+  Color? _navigatorBackgroundColor;
 
   // ============================================================
   // Time Legend Properties
@@ -131,14 +139,19 @@ class _DayThemeTabState extends State<DayThemeTab> {
       _currentTimeIndicatorDotRadius = dayTheme?.currentTimeIndicatorDotRadius;
 
       _eventTileBackgroundColor = presetTheme.eventTileBackgroundColor;
-      _timedEventBorderRadius = dayTheme?.timedEventBorderRadius;
+      _eventTileCornerRadius = presetTheme.eventTileCornerRadius;
+      _eventTileHorizontalSpacing = presetTheme.eventTileHorizontalSpacing;
       _timedEventMinHeight = dayTheme?.timedEventMinHeight;
       _timedEventPadding = dayTheme?.timedEventPadding;
       _ignoreEventColors = presetTheme.ignoreEventColors;
+      _hoverEventBackgroundColor = presetTheme.hoverEventBackgroundColor;
 
       _allDayEventBackgroundColor = presetTheme.allDayEventBackgroundColor;
       _allDayEventBorderColor = presetTheme.allDayEventBorderColor;
       _allDayEventBorderWidth = presetTheme.allDayEventBorderWidth;
+      _allDayEventPadding = dayTheme?.allDayEventPadding;
+
+      _navigatorBackgroundColor = presetTheme.navigatorBackgroundColor;
 
       _specialTimeRegionColor = dayTheme?.specialTimeRegionColor;
       _blockedTimeRegionColor = dayTheme?.blockedTimeRegionColor;
@@ -158,9 +171,13 @@ class _DayThemeTabState extends State<DayThemeTab> {
     return baseTheme.copyWith(
       eventTileBackgroundColor: _eventTileBackgroundColor,
       ignoreEventColors: _ignoreEventColors,
+      hoverEventBackgroundColor: _hoverEventBackgroundColor,
       allDayEventBackgroundColor: _allDayEventBackgroundColor,
       allDayEventBorderColor: _allDayEventBorderColor,
       allDayEventBorderWidth: _allDayEventBorderWidth,
+      eventTileCornerRadius: _eventTileCornerRadius,
+      eventTileHorizontalSpacing: _eventTileHorizontalSpacing,
+      navigatorBackgroundColor: _navigatorBackgroundColor,
       dayTheme: MCalDayThemeData(
         timeLegendWidth: _timeLegendWidth ?? 60.0,
         showTimeLegendTicks: _showTimeLegendTicks ?? false,
@@ -176,7 +193,7 @@ class _DayThemeTabState extends State<DayThemeTab> {
         currentTimeIndicatorColor: _currentTimeIndicatorColor ?? colorScheme.primary,
         currentTimeIndicatorWidth: _currentTimeIndicatorWidth ?? 2.0,
         currentTimeIndicatorDotRadius: _currentTimeIndicatorDotRadius ?? 4.0,
-        timedEventBorderRadius: _timedEventBorderRadius ?? 4.0,
+        allDayEventPadding: _allDayEventPadding ?? const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
         timedEventMinHeight: _timedEventMinHeight ?? 20.0,
         timedEventPadding: _timedEventPadding ?? const EdgeInsets.all(4.0),
         specialTimeRegionColor: _specialTimeRegionColor,
@@ -232,19 +249,38 @@ class _DayThemeTabState extends State<DayThemeTab> {
         ControlPanelSection(
           title: l10n.sectionEvents,
           children: [
+            ControlWidgets.toggle(
+              label: l10n.settingIgnoreEventColors,
+              value: _ignoreEventColors ?? false,
+              onChanged: (value) => setState(() => _ignoreEventColors = value),
+            ),
             ControlWidgets.colorPicker(
               label: l10n.settingEventTileBackgroundColor,
               value: _eventTileBackgroundColor ?? colorScheme.primaryContainer,
               onChanged: (value) => setState(() => _eventTileBackgroundColor = value),
               cancelLabel: l10n.cancel,
             ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingHoverEventBackgroundColor,
+              value: _hoverEventBackgroundColor ?? colorScheme.primaryContainer.withValues(alpha: 0.8),
+              onChanged: (value) => setState(() => _hoverEventBackgroundColor = value),
+              cancelLabel: l10n.cancel,
+            ),
             ControlWidgets.slider(
-              label: l10n.settingTimedEventBorderRadius,
-              value: _timedEventBorderRadius ?? 4.0,
+              label: l10n.settingEventTileCornerRadius,
+              value: _eventTileCornerRadius ?? 4.0,
               min: 0,
               max: 16,
               divisions: 16,
-              onChanged: (value) => setState(() => _timedEventBorderRadius = value),
+              onChanged: (value) => setState(() => _eventTileCornerRadius = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingEventTileHorizontalSpacing,
+              value: _eventTileHorizontalSpacing ?? 2.0,
+              min: 0,
+              max: 8,
+              divisions: 16,
+              onChanged: (value) => setState(() => _eventTileHorizontalSpacing = value),
             ),
             ControlWidgets.slider(
               label: l10n.settingTimedEventMinHeight,
@@ -261,11 +297,6 @@ class _DayThemeTabState extends State<DayThemeTab> {
               max: 12,
               divisions: 12,
               onChanged: (value) => setState(() => _timedEventPadding = EdgeInsets.all(value)),
-            ),
-            ControlWidgets.toggle(
-              label: l10n.settingIgnoreEventColors,
-              value: _ignoreEventColors ?? false,
-              onChanged: (value) => setState(() => _ignoreEventColors = value),
             ),
           ],
         ),
@@ -295,6 +326,29 @@ class _DayThemeTabState extends State<DayThemeTab> {
               max: 4,
               divisions: 16,
               onChanged: (value) => setState(() => _allDayEventBorderWidth = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingAllDayEventPadding,
+              value: (_allDayEventPadding?.left ?? 6.0),
+              min: 0,
+              max: 16,
+              divisions: 16,
+              onChanged: (value) => setState(
+                () => _allDayEventPadding = EdgeInsets.symmetric(horizontal: value, vertical: value / 3),
+              ),
+            ),
+          ],
+        ),
+
+        // Navigator section
+        ControlPanelSection(
+          title: l10n.sectionNavigator,
+          children: [
+            ControlWidgets.colorPicker(
+              label: l10n.settingNavigatorBackgroundColor,
+              value: _navigatorBackgroundColor ?? colorScheme.surface,
+              onChanged: (value) => setState(() => _navigatorBackgroundColor = value),
+              cancelLabel: l10n.cancel,
             ),
           ],
         ),

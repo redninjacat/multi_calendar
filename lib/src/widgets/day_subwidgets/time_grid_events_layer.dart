@@ -5,6 +5,7 @@ import '../../models/mcal_calendar_event.dart';
 import '../../models/mcal_region.dart';
 import '../../styles/mcal_theme.dart';
 import '../../utils/day_view_overlap.dart';
+import '../../utils/theme_cascade_utils.dart';
 import '../../utils/time_utils.dart';
 import '../mcal_callback_details.dart';
 import '../mcal_day_view_contexts.dart';
@@ -230,12 +231,12 @@ class TimeGridEventsLayer extends StatelessWidget {
     Widget tile = _buildEventTile(context, event, tileContext);
 
     if (keyboardFocusedEventId == event.id) {
+      final kbDefaults = MCalThemeData.fromTheme(Theme.of(context));
+      final kbBorderColor = theme.dayTheme?.keyboardFocusBorderColor ??
+          kbDefaults.dayTheme!.keyboardFocusBorderColor!;
       tile = Container(
         decoration: BoxDecoration(
-          border: Border.all(
-            color: Theme.of(context).colorScheme.primary,
-            width: 2,
-          ),
+          border: Border.all(color: kbBorderColor, width: 2),
           borderRadius: BorderRadius.circular(4),
         ),
         child: tile,
@@ -355,7 +356,11 @@ class TimeGridEventsLayer extends StatelessWidget {
     double width,
     double height,
   ) {
-    final handleSize = theme.dayTheme?.resizeHandleSize ?? 8.0;
+    final handleDefaults = MCalThemeData.fromTheme(Theme.of(context));
+    final handleSize = theme.dayTheme?.resizeHandleSize ??
+        handleDefaults.dayTheme!.resizeHandleSize!;
+    final handleColor = theme.dayTheme?.resizeHandleColor ??
+        handleDefaults.dayTheme!.resizeHandleColor!;
     final children = <Widget>[Positioned.fill(child: tile)];
 
     if (tileContext.isStartOnDisplayDate) {
@@ -368,6 +373,7 @@ class TimeGridEventsLayer extends StatelessWidget {
           handleSize: handleSize,
           tileWidth: width,
           tileHeight: height,
+          resizeHandleColor: handleColor,
           inset: startInset,
           visualBuilder: timeResizeHandleBuilder,
           onPointerDown: (e, edge, pointer) =>
@@ -386,6 +392,7 @@ class TimeGridEventsLayer extends StatelessWidget {
           handleSize: handleSize,
           tileWidth: width,
           tileHeight: height,
+          resizeHandleColor: handleColor,
           inset: endInset,
           visualBuilder: timeResizeHandleBuilder,
           onPointerDown: (e, edge, pointer) =>
@@ -402,23 +409,41 @@ class TimeGridEventsLayer extends StatelessWidget {
   }
 
   Widget _buildDefaultTimedEventTile(
+    BuildContext context,
+    MCalThemeData defaults,
     MCalCalendarEvent event,
     MCalTimedEventTileContext tileContext,
     String timeRange,
   ) {
-    final tileColor = theme.ignoreEventColors
-        ? (theme.eventTileBackgroundColor ?? Colors.blue)
-        : (event.color ?? theme.eventTileBackgroundColor ?? Colors.blue);
+    final tileColor = resolveEventTileColor(
+      themeColor: theme.eventTileBackgroundColor,
+      eventColor: event.color,
+      ignoreEventColors: theme.ignoreEventColors,
+      defaultColor: defaults.eventTileBackgroundColor!,
+    );
 
-    final contrastColor = _getContrastColor(tileColor);
+    final lightContrast =
+        theme.eventTileLightContrastColor ??
+        defaults.eventTileLightContrastColor!;
+    final darkContrast =
+        theme.eventTileDarkContrastColor ??
+        defaults.eventTileDarkContrastColor!;
+
+    final textStyleColor = theme.ignoreEventColors
+        ? theme.eventTileTextStyle?.color
+        : null;
+    final contrastColor = textStyleColor ??
+        resolveContrastColor(
+          backgroundColor: tileColor,
+          lightContrastColor: lightContrast,
+          darkContrastColor: darkContrast,
+        );
     final timeColor = contrastColor.withValues(alpha: 0.9);
     final showTimeRange =
         tileContext.endTime.difference(tileContext.startTime).inMinutes >= 30;
 
     final cornerRadius =
-        theme.dayTheme?.timedEventBorderRadius ??
-        theme.eventTileCornerRadius ??
-        4.0;
+        theme.eventTileCornerRadius ?? defaults.eventTileCornerRadius!;
     final topRadius = tileContext.isStartOnDisplayDate
         ? Radius.circular(cornerRadius)
         : Radius.zero;
@@ -511,7 +536,10 @@ class TimeGridEventsLayer extends StatelessWidget {
     final semanticLabel =
         '${event.title}, $startTimeStr to $endTimeStr, $durationStr';
 
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final defaultWidget = _buildDefaultTimedEventTile(
+      context,
+      defaults,
       event,
       tileContext,
       timeRange,
@@ -601,12 +629,4 @@ class TimeGridEventsLayer extends StatelessWidget {
     );
   }
 
-  Color _getContrastColor(Color backgroundColor) {
-    final r = backgroundColor.r;
-    final g = backgroundColor.g;
-    final b = backgroundColor.b;
-    final luminance = (0.299 * r + 0.587 * g + 0.114 * b);
-
-    return luminance > 0.5 ? Colors.black87 : Colors.white;
-  }
 }

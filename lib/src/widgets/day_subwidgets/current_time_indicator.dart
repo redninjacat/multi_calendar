@@ -89,8 +89,10 @@ class CurrentTimeIndicatorState extends State<CurrentTimeIndicator> {
     final l10n = mcalL10n(context);
     final semanticLabel = l10n.currentTime(formattedTime);
 
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final indicatorColor =
-        widget.theme.dayTheme?.currentTimeIndicatorColor ?? Colors.red;
+        widget.theme.dayTheme?.currentTimeIndicatorColor ??
+        defaults.dayTheme!.currentTimeIndicatorColor!;
     final indicatorWidth =
         widget.theme.dayTheme?.currentTimeIndicatorWidth ?? 2.0;
     final dotRadius =

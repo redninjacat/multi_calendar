@@ -436,10 +436,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Rayon de Point d\'Indicateur d\'Heure Actuelle';
 
   @override
-  String get settingTimedEventBorderRadius =>
-      'Rayon de Bordure d\'Événement Horaire';
-
-  @override
   String get settingTimedEventMinHeight =>
       'Hauteur Minimale d\'Événement Horaire';
 
@@ -457,6 +453,24 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get settingAllDayEventBorderWidth =>
       'Largeur de Bordure d\'Événement Toute la Journée';
+
+  @override
+  String get settingAllDayEventPadding =>
+      'Espacement d\'Événement Toute la Journée';
+
+  @override
+  String get settingEventTilePadding => 'Espacement de Tuile d\'Événement';
+
+  @override
+  String get settingEventTileBorderColor =>
+      'Couleur de Bordure de Tuile d\'Événement';
+
+  @override
+  String get settingMultiDayEventBackgroundColor =>
+      'Couleur de Fond d\'Événement sur Plusieurs Jours';
+
+  @override
+  String get sectionMultiDayEvents => 'Événements sur Plusieurs Jours';
 
   @override
   String get settingSpecialTimeRegionColor =>

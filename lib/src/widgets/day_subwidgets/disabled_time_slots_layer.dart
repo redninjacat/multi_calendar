@@ -19,6 +19,7 @@ class DisabledTimeSlotsLayer extends StatelessWidget {
     required this.timeSlotDuration,
     required this.displayDate,
     required this.interactivityCallback,
+    required this.disabledTimeSlotColor,
   });
 
   final int startHour;
@@ -28,6 +29,7 @@ class DisabledTimeSlotsLayer extends StatelessWidget {
   final DateTime displayDate;
   final bool Function(BuildContext, MCalTimeSlotInteractivityDetails)
   interactivityCallback;
+  final Color disabledTimeSlotColor;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +70,7 @@ class DisabledTimeSlotsLayer extends StatelessWidget {
               right: 0,
               height: slotHeight,
               child: IgnorePointer(
-                child: Container(color: Colors.grey.withValues(alpha: 0.3)),
+                child: Container(color: disabledTimeSlotColor),
               ),
             ),
           );

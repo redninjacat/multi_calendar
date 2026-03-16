@@ -44,6 +44,8 @@ class WeekdayHeaderRowWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = mcalL10n(context);
+    final cellBorderColor = theme.cellBorderColor ??
+        MCalThemeData.fromTheme(Theme.of(context)).cellBorderColor!;
     // Use layout direction from MCalLayoutDirectionality rather than the ambient
     // Directionality (which carries textDirection) to avoid any mismatch.
     final isLayoutRTL = MCalLayoutDirectionality.of(context);
@@ -72,10 +74,7 @@ class WeekdayHeaderRowWidget extends StatelessWidget {
               theme.monthTheme?.weekdayHeaderBackgroundColor ??
               theme.weekNumberBackgroundColor,
           border: Border(
-            bottom: BorderSide(
-              color:
-                  theme.cellBorderColor ?? Colors.grey.shade300,
-            ),
+            bottom: BorderSide(color: cellBorderColor),
           ),
         ),
         child: Center(
@@ -145,13 +144,9 @@ class WeekdayHeaderRowWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color:
             theme.weekNumberBackgroundColor ??
-            theme.monthTheme?.weekNumberBackgroundColor ??
             theme.monthTheme?.weekdayHeaderBackgroundColor,
-        border: Border(
-          bottom: BorderSide(
-            color:
-                theme.cellBorderColor ?? Colors.grey.shade300,
-          ),
+          border: Border(
+          bottom: BorderSide(color: cellBorderColor),
         ),
       ),
       child: Center(
@@ -159,7 +154,6 @@ class WeekdayHeaderRowWidget extends StatelessWidget {
           'Wk',
           style:
               theme.weekNumberTextStyle ??
-              theme.monthTheme?.weekNumberTextStyle ??
               theme.monthTheme?.weekdayHeaderTextStyle,
           textAlign: TextAlign.center,
         ),

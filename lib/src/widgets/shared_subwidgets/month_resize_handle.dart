@@ -35,6 +35,7 @@ class MonthResizeHandle extends StatelessWidget {
     required this.edge,
     required this.event,
     required this.onPointerDown,
+    required this.resizeHandleColor,
     this.visualBuilder,
     this.inset = 0.0,
   });
@@ -50,6 +51,9 @@ class MonthResizeHandle extends StatelessWidget {
   /// scroll hold before the gesture arena resolves.
   final void Function(MCalCalendarEvent event, MCalResizeEdge edge, int pointer)
   onPointerDown;
+
+  /// Color for the default resize handle visual indicator.
+  final Color resizeHandleColor;
 
   /// Optional custom builder for the visual indicator.
   ///
@@ -86,7 +90,7 @@ class MonthResizeHandle extends StatelessWidget {
             width: 2,
             height: 16,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.5),
+              color: resizeHandleColor,
               borderRadius: BorderRadius.circular(1),
             ),
           );

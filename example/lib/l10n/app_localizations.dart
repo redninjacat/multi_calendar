@@ -884,12 +884,6 @@ abstract class AppLocalizations {
   /// **'Current Time Indicator Dot Radius'**
   String get settingCurrentTimeIndicatorDotRadius;
 
-  /// No description provided for @settingTimedEventBorderRadius.
-  ///
-  /// In en, this message translates to:
-  /// **'Timed Event Border Radius'**
-  String get settingTimedEventBorderRadius;
-
   /// No description provided for @settingTimedEventMinHeight.
   ///
   /// In en, this message translates to:
@@ -919,6 +913,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All-Day Event Border Width'**
   String get settingAllDayEventBorderWidth;
+
+  /// No description provided for @settingAllDayEventPadding.
+  ///
+  /// In en, this message translates to:
+  /// **'All-Day Event Padding'**
+  String get settingAllDayEventPadding;
+
+  /// No description provided for @settingEventTilePadding.
+  ///
+  /// In en, this message translates to:
+  /// **'Event Tile Padding'**
+  String get settingEventTilePadding;
+
+  /// No description provided for @settingEventTileBorderColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Event Tile Border Color'**
+  String get settingEventTileBorderColor;
+
+  /// No description provided for @settingMultiDayEventBackgroundColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-Day Event Background Color'**
+  String get settingMultiDayEventBackgroundColor;
+
+  /// No description provided for @sectionMultiDayEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-Day Events'**
+  String get sectionMultiDayEvents;
 
   /// No description provided for @settingSpecialTimeRegionColor.
   ///
