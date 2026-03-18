@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/theme-layout-future-views/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-17T22:22:28.380Z",
+      "trigger": "initial",
+      "approvalId": "approval_1773786148375_2dywtyymm",
+      "approvalTitle": "Theme Layout Properties and Future View Preparation - Tasks"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-03-18T02:11:09.240Z",
+      "trigger": "approved",
+      "approvalId": "approval_1773786148375_2dywtyymm",
+      "approvalTitle": "Theme Layout Properties and Future View Preparation - Tasks"
+    }
+  ]
+}

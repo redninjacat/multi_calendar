@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/theme-layout-future-views/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-17T20:54:01.655Z",
+      "trigger": "initial",
+      "approvalId": "approval_1773780841646_lj2kd23zf",
+      "approvalTitle": "Theme Layout Properties and Future View Preparation - Design"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-03-17T22:17:51.075Z",
+      "trigger": "approved",
+      "approvalId": "approval_1773780841646_lj2kd23zf",
+      "approvalTitle": "Theme Layout Properties and Future View Preparation - Design"
+    }
+  ]
+}
