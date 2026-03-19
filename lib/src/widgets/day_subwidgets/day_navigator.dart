@@ -61,7 +61,7 @@ class DayNavigator extends StatelessWidget {
         theme.navigatorTextStyle ?? defaults.navigatorTextStyle!;
 
     Widget navigator = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+      padding: theme.navigatorPadding ?? defaults.navigatorPadding!,
       decoration: BoxDecoration(color: bgColor),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

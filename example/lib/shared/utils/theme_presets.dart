@@ -27,7 +27,7 @@ enum ThemePreset {
 /// Returns a [MCalThemeData] configured for Month View based on the given [preset].
 ///
 /// The returned theme includes both shared properties and Month View-specific
-/// properties in [monthTheme]. Use this with [MCalTheme] to apply the preset
+/// properties in [monthViewTheme]. Use this with [MCalTheme] to apply the preset
 /// to a [MCalMonthView].
 ///
 /// Example:
@@ -50,24 +50,24 @@ MCalThemeData getMonthThemePreset(ThemePreset preset, ThemeData materialTheme) {
       return MCalThemeData(
         cellBackgroundColor: colorScheme.surface,
         cellBorderColor: colorScheme.outline.withValues(alpha: 0.15),
-        eventTileBackgroundColor: colorScheme.primaryContainer,
-        eventTileTextStyle: textTheme.labelSmall?.copyWith(
-          color: colorScheme.onPrimaryContainer,
-          fontSize: 10,
-        ),
-        eventTileCornerRadius: 2.0,
-        eventTileHorizontalSpacing: 0.5,
         navigatorTextStyle: textTheme.titleSmall?.copyWith(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.w600,
         ),
         navigatorBackgroundColor: colorScheme.surfaceContainerHighest,
-        weekNumberTextStyle: textTheme.labelSmall?.copyWith(
-          color: colorScheme.onSurface.withValues(alpha: 0.4),
-          fontSize: 10,
-        ),
-        weekNumberBackgroundColor: colorScheme.surfaceContainer,
-        monthTheme: MCalMonthThemeData(
+        monthViewTheme: MCalMonthViewThemeData(
+          eventTileBackgroundColor: colorScheme.primaryContainer,
+          eventTileTextStyle: textTheme.labelSmall?.copyWith(
+            color: colorScheme.onPrimaryContainer,
+            fontSize: 10,
+          ),
+          eventTileCornerRadius: 2.0,
+          eventTileHorizontalSpacing: 0.5,
+          weekNumberTextStyle: textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurface.withValues(alpha: 0.4),
+            fontSize: 10,
+          ),
+          weekNumberBackgroundColor: colorScheme.surfaceContainer,
           eventTileHeight: 18.0,
           eventTileVerticalSpacing: 1.0,
           eventTilePadding: const EdgeInsets.symmetric(horizontal: 2.0),
@@ -85,23 +85,23 @@ MCalThemeData getMonthThemePreset(ThemePreset preset, ThemeData materialTheme) {
       return MCalThemeData(
         cellBackgroundColor: colorScheme.surface,
         cellBorderColor: colorScheme.outline.withValues(alpha: 0.25),
-        eventTileBackgroundColor: colorScheme.primaryContainer,
-        eventTileTextStyle: textTheme.bodyMedium?.copyWith(
-          color: colorScheme.onPrimaryContainer,
-          fontSize: 14,
-        ),
-        eventTileCornerRadius: 6.0,
-        eventTileHorizontalSpacing: 4.0,
         navigatorTextStyle: textTheme.titleLarge?.copyWith(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.bold,
         ),
         navigatorBackgroundColor: colorScheme.surfaceContainerLow,
-        weekNumberTextStyle: textTheme.bodyMedium?.copyWith(
-          color: colorScheme.onSurface.withValues(alpha: 0.6),
-        ),
-        weekNumberBackgroundColor: colorScheme.surfaceContainerHighest,
-        monthTheme: MCalMonthThemeData(
+        monthViewTheme: MCalMonthViewThemeData(
+          eventTileBackgroundColor: colorScheme.primaryContainer,
+          eventTileTextStyle: textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onPrimaryContainer,
+            fontSize: 14,
+          ),
+          eventTileCornerRadius: 6.0,
+          eventTileHorizontalSpacing: 4.0,
+          weekNumberTextStyle: textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+          weekNumberBackgroundColor: colorScheme.surfaceContainerHighest,
           eventTileHeight: 32.0,
           eventTileVerticalSpacing: 4.0,
           eventTilePadding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
@@ -119,24 +119,24 @@ MCalThemeData getMonthThemePreset(ThemePreset preset, ThemeData materialTheme) {
       return MCalThemeData(
         cellBackgroundColor: colorScheme.surface,
         cellBorderColor: colorScheme.onSurface.withValues(alpha: 0.5),
-        eventTileBackgroundColor: colorScheme.primary,
-        eventTileTextStyle: textTheme.labelMedium?.copyWith(
-          color: colorScheme.onPrimary,
-          fontWeight: FontWeight.w600,
-        ),
-        eventTileCornerRadius: 4.0,
-        eventTileHorizontalSpacing: 2.0,
         navigatorTextStyle: textTheme.titleMedium?.copyWith(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.bold,
         ),
         navigatorBackgroundColor: colorScheme.surfaceContainerHighest,
-        weekNumberTextStyle: textTheme.labelMedium?.copyWith(
-          color: colorScheme.onSurface,
-          fontWeight: FontWeight.w600,
-        ),
-        weekNumberBackgroundColor: colorScheme.surfaceContainer,
-        monthTheme: MCalMonthThemeData(
+        monthViewTheme: MCalMonthViewThemeData(
+          eventTileBackgroundColor: colorScheme.primary,
+          eventTileTextStyle: textTheme.labelMedium?.copyWith(
+            color: colorScheme.onPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+          eventTileCornerRadius: 4.0,
+          eventTileHorizontalSpacing: 2.0,
+          weekNumberTextStyle: textTheme.labelMedium?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+          weekNumberBackgroundColor: colorScheme.surfaceContainer,
           eventTileHeight: 24.0,
           eventTileVerticalSpacing: 2.0,
           dateLabelHeight: 28.0,
@@ -163,22 +163,22 @@ MCalThemeData getMonthThemePreset(ThemePreset preset, ThemeData materialTheme) {
       return MCalThemeData(
         cellBackgroundColor: Colors.transparent,
         cellBorderColor: colorScheme.outline.withValues(alpha: 0.1),
-        eventTileBackgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
-        eventTileTextStyle: textTheme.labelSmall?.copyWith(
-          color: colorScheme.onSurface.withValues(alpha: 0.8),
-        ),
-        eventTileCornerRadius: 2.0,
-        eventTileHorizontalSpacing: 1.0,
         navigatorTextStyle: textTheme.titleMedium?.copyWith(
           color: colorScheme.onSurface.withValues(alpha: 0.8),
           fontWeight: FontWeight.normal,
         ),
         navigatorBackgroundColor: Colors.transparent,
-        weekNumberTextStyle: textTheme.labelSmall?.copyWith(
-          color: colorScheme.onSurface.withValues(alpha: 0.3),
-        ),
-        weekNumberBackgroundColor: Colors.transparent,
-        monthTheme: MCalMonthThemeData(
+        monthViewTheme: MCalMonthViewThemeData(
+          eventTileBackgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
+          eventTileTextStyle: textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurface.withValues(alpha: 0.8),
+          ),
+          eventTileCornerRadius: 2.0,
+          eventTileHorizontalSpacing: 1.0,
+          weekNumberTextStyle: textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurface.withValues(alpha: 0.3),
+          ),
+          weekNumberBackgroundColor: Colors.transparent,
           eventTileHeight: 20.0,
           eventTileVerticalSpacing: 1.5,
           dateLabelHeight: 24.0,
@@ -197,7 +197,7 @@ MCalThemeData getMonthThemePreset(ThemePreset preset, ThemeData materialTheme) {
 /// Returns a [MCalThemeData] configured for Day View based on the given [preset].
 ///
 /// The returned theme includes both shared properties and Day View-specific
-/// properties in [dayTheme]. Use this with [MCalTheme] to apply the preset
+/// properties in [dayViewTheme]. Use this with [MCalTheme] to apply the preset
 /// to a [MCalDayView].
 ///
 /// Example:
@@ -220,24 +220,24 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
       return MCalThemeData(
         cellBackgroundColor: colorScheme.surface,
         cellBorderColor: colorScheme.outline.withValues(alpha: 0.15),
-        eventTileBackgroundColor: colorScheme.primaryContainer,
-        eventTileTextStyle: textTheme.labelSmall?.copyWith(
-          color: colorScheme.onPrimaryContainer,
-          fontSize: 10,
-        ),
-        eventTileCornerRadius: 2.0,
         navigatorTextStyle: textTheme.titleSmall?.copyWith(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.w600,
         ),
         navigatorBackgroundColor: colorScheme.surfaceContainerHighest,
-        allDayEventBackgroundColor: colorScheme.secondaryContainer,
-        allDayEventTextStyle: textTheme.labelSmall?.copyWith(
-          color: colorScheme.onSecondaryContainer,
-          fontSize: 10,
-        ),
-        allDayEventBorderWidth: 0.5,
-        dayTheme: MCalDayThemeData(
+        dayViewTheme: MCalDayViewThemeData(
+          eventTileBackgroundColor: colorScheme.primaryContainer,
+          eventTileTextStyle: textTheme.labelSmall?.copyWith(
+            color: colorScheme.onPrimaryContainer,
+            fontSize: 10,
+          ),
+          eventTileCornerRadius: 2.0,
+          allDayEventBackgroundColor: colorScheme.secondaryContainer,
+          allDayEventTextStyle: textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSecondaryContainer,
+            fontSize: 10,
+          ),
+          allDayEventBorderWidth: 0.5,
           timeLegendWidth: 48.0,
           timeLegendTextStyle: textTheme.labelSmall?.copyWith(
             fontSize: 10,
@@ -262,23 +262,23 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
       return MCalThemeData(
         cellBackgroundColor: colorScheme.surface,
         cellBorderColor: colorScheme.outline.withValues(alpha: 0.25),
-        eventTileBackgroundColor: colorScheme.primaryContainer,
-        eventTileTextStyle: textTheme.bodyMedium?.copyWith(
-          color: colorScheme.onPrimaryContainer,
-          fontSize: 14,
-        ),
-        eventTileCornerRadius: 8.0,
         navigatorTextStyle: textTheme.titleLarge?.copyWith(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.bold,
         ),
         navigatorBackgroundColor: colorScheme.surfaceContainerLow,
-        allDayEventBackgroundColor: colorScheme.secondaryContainer,
-        allDayEventTextStyle: textTheme.bodyMedium?.copyWith(
-          color: colorScheme.onSecondaryContainer,
-        ),
-        allDayEventBorderWidth: 2.0,
-        dayTheme: MCalDayThemeData(
+        dayViewTheme: MCalDayViewThemeData(
+          eventTileBackgroundColor: colorScheme.primaryContainer,
+          eventTileTextStyle: textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onPrimaryContainer,
+            fontSize: 14,
+          ),
+          eventTileCornerRadius: 8.0,
+          allDayEventBackgroundColor: colorScheme.secondaryContainer,
+          allDayEventTextStyle: textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSecondaryContainer,
+          ),
+          allDayEventBorderWidth: 2.0,
           timeLegendWidth: 80.0,
           timeLegendTextStyle: textTheme.bodyMedium?.copyWith(
             color: colorScheme.onSurfaceVariant,
@@ -304,25 +304,25 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
       return MCalThemeData(
         cellBackgroundColor: colorScheme.surface,
         cellBorderColor: colorScheme.onSurface.withValues(alpha: 0.5),
-        eventTileBackgroundColor: colorScheme.primary,
-        eventTileTextStyle: textTheme.labelMedium?.copyWith(
-          color: colorScheme.onPrimary,
-          fontWeight: FontWeight.w600,
-        ),
-        eventTileCornerRadius: 4.0,
         navigatorTextStyle: textTheme.titleMedium?.copyWith(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.bold,
         ),
         navigatorBackgroundColor: colorScheme.surfaceContainerHighest,
-        allDayEventBackgroundColor: colorScheme.secondary,
-        allDayEventTextStyle: textTheme.labelMedium?.copyWith(
-          color: colorScheme.onSecondary,
-          fontWeight: FontWeight.w600,
-        ),
-        allDayEventBorderColor: colorScheme.onSurface.withValues(alpha: 0.4),
-        allDayEventBorderWidth: 2.0,
-        dayTheme: MCalDayThemeData(
+        dayViewTheme: MCalDayViewThemeData(
+          eventTileBackgroundColor: colorScheme.primary,
+          eventTileTextStyle: textTheme.labelMedium?.copyWith(
+            color: colorScheme.onPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+          eventTileCornerRadius: 4.0,
+          allDayEventBackgroundColor: colorScheme.secondary,
+          allDayEventTextStyle: textTheme.labelMedium?.copyWith(
+            color: colorScheme.onSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+          allDayEventBorderColor: colorScheme.onSurface.withValues(alpha: 0.4),
+          allDayEventBorderWidth: 2.0,
           timeLegendWidth: 64.0,
           timeLegendTextStyle: textTheme.labelMedium?.copyWith(
             color: colorScheme.onSurface,
@@ -354,23 +354,23 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
       return MCalThemeData(
         cellBackgroundColor: Colors.transparent,
         cellBorderColor: colorScheme.outline.withValues(alpha: 0.1),
-        eventTileBackgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
-        eventTileTextStyle: textTheme.labelSmall?.copyWith(
-          color: colorScheme.onSurface.withValues(alpha: 0.8),
-        ),
-        eventTileCornerRadius: 2.0,
         navigatorTextStyle: textTheme.titleMedium?.copyWith(
           color: colorScheme.onSurface.withValues(alpha: 0.8),
           fontWeight: FontWeight.normal,
         ),
         navigatorBackgroundColor: Colors.transparent,
-        allDayEventBackgroundColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
-        allDayEventTextStyle: textTheme.labelSmall?.copyWith(
-          color: colorScheme.onSurface.withValues(alpha: 0.8),
-        ),
-        allDayEventBorderColor: colorScheme.outline.withValues(alpha: 0.2),
-        allDayEventBorderWidth: 0.5,
-        dayTheme: MCalDayThemeData(
+        dayViewTheme: MCalDayViewThemeData(
+          eventTileBackgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
+          eventTileTextStyle: textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurface.withValues(alpha: 0.8),
+          ),
+          eventTileCornerRadius: 2.0,
+          allDayEventBackgroundColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
+          allDayEventTextStyle: textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurface.withValues(alpha: 0.8),
+          ),
+          allDayEventBorderColor: colorScheme.outline.withValues(alpha: 0.2),
+          allDayEventBorderWidth: 0.5,
           timeLegendWidth: 56.0,
           timeLegendTextStyle: textTheme.labelSmall?.copyWith(
             color: colorScheme.onSurface.withValues(alpha: 0.5),

@@ -52,26 +52,28 @@ class TimeLegendColumn extends StatelessWidget {
   final Widget Function(BuildContext, MCalTimeLabelContext, Widget)?
   subHourLabelBuilder;
 
-  static const double _labelHeight = 20.0;
-
   @override
   Widget build(BuildContext context) {
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
+    final labelHeight = theme.dayViewTheme?.timeLegendLabelHeight ??
+        defaults.dayViewTheme!.timeLegendLabelHeight!;
     final totalHours = (endHour - startHour).clamp(0, 24);
     final columnHeight = hourHeight * totalHours;
-    final legendWidth = theme.dayTheme?.timeLegendWidth ?? 60.0;
+    final legendWidth = theme.dayViewTheme?.timeLegendWidth ??
+        defaults.dayViewTheme!.timeLegendWidth!;
 
     final isLayoutRTL = MCalLayoutDirectionality.of(context);
 
-    final showTicks = theme.dayTheme?.showTimeLegendTicks ?? true;
+    final showTicks = theme.dayViewTheme?.showTimeLegendTicks ?? true;
 
     final labelPosition =
-        theme.dayTheme?.timeLabelPosition ??
+        theme.dayViewTheme?.timeLabelPosition ??
         MCalTimeLabelPosition.topTrailingBelow;
 
     return Container(
       width: legendWidth,
       height: columnHeight,
-      color: theme.dayTheme?.timeLegendBackgroundColor,
+      color: theme.dayViewTheme?.timeLegendBackgroundColor,
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
@@ -83,12 +85,12 @@ class TimeLegendColumn extends StatelessWidget {
                 endHour: endHour,
                 hourHeight: hourHeight,
                 tickColor:
-                    theme.dayTheme?.timeLegendTickColor ??
-                    MCalThemeData.fromTheme(Theme.of(context))
-                        .dayTheme!
-                        .timeLegendTickColor!,
-                tickWidth: theme.dayTheme?.timeLegendTickWidth ?? 1.0,
-                tickLength: theme.dayTheme?.timeLegendTickLength ?? 8.0,
+                    theme.dayViewTheme?.timeLegendTickColor ??
+                    defaults.dayViewTheme!.timeLegendTickColor!,
+                tickWidth: theme.dayViewTheme?.timeLegendTickWidth ??
+                    defaults.dayViewTheme!.timeLegendTickWidth!,
+                tickLength: theme.dayViewTheme?.timeLegendTickLength ??
+                    defaults.dayViewTheme!.timeLegendTickLength!,
                 isLayoutRTL: isLayoutRTL,
                 displayDate: displayDate,
               ),
@@ -100,6 +102,7 @@ class TimeLegendColumn extends StatelessWidget {
               minute: 0,
               isSubHour: false,
               labelPosition: labelPosition,
+              labelHeight: labelHeight,
             ),
           if (showSubHourLabels && subHourLabelInterval != null)
             for (int hour = startHour; hour <= endHour; hour++)
@@ -114,6 +117,7 @@ class TimeLegendColumn extends StatelessWidget {
                   minute: minute,
                   isSubHour: true,
                   labelPosition: labelPosition,
+                  labelHeight: labelHeight,
                 ),
         ],
       ),
@@ -126,6 +130,7 @@ class TimeLegendColumn extends StatelessWidget {
     required int minute,
     required bool isSubHour,
     required MCalTimeLabelPosition labelPosition,
+    required double labelHeight,
   }) {
     final isBottomRef =
         labelPosition == MCalTimeLabelPosition.bottomLeadingAbove ||
@@ -149,9 +154,9 @@ class TimeLegendColumn extends StatelessWidget {
     final isCentered = labelPosition.name.endsWith('Centered');
     double top;
     if (isAbove) {
-      top = gridlineY - _labelHeight;
+      top = gridlineY - labelHeight;
     } else if (isCentered) {
-      top = gridlineY - _labelHeight / 2;
+      top = gridlineY - labelHeight / 2;
     } else {
       top = gridlineY;
     }
@@ -165,7 +170,7 @@ class TimeLegendColumn extends StatelessWidget {
       top: top,
       left: 0,
       right: 0,
-      height: _labelHeight,
+      height: labelHeight,
       child: Align(
         alignment: alignment,
         child: isSubHour
@@ -204,8 +209,8 @@ class TimeLegendColumn extends StatelessWidget {
     final semanticLabel = DateFormat('h a', locale.toString()).format(time);
 
     final baseStyle =
-        theme.dayTheme?.timeLegendTextStyle ??
-        MCalThemeData.fromTheme(Theme.of(context)).dayTheme!.timeLegendTextStyle;
+        theme.dayViewTheme?.timeLegendTextStyle ??
+        MCalThemeData.fromTheme(Theme.of(context)).dayViewTheme!.timeLegendTextStyle;
 
     final defaultWidget = Text(formattedTime, style: baseStyle);
 
@@ -283,10 +288,10 @@ class TimeLegendColumn extends StatelessWidget {
     );
 
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
-    // defaults.dayTheme!.timeLegendTextStyle is guaranteed non-null by the factory.
+    // defaults.dayViewTheme!.timeLegendTextStyle is guaranteed non-null by the factory.
     final effectiveStyle =
-        theme.dayTheme?.timeLegendTextStyle ??
-        defaults.dayTheme!.timeLegendTextStyle!;
+        theme.dayViewTheme?.timeLegendTextStyle ??
+        defaults.dayViewTheme!.timeLegendTextStyle!;
     final baseFontSize = effectiveStyle.fontSize ?? 12.0;
     final baseColor = effectiveStyle.color!;
     final subHourStyle = effectiveStyle.copyWith(

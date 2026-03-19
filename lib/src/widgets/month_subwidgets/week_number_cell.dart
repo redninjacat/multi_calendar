@@ -20,9 +20,6 @@ class WeekNumberCell extends StatelessWidget {
   /// Optional builder for custom week number rendering.
   final Widget Function(BuildContext, MCalWeekNumberContext)? weekNumberBuilder;
 
-  /// Fixed width for the week number column.
-  static const double columnWidth = 36.0;
-
   const WeekNumberCell({
     super.key,
     required this.weekNumber,
@@ -41,6 +38,12 @@ class WeekNumberCell extends StatelessWidget {
       defaultFormattedString: defaultFormattedString,
     );
 
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
+    final columnWidth = theme.monthViewTheme?.weekNumberColumnWidth ??
+        defaults.monthViewTheme!.weekNumberColumnWidth!;
+    final borderWidth = theme.monthViewTheme?.weekNumberBorderWidth ??
+        defaults.monthViewTheme!.weekNumberBorderWidth!;
+
     // Use custom builder if provided
     if (weekNumberBuilder != null) {
       return SizedBox(
@@ -51,17 +54,17 @@ class WeekNumberCell extends StatelessWidget {
 
     // Default rendering
     final cellBorderColor = theme.cellBorderColor ??
-        MCalThemeData.fromTheme(Theme.of(context)).cellBorderColor!;
+        defaults.cellBorderColor!;
     return Container(
       width: columnWidth,
       decoration: BoxDecoration(
-        color: theme.weekNumberBackgroundColor,
-        border: Border.all(color: cellBorderColor, width: 0.5),
+        color: theme.monthViewTheme?.weekNumberBackgroundColor,
+        border: Border.all(color: cellBorderColor, width: borderWidth),
       ),
       child: Center(
         child: Text(
           '$weekNumber',
-          style: theme.weekNumberTextStyle,
+          style: theme.monthViewTheme?.weekNumberTextStyle,
         ),
       ),
     );

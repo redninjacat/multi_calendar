@@ -217,31 +217,25 @@ class MCalMonthWeekLayoutConfig {
 
   /// Creates a [MCalWeekLayoutConfig] with values from [MCalThemeData].
   ///
-  /// Inherits values from the theme where available, using sensible
-  /// defaults for values not specified in the theme:
-  /// - tileHeight: theme.eventTileHeight ?? 18.0
-  /// - tileVerticalSpacing: theme.eventTileVerticalSpacing ?? 2.0
-  /// - tileHorizontalSpacing: theme.eventTileHorizontalSpacing ?? 2.0
-  /// - eventTileCornerRadius: 3.0
-  /// - tileBorderWidth: 0.0
-  /// - dateLabelHeight: 18.0
-  /// - dateLabelPosition: DateLabelPosition.topLeft
-  /// - overflowIndicatorHeight: 14.0
-  /// - maxVisibleEventsPerDay: defaults to 5
+  /// [flutterTheme] is used to resolve Material 3 defaults when properties
+  /// are not specified in [theme]. All layout values come from the theme
+  /// or Material defaults — no hardcoded fallbacks.
   factory MCalMonthWeekLayoutConfig.fromTheme(
     MCalThemeData theme, {
+    required ThemeData flutterTheme,
     int maxVisibleEventsPerDay = 5,
   }) {
-    final mt = theme.monthTheme;
+    final mt = theme.monthViewTheme;
+    final d = MCalThemeData.fromTheme(flutterTheme).monthViewTheme!;
     return MCalMonthWeekLayoutConfig(
-      tileHeight: mt?.eventTileHeight ?? 18.0,
-      tileVerticalSpacing: mt?.eventTileVerticalSpacing ?? 2.0,
-      tileHorizontalSpacing: theme.eventTileHorizontalSpacing ?? 2.0,
-      eventTileCornerRadius: theme.eventTileCornerRadius ?? 3.0,
+      tileHeight: mt?.eventTileHeight ?? d.eventTileHeight!,
+      tileVerticalSpacing: mt?.eventTileVerticalSpacing ?? d.eventTileVerticalSpacing!,
+      tileHorizontalSpacing: mt?.eventTileHorizontalSpacing ?? d.eventTileHorizontalSpacing!,
+      eventTileCornerRadius: mt?.eventTileCornerRadius ?? d.eventTileCornerRadius!,
       tileBorderWidth: 0.0,
-      dateLabelHeight: mt?.dateLabelHeight ?? 18.0,
-      dateLabelPosition: mt?.dateLabelPosition ?? DateLabelPosition.topLeft,
-      overflowIndicatorHeight: mt?.overflowIndicatorHeight ?? 14.0,
+      dateLabelHeight: mt?.dateLabelHeight ?? d.dateLabelHeight!,
+      dateLabelPosition: mt?.dateLabelPosition ?? d.dateLabelPosition!,
+      overflowIndicatorHeight: mt?.overflowIndicatorHeight ?? d.overflowIndicatorHeight!,
       maxVisibleEventsPerDay: maxVisibleEventsPerDay,
     );
   }

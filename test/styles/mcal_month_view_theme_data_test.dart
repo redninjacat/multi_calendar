@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 
 void main() {
-  group('MCalMonthThemeData constructor', () {
+  group('MCalMonthViewThemeData constructor', () {
     test('default constructor creates instance with all null properties', () {
-      const theme = MCalMonthThemeData();
+      const theme = MCalMonthViewThemeData();
 
       expect(theme.cellTextStyle, isNull);
       expect(theme.todayBackgroundColor, isNull);
@@ -21,7 +21,7 @@ void main() {
     test('constructor accepts key properties', () {
       const cellStyle = TextStyle(fontSize: 14);
 
-      const theme = MCalMonthThemeData(
+      const theme = MCalMonthViewThemeData(
         cellTextStyle: cellStyle,
         todayBackgroundColor: Colors.blue,
         eventTileHeight: 24.0,
@@ -37,14 +37,14 @@ void main() {
     });
   });
 
-  group('MCalMonthThemeData.defaults', () {
+  group('MCalMonthViewThemeData.defaults', () {
     test('defaults factory creates non-null values from ThemeData', () {
       final themeData = ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       );
 
-      final theme = MCalMonthThemeData.defaults(themeData);
+      final theme = MCalMonthViewThemeData.defaults(themeData);
 
       expect(theme.cellTextStyle, isNotNull);
       expect(theme.todayBackgroundColor, isNotNull);
@@ -63,7 +63,7 @@ void main() {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),
       );
 
-      final theme = MCalMonthThemeData.defaults(themeData);
+      final theme = MCalMonthViewThemeData.defaults(themeData);
 
       expect(theme.todayBackgroundColor, isNotNull);
     });
@@ -84,16 +84,16 @@ void main() {
         ),
       );
 
-      final light = MCalMonthThemeData.defaults(lightTheme);
-      final dark = MCalMonthThemeData.defaults(darkTheme);
+      final light = MCalMonthViewThemeData.defaults(lightTheme);
+      final dark = MCalMonthViewThemeData.defaults(darkTheme);
 
       expect(light.todayBackgroundColor, isNot(dark.todayBackgroundColor));
     });
   });
 
-  group('MCalMonthThemeData copyWith', () {
+  group('MCalMonthViewThemeData copyWith', () {
     test('copyWith with no arguments returns identical instance', () {
-      const original = MCalMonthThemeData(
+      const original = MCalMonthViewThemeData(
         eventTileHeight: 24.0,
         todayBackgroundColor: Colors.blue,
       );
@@ -106,7 +106,7 @@ void main() {
     });
 
     test('copyWith updates single property', () {
-      const original = MCalMonthThemeData(eventTileHeight: 20.0);
+      const original = MCalMonthViewThemeData(eventTileHeight: 20.0);
 
       final updated = original.copyWith(eventTileHeight: 28.0);
 
@@ -115,7 +115,7 @@ void main() {
     });
 
     test('copyWith preserves unspecified properties', () {
-      const original = MCalMonthThemeData(
+      const original = MCalMonthViewThemeData(
         eventTileHeight: 20.0,
         todayBackgroundColor: Colors.blue,
       );
@@ -127,7 +127,7 @@ void main() {
     });
 
     test('copyWith updates DateLabelPosition', () {
-      const original = MCalMonthThemeData(
+      const original = MCalMonthViewThemeData(
         dateLabelPosition: DateLabelPosition.topLeft,
       );
 
@@ -139,7 +139,7 @@ void main() {
     });
 
     test('copyWith updates Color properties', () {
-      const original = MCalMonthThemeData(todayBackgroundColor: Colors.blue);
+      const original = MCalMonthViewThemeData(todayBackgroundColor: Colors.blue);
 
       final updated = original.copyWith(todayBackgroundColor: Colors.red);
 
@@ -147,7 +147,7 @@ void main() {
     });
 
     test('copyWith updates double properties', () {
-      const original = MCalMonthThemeData(
+      const original = MCalMonthViewThemeData(
         eventTileHeight: 20.0,
         overflowIndicatorHeight: 14.0,
         dragSourceOpacity: 0.5,
@@ -165,7 +165,7 @@ void main() {
     });
 
     test('copyWith updates TextStyle properties', () {
-      const original = MCalMonthThemeData(
+      const original = MCalMonthViewThemeData(
         cellTextStyle: TextStyle(fontSize: 12),
       );
       const newStyle = TextStyle(fontSize: 16, color: Colors.red);
@@ -177,7 +177,7 @@ void main() {
     });
 
     test('copyWith updates drop target properties', () {
-      const original = MCalMonthThemeData(
+      const original = MCalMonthViewThemeData(
         dropTargetCellValidColor: Colors.green,
         dropTargetCellInvalidColor: Colors.red,
         dropTargetCellBorderRadius: 4.0,
@@ -195,7 +195,7 @@ void main() {
     });
 
     test('copyWith updates event tile properties', () {
-      const original = MCalMonthThemeData(
+      const original = MCalMonthViewThemeData(
         eventTileHeight: 20.0,
         eventTileVerticalSpacing: 1.0,
       );
@@ -211,9 +211,9 @@ void main() {
 
   });
 
-  group('MCalMonthThemeData lerp', () {
+  group('MCalMonthViewThemeData lerp', () {
     test('lerp with null other returns this', () {
-      const theme = MCalMonthThemeData(eventTileHeight: 24.0);
+      const theme = MCalMonthViewThemeData(eventTileHeight: 24.0);
 
       final result = theme.lerp(null, 0.5);
 
@@ -221,11 +221,11 @@ void main() {
     });
 
     test('lerp at t=0.0 returns this theme', () {
-      const theme1 = MCalMonthThemeData(
+      const theme1 = MCalMonthViewThemeData(
         eventTileHeight: 20.0,
         todayBackgroundColor: Colors.white,
       );
-      const theme2 = MCalMonthThemeData(
+      const theme2 = MCalMonthViewThemeData(
         eventTileHeight: 28.0,
         todayBackgroundColor: Colors.black,
       );
@@ -237,11 +237,11 @@ void main() {
     });
 
     test('lerp at t=1.0 returns other theme', () {
-      const theme1 = MCalMonthThemeData(
+      const theme1 = MCalMonthViewThemeData(
         eventTileHeight: 20.0,
         todayBackgroundColor: Colors.white,
       );
-      const theme2 = MCalMonthThemeData(
+      const theme2 = MCalMonthViewThemeData(
         eventTileHeight: 28.0,
         todayBackgroundColor: Colors.black,
       );
@@ -253,8 +253,8 @@ void main() {
     });
 
     test('lerp at t=0.5 interpolates double values', () {
-      const theme1 = MCalMonthThemeData(eventTileHeight: 20.0);
-      const theme2 = MCalMonthThemeData(eventTileHeight: 28.0);
+      const theme1 = MCalMonthViewThemeData(eventTileHeight: 20.0);
+      const theme2 = MCalMonthViewThemeData(eventTileHeight: 28.0);
 
       final result = theme1.lerp(theme2, 0.5);
 
@@ -262,8 +262,8 @@ void main() {
     });
 
     test('lerp interpolates Color values', () {
-      const theme1 = MCalMonthThemeData(todayBackgroundColor: Colors.white);
-      const theme2 = MCalMonthThemeData(todayBackgroundColor: Colors.black);
+      const theme1 = MCalMonthViewThemeData(todayBackgroundColor: Colors.white);
+      const theme2 = MCalMonthViewThemeData(todayBackgroundColor: Colors.black);
 
       final atHalf = theme1.lerp(theme2, 0.5);
 
@@ -273,10 +273,10 @@ void main() {
     });
 
     test('lerp interpolates dateLabelPosition at t<0.5 uses this value', () {
-      const theme1 = MCalMonthThemeData(
+      const theme1 = MCalMonthViewThemeData(
         dateLabelPosition: DateLabelPosition.topLeft,
       );
-      const theme2 = MCalMonthThemeData(
+      const theme2 = MCalMonthViewThemeData(
         dateLabelPosition: DateLabelPosition.topCenter,
       );
 
@@ -286,10 +286,10 @@ void main() {
     });
 
     test('lerp interpolates dateLabelPosition at t>=0.5 uses other value', () {
-      const theme1 = MCalMonthThemeData(
+      const theme1 = MCalMonthViewThemeData(
         dateLabelPosition: DateLabelPosition.topLeft,
       );
-      const theme2 = MCalMonthThemeData(
+      const theme2 = MCalMonthViewThemeData(
         dateLabelPosition: DateLabelPosition.topCenter,
       );
 
@@ -299,10 +299,10 @@ void main() {
     });
 
     test('lerp interpolates TextStyle', () {
-      const theme1 = MCalMonthThemeData(
+      const theme1 = MCalMonthViewThemeData(
         cellTextStyle: TextStyle(fontSize: 12, color: Colors.white),
       );
-      const theme2 = MCalMonthThemeData(
+      const theme2 = MCalMonthViewThemeData(
         cellTextStyle: TextStyle(fontSize: 24, color: Colors.black),
       );
 
@@ -312,8 +312,8 @@ void main() {
     });
 
     test('lerp handles null double values', () {
-      const theme1 = MCalMonthThemeData(eventTileHeight: null);
-      const theme2 = MCalMonthThemeData(eventTileHeight: 28.0);
+      const theme1 = MCalMonthViewThemeData(eventTileHeight: null);
+      const theme2 = MCalMonthViewThemeData(eventTileHeight: 28.0);
 
       final result = theme1.lerp(theme2, 0.5);
 
@@ -321,8 +321,8 @@ void main() {
     });
 
     test('lerp handles both null doubles', () {
-      const theme1 = MCalMonthThemeData(eventTileHeight: null);
-      const theme2 = MCalMonthThemeData(eventTileHeight: null);
+      const theme1 = MCalMonthViewThemeData(eventTileHeight: null);
+      const theme2 = MCalMonthViewThemeData(eventTileHeight: null);
 
       final result = theme1.lerp(theme2, 0.5);
 
@@ -330,12 +330,12 @@ void main() {
     });
 
     test('lerp interpolates drop target and drag properties', () {
-      const theme1 = MCalMonthThemeData(
+      const theme1 = MCalMonthViewThemeData(
         dropTargetCellBorderRadius: 2.0,
         dragSourceOpacity: 0.3,
         draggedTileElevation: 4.0,
       );
-      const theme2 = MCalMonthThemeData(
+      const theme2 = MCalMonthViewThemeData(
         dropTargetCellBorderRadius: 8.0,
         dragSourceOpacity: 0.9,
         draggedTileElevation: 12.0,
@@ -349,19 +349,19 @@ void main() {
     });
   });
 
-  group('MCalMonthThemeData equality', () {
+  group('MCalMonthViewThemeData equality', () {
     test('identical instances are equal', () {
-      const theme = MCalMonthThemeData(eventTileHeight: 24.0);
+      const theme = MCalMonthViewThemeData(eventTileHeight: 24.0);
 
       expect(theme == theme, isTrue);
     });
 
     test('same values are equal', () {
-      const theme1 = MCalMonthThemeData(
+      const theme1 = MCalMonthViewThemeData(
         eventTileHeight: 24.0,
         dateLabelPosition: DateLabelPosition.topCenter,
       );
-      const theme2 = MCalMonthThemeData(
+      const theme2 = MCalMonthViewThemeData(
         eventTileHeight: 24.0,
         dateLabelPosition: DateLabelPosition.topCenter,
       );
@@ -371,44 +371,44 @@ void main() {
     });
 
     test('different values are not equal', () {
-      const theme1 = MCalMonthThemeData(eventTileHeight: 20.0);
-      const theme2 = MCalMonthThemeData(eventTileHeight: 28.0);
+      const theme1 = MCalMonthViewThemeData(eventTileHeight: 20.0);
+      const theme2 = MCalMonthViewThemeData(eventTileHeight: 28.0);
 
       expect(theme1, isNot(equals(theme2)));
       expect(theme1.hashCode, isNot(theme2.hashCode));
     });
 
     test('empty themes are equal', () {
-      const theme1 = MCalMonthThemeData();
-      const theme2 = MCalMonthThemeData();
+      const theme1 = MCalMonthViewThemeData();
+      const theme2 = MCalMonthViewThemeData();
 
       expect(theme1, equals(theme2));
     });
 
-    test('equality with non-MCalMonthThemeData returns false', () {
-      const theme = MCalMonthThemeData();
+    test('equality with non-MCalMonthViewThemeData returns false', () {
+      const theme = MCalMonthViewThemeData();
 
       expect(theme == 'string', isFalse); // ignore: unrelated_type_equality_checks
       expect(theme == 42, isFalse); // ignore: unrelated_type_equality_checks
     });
   });
 
-  group('MCalMonthThemeData hashCode', () {
+  group('MCalMonthViewThemeData hashCode', () {
     test('hashCode is consistent', () {
-      const theme = MCalMonthThemeData(eventTileHeight: 24.0);
+      const theme = MCalMonthViewThemeData(eventTileHeight: 24.0);
 
       expect(theme.hashCode, theme.hashCode);
     });
 
     test('equal instances have same hashCode', () {
-      const theme1 = MCalMonthThemeData(dateLabelPosition: DateLabelPosition.topLeft);
-      const theme2 = MCalMonthThemeData(dateLabelPosition: DateLabelPosition.topLeft);
+      const theme1 = MCalMonthViewThemeData(dateLabelPosition: DateLabelPosition.topLeft);
+      const theme2 = MCalMonthViewThemeData(dateLabelPosition: DateLabelPosition.topLeft);
 
       expect(theme1.hashCode, theme2.hashCode);
     });
   });
 
-  group('MCalMonthThemeData edge cases', () {
+  group('MCalMonthViewThemeData edge cases', () {
     test('copyWith with all DateLabelPosition values', () {
       const positions = [
         DateLabelPosition.topLeft,
@@ -420,7 +420,7 @@ void main() {
       ];
 
       for (final position in positions) {
-        const original = MCalMonthThemeData(
+        const original = MCalMonthViewThemeData(
           dateLabelPosition: DateLabelPosition.topLeft,
         );
         final updated = original.copyWith(dateLabelPosition: position);
@@ -429,7 +429,7 @@ void main() {
     });
 
     test('lerp with identical themes returns same values', () {
-      const theme = MCalMonthThemeData(
+      const theme = MCalMonthViewThemeData(
         eventTileHeight: 24.0,
         todayBackgroundColor: Colors.blue,
       );
@@ -446,15 +446,15 @@ void main() {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       );
 
-      final theme1 = MCalMonthThemeData.defaults(themeData);
-      final theme2 = MCalMonthThemeData.defaults(themeData);
+      final theme1 = MCalMonthViewThemeData.defaults(themeData);
+      final theme2 = MCalMonthViewThemeData.defaults(themeData);
 
       expect(theme1.eventTileHeight, theme2.eventTileHeight);
       expect(theme1.dateLabelPosition, theme2.dateLabelPosition);
     });
 
     test('copyWith updates multi-day and hover properties', () {
-      const original = MCalMonthThemeData(
+      const original = MCalMonthViewThemeData(
         multiDayEventBackgroundColor: Colors.blue,
         hoverCellBackgroundColor: Colors.grey,
       );
@@ -469,11 +469,11 @@ void main() {
     });
 
     test('lerp interpolates all Color properties', () {
-      const theme1 = MCalMonthThemeData(
+      const theme1 = MCalMonthViewThemeData(
         todayBackgroundColor: Colors.white,
         dropTargetCellValidColor: Colors.white,
       );
-      const theme2 = MCalMonthThemeData(
+      const theme2 = MCalMonthViewThemeData(
         todayBackgroundColor: Colors.black,
         dropTargetCellValidColor: Colors.black,
       );
@@ -485,7 +485,7 @@ void main() {
     });
 
     test('copyWith updates leading and trailing date properties', () {
-      const original = MCalMonthThemeData(
+      const original = MCalMonthViewThemeData(
         leadingDatesTextStyle: TextStyle(fontSize: 10),
         trailingDatesTextStyle: TextStyle(fontSize: 10),
         leadingDatesBackgroundColor: Colors.white,
@@ -506,8 +506,8 @@ void main() {
     });
 
     test('lerp at t=0.25 and t=0.75 gives expected double values', () {
-      const theme1 = MCalMonthThemeData(eventTileHeight: 0.0);
-      const theme2 = MCalMonthThemeData(eventTileHeight: 100.0);
+      const theme1 = MCalMonthViewThemeData(eventTileHeight: 0.0);
+      const theme2 = MCalMonthViewThemeData(eventTileHeight: 100.0);
 
       final atQuarter = theme1.lerp(theme2, 0.25);
       final atThreeQuarters = theme1.lerp(theme2, 0.75);
@@ -517,7 +517,7 @@ void main() {
     });
 
     test('copyWith updates drop target tile properties', () {
-      const original = MCalMonthThemeData(
+      const original = MCalMonthViewThemeData(
         dropTargetTileBackgroundColor: Colors.blue,
         dropTargetTileInvalidBackgroundColor: Colors.red,
         dropTargetTileCornerRadius: 4.0,
@@ -541,7 +541,7 @@ void main() {
     });
 
     test('new 5 cascade properties round-trip via copyWith', () {
-      const original = MCalMonthThemeData(
+      const original = MCalMonthViewThemeData(
         overlayScrimColor: Color(0x80000000),
         errorIconColor: Color(0xFFFF0000),
         defaultRegionColor: Color(0xFF909090),
@@ -564,7 +564,7 @@ void main() {
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         );
-        final defaults = MCalMonthThemeData.defaults(themeData);
+        final defaults = MCalMonthViewThemeData.defaults(themeData);
 
         expect(defaults.overlayScrimColor, isNotNull);
         expect(defaults.errorIconColor, isNotNull);
@@ -577,7 +577,7 @@ void main() {
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         );
-        final defaults = MCalMonthThemeData.defaults(themeData);
+        final defaults = MCalMonthViewThemeData.defaults(themeData);
 
         // Should be non-null
         expect(defaults.dropTargetCellValidColor, isNotNull);

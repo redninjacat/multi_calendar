@@ -163,6 +163,18 @@ class AppLocalizationsHe extends AppLocalizations {
   String get sectionAllDayEvents => 'אירועי כל היום';
 
   @override
+  String get sectionGlobal => 'כללי';
+
+  @override
+  String get sectionTimeGrid => 'רשת זמן';
+
+  @override
+  String get sectionDayHeader => 'כותרת יום';
+
+  @override
+  String get sectionMonthView => 'תצוגת חודש';
+
+  @override
   String get settingShowNavigator => 'הצג ניווט';
 
   @override
@@ -253,6 +265,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get settingCellBorderColor => 'צבע גבול תא';
 
   @override
+  String get settingCellBorderWidth => 'רוחב גבול תא';
+
+  @override
   String get settingTodayBackgroundColor => 'צבע רקע היום';
 
   @override
@@ -274,7 +289,31 @@ class AppLocalizationsHe extends AppLocalizations {
   String get settingEventTileBorderWidth => 'רוחב גבול משבצת אירוע';
 
   @override
-  String get settingIgnoreEventColors => 'התעלם מצבעי אירוע';
+  String get settingEnableEventColorOverrides => 'הפעלת דריסת צבעי אירועים';
+
+  @override
+  String get settingDayHeaderPadding => 'ריפוד כותרת יום';
+
+  @override
+  String get settingDayHeaderSpacing => 'ריווח כותרת יום';
+
+  @override
+  String get settingTimeLegendLabelHeight => 'גובה תווית זמן';
+
+  @override
+  String get settingTimedEventMarginH => 'שוליים אופקיים לאירוע מתוזמן';
+
+  @override
+  String get settingTimedEventMarginV => 'שוליים אנכיים לאירוע מתוזמן';
+
+  @override
+  String get settingAllDayWrapSpacing => 'ריווח משבצות כל היום';
+
+  @override
+  String get settingResizeHandleHeight => 'גובה ידית שינוי גודל';
+
+  @override
+  String get settingNavigatorPadding => 'ריפוד ניווט';
 
   @override
   String get settingWeekdayHeaderBackgroundColor => 'צבע רקע כותרת יום בשבוע';
@@ -448,6 +487,19 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get settingMinResizeDurationMinutes =>
       'משך מינימלי לשינוי גודל (דקות)';
+
+  @override
+  String get settingKeyboardFocusBorderRadius => 'רדיוס גבול מיקוד';
+
+  @override
+  String get settingTimedEventTitleTimeGap => 'רווח כותרת-שעה';
+
+  @override
+  String get settingAllDayOverflowIndicatorBorderWidth =>
+      'רוחב גבול מחוון גלישה';
+
+  @override
+  String get settingAllDaySectionLabelBottomPadding => 'ריפוד תחתון לתווית';
 
   @override
   String get styleDefault => 'ברירת מחדל';

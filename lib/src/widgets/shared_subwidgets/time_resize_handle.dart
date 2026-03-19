@@ -18,6 +18,9 @@ class TimeResizeHandle extends StatelessWidget {
     required this.tileHeight,
     required this.resizeHandleColor,
     this.inset = 0.0,
+    required this.resizeHandleVisualHeight,
+    required this.resizeHandleHorizontalMargin,
+    required this.resizeHandleBorderRadius,
     this.visualBuilder,
     this.onPointerDown,
   });
@@ -29,6 +32,9 @@ class TimeResizeHandle extends StatelessWidget {
   final double tileHeight;
   final Color resizeHandleColor;
   final double inset;
+  final double resizeHandleVisualHeight;
+  final double resizeHandleHorizontalMargin;
+  final double resizeHandleBorderRadius;
   final Widget Function(
     BuildContext,
     MCalCalendarEvent,
@@ -41,12 +47,12 @@ class TimeResizeHandle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final defaultVisual = Container(
-      width: tileWidth - 8,
-      height: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      width: tileWidth - (resizeHandleHorizontalMargin * 2),
+      height: resizeHandleVisualHeight,
+      margin: EdgeInsets.symmetric(horizontal: resizeHandleHorizontalMargin),
       decoration: BoxDecoration(
         color: resizeHandleColor,
-        borderRadius: BorderRadius.circular(1),
+        borderRadius: BorderRadius.circular(resizeHandleBorderRadius),
       ),
     );
 

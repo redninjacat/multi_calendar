@@ -62,25 +62,25 @@ class _DayMinimalStyleState extends State<DayMinimalStyle>
     return SizedBox.expand(
       child: MCalTheme(
       data: MCalThemeData(
-        allDayEventBackgroundColor:
-            colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        allDayEventTextStyle: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w400,
-          color: colorScheme.onSurface.withValues(alpha: 0.8),
-        ),
-        allDayEventBorderColor: Colors.transparent,
-        allDayEventBorderWidth: 0.0,
-        ignoreEventColors: false,
-        eventTileBackgroundColor:
-            colorScheme.primaryContainer.withValues(alpha: 0.6),
-        eventTileTextStyle: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w400,
-          color: colorScheme.onSurface,
-        ),
-        eventTileCornerRadius: 2.0,
-        dayTheme: MCalDayThemeData(
+        enableEventColorOverrides: false,
+        dayViewTheme: MCalDayViewThemeData(
+          allDayEventBackgroundColor:
+              colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          allDayEventTextStyle: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w400,
+            color: colorScheme.onSurface.withValues(alpha: 0.8),
+          ),
+          allDayEventBorderColor: Colors.transparent,
+          allDayEventBorderWidth: 0.0,
+          eventTileBackgroundColor:
+              colorScheme.primaryContainer.withValues(alpha: 0.6),
+          eventTileTextStyle: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w400,
+            color: colorScheme.onSurface,
+          ),
+          eventTileCornerRadius: 2.0,
           hourGridlineColor: colorScheme.outline.withValues(alpha: 0.08),
           hourGridlineWidth: 0.5,
           majorGridlineColor: colorScheme.outline.withValues(alpha: 0.04),

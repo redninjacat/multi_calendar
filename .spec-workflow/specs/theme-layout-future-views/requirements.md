@@ -11,8 +11,8 @@ This spec addresses all three problems with a mixin-based architecture:
 - **Three mixins** (`MCalEventTileThemeMixin`, `MCalTimeGridThemeMixin`, `MCalAllDayThemeMixin`) define property contracts once. View-level theme classes mix in the relevant ones.
 - **Zero property duplication** — each property is defined in exactly one place (a mixin or a specific class).
 - **Zero hardcoded visual values** — every padding, margin, spacing, border width/radius, icon size, and font size in widget code is replaced with a theme property that has a master default.
-- **Slim parent** — `MCalThemeData` is reduced to ~7 truly global properties. Event tile, contrast, hover, drop target, and week number properties move into per-view themes via mixins.
-- **Consumer clarity** — consumers still interact with only 2 sub-themes (`dayViewTheme`, `monthTheme`). Mixins are internal organization.
+- **Slim parent** — `MCalThemeData` is reduced to ~9 truly global properties. Event tile, contrast, hover, drop target, and week number properties move into per-view themes via mixins.
+- **Consumer clarity** — consumers still interact with only 2 sub-themes (`dayViewTheme`, `monthViewTheme`). Mixins are internal organization.
 
 ## Alignment with Product Vision
 
@@ -61,10 +61,10 @@ This spec addresses all three problems with a mixin-based architecture:
    - Resize handle: `resizeHandleColor` (Color?)
    - Multi-day events: `multiDayEventBackgroundColor` (Color?) — cascade-eligible color for multi-day event tiles. In Month View this colors the horizontal bar segments; in Day View it colors multi-day events that appear in the all-day section or as timed tiles.
 2. `MCalDayViewThemeData` SHALL mix in `MCalEventTileThemeMixin` and implement all abstract getters as final fields.
-3. `MCalMonthThemeData` SHALL mix in `MCalEventTileThemeMixin` and implement all abstract getters as final fields.
-4. The 5 `dropTargetTile*` properties and `resizeHandleColor` that currently exist on both `MCalDayThemeData` and `MCalMonthThemeData` as separate declarations SHALL be consolidated into this mixin (defined once, no duplication).
-5. `multiDayEventBackgroundColor`, currently declared only on `MCalMonthThemeData`, SHALL move into this mixin so that both Day View and Month View can independently theme multi-day events.
-6. `eventTileBorderWidth` and `eventTileBorderColor`, currently declared only on `MCalMonthThemeData`, SHALL move into this mixin so that both Day View (timed event tiles) and Month View can independently theme event tile borders. All-day event tile borders use separate properties (`allDayEventBorderWidth`, `allDayEventBorderColor`) defined in `MCalAllDayThemeMixin` (see Req 5).
+3. `MCalMonthViewThemeData` SHALL mix in `MCalEventTileThemeMixin` and implement all abstract getters as final fields.
+4. The 5 `dropTargetTile*` properties and `resizeHandleColor` that currently exist on both `MCalDayThemeData` and `MCalMonthViewThemeData` as separate declarations SHALL be consolidated into this mixin (defined once, no duplication).
+5. `multiDayEventBackgroundColor`, currently declared only on `MCalMonthViewThemeData`, SHALL move into this mixin so that both Day View and Month View can independently theme multi-day events.
+6. `eventTileBorderWidth` and `eventTileBorderColor`, currently declared only on `MCalMonthViewThemeData`, SHALL move into this mixin so that both Day View (timed event tiles) and Month View can independently theme event tile borders. All-day event tile borders use separate properties (`allDayEventBorderWidth`, `allDayEventBorderColor`) defined in `MCalAllDayThemeMixin` (see Req 5).
 7. The 9 properties currently on `MCalThemeData` (parent) that are moved into this mixin (`eventTileBackgroundColor`, `eventTileTextStyle`, `eventTileCornerRadius`, `eventTileHorizontalSpacing`, `hoverEventBackgroundColor`, `eventTileLightContrastColor`, `eventTileDarkContrastColor`, `weekNumberTextStyle`, `weekNumberBackgroundColor`) SHALL be **removed from `MCalThemeData`**.
 8. WHEN widgets resolve event tile properties THEN they SHALL read from the per-view theme (e.g. `theme.dayViewTheme?.eventTileBackgroundColor`) instead of the parent theme.
 
@@ -95,6 +95,8 @@ This spec addresses all three problems with a mixin-based architecture:
    - `resizeHandleVisualHeight` (double?) — replaces hardcoded `2` (bar height) in `time_resize_handle.dart`
    - `resizeHandleHorizontalMargin` (double?) — replaces hardcoded `4` (horizontal margin per side; the bar width `tileWidth - 8` is derived from this value × 2) in `time_resize_handle.dart`
    - `resizeHandleBorderRadius` (double?) — replaces hardcoded `1` in `time_resize_handle.dart`
+   - `timedEventTitleTimeGap` (double?) — replaces hardcoded `2.0` (`EdgeInsets.only(top: 2.0)`) vertical gap between event title and time range text in `time_grid_events_layer.dart`
+   - `keyboardFocusBorderRadius` (double?) — replaces hardcoded `4` (`BorderRadius.circular(4)`) keyboard focus ring border radius in `time_grid_events_layer.dart` and `all_day_events_section.dart`
 3. `MCalDayViewThemeData` SHALL mix in `MCalTimeGridThemeMixin` and implement all abstract getters.
 
 ### Requirement 5: Create MCalAllDayThemeMixin
@@ -116,6 +118,8 @@ This spec addresses all three problems with a mixin-based architecture:
      - `allDayOverflowHandleBorderRadius` (double?) — replaces hardcoded `1.5`
      - `allDayOverflowHandleGap` (double?) — replaces hardcoded `4`
      - `allDayOverflowIndicatorFontSize` (double?) — replaces hardcoded `11` (used in the `'+$count more'` overflow indicator, not the tile text)
+     - `allDayOverflowIndicatorBorderWidth` (double?) — replaces hardcoded `1.0` border width of the overflow indicator container in `all_day_events_section.dart`
+     - `allDaySectionLabelBottomPadding` (double?) — replaces hardcoded `4.0` (`EdgeInsets.only(bottom: 4.0)`) padding below the "All-day" label in `all_day_events_section.dart`
 2. The 4 `allDayEvent*` properties currently on `MCalThemeData` (parent) SHALL be **removed from `MCalThemeData`** and exist only via this mixin.
 3. `MCalDayViewThemeData` SHALL mix in `MCalAllDayThemeMixin` and implement all abstract getters.
 
@@ -137,16 +141,16 @@ This spec addresses all three problems with a mixin-based architecture:
 4. The constructor SHALL include all mixin properties plus view-specific properties as named optional parameters.
 5. `copyWith`, `lerp`, `==`, and `hashCode` SHALL include all properties from all three mixins and the view-specific properties.
 
-### Requirement 7: MCalMonthThemeData Composition
+### Requirement 7: MCalMonthViewThemeData Composition
 
-**User Story:** As a developer, I want `MCalMonthThemeData` to gain per-view event tile properties via the shared mixin, so that I can style Month View event tiles independently from Day View.
+**User Story:** As a developer, I want `MCalMonthViewThemeData` to gain per-view event tile properties via the shared mixin, so that I can style Month View event tiles independently from Day View.
 
 #### Acceptance Criteria
 
-1. `MCalMonthThemeData` SHALL mix in `MCalEventTileThemeMixin`.
-2. `MCalMonthThemeData` SHALL retain all its existing month-specific properties (cell styling, date labels, headers, multi-day tiles, drag & drop, overflow, regions, overlays).
-3. The 5 `dropTargetTile*` properties and `resizeHandleColor` currently declared directly on `MCalMonthThemeData` SHALL be replaced by the mixin's abstract getters (same names, no duplication).
-4. `MCalMonthThemeData` SHALL add the following **new** layout properties that replace hardcoded values in Month View widgets:
+1. `MCalMonthViewThemeData` SHALL mix in `MCalEventTileThemeMixin`.
+2. `MCalMonthViewThemeData` SHALL retain all its existing month-specific properties (cell styling, date labels, headers, multi-day tiles, drag & drop, overflow, regions, overlays).
+3. The 5 `dropTargetTile*` properties and `resizeHandleColor` currently declared directly on `MCalMonthViewThemeData` SHALL be replaced by the mixin's abstract getters (same names, no duplication).
+4. `MCalMonthViewThemeData` SHALL add the following **new** layout properties that replace hardcoded values in Month View widgets:
    - `dateLabelPadding` (EdgeInsets?) — replaces hardcoded `EdgeInsets.only(left: 4.0, top: 4.0, right: 4.0)` in `day_cell_widget.dart`
    - `cellBorderWidth` (double?) — replaces hardcoded `1.0` in `day_cell_widget.dart`
    - `regionContentPadding` (EdgeInsets?) — replaces hardcoded `EdgeInsets.only(bottom: 2.0)` in `day_cell_widget.dart`
@@ -163,10 +167,10 @@ This spec addresses all three problems with a mixin-based architecture:
    - `multiDayTileBorderRadius` (double?) — replaces hardcoded `4.0` in `mcal_month_multi_day_tile.dart`
    - `weekLayoutDateLabelPadding` (double?) — replaces hardcoded `2.0` in week layout
    - `weekLayoutBaseMargin` (double?) — replaces hardcoded `2.0` in week layout
-5. The `MCalMonthThemeData.defaults(ThemeData)` factory SHALL populate all mixin properties and month-specific properties (including new layout properties) with master defaults.
+5. The `MCalMonthViewThemeData.defaults(ThemeData)` factory SHALL populate all mixin properties and month-specific properties (including new layout properties) with master defaults.
 6. `eventTileBorderWidth` (double?) and `eventTileBorderColor` (Color?) SHALL come from `MCalEventTileThemeMixin` (see Req 3.6). Day View SHALL use these for timed event tile borders. All-day event tile borders are controlled by `allDayEventBorderWidth` and `allDayEventBorderColor` from `MCalAllDayThemeMixin` (Req 5).
 7. `multiDayEventBackgroundColor` (Color?) SHALL come from `MCalEventTileThemeMixin` (see Req 3.5). It is no longer Month-specific because Day View also displays multi-day events in the all-day section and as timed tiles.
-8. `weekLayoutDateLabelPadding` and `weekLayoutBaseMargin` SHALL be accessed by `MCalMonthDefaultWeekLayoutBuilder` through the `BuildContext` parameter it already receives, using `MCalTheme.of(context).monthTheme?.weekLayoutDateLabelPadding` (same pattern as all other widget theme access).
+8. `weekLayoutDateLabelPadding` and `weekLayoutBaseMargin` SHALL be accessed by `MCalMonthDefaultWeekLayoutBuilder` through the `BuildContext` parameter it already receives, using `MCalTheme.of(context).monthViewTheme?.weekLayoutDateLabelPadding` (same pattern as all other widget theme access).
 
 ### Requirement 8: Slim MCalThemeData Parent
 
@@ -177,16 +181,17 @@ This spec addresses all three problems with a mixin-based architecture:
 1. `MCalThemeData` SHALL retain only the following properties:
    - `cellBackgroundColor` (Color?) — grid structure consistency across views
    - `cellBorderColor` (Color?) — grid structure consistency across views
+   - **New:** `cellBorderWidth` (double?) — replaces hardcoded `1.0` border width used with `cellBorderColor` in `all_day_events_section.dart`; grid structure consistency across views
    - `navigatorBackgroundColor` (Color?) — identical navigators on both views
    - `navigatorTextStyle` (TextStyle?) — identical navigators on both views
    - `enableEventColorOverrides` (bool, default: `false`) — global cascade policy (renamed from `ignoreEventColors`)
    - `dayViewTheme` (MCalDayViewThemeData?) — renamed from `dayTheme`
-   - `monthTheme` (MCalMonthThemeData?) — unchanged
+   - `monthViewTheme` (MCalMonthViewThemeData?) — unchanged
    - **New:** `navigatorPadding` (EdgeInsets?) — replaces hardcoded `EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0)` in both navigators
 2. The following 13 properties SHALL be **removed from `MCalThemeData`** (moved to mixins as specified in Requirements 3 and 5):
    - To `MCalEventTileThemeMixin`: `eventTileBackgroundColor`, `eventTileTextStyle`, `eventTileCornerRadius`, `eventTileHorizontalSpacing`, `hoverEventBackgroundColor`, `eventTileLightContrastColor`, `eventTileDarkContrastColor`, `weekNumberTextStyle`, `weekNumberBackgroundColor`
    - To `MCalAllDayThemeMixin`: `allDayEventBackgroundColor`, `allDayEventTextStyle`, `allDayEventBorderColor`, `allDayEventBorderWidth`
-3. `MCalThemeData.fromTheme(ThemeData)` SHALL still produce a fully populated instance by populating the 8 parent properties and creating `dayViewTheme: MCalDayViewThemeData.defaults(theme)` and `monthTheme: MCalMonthThemeData.defaults(theme)`.
+3. `MCalThemeData.fromTheme(ThemeData)` SHALL still produce a fully populated instance by populating the 9 parent properties and creating `dayViewTheme: MCalDayViewThemeData.defaults(theme)` and `monthViewTheme: MCalMonthViewThemeData.defaults(theme)`.
 
 ### Requirement 9: Zero Hardcoded Visual Values
 
@@ -196,7 +201,7 @@ This spec addresses all three problems with a mixin-based architecture:
 
 1. AFTER this spec is implemented THEN no widget file in `lib/src/widgets/` SHALL contain hardcoded numeric literals for padding, margin, spacing, border width, border radius, icon size, or font size. **Exception**: behavioral thresholds (drag detection distances, spring physics, tablet breakpoints, debug overlay dimensions) SHALL remain hardcoded.
 2. Each replaced hardcoded value SHALL have a corresponding theme property on the appropriate class or mixin with a master default that preserves the current visual appearance.
-3. The master defaults factories (`MCalDayViewThemeData.defaults`, `MCalMonthThemeData.defaults`) SHALL provide values for all new layout properties derived from the current hardcoded values.
+3. The master defaults factories (`MCalDayViewThemeData.defaults`, `MCalMonthViewThemeData.defaults`) SHALL provide values for all new layout properties derived from the current hardcoded values.
 4. WHEN a consumer does not set any theme THEN the visual appearance SHALL be identical to the current hardcoded appearance (master defaults match current values).
 
 ### Requirement 10: Example App Control Panel Reorganization
@@ -208,15 +213,15 @@ This spec addresses all three problems with a mixin-based architecture:
 Each theme tab SHALL expose controls for **all** theme properties applicable to that view — every property from `MCalThemeData` (global), every property from each mixin the view's theme class mixes in, and every view-specific property. No applicable property SHALL be omitted.
 
 1. `day_theme_tab.dart` SHALL organize its control panel sections as:
-   - **Global (MCalThemeData)** — `enableEventColorOverrides` toggle, `cellBackgroundColor`, `cellBorderColor`, `navigatorBackgroundColor`, `navigatorPadding`
+   - **Global (MCalThemeData)** — `enableEventColorOverrides` toggle, `cellBackgroundColor`, `cellBorderColor`, `cellBorderWidth`, `navigatorBackgroundColor`, `navigatorPadding`
    - **Event Tiles (MCalEventTileThemeMixin)** — event tile colors, contrast colors, hover, drop target tile properties, resize handle, week number properties
    - **Time Grid (MCalTimeGridThemeMixin)** — time legend, gridlines, current time, time regions, timed events, focus/hover slots, drop target overlay, disabled slots
    - **All-Day Events (MCalAllDayThemeMixin)** — all-day event colors, tile sizing, section layout, overflow
    - **Day Header (MCalDayViewThemeData-specific)** — header padding, spacing, styles
 2. `month_theme_tab.dart` SHALL organize its control panel sections as:
-   - **Global (MCalThemeData)** — `enableEventColorOverrides` toggle, `cellBackgroundColor`, `cellBorderColor`, `navigatorBackgroundColor`, `navigatorPadding`
+   - **Global (MCalThemeData)** — `enableEventColorOverrides` toggle, `cellBackgroundColor`, `cellBorderColor`, `cellBorderWidth`, `navigatorBackgroundColor`, `navigatorPadding`
    - **Event Tiles (MCalEventTileThemeMixin)** — event tile colors, contrast colors, hover, drop target tile properties, resize handle, week number properties
-   - **Month View (MCalMonthThemeData-specific)** — cell styling, date labels, headers, multi-day tiles, drag & drop, overflow
+   - **Month View (MCalMonthViewThemeData-specific)** — cell styling, date labels, headers, multi-day tiles, drag & drop, overflow
 3. WHEN `enableEventColorOverrides` is `false` (default) THEN the following color controls SHALL be visually disabled (greyed out / non-interactive):
    - `eventTileBackgroundColor` (both tabs)
    - `allDayEventBackgroundColor` (Day Theme Tab only)
@@ -249,7 +254,7 @@ Each theme tab SHALL expose controls for **all** theme properties applicable to 
 
 ### Consumer API Clarity
 
-- Consumers SHALL interact with at most 2 sub-themes (`dayViewTheme`, `monthTheme`). No additional top-level sub-theme properties on `MCalThemeData`.
+- Consumers SHALL interact with at most 2 sub-themes (`dayViewTheme`, `monthViewTheme`). No additional top-level sub-theme properties on `MCalThemeData`.
 - Mixins are internal organization. The consumer sees a single flat constructor per view theme class.
 
 ### Master Defaults Preservation

@@ -45,14 +45,14 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('ticks can be disabled via dayTheme.showTimeLegendTicks false', (
+    testWidgets('ticks can be disabled via dayViewTheme.showTimeLegendTicks false', (
       tester,
     ) async {
       final controller = MCalEventController(
         initialDate: DateTime(2026, 2, 14),
       );
       final themeWithNoTicks = MCalThemeData(
-        dayTheme: MCalDayThemeData(showTimeLegendTicks: false),
+        dayViewTheme: MCalDayViewThemeData(showTimeLegendTicks: false),
       );
 
       await tester.pumpWidget(
@@ -85,12 +85,12 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('ticks explicitly enabled via dayTheme', (tester) async {
+    testWidgets('ticks explicitly enabled via dayViewTheme', (tester) async {
       final controller = MCalEventController(
         initialDate: DateTime(2026, 2, 14),
       );
       final themeWithTicks = MCalThemeData(
-        dayTheme: MCalDayThemeData(showTimeLegendTicks: true),
+        dayViewTheme: MCalDayViewThemeData(showTimeLegendTicks: true),
       );
 
       await tester.pumpWidget(
@@ -130,7 +130,7 @@ void main() {
         initialDate: DateTime(2026, 2, 14),
       );
       final themeWithCustomTickColor = MCalThemeData(
-        dayTheme: MCalDayThemeData(
+        dayViewTheme: MCalDayViewThemeData(
           showTimeLegendTicks: true,
           timeLegendTickColor: Colors.red,
         ),
@@ -168,7 +168,7 @@ void main() {
         initialDate: DateTime(2026, 2, 14),
       );
       final themeWithCustomTickWidth = MCalThemeData(
-        dayTheme: MCalDayThemeData(
+        dayViewTheme: MCalDayViewThemeData(
           showTimeLegendTicks: true,
           timeLegendTickWidth: 2.0,
         ),
@@ -206,7 +206,7 @@ void main() {
         initialDate: DateTime(2026, 2, 14),
       );
       final themeWithCustomTickLength = MCalThemeData(
-        dayTheme: MCalDayThemeData(
+        dayViewTheme: MCalDayViewThemeData(
           showTimeLegendTicks: true,
           timeLegendTickLength: 12.0,
         ),
@@ -246,7 +246,7 @@ void main() {
         initialDate: DateTime(2026, 2, 14),
       );
       final themeWithAllCustomTicks = MCalThemeData(
-        dayTheme: MCalDayThemeData(
+        dayViewTheme: MCalDayViewThemeData(
           showTimeLegendTicks: true,
           timeLegendTickColor: Colors.blue,
           timeLegendTickWidth: 3.0,
@@ -452,7 +452,7 @@ void main() {
         initialDate: DateTime(2026, 2, 14),
       );
       final themeNoTicks = MCalThemeData(
-        dayTheme: MCalDayThemeData(showTimeLegendTicks: false),
+        dayViewTheme: MCalDayViewThemeData(showTimeLegendTicks: false),
       );
 
       await tester.pumpWidget(

@@ -430,14 +430,17 @@ class MCalDateLabelContext {
 /// ```dart
 /// weekNumberBuilder: (context, ctx, defaultWeekNumber) {
 ///   final theme = MCalTheme.of(context);
+///   final defaults = MCalThemeData.fromTheme(Theme.of(context));
 ///   return Container(
 ///     decoration: BoxDecoration(
-///       color: theme.weekNumberBackgroundColor,
+///       color: theme.monthViewTheme?.weekNumberBackgroundColor
+///           ?? defaults.monthViewTheme!.weekNumberBackgroundColor!,
 ///     ),
 ///     child: Center(
 ///       child: Text(
 ///         ctx.defaultFormattedString,
-///         style: theme.weekNumberTextStyle,
+///         style: theme.monthViewTheme?.weekNumberTextStyle
+///             ?? defaults.monthViewTheme!.weekNumberTextStyle,
 ///       ),
 ///     ),
 ///   );

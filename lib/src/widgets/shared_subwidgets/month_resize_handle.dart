@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../mcal_callback_details.dart';
 import '../mcal_layout_directionality.dart';
 import '../../models/mcal_calendar_event.dart';
+import '../../styles/mcal_month_view_theme_data.dart';
+import '../../styles/mcal_theme.dart';
 import '../mcal_month_view_contexts.dart';
 
 /// A thin draggable zone on the leading or trailing edge of an event tile
@@ -36,6 +38,7 @@ class MonthResizeHandle extends StatelessWidget {
     required this.event,
     required this.onPointerDown,
     required this.resizeHandleColor,
+    this.theme,
     this.visualBuilder,
     this.inset = 0.0,
   });
@@ -55,9 +58,12 @@ class MonthResizeHandle extends StatelessWidget {
   /// Color for the default resize handle visual indicator.
   final Color resizeHandleColor;
 
+  /// Month view theme for resolving resize handle dimensions.
+  final MCalMonthViewThemeData? theme;
+
   /// Optional custom builder for the visual indicator.
   ///
-  /// When provided, replaces the default 2x16px semi-transparent white bar.
+  /// When provided, replaces the default themed semi-transparent white bar.
   /// The framework still handles hit testing, cursor feedback, and positioning.
   final Widget Function(BuildContext, MCalResizeHandleContext)? visualBuilder;
 
@@ -84,16 +90,29 @@ class MonthResizeHandle extends StatelessWidget {
       event: event,
       isDropTargetPreview: false,
     );
-    final visual = visualBuilder != null
-        ? visualBuilder!(context, handleContext)
-        : Container(
-            width: 2,
-            height: 16,
-            decoration: BoxDecoration(
-              color: resizeHandleColor,
-              borderRadius: BorderRadius.circular(1),
-            ),
-          );
+    final Widget visual;
+    if (visualBuilder != null) {
+      visual = visualBuilder!(context, handleContext);
+    } else {
+      final defaults = MCalThemeData.fromTheme(Theme.of(context));
+      final handleWidth = theme?.resizeHandleVisualWidth ??
+          defaults.monthViewTheme!.resizeHandleVisualWidth!;
+      final vMargin = theme?.resizeHandleVerticalMargin ??
+          defaults.monthViewTheme!.resizeHandleVerticalMargin!;
+      final handleRadius = theme?.resizeHandleBorderRadius ??
+          defaults.monthViewTheme!.resizeHandleBorderRadius!;
+      final tileH = theme?.eventTileHeight ??
+          defaults.monthViewTheme!.eventTileHeight!;
+      final handleHeight = tileH - (2 * vMargin);
+      visual = Container(
+        width: handleWidth,
+        height: handleHeight > 0 ? handleHeight : 0,
+        decoration: BoxDecoration(
+          color: resizeHandleColor,
+          borderRadius: BorderRadius.circular(handleRadius),
+        ),
+      );
+    }
 
     return Positioned(
       left: isLeading ? inset : null,

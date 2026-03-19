@@ -164,6 +164,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sectionAllDayEvents => 'Événements Toute la Journée';
 
   @override
+  String get sectionGlobal => 'Global';
+
+  @override
+  String get sectionTimeGrid => 'Grille de Temps';
+
+  @override
+  String get sectionDayHeader => 'En-tête de Jour';
+
+  @override
+  String get sectionMonthView => 'Vue Mensuelle';
+
+  @override
   String get settingShowNavigator => 'Afficher le Navigateur';
 
   @override
@@ -266,6 +278,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingCellBorderColor => 'Couleur de Bordure de Cellule';
 
   @override
+  String get settingCellBorderWidth => 'Largeur de bordure de cellule';
+
+  @override
   String get settingTodayBackgroundColor => 'Couleur de Fond d\'Aujourd\'hui';
 
   @override
@@ -292,7 +307,34 @@ class AppLocalizationsFr extends AppLocalizations {
       'Largeur de Bordure de Tuile d\'Événement';
 
   @override
-  String get settingIgnoreEventColors => 'Ignorer les Couleurs d\'Événement';
+  String get settingEnableEventColorOverrides =>
+      'Activer le Remplacement des Couleurs d\'Événement';
+
+  @override
+  String get settingDayHeaderPadding => 'Marge Int. d\'En-tête de Jour';
+
+  @override
+  String get settingDayHeaderSpacing => 'Espacement d\'En-tête de Jour';
+
+  @override
+  String get settingTimeLegendLabelHeight => 'Hauteur d\'Étiquette de Temps';
+
+  @override
+  String get settingTimedEventMarginH => 'Marge Horiz. d\'Événement Planifié';
+
+  @override
+  String get settingTimedEventMarginV => 'Marge Vert. d\'Événement Planifié';
+
+  @override
+  String get settingAllDayWrapSpacing =>
+      'Espacement de Tuiles Toute la Journée';
+
+  @override
+  String get settingResizeHandleHeight =>
+      'Hauteur de Poignée de Redimensionnement';
+
+  @override
+  String get settingNavigatorPadding => 'Marge Int. de Navigateur';
 
   @override
   String get settingWeekdayHeaderBackgroundColor =>
@@ -494,6 +536,20 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get settingMinResizeDurationMinutes =>
       'Durée Minimale de Redimensionnement (Minutes)';
+
+  @override
+  String get settingKeyboardFocusBorderRadius => 'Rayon de bordure de focus';
+
+  @override
+  String get settingTimedEventTitleTimeGap => 'Écart titre-heure';
+
+  @override
+  String get settingAllDayOverflowIndicatorBorderWidth =>
+      'Largeur de bordure de l\'indicateur';
+
+  @override
+  String get settingAllDaySectionLabelBottomPadding =>
+      'Marge inférieure du libellé';
 
   @override
   String get styleDefault => 'Par défaut';

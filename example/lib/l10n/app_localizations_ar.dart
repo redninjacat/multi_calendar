@@ -163,6 +163,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sectionAllDayEvents => 'أحداث طوال اليوم';
 
   @override
+  String get sectionGlobal => 'عام';
+
+  @override
+  String get sectionTimeGrid => 'شبكة الوقت';
+
+  @override
+  String get sectionDayHeader => 'رأس اليوم';
+
+  @override
+  String get sectionMonthView => 'عرض الشهر';
+
+  @override
   String get settingShowNavigator => 'إظهار المتصفح';
 
   @override
@@ -258,6 +270,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingCellBorderColor => 'لون حدود الخلية';
 
   @override
+  String get settingCellBorderWidth => 'عرض حدود الخلية';
+
+  @override
   String get settingTodayBackgroundColor => 'لون خلفية اليوم';
 
   @override
@@ -279,7 +294,31 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingEventTileBorderWidth => 'عرض حدود بلاطة الحدث';
 
   @override
-  String get settingIgnoreEventColors => 'تجاهل ألوان الأحداث';
+  String get settingEnableEventColorOverrides => 'تمكين تجاوز ألوان الأحداث';
+
+  @override
+  String get settingDayHeaderPadding => 'حشوة رأس اليوم';
+
+  @override
+  String get settingDayHeaderSpacing => 'تباعد رأس اليوم';
+
+  @override
+  String get settingTimeLegendLabelHeight => 'ارتفاع تسمية الوقت';
+
+  @override
+  String get settingTimedEventMarginH => 'هامش أفقي للحدث الموقّت';
+
+  @override
+  String get settingTimedEventMarginV => 'هامش رأسي للحدث الموقّت';
+
+  @override
+  String get settingAllDayWrapSpacing => 'تباعد بلاطات طوال اليوم';
+
+  @override
+  String get settingResizeHandleHeight => 'ارتفاع مقبض تغيير الحجم';
+
+  @override
+  String get settingNavigatorPadding => 'حشوة المتصفح';
 
   @override
   String get settingWeekdayHeaderBackgroundColor => 'لون خلفية رأس يوم الأسبوع';
@@ -455,6 +494,20 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get settingMinResizeDurationMinutes =>
       'الحد الأدنى لمدة تغيير الحجم (دقائق)';
+
+  @override
+  String get settingKeyboardFocusBorderRadius => 'نصف قطر حدود التركيز';
+
+  @override
+  String get settingTimedEventTitleTimeGap => 'المسافة بين العنوان والوقت';
+
+  @override
+  String get settingAllDayOverflowIndicatorBorderWidth =>
+      'عرض حدود مؤشر التجاوز';
+
+  @override
+  String get settingAllDaySectionLabelBottomPadding =>
+      'المسافة أسفل عنوان القسم';
 
   @override
   String get styleDefault => 'افتراضي';

@@ -11,7 +11,7 @@ import '../../../shared/widgets/event_form_dialog.dart';
 /// Features:
 /// - Square corners on event tiles
 /// - Visible gridlines at hour and interval marks
-/// - Uniform event colors (ignoreEventColors)
+/// - Uniform event colors (enableEventColorOverrides)
 /// - Business hours 8–18, 15-minute gridlines
 /// - Full CRUD: double-tap to create, tap event to edit/delete, Cmd+N/E/D
 class DayClassicStyle extends StatefulWidget {
@@ -62,23 +62,23 @@ class _DayClassicStyleState extends State<DayClassicStyle>
     return SizedBox.expand(
       child: MCalTheme(
       data: MCalThemeData(
-        allDayEventBackgroundColor: colorScheme.primaryContainer,
-        allDayEventTextStyle: TextStyle(
-          fontSize: 11,
-          fontFamily: 'serif',
-          color: colorScheme.onPrimaryContainer,
-        ),
-        allDayEventBorderColor: colorScheme.outlineVariant,
-        allDayEventBorderWidth: 0.5,
-        ignoreEventColors: true,
-        eventTileBackgroundColor: colorScheme.primaryContainer,
-        eventTileTextStyle: TextStyle(
-          fontSize: 11,
-          fontFamily: 'serif',
-          color: colorScheme.onPrimaryContainer,
-        ),
-        eventTileCornerRadius: 0.0,
-        dayTheme: MCalDayThemeData(
+        enableEventColorOverrides: true,
+        dayViewTheme: MCalDayViewThemeData(
+          allDayEventBackgroundColor: colorScheme.primaryContainer,
+          allDayEventTextStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: 'serif',
+            color: colorScheme.onPrimaryContainer,
+          ),
+          allDayEventBorderColor: colorScheme.outlineVariant,
+          allDayEventBorderWidth: 0.5,
+          eventTileBackgroundColor: colorScheme.primaryContainer,
+          eventTileTextStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: 'serif',
+            color: colorScheme.onPrimaryContainer,
+          ),
+          eventTileCornerRadius: 0.0,
           hourGridlineColor: colorScheme.outline,
           hourGridlineWidth: 1.0,
           majorGridlineColor: colorScheme.outline.withValues(alpha: 0.5),

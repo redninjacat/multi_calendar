@@ -62,15 +62,15 @@ class _DayModernStyleState extends State<DayModernStyle>
     return SizedBox.expand(
       child: MCalTheme(
       data: MCalThemeData(
-        allDayEventBackgroundColor: colorScheme.primaryContainer,
-        allDayEventTextStyle: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: colorScheme.onPrimaryContainer,
-        ),
-        ignoreEventColors: false,
-        eventTileCornerRadius: 8.0,
-        dayTheme: MCalDayThemeData(
+        enableEventColorOverrides: false,
+        dayViewTheme: MCalDayViewThemeData(
+          allDayEventBackgroundColor: colorScheme.primaryContainer,
+          allDayEventTextStyle: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: colorScheme.onPrimaryContainer,
+          ),
+          eventTileCornerRadius: 8.0,
           hourGridlineColor: colorScheme.outline.withValues(alpha: 0.15),
           hourGridlineWidth: 1.0,
           majorGridlineColor: colorScheme.outline.withValues(alpha: 0.1),

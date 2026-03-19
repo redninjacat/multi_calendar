@@ -5816,26 +5816,26 @@ class MCalDayViewState extends State<MCalDayView> {
     final isAllDay = event.isAllDay;
     final tileColor = isValid
         ? resolveDropTargetTileColor(
-            dropTargetThemeColor: theme.dayTheme?.dropTargetTileBackgroundColor,
-            themeColor: theme.eventTileBackgroundColor,
-            allDayThemeColor: isAllDay ? theme.allDayEventBackgroundColor : null,
+            dropTargetThemeColor: theme.dayViewTheme?.dropTargetTileBackgroundColor,
+            themeColor: theme.dayViewTheme?.eventTileBackgroundColor,
+            allDayThemeColor: isAllDay ? theme.dayViewTheme?.allDayEventBackgroundColor : null,
             eventColor: event.color,
-            ignoreEventColors: theme.ignoreEventColors,
-            defaultColor: defaults.eventTileBackgroundColor!,
+            enableEventColorOverrides: theme.enableEventColorOverrides,
+            defaultColor: defaults.dayViewTheme!.eventTileBackgroundColor!,
           )
-        : theme.dayTheme?.dropTargetTileInvalidBackgroundColor ??
-            defaults.dayTheme!.dropTargetTileInvalidBackgroundColor!;
-    final cornerRadius = theme.dayTheme?.dropTargetTileCornerRadius ??
-        theme.eventTileCornerRadius ??
-        defaults.eventTileCornerRadius!;
+        : theme.dayViewTheme?.dropTargetTileInvalidBackgroundColor ??
+            defaults.dayViewTheme!.dropTargetTileInvalidBackgroundColor!;
+    final cornerRadius = theme.dayViewTheme?.dropTargetTileCornerRadius ??
+        theme.dayViewTheme?.eventTileCornerRadius ??
+        defaults.dayViewTheme!.eventTileCornerRadius!;
     final borderColor = isValid
-        ? (theme.dayTheme?.dropTargetTileBorderColor ??
-            defaults.dayTheme!.dropTargetTileBorderColor!)
-        : (theme.dayTheme?.dropTargetTileInvalidBackgroundColor ??
-            defaults.dayTheme!.dropTargetTileInvalidBackgroundColor!);
+        ? (theme.dayViewTheme?.dropTargetTileBorderColor ??
+            defaults.dayViewTheme!.dropTargetTileBorderColor!)
+        : (theme.dayViewTheme?.dropTargetTileInvalidBackgroundColor ??
+            defaults.dayViewTheme!.dropTargetTileInvalidBackgroundColor!);
     final borderWidth =
-        theme.dayTheme?.dropTargetTileBorderWidth ??
-        defaults.dayTheme!.dropTargetTileBorderWidth!;
+        theme.dayViewTheme?.dropTargetTileBorderWidth ??
+        defaults.dayViewTheme!.dropTargetTileBorderWidth!;
     final defaultTile = Opacity(
       opacity: isValid ? 0.6 : 0.45,
       child: Container(
@@ -5851,11 +5851,11 @@ class MCalDayViewState extends State<MCalDayView> {
         child: !isValid
             ? Align(
                 alignment: Alignment.topLeft,
-                child: Icon(
+                  child: Icon(
                   Icons.block,
                   size: 12,
-                  color: theme.dayTheme?.dropTargetTileInvalidBackgroundColor ??
-                      defaults.dayTheme!.dropTargetTileInvalidBackgroundColor!,
+                  color: theme.dayViewTheme?.dropTargetTileInvalidBackgroundColor ??
+                      defaults.dayViewTheme!.dropTargetTileInvalidBackgroundColor!,
                 ),
               )
             : null,
@@ -5921,14 +5921,14 @@ class MCalDayViewState extends State<MCalDayView> {
     final theme = _resolveTheme(context);
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final overlayColor = isValid
-        ? (theme.dayTheme?.dropTargetOverlayValidColor ??
-            defaults.dayTheme!.dropTargetOverlayValidColor!)
-        : (theme.dayTheme?.dropTargetOverlayInvalidColor ??
-            defaults.dayTheme!.dropTargetOverlayInvalidColor!);
-    final overlayBorderWidth = theme.dayTheme?.dropTargetOverlayBorderWidth ??
-        defaults.dayTheme!.dropTargetOverlayBorderWidth!;
-    final overlayBorderColor = theme.dayTheme?.dropTargetOverlayBorderColor ??
-        defaults.dayTheme!.dropTargetOverlayBorderColor!;
+        ? (theme.dayViewTheme?.dropTargetOverlayValidColor ??
+            defaults.dayViewTheme!.dropTargetOverlayValidColor!)
+        : (theme.dayViewTheme?.dropTargetOverlayInvalidColor ??
+            defaults.dayViewTheme!.dropTargetOverlayInvalidColor!);
+    final overlayBorderWidth = theme.dayViewTheme?.dropTargetOverlayBorderWidth ??
+        defaults.dayViewTheme!.dropTargetOverlayBorderWidth!;
+    final overlayBorderColor = theme.dayViewTheme?.dropTargetOverlayBorderColor ??
+        defaults.dayViewTheme!.dropTargetOverlayBorderColor!;
     final defaultOverlay = Positioned(
       top: topOffset,
       left: 0,
@@ -6069,13 +6069,13 @@ class MCalDayViewState extends State<MCalDayView> {
     final topOffset = slotIndex * slotHeight;
     final theme = _resolveTheme(context);
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
-    final dayTheme = theme.dayTheme;
+    final dayTheme = theme.dayViewTheme;
     final borderColor = dayTheme?.focusedSlotBorderColor ??
-        defaults.dayTheme!.focusedSlotBorderColor!;
+        defaults.dayViewTheme!.focusedSlotBorderColor!;
     final borderWidth = dayTheme?.focusedSlotBorderWidth ??
-        defaults.dayTheme!.focusedSlotBorderWidth!;
+        defaults.dayViewTheme!.focusedSlotBorderWidth!;
     final bgColor = dayTheme?.focusedSlotBackgroundColor ??
-        defaults.dayTheme!.focusedSlotBackgroundColor!;
+        defaults.dayViewTheme!.focusedSlotBackgroundColor!;
 
     final decoration = dayTheme?.focusedSlotDecoration ??
         BoxDecoration(
@@ -6163,8 +6163,8 @@ class MCalDayViewState extends State<MCalDayView> {
             disabledTimeSlotColor: () {
               final t = _resolveTheme(context);
               final d = MCalThemeData.fromTheme(Theme.of(context));
-              return t.dayTheme?.disabledTimeSlotColor ??
-                  d.dayTheme!.disabledTimeSlotColor!;
+              return t.dayViewTheme?.disabledTimeSlotColor ??
+                  d.dayViewTheme!.disabledTimeSlotColor!;
             }(),
           ),
         if (timedRegions.isNotEmpty)
@@ -6859,12 +6859,12 @@ class MCalDayViewState extends State<MCalDayView> {
                   child: Builder(builder: (context) {
                     final t = _resolveTheme(context);
                     final d = MCalThemeData.fromTheme(Theme.of(context));
-                    final borderColor = t.dayTheme?.focusedSlotBorderColor ??
-                        d.dayTheme!.focusedSlotBorderColor!;
-                    final borderWidth = t.dayTheme?.focusedSlotBorderWidth ??
-                        d.dayTheme!.focusedSlotBorderWidth!;
-                    final bgColor = t.dayTheme?.focusedSlotBackgroundColor ??
-                        d.dayTheme!.focusedSlotBackgroundColor!;
+                    final borderColor = t.dayViewTheme?.focusedSlotBorderColor ??
+                        d.dayViewTheme!.focusedSlotBorderColor!;
+                    final borderWidth = t.dayViewTheme?.focusedSlotBorderWidth ??
+                        d.dayViewTheme!.focusedSlotBorderWidth!;
+                    final bgColor = t.dayViewTheme?.focusedSlotBackgroundColor ??
+                        d.dayViewTheme!.focusedSlotBackgroundColor!;
                     return DecoratedBox(
                       decoration: BoxDecoration(
                         border: Border(

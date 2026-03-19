@@ -102,6 +102,7 @@ class DayCellWidgetState extends State<DayCellWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final cellDefaults = MCalThemeData.fromTheme(Theme.of(context));
     // Check if cell is interactive
     final isInteractive = widget.cellInteractivityCallback != null
         ? widget.cellInteractivityCallback!(
@@ -150,11 +151,8 @@ class DayCellWidgetState extends State<DayCellWidget> {
               children: [
                 if (dateLabel != null)
                   Padding(
-                    padding: const EdgeInsets.only(
-                      left: 4.0,
-                      top: 4.0,
-                      right: 4.0,
-                    ),
+                    padding: widget.theme.monthViewTheme?.dateLabelPadding ??
+                        cellDefaults.monthViewTheme!.dateLabelPadding!,
                     child: dateLabel,
                   ),
               ],
@@ -322,6 +320,16 @@ class DayCellWidgetState extends State<DayCellWidget> {
       isToday: widget.isToday,
     );
 
+    final regionDefaults = MCalThemeData.fromTheme(Theme.of(context));
+    final regionIconSize = widget.theme.monthViewTheme?.regionIconSize ??
+        regionDefaults.monthViewTheme!.regionIconSize!;
+    final regionIconGap = widget.theme.monthViewTheme?.regionIconGap ??
+        regionDefaults.monthViewTheme!.regionIconGap!;
+    final regionFontSize = widget.theme.monthViewTheme?.regionFontSize ??
+        regionDefaults.monthViewTheme!.regionFontSize!;
+    final regionContentPadding = widget.theme.monthViewTheme?.regionContentPadding ??
+        regionDefaults.monthViewTheme!.regionContentPadding!;
+
     // Default rendering: semi-transparent color fill with optional text/icon.
     Widget defaultWidget = Container(
       color: region.color,
@@ -329,7 +337,7 @@ class DayCellWidgetState extends State<DayCellWidget> {
           ? Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 2.0),
+                padding: regionContentPadding,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -337,15 +345,13 @@ class DayCellWidgetState extends State<DayCellWidget> {
                     if (region.icon != null)
                       Icon(
                         region.icon,
-                        size: 9.0,
+                        size: regionIconSize,
                         color: (region.color ??
-                            widget.theme.monthTheme?.defaultRegionColor ??
-                            MCalThemeData.fromTheme(Theme.of(context))
-                                .monthTheme!
-                                .defaultRegionColor!),
+                            widget.theme.monthViewTheme?.defaultRegionColor ??
+                            regionDefaults.monthViewTheme!.defaultRegionColor!),
                       ),
                     if (region.icon != null && region.text != null)
-                      const SizedBox(width: 2),
+                      SizedBox(width: regionIconGap),
                     if (region.text != null)
                       Flexible(
                         child: Text(
@@ -353,12 +359,10 @@ class DayCellWidgetState extends State<DayCellWidget> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 8.0,
+                            fontSize: regionFontSize,
                             color: (region.color ??
-                                widget.theme.monthTheme?.defaultRegionColor ??
-                                MCalThemeData.fromTheme(Theme.of(context))
-                                    .monthTheme!
-                                    .defaultRegionColor!),
+                                widget.theme.monthViewTheme?.defaultRegionColor ??
+                                regionDefaults.monthViewTheme!.defaultRegionColor!),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -387,15 +391,17 @@ class DayCellWidgetState extends State<DayCellWidget> {
     Color? backgroundColor;
     final borderColor =
         widget.theme.cellBorderColor ?? defaults.cellBorderColor!;
+    final borderWidth = widget.theme.monthViewTheme?.cellBorderWidth ??
+        defaults.monthViewTheme!.cellBorderWidth!;
 
     // Apply focused styling first (takes priority)
     if (widget.isFocused) {
       backgroundColor =
-          widget.theme.monthTheme?.focusedDateBackgroundColor ??
+          widget.theme.monthViewTheme?.focusedDateBackgroundColor ??
           widget.theme.cellBackgroundColor;
     } else if (widget.isToday) {
       backgroundColor =
-          widget.theme.monthTheme?.todayBackgroundColor ??
+          widget.theme.monthViewTheme?.todayBackgroundColor ??
           widget.theme.cellBackgroundColor;
     } else if (widget.isCurrentMonth) {
       backgroundColor = widget.theme.cellBackgroundColor;
@@ -403,8 +409,8 @@ class DayCellWidgetState extends State<DayCellWidget> {
       // Leading/trailing date
       backgroundColor = widget.isCurrentMonth
           ? widget.theme.cellBackgroundColor
-          : (widget.theme.monthTheme?.leadingDatesBackgroundColor ??
-                widget.theme.monthTheme?.trailingDatesBackgroundColor ??
+          : (widget.theme.monthViewTheme?.leadingDatesBackgroundColor ??
+                widget.theme.monthViewTheme?.trailingDatesBackgroundColor ??
                 widget.theme.cellBackgroundColor);
     }
 
@@ -415,7 +421,7 @@ class DayCellWidgetState extends State<DayCellWidget> {
 
     return BoxDecoration(
       color: backgroundColor,
-      border: Border.all(color: borderColor, width: 1.0),
+      border: Border.all(color: borderColor, width: borderWidth),
     );
   }
 
@@ -460,20 +466,20 @@ class DayCellWidgetState extends State<DayCellWidget> {
     if (widget.isFocused) {
       // Focused date takes priority for text styling
       textStyle =
-          widget.theme.monthTheme?.focusedDateTextStyle ??
-          widget.theme.monthTheme?.cellTextStyle;
+          widget.theme.monthViewTheme?.focusedDateTextStyle ??
+          widget.theme.monthViewTheme?.cellTextStyle;
     } else if (widget.isToday) {
       textStyle =
-          widget.theme.monthTheme?.todayTextStyle ??
-          widget.theme.monthTheme?.cellTextStyle;
+          widget.theme.monthViewTheme?.todayTextStyle ??
+          widget.theme.monthViewTheme?.cellTextStyle;
     } else if (widget.isCurrentMonth) {
-      textStyle = widget.theme.monthTheme?.cellTextStyle;
+      textStyle = widget.theme.monthViewTheme?.cellTextStyle;
     } else {
       // Leading/trailing date
       textStyle =
-          widget.theme.monthTheme?.leadingDatesTextStyle ??
-          widget.theme.monthTheme?.trailingDatesTextStyle ??
-          widget.theme.monthTheme?.cellTextStyle;
+          widget.theme.monthViewTheme?.leadingDatesTextStyle ??
+          widget.theme.monthViewTheme?.trailingDatesTextStyle ??
+          widget.theme.monthViewTheme?.cellTextStyle;
     }
 
     return Text(
@@ -499,15 +505,15 @@ class DayCellWidgetState extends State<DayCellWidget> {
     TextStyle? textStyle;
     if (labelContext.isToday) {
       textStyle =
-          widget.theme.monthTheme?.todayTextStyle ??
-          widget.theme.monthTheme?.cellTextStyle;
+          widget.theme.monthViewTheme?.todayTextStyle ??
+          widget.theme.monthViewTheme?.cellTextStyle;
     } else if (labelContext.isCurrentMonth) {
-      textStyle = widget.theme.monthTheme?.cellTextStyle;
+      textStyle = widget.theme.monthViewTheme?.cellTextStyle;
     } else {
       textStyle =
-          widget.theme.monthTheme?.leadingDatesTextStyle ??
-          widget.theme.monthTheme?.trailingDatesTextStyle ??
-          widget.theme.monthTheme?.cellTextStyle;
+          widget.theme.monthViewTheme?.leadingDatesTextStyle ??
+          widget.theme.monthViewTheme?.trailingDatesTextStyle ??
+          widget.theme.monthViewTheme?.cellTextStyle;
     }
 
     final dateText = Text(
@@ -522,7 +528,9 @@ class DayCellWidgetState extends State<DayCellWidget> {
     final alignment = labelContext.horizontalAlignment;
 
     // Use theme dateLabelHeight to prevent overflow when cells are constrained
-    final labelHeight = widget.theme.monthTheme?.dateLabelHeight ?? 18.0;
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
+    final labelHeight = widget.theme.monthViewTheme?.dateLabelHeight ??
+        defaults.monthViewTheme!.dateLabelHeight!;
 
     // Use a fixed-size container for uniform spacing
     final circleContainer = Container(
@@ -531,9 +539,9 @@ class DayCellWidgetState extends State<DayCellWidget> {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: labelContext.isToday
-            ? (widget.theme.monthTheme?.todayBackgroundColor ??
+            ? (widget.theme.monthViewTheme?.todayBackgroundColor ??
                   MCalThemeData.fromTheme(Theme.of(context))
-                      .monthTheme!
+                      .monthViewTheme!
                       .todayBackgroundColor!)
             : Colors.transparent,
         shape: BoxShape.circle,

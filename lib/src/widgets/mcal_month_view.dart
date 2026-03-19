@@ -28,7 +28,6 @@ import 'month_subwidgets/boundary_scroll_physics.dart';
 import 'month_subwidgets/month_navigator_widget.dart';
 import 'month_subwidgets/month_overlays.dart';
 import 'month_subwidgets/month_page_widget.dart';
-import 'month_subwidgets/week_number_cell.dart';
 import 'month_subwidgets/weekday_header_row_widget.dart';
 
 /// Builder callback for customizing week row event layout.
@@ -3740,9 +3739,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     final gridOffset = gridRenderBox.localToGlobal(Offset.zero);
 
     // Compute layout values
-    final weekNumberWidth = widget.showWeekNumbers
-        ? WeekNumberCell.columnWidth
-        : 0.0;
+    final resizeTheme = MCalTheme.of(context);
+    final resizeDefaults = MCalThemeData.fromTheme(Theme.of(context));
+    final weekNumColWidth = resizeTheme.monthViewTheme?.weekNumberColumnWidth ??
+        resizeDefaults.monthViewTheme!.weekNumberColumnWidth!;
+    final weekNumberWidth = widget.showWeekNumbers ? weekNumColWidth : 0.0;
     final isLayoutRTL = MCalLayoutDirectionality.of(context);
     final contentOffsetX = isLayoutRTL ? 0.0 : weekNumberWidth;
     final contentWidth = gridSize.width - weekNumberWidth;

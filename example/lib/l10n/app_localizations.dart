@@ -410,6 +410,30 @@ abstract class AppLocalizations {
   /// **'All-Day Events'**
   String get sectionAllDayEvents;
 
+  /// No description provided for @sectionGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Global'**
+  String get sectionGlobal;
+
+  /// No description provided for @sectionTimeGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Grid'**
+  String get sectionTimeGrid;
+
+  /// No description provided for @sectionDayHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Day Header'**
+  String get sectionDayHeader;
+
+  /// No description provided for @sectionMonthView.
+  ///
+  /// In en, this message translates to:
+  /// **'Month View'**
+  String get sectionMonthView;
+
   /// No description provided for @settingShowNavigator.
   ///
   /// In en, this message translates to:
@@ -590,6 +614,12 @@ abstract class AppLocalizations {
   /// **'Cell Border Color'**
   String get settingCellBorderColor;
 
+  /// No description provided for @settingCellBorderWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Cell Border Width'**
+  String get settingCellBorderWidth;
+
   /// No description provided for @settingTodayBackgroundColor.
   ///
   /// In en, this message translates to:
@@ -632,11 +662,59 @@ abstract class AppLocalizations {
   /// **'Event Tile Border Width'**
   String get settingEventTileBorderWidth;
 
-  /// No description provided for @settingIgnoreEventColors.
+  /// No description provided for @settingEnableEventColorOverrides.
   ///
   /// In en, this message translates to:
-  /// **'Ignore Event Colors'**
-  String get settingIgnoreEventColors;
+  /// **'Enable Event Color Overrides'**
+  String get settingEnableEventColorOverrides;
+
+  /// No description provided for @settingDayHeaderPadding.
+  ///
+  /// In en, this message translates to:
+  /// **'Day Header Padding'**
+  String get settingDayHeaderPadding;
+
+  /// No description provided for @settingDayHeaderSpacing.
+  ///
+  /// In en, this message translates to:
+  /// **'Day Header Spacing'**
+  String get settingDayHeaderSpacing;
+
+  /// No description provided for @settingTimeLegendLabelHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Label Height'**
+  String get settingTimeLegendLabelHeight;
+
+  /// No description provided for @settingTimedEventMarginH.
+  ///
+  /// In en, this message translates to:
+  /// **'Timed Event Horiz. Margin'**
+  String get settingTimedEventMarginH;
+
+  /// No description provided for @settingTimedEventMarginV.
+  ///
+  /// In en, this message translates to:
+  /// **'Timed Event Vert. Margin'**
+  String get settingTimedEventMarginV;
+
+  /// No description provided for @settingAllDayWrapSpacing.
+  ///
+  /// In en, this message translates to:
+  /// **'All-Day Tile Spacing'**
+  String get settingAllDayWrapSpacing;
+
+  /// No description provided for @settingResizeHandleHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize Handle Height'**
+  String get settingResizeHandleHeight;
+
+  /// No description provided for @settingNavigatorPadding.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigator Padding'**
+  String get settingNavigatorPadding;
 
   /// No description provided for @settingWeekdayHeaderBackgroundColor.
   ///
@@ -979,6 +1057,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Min Resize Duration (Minutes)'**
   String get settingMinResizeDurationMinutes;
+
+  /// No description provided for @settingKeyboardFocusBorderRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Keyboard Focus Border Radius'**
+  String get settingKeyboardFocusBorderRadius;
+
+  /// No description provided for @settingTimedEventTitleTimeGap.
+  ///
+  /// In en, this message translates to:
+  /// **'Title-Time Gap'**
+  String get settingTimedEventTitleTimeGap;
+
+  /// No description provided for @settingAllDayOverflowIndicatorBorderWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Overflow Indicator Border Width'**
+  String get settingAllDayOverflowIndicatorBorderWidth;
+
+  /// No description provided for @settingAllDaySectionLabelBottomPadding.
+  ///
+  /// In en, this message translates to:
+  /// **'Section Label Bottom Padding'**
+  String get settingAllDaySectionLabelBottomPadding;
 
   /// No description provided for @styleDefault.
   ///

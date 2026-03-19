@@ -174,6 +174,7 @@ class TimeGridEventsLayer extends StatelessWidget {
     final event = eventWithColumn.event;
     final columnIndex = eventWithColumn.columnIndex;
     final totalColumns = eventWithColumn.totalColumns;
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
 
     final dayStart = DateTime(
       displayDate.year,
@@ -209,7 +210,8 @@ class TimeGridEventsLayer extends StatelessWidget {
       hourHeight: hourHeight,
     );
 
-    final minHeight = theme.dayTheme?.timedEventMinHeight ?? 20.0;
+    final minHeight = theme.dayViewTheme?.timedEventMinHeight ??
+        defaults.dayViewTheme!.timedEventMinHeight!;
     final height = rawHeight < minHeight ? minHeight : rawHeight;
 
     final columnWidth = areaWidth / totalColumns;
@@ -232,12 +234,18 @@ class TimeGridEventsLayer extends StatelessWidget {
 
     if (keyboardFocusedEventId == event.id) {
       final kbDefaults = MCalThemeData.fromTheme(Theme.of(context));
-      final kbBorderColor = theme.dayTheme?.keyboardFocusBorderColor ??
-          kbDefaults.dayTheme!.keyboardFocusBorderColor!;
+      final kbBorderColor = theme.dayViewTheme?.keyboardFocusBorderColor ??
+          kbDefaults.dayViewTheme!.keyboardFocusBorderColor!;
+      final kbBorderWidth =
+          theme.dayViewTheme?.timedEventKeyboardFocusBorderWidth ??
+          kbDefaults.dayViewTheme!.timedEventKeyboardFocusBorderWidth!;
+      final kbBorderRadius =
+          theme.dayViewTheme?.keyboardFocusBorderRadius ??
+          kbDefaults.dayViewTheme!.keyboardFocusBorderRadius!;
       tile = Container(
         decoration: BoxDecoration(
-          border: Border.all(color: kbBorderColor, width: 2),
-          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: kbBorderColor, width: kbBorderWidth),
+          borderRadius: BorderRadius.circular(kbBorderRadius),
         ),
         child: tile,
       );
@@ -277,7 +285,8 @@ class TimeGridEventsLayer extends StatelessWidget {
     }
 
     if (enableDragToMove) {
-      final hSpacing = theme.eventTileHorizontalSpacing ?? 2.0;
+      final hSpacing = theme.dayViewTheme?.eventTileHorizontalSpacing ??
+          defaults.dayViewTheme!.eventTileHorizontalSpacing!;
       tile = MCalDraggableEventTile(
         event: event,
         sourceDate: displayDate,
@@ -344,7 +353,7 @@ class TimeGridEventsLayer extends StatelessWidget {
       return false;
     }
     final duration = event.end.difference(event.start);
-    final minMinutes = theme.dayTheme?.minResizeDurationMinutes ?? 15;
+    final minMinutes = theme.dayViewTheme?.minResizeDurationMinutes ?? 15;
     return duration.inMinutes >= minMinutes;
   }
 
@@ -357,10 +366,16 @@ class TimeGridEventsLayer extends StatelessWidget {
     double height,
   ) {
     final handleDefaults = MCalThemeData.fromTheme(Theme.of(context));
-    final handleSize = theme.dayTheme?.resizeHandleSize ??
-        handleDefaults.dayTheme!.resizeHandleSize!;
-    final handleColor = theme.dayTheme?.resizeHandleColor ??
-        handleDefaults.dayTheme!.resizeHandleColor!;
+    final handleSize = theme.dayViewTheme?.resizeHandleSize ??
+        handleDefaults.dayViewTheme!.resizeHandleSize!;
+    final handleColor = theme.dayViewTheme?.resizeHandleColor ??
+        handleDefaults.dayViewTheme!.resizeHandleColor!;
+    final handleVisualHeight = theme.dayViewTheme?.resizeHandleVisualHeight ??
+        handleDefaults.dayViewTheme!.resizeHandleVisualHeight!;
+    final handleHMargin = theme.dayViewTheme?.resizeHandleHorizontalMargin ??
+        handleDefaults.dayViewTheme!.resizeHandleHorizontalMargin!;
+    final handleRadius = theme.dayViewTheme?.resizeHandleBorderRadius ??
+        handleDefaults.dayViewTheme!.resizeHandleBorderRadius!;
     final children = <Widget>[Positioned.fill(child: tile)];
 
     if (tileContext.isStartOnDisplayDate) {
@@ -375,6 +390,9 @@ class TimeGridEventsLayer extends StatelessWidget {
           tileHeight: height,
           resizeHandleColor: handleColor,
           inset: startInset,
+          resizeHandleVisualHeight: handleVisualHeight,
+          resizeHandleHorizontalMargin: handleHMargin,
+          resizeHandleBorderRadius: handleRadius,
           visualBuilder: timeResizeHandleBuilder,
           onPointerDown: (e, edge, pointer) =>
               onResizePointerDown?.call(e, edge, pointer),
@@ -394,6 +412,9 @@ class TimeGridEventsLayer extends StatelessWidget {
           tileHeight: height,
           resizeHandleColor: handleColor,
           inset: endInset,
+          resizeHandleVisualHeight: handleVisualHeight,
+          resizeHandleHorizontalMargin: handleHMargin,
+          resizeHandleBorderRadius: handleRadius,
           visualBuilder: timeResizeHandleBuilder,
           onPointerDown: (e, edge, pointer) =>
               onResizePointerDown?.call(e, edge, pointer),
@@ -416,21 +437,21 @@ class TimeGridEventsLayer extends StatelessWidget {
     String timeRange,
   ) {
     final tileColor = resolveEventTileColor(
-      themeColor: theme.eventTileBackgroundColor,
+      themeColor: theme.dayViewTheme?.eventTileBackgroundColor,
       eventColor: event.color,
-      ignoreEventColors: theme.ignoreEventColors,
-      defaultColor: defaults.eventTileBackgroundColor!,
+      enableEventColorOverrides: theme.enableEventColorOverrides,
+      defaultColor: defaults.dayViewTheme!.eventTileBackgroundColor!,
     );
 
     final lightContrast =
-        theme.eventTileLightContrastColor ??
-        defaults.eventTileLightContrastColor!;
+        theme.dayViewTheme?.eventTileLightContrastColor ??
+        defaults.dayViewTheme!.eventTileLightContrastColor!;
     final darkContrast =
-        theme.eventTileDarkContrastColor ??
-        defaults.eventTileDarkContrastColor!;
+        theme.dayViewTheme?.eventTileDarkContrastColor ??
+        defaults.dayViewTheme!.eventTileDarkContrastColor!;
 
-    final textStyleColor = theme.ignoreEventColors
-        ? theme.eventTileTextStyle?.color
+    final textStyleColor = theme.enableEventColorOverrides
+        ? theme.dayViewTheme?.eventTileTextStyle?.color
         : null;
     final contrastColor = textStyleColor ??
         resolveContrastColor(
@@ -443,7 +464,7 @@ class TimeGridEventsLayer extends StatelessWidget {
         tileContext.endTime.difference(tileContext.startTime).inMinutes >= 30;
 
     final cornerRadius =
-        theme.eventTileCornerRadius ?? defaults.eventTileCornerRadius!;
+        theme.dayViewTheme?.eventTileCornerRadius ?? defaults.dayViewTheme!.eventTileCornerRadius!;
     final topRadius = tileContext.isStartOnDisplayDate
         ? Radius.circular(cornerRadius)
         : Radius.zero;
@@ -451,9 +472,19 @@ class TimeGridEventsLayer extends StatelessWidget {
         ? Radius.circular(cornerRadius)
         : Radius.zero;
 
+    final tileMargin = theme.dayViewTheme?.timedEventMargin ??
+        defaults.dayViewTheme!.timedEventMargin!;
+    final tilePadding = theme.dayViewTheme?.timedEventPadding ??
+        defaults.dayViewTheme!.timedEventPadding!;
+    final tileBorderWidth = theme.dayViewTheme?.eventTileBorderWidth ?? 0.0;
+    final tileBorderColor = theme.dayViewTheme?.eventTileBorderColor;
+    final tileBorder = (tileBorderWidth > 0 && tileBorderColor != null)
+        ? Border.all(color: tileBorderColor, width: tileBorderWidth)
+        : Border.all(color: tileColor, width: 0.0);
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 1.0),
-      padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
+      margin: tileMargin,
+      padding: tilePadding,
       decoration: BoxDecoration(
         color: tileColor.withValues(alpha: 0.85),
         borderRadius: BorderRadius.only(
@@ -462,7 +493,7 @@ class TimeGridEventsLayer extends StatelessWidget {
           bottomLeft: bottomRadius,
           bottomRight: bottomRadius,
         ),
-        border: Border.all(color: tileColor, width: 1.0),
+        border: tileBorder,
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -478,6 +509,7 @@ class TimeGridEventsLayer extends StatelessWidget {
                     contrastColor: contrastColor,
                     timeColor: timeColor,
                     theme: theme,
+                    defaults: defaults,
                   )
                 : _buildNormalTileContent(
                     event: event,
@@ -486,6 +518,7 @@ class TimeGridEventsLayer extends StatelessWidget {
                     contrastColor: contrastColor,
                     timeColor: timeColor,
                     theme: theme,
+                    defaults: defaults,
                   ),
           );
         },
@@ -559,15 +592,18 @@ class TimeGridEventsLayer extends StatelessWidget {
     required Color contrastColor,
     required Color timeColor,
     required MCalThemeData theme,
+    required MCalThemeData defaults,
   }) {
+    final compactFontSize = theme.dayViewTheme?.timedEventCompactFontSize ??
+        defaults.dayViewTheme!.timedEventCompactFontSize!;
     final titleStyle =
-        theme.eventTileTextStyle?.copyWith(
-          fontSize: 10,
+        theme.dayViewTheme?.eventTileTextStyle?.copyWith(
+          fontSize: compactFontSize,
           fontWeight: FontWeight.w600,
           color: contrastColor,
         ) ??
         TextStyle(
-          fontSize: 10,
+          fontSize: compactFontSize,
           fontWeight: FontWeight.w600,
           color: contrastColor,
         );
@@ -589,7 +625,12 @@ class TimeGridEventsLayer extends StatelessWidget {
     required Color contrastColor,
     required Color timeColor,
     required MCalThemeData theme,
+    required MCalThemeData defaults,
   }) {
+    final normalFontSize = theme.dayViewTheme?.timedEventNormalFontSize ??
+        defaults.dayViewTheme!.timedEventNormalFontSize!;
+    final compactFontSize = theme.dayViewTheme?.timedEventCompactFontSize ??
+        defaults.dayViewTheme!.timedEventCompactFontSize!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -597,13 +638,13 @@ class TimeGridEventsLayer extends StatelessWidget {
         Text(
           event.title,
           style:
-              theme.eventTileTextStyle?.copyWith(
-                fontSize: 12,
+              theme.dayViewTheme?.eventTileTextStyle?.copyWith(
+                fontSize: normalFontSize,
                 fontWeight: FontWeight.w600,
                 color: contrastColor,
               ) ??
               TextStyle(
-                fontSize: 12,
+                fontSize: normalFontSize,
                 fontWeight: FontWeight.w600,
                 color: contrastColor,
               ),
@@ -612,15 +653,18 @@ class TimeGridEventsLayer extends StatelessWidget {
         ),
         if (showTimeRange)
           Padding(
-            padding: const EdgeInsets.only(top: 2.0),
+            padding: EdgeInsets.only(
+              top: theme.dayViewTheme?.timedEventTitleTimeGap ??
+                  defaults.dayViewTheme!.timedEventTitleTimeGap!,
+            ),
             child: Text(
               timeRange,
               style:
-                  theme.eventTileTextStyle?.copyWith(
-                    fontSize: 10,
+                  theme.dayViewTheme?.eventTileTextStyle?.copyWith(
+                    fontSize: compactFontSize,
                     color: timeColor,
                   ) ??
-                  TextStyle(fontSize: 10, color: timeColor),
+                  TextStyle(fontSize: compactFontSize, color: timeColor),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),

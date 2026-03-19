@@ -55,10 +55,10 @@ class MonthColorfulStyle extends StatelessWidget {
             child: MCalTheme(
               data: MCalThemeData(
                 cellBorderColor: Colors.transparent,
-                eventTileCornerRadius: 4,
-                eventTileHorizontalSpacing: 6.0,
                 cellBackgroundColor: Colors.transparent,
-                monthTheme: MCalMonthThemeData(
+                monthViewTheme: MCalMonthViewThemeData(
+                  eventTileCornerRadius: 4,
+                  eventTileHorizontalSpacing: 6.0,
                   dateLabelHeight: 24.0,
                   todayBackgroundColor: Colors.transparent,
                   weekdayHeaderBackgroundColor: Colors.transparent,
@@ -100,8 +100,8 @@ class MonthColorfulStyle extends StatelessWidget {
                 },
                 draggedTileBuilder: (context, details, defaultWidget) {
                   final theme = MCalTheme.of(context);
-                  final cornerRadius = theme.eventTileCornerRadius ?? 4.0;
-                  final tileHeight = theme.monthTheme?.eventTileHeight ?? 6.0;
+                  final cornerRadius = theme.monthViewTheme?.eventTileCornerRadius ?? 4.0;
+                  final tileHeight = theme.monthViewTheme?.eventTileHeight ?? 6.0;
                   final isAllDay = details.event.isAllDay;
                   final color =
                       details.event.color ??
@@ -377,7 +377,7 @@ class MonthColorfulStyle extends StatelessWidget {
     final segment = tileContext.segment;
     final isAllDay = tileContext.event.isAllDay;
     final MCalThemeData theme = MCalTheme.of(context);
-    final cornerRadius = theme.eventTileCornerRadius ?? 4.0;
+    final cornerRadius = theme.monthViewTheme?.eventTileCornerRadius ?? 4.0;
     final color =
         tileContext.event.color ?? Theme.of(context).colorScheme.primary;
 
@@ -440,7 +440,7 @@ class MonthColorfulStyle extends StatelessWidget {
     final isAllDay = tileContext.event.isAllDay;
     final valid = tileContext.dropValid ?? true;
     final MCalThemeData theme = MCalTheme.of(context);
-    final cornerRadius = theme.eventTileCornerRadius ?? 4.0;
+    final cornerRadius = theme.monthViewTheme?.eventTileCornerRadius ?? 4.0;
 
     final leftRadius = segment?.isFirstSegment == true
         ? Radius.circular(cornerRadius)

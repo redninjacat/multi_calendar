@@ -60,7 +60,7 @@ class MonthNavigatorWidget extends StatelessWidget {
 
     // Build default navigator - use Expanded for text to prevent overflow
     Widget navigator = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+      padding: theme.navigatorPadding ?? defaults.navigatorPadding!,
       decoration: BoxDecoration(color: bgColor),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

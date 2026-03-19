@@ -76,17 +76,17 @@ class _DayColorfulStyleState extends State<DayColorfulStyle>
       ),
       child: MCalTheme(
         data: MCalThemeData(
-          allDayEventBackgroundColor: DayColorfulStyle.gradientStart,
-          allDayEventTextStyle: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-          allDayEventBorderColor: DayColorfulStyle.gradientEnd.withValues(alpha: 0.5),
-          allDayEventBorderWidth: 1.0,
-          ignoreEventColors: false,
-          eventTileCornerRadius: 12.0,
-          dayTheme: MCalDayThemeData(
+          enableEventColorOverrides: false,
+          dayViewTheme: MCalDayViewThemeData(
+            allDayEventBackgroundColor: DayColorfulStyle.gradientStart,
+            allDayEventTextStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+            allDayEventBorderColor: DayColorfulStyle.gradientEnd.withValues(alpha: 0.5),
+            allDayEventBorderWidth: 1.0,
+            eventTileCornerRadius: 12.0,
             hourGridlineColor: (widget.isDarkMode ? Colors.white : DayColorfulStyle.gradientStart)
                 .withValues(alpha: 0.2),
             hourGridlineWidth: 1.0,

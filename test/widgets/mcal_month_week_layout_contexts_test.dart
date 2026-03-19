@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 
@@ -104,11 +105,14 @@ void main() {
 
   group('MCalMonthWeekLayoutConfig (Month View)', () {
     test('has correct default values', () {
-      final config = MCalMonthWeekLayoutConfig.fromTheme(const MCalThemeData());
+      final config = MCalMonthWeekLayoutConfig.fromTheme(
+        const MCalThemeData(),
+        flutterTheme: ThemeData(),
+      );
 
-      expect(config.tileHeight, 18.0);
-      expect(config.tileVerticalSpacing, 2.0);
-      expect(config.tileHorizontalSpacing, 2.0);
+      expect(config.tileHeight, 20.0);
+      expect(config.tileVerticalSpacing, 1.0);
+      expect(config.tileHorizontalSpacing, 1.0);
       expect(config.eventTileCornerRadius, 3.0);
       expect(config.tileBorderWidth, 0.0);
       expect(config.dateLabelHeight, 18.0);
@@ -118,12 +122,15 @@ void main() {
 
     test('inherits values from theme', () {
       final theme = MCalThemeData(
-        monthTheme: MCalMonthThemeData(
+        monthViewTheme: MCalMonthViewThemeData(
           eventTileHeight: 25.0,
           dateLabelPosition: DateLabelPosition.bottomRight,
         ),
       );
-      final config = MCalMonthWeekLayoutConfig.fromTheme(theme);
+      final config = MCalMonthWeekLayoutConfig.fromTheme(
+        theme,
+        flutterTheme: ThemeData(),
+      );
 
       expect(config.tileHeight, 25.0);
       expect(config.dateLabelPosition, DateLabelPosition.bottomRight);

@@ -46,16 +46,16 @@ class MonthClassicStyle extends StatelessWidget {
         Expanded(
           child: MCalTheme(
             data: MCalThemeData(
-              eventTileBackgroundColor: colorScheme.primaryContainer,
-              eventTileTextStyle: TextStyle(
-                fontSize: 10,
-                color: colorScheme.onPrimaryContainer,
-              ),
-              eventTileCornerRadius: 0.0, // Square corners
               cellBackgroundColor: colorScheme.surface,
               cellBorderColor: colorScheme.outlineVariant,
-              ignoreEventColors: true, // Use uniform colors from theme
-              monthTheme: MCalMonthThemeData(
+              enableEventColorOverrides: true, // Use uniform colors from theme
+              monthViewTheme: MCalMonthViewThemeData(
+                eventTileBackgroundColor: colorScheme.primaryContainer,
+                eventTileTextStyle: TextStyle(
+                  fontSize: 10,
+                  color: colorScheme.onPrimaryContainer,
+                ),
+                eventTileCornerRadius: 0.0, // Square corners
                 todayBackgroundColor: colorScheme.primaryContainer,
                 todayTextStyle: TextStyle(
                   fontWeight: FontWeight.bold,

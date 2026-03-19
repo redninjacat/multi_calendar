@@ -22,7 +22,6 @@ import '../mcal_month_view_contexts.dart';
 import '../mcal_month_week_layout_contexts.dart';
 import '../shared_subwidgets/month_resize_handle.dart';
 import 'drop_target_highlight_painter.dart';
-import 'week_number_cell.dart';
 import 'week_row_widget.dart';
 
 /// Returns recurrence metadata for an event — forward declaration.
@@ -494,9 +493,9 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
     _cachedCalendarSize = renderBox.size;
     _cachedCalendarOffset = renderBox.localToGlobal(Offset.zero);
     // Account for week number column: day width is computed from content area only
-    final weekNumberWidth = widget.showWeekNumbers
-        ? WeekNumberCell.columnWidth
-        : 0.0;
+    final weekNumColWidth = widget.theme.monthViewTheme?.weekNumberColumnWidth ??
+        MCalThemeData.fromTheme(Theme.of(context)).monthViewTheme!.weekNumberColumnWidth!;
+    final weekNumberWidth = widget.showWeekNumbers ? weekNumColWidth : 0.0;
     _cachedWeekNumberWidth = weekNumberWidth;
     // In LTR, week numbers are on the left → content starts at weekNumberWidth.
     // In RTL, week numbers are on the right → content starts at 0.
@@ -982,26 +981,24 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
     final event = tileContext.event;
     final segment = tileContext.segment;
     final valid = tileContext.dropValid ?? true;
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
 
     final cornerRadius =
-        theme.monthTheme?.dropTargetTileCornerRadius ??
-        theme.eventTileCornerRadius ??
-        4.0;
+        theme.monthViewTheme?.dropTargetTileCornerRadius ??
+        theme.monthViewTheme?.eventTileCornerRadius ??
+        defaults.monthViewTheme!.eventTileCornerRadius!;
     final leftRadius = segment?.isFirstSegment ?? true ? cornerRadius : 0.0;
     final rightRadius = segment?.isLastSegment ?? true ? cornerRadius : 0.0;
-
-    final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final tileColor = valid
         ? resolveDropTargetTileColor(
-            dropTargetThemeColor: theme.monthTheme?.dropTargetTileBackgroundColor,
-            themeColor: theme.eventTileBackgroundColor,
-            allDayThemeColor: theme.allDayEventBackgroundColor,
+            dropTargetThemeColor: theme.monthViewTheme?.dropTargetTileBackgroundColor,
+            themeColor: theme.monthViewTheme?.eventTileBackgroundColor,
             eventColor: event.color,
-            ignoreEventColors: theme.ignoreEventColors,
-            defaultColor: defaults.eventTileBackgroundColor!,
+            enableEventColorOverrides: theme.enableEventColorOverrides,
+            defaultColor: defaults.monthViewTheme!.eventTileBackgroundColor!,
           )
-        : (theme.monthTheme?.dropTargetTileInvalidBackgroundColor ??
-              defaults.monthTheme!.dropTargetTileInvalidBackgroundColor!);
+        : (theme.monthViewTheme?.dropTargetTileInvalidBackgroundColor ??
+              defaults.monthViewTheme!.dropTargetTileInvalidBackgroundColor!);
 
     final isFirstSegment = segment?.isFirstSegment ?? true;
     final isLastSegment = segment?.isLastSegment ?? true;
@@ -1010,11 +1007,11 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
     // Otherwise use the tile color as a 1px border with a translucent fill
     // so the drop-target preview is visually distinct from the original tile.
     final themeBorderWidth =
-        theme.monthTheme?.dropTargetTileBorderWidth ??
-        theme.monthTheme?.eventTileBorderWidth;
+        theme.monthViewTheme?.dropTargetTileBorderWidth ??
+        theme.monthViewTheme?.eventTileBorderWidth;
     final themeBorderColor =
-        theme.monthTheme?.dropTargetTileBorderColor ??
-        theme.monthTheme?.eventTileBorderColor;
+        theme.monthViewTheme?.dropTargetTileBorderColor ??
+        theme.monthViewTheme?.eventTileBorderColor;
     final hasThemeBorder =
         themeBorderWidth != null &&
         themeBorderWidth > 0 &&
@@ -1054,9 +1051,11 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
           : tileColor.withValues(alpha: 0.35);
       final borderColor = valid
           ? tileColor
-          : (theme.monthTheme?.dropTargetTileInvalidBackgroundColor ??
-              defaults.monthTheme!.dropTargetTileInvalidBackgroundColor!);
-      final borderSide = BorderSide(color: borderColor, width: 1.5);
+          : (theme.monthViewTheme?.dropTargetTileInvalidBackgroundColor ??
+              defaults.monthViewTheme!.dropTargetTileInvalidBackgroundColor!);
+      final fallbackBorderWidth =
+          defaults.monthViewTheme!.dropTargetTileBorderWidth!;
+      final borderSide = BorderSide(color: borderColor, width: fallbackBorderWidth);
       final leftBorder = isFirstSegment ? borderSide : BorderSide.none;
       final rightBorder = isLastSegment ? borderSide : BorderSide.none;
       tileBorder = Border(
@@ -1108,16 +1107,25 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
           event: tileContext.event,
           isDropTargetPreview: true,
         );
-        final resizeHandleColor = theme.dayTheme?.resizeHandleColor ??
-            defaults.dayTheme!.resizeHandleColor!;
+        final resizeHandleColor = theme.monthViewTheme?.resizeHandleColor ??
+            defaults.monthViewTheme!.resizeHandleColor!;
+        final handleVisualWidth = theme.monthViewTheme?.resizeHandleVisualWidth ??
+            defaults.monthViewTheme!.resizeHandleVisualWidth!;
+        final handleVMargin = theme.monthViewTheme?.resizeHandleVerticalMargin ??
+            defaults.monthViewTheme!.resizeHandleVerticalMargin!;
+        final handleRadius = theme.monthViewTheme?.resizeHandleBorderRadius ??
+            defaults.monthViewTheme!.resizeHandleBorderRadius!;
+        final tileHeight = theme.monthViewTheme?.eventTileHeight ??
+            defaults.monthViewTheme!.eventTileHeight!;
+        final handleVisualHeight = tileHeight - (2 * handleVMargin);
         final visual = widget.resizeHandleBuilder != null
             ? widget.resizeHandleBuilder!(context, handleContext)
             : Container(
-                width: 2,
-                height: 16,
+                width: handleVisualWidth,
+                height: handleVisualHeight,
                 decoration: BoxDecoration(
                   color: resizeHandleColor,
-                  borderRadius: BorderRadius.circular(1),
+                  borderRadius: BorderRadius.circular(handleRadius),
                 ),
               );
 
@@ -1165,16 +1173,17 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final weekNumberWidth = widget.showWeekNumbers
-            ? WeekNumberCell.columnWidth
-            : 0.0;
+        final defaults = MCalThemeData.fromTheme(Theme.of(context));
+        final weekNumColWidthDrop = widget.theme.monthViewTheme?.weekNumberColumnWidth ??
+            defaults.monthViewTheme!.weekNumberColumnWidth!;
+        final weekNumberWidth = widget.showWeekNumbers ? weekNumColWidthDrop : 0.0;
         final contentWidth = constraints.maxWidth - weekNumberWidth;
         final dayWidth = _weeks.isNotEmpty ? contentWidth / 7 : 0.0;
         final rowHeight = _weeks.isNotEmpty
             ? constraints.maxHeight / _weeks.length
             : 0.0;
-        final dateLabelHeight =
-            widget.theme.monthTheme?.dateLabelHeight ?? 18.0;
+        final dateLabelHeight = widget.theme.monthViewTheme?.dateLabelHeight ??
+            defaults.monthViewTheme!.dateLabelHeight!;
 
         final phantomSegments = _getPhantomSegmentsForDropTarget(
           proposedStartDate: proposedStart,
@@ -1191,6 +1200,7 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
         );
         final config = MCalMonthWeekLayoutConfig.fromTheme(
           widget.theme,
+          flutterTheme: Theme.of(context),
           maxVisibleEventsPerDay: widget.maxVisibleEventsPerDay,
         );
         Widget noOpOverflow(
@@ -1228,7 +1238,7 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (widget.showWeekNumbers)
-                    SizedBox(width: WeekNumberCell.columnWidth),
+                    SizedBox(width: weekNumColWidthDrop),
                   Expanded(child: weekLayout),
                 ],
               ),
@@ -1337,16 +1347,16 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
           isValid: isValid,
           validColor: () {
                 final d = MCalThemeData.fromTheme(Theme.of(context));
-                return widget.theme.monthTheme?.dropTargetCellValidColor ??
-                    d.monthTheme!.dropTargetCellValidColor!;
+                return widget.theme.monthViewTheme?.dropTargetCellValidColor ??
+                    d.monthViewTheme!.dropTargetCellValidColor!;
               }(),
           invalidColor: () {
                 final d = MCalThemeData.fromTheme(Theme.of(context));
-                return widget.theme.monthTheme?.dropTargetCellInvalidColor ??
-                    d.monthTheme!.dropTargetCellInvalidColor!;
+                return widget.theme.monthViewTheme?.dropTargetCellInvalidColor ??
+                    d.monthViewTheme!.dropTargetCellInvalidColor!;
               }(),
-          borderRadius:
-              widget.theme.monthTheme?.dropTargetCellBorderRadius ?? 4.0,
+          borderRadius: widget.theme.monthViewTheme?.dropTargetCellBorderRadius ??
+              MCalThemeData.fromTheme(Theme.of(context)).monthViewTheme!.dropTargetCellBorderRadius!,
         ),
       );
     }

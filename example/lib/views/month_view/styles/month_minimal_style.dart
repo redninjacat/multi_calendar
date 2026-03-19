@@ -46,7 +46,7 @@ class MonthMinimalStyle extends StatelessWidget {
               data: MCalThemeData(
                 cellBorderColor: Colors.transparent,
                 cellBackgroundColor: Colors.transparent,
-                monthTheme: MCalMonthThemeData(
+                monthViewTheme: MCalMonthViewThemeData(
                   todayBackgroundColor: Colors.transparent,
                   todayTextStyle: TextStyle(
                     fontWeight: FontWeight.w800,
@@ -215,13 +215,13 @@ class MonthMinimalStyle extends StatelessWidget {
     // Get text style from theme
     final theme = MCalTheme.of(context);
     final textStyle = labelContext.isToday
-        ? (theme.monthTheme?.todayTextStyle ??
+        ? (theme.monthViewTheme?.todayTextStyle ??
               TextStyle(
                 fontWeight: FontWeight.w800,
                 color: colorScheme.primary,
                 fontSize: 18,
               ))
-        : (theme.monthTheme?.cellTextStyle ??
+        : (theme.monthViewTheme?.cellTextStyle ??
               TextStyle(
                 fontWeight: FontWeight.w400,
                 color: labelContext.isCurrentMonth

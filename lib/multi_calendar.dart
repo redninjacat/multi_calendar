@@ -67,9 +67,12 @@ export 'src/models/mcal_recurrence_exception.dart';
 export 'src/models/mcal_recurrence_rule.dart';
 export 'src/models/mcal_region.dart';
 // Export styles
-export 'src/styles/mcal_day_theme_data.dart';
-export 'src/styles/mcal_month_theme_data.dart';
+export 'src/styles/mcal_all_day_theme_mixin.dart';
+export 'src/styles/mcal_day_view_theme_data.dart';
+export 'src/styles/mcal_event_tile_theme_mixin.dart';
+export 'src/styles/mcal_month_view_theme_data.dart';
 export 'src/styles/mcal_theme.dart';
+export 'src/styles/mcal_time_grid_theme_mixin.dart';
 // Export utilities
 export 'src/utils/color_utils.dart';
 export 'src/utils/date_utils.dart';

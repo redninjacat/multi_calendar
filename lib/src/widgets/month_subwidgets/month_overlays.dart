@@ -14,8 +14,8 @@ class LoadingOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scrimColor = theme.monthTheme?.overlayScrimColor ??
-        MCalThemeData.fromTheme(Theme.of(context)).monthTheme!.overlayScrimColor!;
+    final scrimColor = theme.monthViewTheme?.overlayScrimColor ??
+        MCalThemeData.fromTheme(Theme.of(context)).monthViewTheme!.overlayScrimColor!;
     return Positioned.fill(
       child: Container(
         color: scrimColor,
@@ -54,10 +54,10 @@ class ErrorOverlay extends StatelessWidget {
         : 'Failed to load events. Please try again.';
 
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
-    final scrimColor = theme.monthTheme?.overlayScrimColor ??
-        defaults.monthTheme!.overlayScrimColor!;
-    final errorIconColor = theme.monthTheme?.errorIconColor ??
-        defaults.monthTheme!.errorIconColor!;
+    final scrimColor = theme.monthViewTheme?.overlayScrimColor ??
+        defaults.monthViewTheme!.overlayScrimColor!;
+    final errorIconColor = theme.monthViewTheme?.errorIconColor ??
+        defaults.monthViewTheme!.errorIconColor!;
     return Positioned.fill(
       child: Container(
         color: scrimColor,
@@ -79,7 +79,7 @@ class ErrorOverlay extends StatelessWidget {
                     errorMessage,
                     textAlign: TextAlign.center,
                     style:
-                        theme.monthTheme?.cellTextStyle?.copyWith(
+                        theme.monthViewTheme?.cellTextStyle?.copyWith(
                           fontSize: 14,
                         ) ??
                         const TextStyle(fontSize: 14),

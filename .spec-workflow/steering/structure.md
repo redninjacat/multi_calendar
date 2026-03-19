@@ -30,7 +30,7 @@ multi_calendar/
 │   │   └── styles/               # Style definitions
 │   │       ├── mcal_theme.dart
 │   │       ├── mcal_day_theme_data.dart
-│   │       └── mcal_month_theme_data.dart
+│   │       └── mcal_month_view_theme_data.dart
 │   ├── l10n/                     # Package-level localization (gen-l10n ARB files)
 │   │   ├── app_en.arb            # English translations (template)
 │   │   ├── app_es.arb            # Spanish translations

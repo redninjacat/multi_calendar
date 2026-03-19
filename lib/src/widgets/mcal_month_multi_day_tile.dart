@@ -129,24 +129,25 @@ class MCalMonthMultiDayTile extends StatelessWidget {
     final theme = MCalTheme.of(context);
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
 
-    // Determine background color respecting ignoreEventColors cascade
-    final backgroundColor = theme.ignoreEventColors
-        ? theme.allDayEventBackgroundColor ??
-              theme.eventTileBackgroundColor ??
+    // Determine background color respecting enableEventColorOverrides cascade
+    final backgroundColor = theme.enableEventColorOverrides
+        ? theme.monthViewTheme?.multiDayEventBackgroundColor ??
+              theme.monthViewTheme?.eventTileBackgroundColor ??
               event.color ??
-              defaults.eventTileBackgroundColor!
+              defaults.monthViewTheme!.eventTileBackgroundColor!
         : event.color ??
-              theme.allDayEventBackgroundColor ??
-              theme.eventTileBackgroundColor ??
-              defaults.eventTileBackgroundColor!;
+              theme.monthViewTheme?.multiDayEventBackgroundColor ??
+              theme.monthViewTheme?.eventTileBackgroundColor ??
+              defaults.monthViewTheme!.eventTileBackgroundColor!;
 
     // Determine text style using master defaults as final fallback
-    final textStyle = theme.allDayEventTextStyle ??
-        theme.eventTileTextStyle ??
-        defaults.allDayEventTextStyle!;
+    final textStyle = theme.monthViewTheme?.eventTileTextStyle ??
+        defaults.monthViewTheme!.eventTileTextStyle!;
 
     // Calculate border radius based on position
-    final borderRadius = _calculateBorderRadius(details);
+    final tileRadius = theme.monthViewTheme?.multiDayTileBorderRadius ??
+        defaults.monthViewTheme!.multiDayTileBorderRadius!;
+    final borderRadius = _calculateBorderRadius(details, tileRadius);
 
     // Build content: show title only on first day in row for cleaner appearance
     Widget content;
@@ -163,15 +164,19 @@ class MCalMonthMultiDayTile extends StatelessWidget {
     }
 
     // Calculate inner padding based on position (for text spacing from tile edges)
+    final tilePadding = theme.monthViewTheme?.multiDayTilePadding ??
+        defaults.monthViewTheme!.multiDayTilePadding!;
+    final hPad = tilePadding.horizontal / 2;
+    final vPad = tilePadding.vertical / 2;
     EdgeInsetsGeometry padding;
     if (details.isFirstDayInRow && details.isLastDayInRow) {
-      padding = const EdgeInsets.symmetric(horizontal: 4, vertical: 2);
+      padding = EdgeInsets.symmetric(horizontal: hPad, vertical: vPad);
     } else if (details.isFirstDayInRow) {
-      padding = const EdgeInsetsDirectional.only(start: 4, top: 2, bottom: 2);
+      padding = EdgeInsetsDirectional.only(start: hPad, top: vPad, bottom: vPad);
     } else if (details.isLastDayInRow) {
-      padding = const EdgeInsetsDirectional.only(end: 4, top: 2, bottom: 2);
+      padding = EdgeInsetsDirectional.only(end: hPad, top: vPad, bottom: vPad);
     } else {
-      padding = const EdgeInsets.symmetric(vertical: 2);
+      padding = EdgeInsets.symmetric(vertical: vPad);
     }
 
     // No margin here - the layout delegate enforces margins
@@ -202,9 +207,10 @@ class MCalMonthMultiDayTile extends StatelessWidget {
   /// - Events that wrap to the next row have flat edges at the wrap point
   /// - Continuation segments have flat left edges
   /// - Ending segments have flat left edges but rounded right edges
-  BorderRadius _calculateBorderRadius(MCalMultiDayTileDetails details) {
-    const double radius = 4.0;
-
+  BorderRadius _calculateBorderRadius(
+    MCalMultiDayTileDetails details,
+    double radius,
+  ) {
     // Left corners: rounded only if first day of event AND first day in row
     final bool roundLeft =
         details.isFirstDayOfEvent && details.isFirstDayInRow;
@@ -213,22 +219,18 @@ class MCalMonthMultiDayTile extends StatelessWidget {
     final bool roundRight = details.isLastDayOfEvent && details.isLastDayInRow;
 
     if (roundLeft && roundRight) {
-      // Both sides rounded (single-row complete event)
       return BorderRadius.circular(radius);
     } else if (roundLeft) {
-      // Only left side rounded
-      return const BorderRadius.only(
+      return BorderRadius.only(
         topLeft: Radius.circular(radius),
         bottomLeft: Radius.circular(radius),
       );
     } else if (roundRight) {
-      // Only right side rounded
-      return const BorderRadius.only(
+      return BorderRadius.only(
         topRight: Radius.circular(radius),
         bottomRight: Radius.circular(radius),
       );
     } else {
-      // No rounding (middle segment or continuation)
       return BorderRadius.zero;
     }
   }

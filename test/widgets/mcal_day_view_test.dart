@@ -286,7 +286,7 @@ void main() {
         initialDate: DateTime(2026, 2, 14),
       );
       final customTheme = MCalThemeData(
-        dayTheme: MCalDayThemeData(
+        dayViewTheme: MCalDayViewThemeData(
           timeLegendTextStyle: const TextStyle(fontSize: 14, color: Colors.blue),
           hourGridlineColor: Colors.grey,
         ),

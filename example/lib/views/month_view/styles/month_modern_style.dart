@@ -44,7 +44,7 @@ class MonthModernStyle extends StatelessWidget {
             data: MCalThemeData(
               cellBorderColor: Colors.transparent,
               cellBackgroundColor: colorScheme.surface,
-              monthTheme: MCalMonthThemeData(
+              monthViewTheme: MCalMonthViewThemeData(
                 todayBackgroundColor: colorScheme.primary,
                 todayTextStyle: const TextStyle(
                   fontWeight: FontWeight.bold,

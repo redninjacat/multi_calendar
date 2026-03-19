@@ -73,26 +73,31 @@ class TimeRegionsLayer extends StatelessWidget {
     );
 
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
-    final dayDefaults = defaults.dayTheme!;
-    final borderColor = theme.dayTheme?.timeRegionBorderColor ??
+    final dayDefaults = defaults.dayViewTheme!;
+    final borderColor = theme.dayViewTheme?.timeRegionBorderColor ??
         dayDefaults.timeRegionBorderColor!;
-    final textColor = theme.dayTheme?.timeRegionTextColor ??
+    final borderWidth = theme.dayViewTheme?.timeRegionBorderWidth ??
+        dayDefaults.timeRegionBorderWidth!;
+    final iconSize = theme.dayViewTheme?.timeRegionIconSize ??
+        dayDefaults.timeRegionIconSize!;
+    final iconGap = theme.dayViewTheme?.timeRegionIconGap ??
+        dayDefaults.timeRegionIconGap!;
+    final textColor = theme.dayViewTheme?.timeRegionTextColor ??
         dayDefaults.timeRegionTextColor!;
-    final textStyle = theme.dayTheme?.timeRegionTextStyle ??
-        dayDefaults.timeRegionTextStyle ??
-        TextStyle(fontSize: 12, color: textColor);
+    final textStyle = theme.dayViewTheme?.timeRegionTextStyle ??
+        dayDefaults.timeRegionTextStyle!;
     final defaultWidget = Container(
       decoration: BoxDecoration(
         color:
             region.color ??
             (region.blockInteraction
-                ? (theme.dayTheme?.blockedTimeRegionColor ??
+                ? (theme.dayViewTheme?.blockedTimeRegionColor ??
                     dayDefaults.blockedTimeRegionColor)
-                : (theme.dayTheme?.specialTimeRegionColor ??
+                : (theme.dayViewTheme?.specialTimeRegionColor ??
                     dayDefaults.specialTimeRegionColor)),
         border: Border(
-          top: BorderSide(color: borderColor, width: 1),
-          bottom: BorderSide(color: borderColor, width: 1),
+          top: BorderSide(color: borderColor, width: borderWidth),
+          bottom: BorderSide(color: borderColor, width: borderWidth),
         ),
       ),
       child: region.text != null || region.icon != null
@@ -101,8 +106,8 @@ class TimeRegionsLayer extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (region.icon != null) ...[
-                    Icon(region.icon, size: 16, color: textColor),
-                    if (region.text != null) const SizedBox(width: 4),
+                    Icon(region.icon, size: iconSize, color: textColor),
+                    if (region.text != null) SizedBox(width: iconGap),
                   ],
                   if (region.text != null)
                     Text(region.text!, style: textStyle),

@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:multi_calendar/multi_calendar.dart';
 
 void main() {
-  group('MCalDayThemeData constructor', () {
+  group('MCalDayViewThemeData constructor', () {
     test('default constructor creates instance with all null properties', () {
-      const theme = MCalDayThemeData();
+      const theme = MCalDayViewThemeData();
 
       expect(theme.dayHeaderDayOfWeekStyle, isNull);
       expect(theme.dayHeaderDateStyle, isNull);
@@ -41,7 +41,7 @@ void main() {
       const dateStyle = TextStyle(fontSize: 24);
       const padding = EdgeInsets.all(4.0);
 
-      const theme = MCalDayThemeData(
+      const theme = MCalDayViewThemeData(
         dayHeaderDayOfWeekStyle: dayStyle,
         dayHeaderDateStyle: dateStyle,
         timeLegendWidth: 72.0,
@@ -87,14 +87,14 @@ void main() {
     });
   });
 
-  group('MCalDayThemeData.defaults', () {
+  group('MCalDayViewThemeData.defaults', () {
     test('defaults factory creates non-null values from ThemeData', () {
       final themeData = ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       );
 
-      final theme = MCalDayThemeData.defaults(themeData);
+      final theme = MCalDayViewThemeData.defaults(themeData);
 
       expect(theme.dayHeaderDayOfWeekStyle, isNotNull);
       expect(theme.dayHeaderDateStyle, isNotNull);
@@ -126,7 +126,7 @@ void main() {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),
       );
 
-      final theme = MCalDayThemeData.defaults(themeData);
+      final theme = MCalDayViewThemeData.defaults(themeData);
 
       expect(theme.currentTimeIndicatorColor, themeData.colorScheme.primary);
       expect(theme.timeLegendBackgroundColor, themeData.colorScheme.surfaceContainerLow);
@@ -142,7 +142,7 @@ void main() {
         ),
       );
 
-      final theme = MCalDayThemeData.defaults(themeData);
+      final theme = MCalDayViewThemeData.defaults(themeData);
 
       expect(theme.dayHeaderDayOfWeekStyle?.fontSize, 12);
       expect(theme.dayHeaderDateStyle?.fontSize, 28);
@@ -164,17 +164,17 @@ void main() {
         ),
       );
 
-      final light = MCalDayThemeData.defaults(lightTheme);
-      final dark = MCalDayThemeData.defaults(darkTheme);
+      final light = MCalDayViewThemeData.defaults(lightTheme);
+      final dark = MCalDayViewThemeData.defaults(darkTheme);
 
       expect(light.timeLegendBackgroundColor, isNot(dark.timeLegendBackgroundColor));
       expect(light.currentTimeIndicatorColor, isNot(dark.currentTimeIndicatorColor));
     });
   });
 
-  group('MCalDayThemeData copyWith', () {
+  group('MCalDayViewThemeData copyWith', () {
     test('copyWith with no arguments returns identical instance', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         timeLegendWidth: 80.0,
         showTimeLegendTicks: true,
       );
@@ -187,7 +187,7 @@ void main() {
     });
 
     test('copyWith updates single property', () {
-      const original = MCalDayThemeData(timeLegendWidth: 60.0);
+      const original = MCalDayViewThemeData(timeLegendWidth: 60.0);
 
       final updated = original.copyWith(timeLegendWidth: 72.0);
 
@@ -196,7 +196,7 @@ void main() {
     });
 
     test('copyWith preserves unspecified properties', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         timeLegendWidth: 60.0,
         timeLegendTickWidth: 1.0,
         hourGridlineColor: Colors.blue,
@@ -210,7 +210,7 @@ void main() {
     });
 
     test('copyWith preserves null when not specified', () {
-      const original = MCalDayThemeData(timeLegendWidth: 60.0);
+      const original = MCalDayViewThemeData(timeLegendWidth: 60.0);
 
       final updated = original.copyWith(showTimeLegendTicks: true);
 
@@ -219,7 +219,7 @@ void main() {
     });
 
     test('copyWith updates TextStyle properties', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         dayHeaderDayOfWeekStyle: TextStyle(fontSize: 12),
       );
       const newStyle = TextStyle(fontSize: 16, color: Colors.red);
@@ -231,7 +231,7 @@ void main() {
     });
 
     test('copyWith updates Color properties', () {
-      const original = MCalDayThemeData(hourGridlineColor: Colors.blue);
+      const original = MCalDayViewThemeData(hourGridlineColor: Colors.blue);
 
       final updated = original.copyWith(hourGridlineColor: Colors.red);
 
@@ -239,7 +239,7 @@ void main() {
     });
 
     test('copyWith updates double properties', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         timeLegendWidth: 60.0,
         timeLegendTickLength: 8.0,
       );
@@ -254,7 +254,7 @@ void main() {
     });
 
     test('copyWith updates bool properties', () {
-      const original = MCalDayThemeData(showTimeLegendTicks: true);
+      const original = MCalDayViewThemeData(showTimeLegendTicks: true);
 
       final updated = original.copyWith(showTimeLegendTicks: false);
 
@@ -262,7 +262,7 @@ void main() {
     });
 
     test('copyWith updates EdgeInsets', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         timedEventPadding: EdgeInsets.all(2.0),
       );
       const newPadding = EdgeInsets.symmetric(horizontal: 4, vertical: 2);
@@ -273,7 +273,7 @@ void main() {
     });
 
     test('copyWith updates multiple properties at once', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         timeLegendWidth: 60.0,
         showTimeLegendTicks: true,
         hourGridlineColor: Colors.blue,
@@ -291,7 +291,7 @@ void main() {
     });
 
     test('copyWith updates time legend tick properties', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         showTimeLegendTicks: false,
         timeLegendTickColor: Colors.grey,
         timeLegendTickWidth: 1.0,
@@ -312,7 +312,7 @@ void main() {
     });
 
     test('copyWith updates gridline properties', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         hourGridlineColor: Colors.blue,
         majorGridlineColor: Colors.green,
         minorGridlineColor: Colors.orange,
@@ -330,7 +330,7 @@ void main() {
     });
 
     test('copyWith updates time region properties', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         specialTimeRegionColor: Colors.cyan,
         blockedTimeRegionColor: Colors.amber,
         timeRegionBorderColor: Colors.brown,
@@ -351,7 +351,7 @@ void main() {
     });
 
     test('copyWith updates current time indicator properties', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         currentTimeIndicatorColor: Colors.blue,
         currentTimeIndicatorWidth: 2.0,
         currentTimeIndicatorDotRadius: 6.0,
@@ -369,7 +369,7 @@ void main() {
     });
 
     test('copyWith updates resize handle properties', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         resizeHandleSize: 8.0,
         minResizeDurationMinutes: 15,
       );
@@ -384,9 +384,9 @@ void main() {
     });
   });
 
-  group('MCalDayThemeData lerp', () {
+  group('MCalDayViewThemeData lerp', () {
     test('lerp with null other returns this', () {
-      const theme = MCalDayThemeData(timeLegendWidth: 60.0);
+      const theme = MCalDayViewThemeData(timeLegendWidth: 60.0);
 
       final result = theme.lerp(null, 0.5);
 
@@ -394,11 +394,11 @@ void main() {
     });
 
     test('lerp at t=0.0 returns this theme', () {
-      const theme1 = MCalDayThemeData(
+      const theme1 = MCalDayViewThemeData(
         timeLegendWidth: 60.0,
         hourGridlineColor: Colors.white,
       );
-      const theme2 = MCalDayThemeData(
+      const theme2 = MCalDayViewThemeData(
         timeLegendWidth: 100.0,
         hourGridlineColor: Colors.black,
       );
@@ -410,11 +410,11 @@ void main() {
     });
 
     test('lerp at t=1.0 returns other theme', () {
-      const theme1 = MCalDayThemeData(
+      const theme1 = MCalDayViewThemeData(
         timeLegendWidth: 60.0,
         hourGridlineColor: Colors.white,
       );
-      const theme2 = MCalDayThemeData(
+      const theme2 = MCalDayViewThemeData(
         timeLegendWidth: 100.0,
         hourGridlineColor: Colors.black,
       );
@@ -426,8 +426,8 @@ void main() {
     });
 
     test('lerp at t=0.5 interpolates double values', () {
-      const theme1 = MCalDayThemeData(timeLegendWidth: 60.0);
-      const theme2 = MCalDayThemeData(timeLegendWidth: 100.0);
+      const theme1 = MCalDayViewThemeData(timeLegendWidth: 60.0);
+      const theme2 = MCalDayViewThemeData(timeLegendWidth: 100.0);
 
       final result = theme1.lerp(theme2, 0.5);
 
@@ -435,8 +435,8 @@ void main() {
     });
 
     test('lerp interpolates Color values', () {
-      const theme1 = MCalDayThemeData(hourGridlineColor: Colors.white);
-      const theme2 = MCalDayThemeData(hourGridlineColor: Colors.black);
+      const theme1 = MCalDayViewThemeData(hourGridlineColor: Colors.white);
+      const theme2 = MCalDayViewThemeData(hourGridlineColor: Colors.black);
 
       final atHalf = theme1.lerp(theme2, 0.5);
 
@@ -446,8 +446,8 @@ void main() {
     });
 
     test('lerp interpolates bool at t<0.5 uses this value', () {
-      const theme1 = MCalDayThemeData(showTimeLegendTicks: true);
-      const theme2 = MCalDayThemeData(showTimeLegendTicks: false);
+      const theme1 = MCalDayViewThemeData(showTimeLegendTicks: true);
+      const theme2 = MCalDayViewThemeData(showTimeLegendTicks: false);
 
       final result = theme1.lerp(theme2, 0.3);
 
@@ -455,8 +455,8 @@ void main() {
     });
 
     test('lerp interpolates bool at t>=0.5 uses other value', () {
-      const theme1 = MCalDayThemeData(showTimeLegendTicks: true);
-      const theme2 = MCalDayThemeData(showTimeLegendTicks: false);
+      const theme1 = MCalDayViewThemeData(showTimeLegendTicks: true);
+      const theme2 = MCalDayViewThemeData(showTimeLegendTicks: false);
 
       final result = theme1.lerp(theme2, 0.5);
 
@@ -464,10 +464,10 @@ void main() {
     });
 
     test('lerp interpolates TextStyle', () {
-      const theme1 = MCalDayThemeData(
+      const theme1 = MCalDayViewThemeData(
         dayHeaderDayOfWeekStyle: TextStyle(fontSize: 12, color: Colors.white),
       );
-      const theme2 = MCalDayThemeData(
+      const theme2 = MCalDayViewThemeData(
         dayHeaderDayOfWeekStyle: TextStyle(fontSize: 24, color: Colors.black),
       );
 
@@ -477,10 +477,10 @@ void main() {
     });
 
     test('lerp interpolates EdgeInsets', () {
-      const theme1 = MCalDayThemeData(
+      const theme1 = MCalDayViewThemeData(
         timedEventPadding: EdgeInsets.all(2.0),
       );
-      const theme2 = MCalDayThemeData(
+      const theme2 = MCalDayViewThemeData(
         timedEventPadding: EdgeInsets.all(10.0),
       );
 
@@ -491,8 +491,8 @@ void main() {
     });
 
     test('lerp handles null double values', () {
-      const theme1 = MCalDayThemeData(timeLegendWidth: null);
-      const theme2 = MCalDayThemeData(timeLegendWidth: 100.0);
+      const theme1 = MCalDayViewThemeData(timeLegendWidth: null);
+      const theme2 = MCalDayViewThemeData(timeLegendWidth: 100.0);
 
       final result = theme1.lerp(theme2, 0.5);
 
@@ -500,8 +500,8 @@ void main() {
     });
 
     test('lerp handles both null doubles', () {
-      const theme1 = MCalDayThemeData(timeLegendWidth: null);
-      const theme2 = MCalDayThemeData(timeLegendWidth: null);
+      const theme1 = MCalDayViewThemeData(timeLegendWidth: null);
+      const theme2 = MCalDayViewThemeData(timeLegendWidth: null);
 
       final result = theme1.lerp(theme2, 0.5);
 
@@ -509,8 +509,8 @@ void main() {
     });
 
     test('lerp interpolates minResizeDurationMinutes at boundary', () {
-      const theme1 = MCalDayThemeData(minResizeDurationMinutes: 15);
-      const theme2 = MCalDayThemeData(minResizeDurationMinutes: 30);
+      const theme1 = MCalDayViewThemeData(minResizeDurationMinutes: 15);
+      const theme2 = MCalDayViewThemeData(minResizeDurationMinutes: 30);
 
       final atStart = theme1.lerp(theme2, 0.0);
       final atEnd = theme1.lerp(theme2, 1.0);
@@ -520,7 +520,7 @@ void main() {
     });
 
     test('lerp interpolates all double properties correctly', () {
-      const theme1 = MCalDayThemeData(
+      const theme1 = MCalDayViewThemeData(
         timeLegendWidth: 40.0,
         timeLegendTickWidth: 0.5,
         timeLegendTickLength: 4.0,
@@ -530,7 +530,7 @@ void main() {
         timedEventMinHeight: 16.0,
         resizeHandleSize: 4.0,
       );
-      const theme2 = MCalDayThemeData(
+      const theme2 = MCalDayViewThemeData(
         timeLegendWidth: 80.0,
         timeLegendTickWidth: 2.0,
         timeLegendTickLength: 16.0,
@@ -554,7 +554,7 @@ void main() {
     });
 
     test('lerp interpolates all Color properties', () {
-      const theme1 = MCalDayThemeData(
+      const theme1 = MCalDayViewThemeData(
         timeLegendBackgroundColor: Colors.white,
         timeLegendTickColor: Colors.white,
         hourGridlineColor: Colors.white,
@@ -566,7 +566,7 @@ void main() {
         timeRegionBorderColor: Colors.white,
         timeRegionTextColor: Colors.white,
       );
-      const theme2 = MCalDayThemeData(
+      const theme2 = MCalDayViewThemeData(
         timeLegendBackgroundColor: Colors.black,
         timeLegendTickColor: Colors.black,
         hourGridlineColor: Colors.black,
@@ -594,8 +594,8 @@ void main() {
     });
 
     test('lerp at t=0.25 and t=0.75 gives expected values', () {
-      const theme1 = MCalDayThemeData(timeLegendWidth: 0.0);
-      const theme2 = MCalDayThemeData(timeLegendWidth: 100.0);
+      const theme1 = MCalDayViewThemeData(timeLegendWidth: 0.0);
+      const theme2 = MCalDayViewThemeData(timeLegendWidth: 100.0);
 
       final atQuarter = theme1.lerp(theme2, 0.25);
       final atThreeQuarters = theme1.lerp(theme2, 0.75);
@@ -605,19 +605,19 @@ void main() {
     });
   });
 
-  group('MCalDayThemeData equality', () {
+  group('MCalDayViewThemeData equality', () {
     test('identical instances are equal', () {
-      const theme = MCalDayThemeData(timeLegendWidth: 60.0);
+      const theme = MCalDayViewThemeData(timeLegendWidth: 60.0);
 
       expect(theme == theme, isTrue);
     });
 
     test('same values are equal', () {
-      const theme1 = MCalDayThemeData(
+      const theme1 = MCalDayViewThemeData(
         timeLegendWidth: 60.0,
         showTimeLegendTicks: true,
       );
-      const theme2 = MCalDayThemeData(
+      const theme2 = MCalDayViewThemeData(
         timeLegendWidth: 60.0,
         showTimeLegendTicks: true,
       );
@@ -627,22 +627,22 @@ void main() {
     });
 
     test('different values are not equal', () {
-      const theme1 = MCalDayThemeData(timeLegendWidth: 60.0);
-      const theme2 = MCalDayThemeData(timeLegendWidth: 80.0);
+      const theme1 = MCalDayViewThemeData(timeLegendWidth: 60.0);
+      const theme2 = MCalDayViewThemeData(timeLegendWidth: 80.0);
 
       expect(theme1, isNot(equals(theme2)));
       expect(theme1.hashCode, isNot(theme2.hashCode));
     });
 
     test('empty themes are equal', () {
-      const theme1 = MCalDayThemeData();
-      const theme2 = MCalDayThemeData();
+      const theme1 = MCalDayViewThemeData();
+      const theme2 = MCalDayViewThemeData();
 
       expect(theme1, equals(theme2));
     });
 
-    test('equality with non-MCalDayThemeData returns false', () {
-      const theme = MCalDayThemeData();
+    test('equality with non-MCalDayViewThemeData returns false', () {
+      const theme = MCalDayViewThemeData();
 
       // ignore: unrelated_type_equality_checks
       expect(theme == 'string', isFalse);
@@ -651,24 +651,24 @@ void main() {
     });
   });
 
-  group('MCalDayThemeData hashCode', () {
+  group('MCalDayViewThemeData hashCode', () {
     test('hashCode is consistent', () {
-      const theme = MCalDayThemeData(timeLegendWidth: 60.0);
+      const theme = MCalDayViewThemeData(timeLegendWidth: 60.0);
 
       expect(theme.hashCode, theme.hashCode);
     });
 
     test('equal instances have same hashCode', () {
-      const theme1 = MCalDayThemeData(showTimeLegendTicks: true);
-      const theme2 = MCalDayThemeData(showTimeLegendTicks: true);
+      const theme1 = MCalDayViewThemeData(showTimeLegendTicks: true);
+      const theme2 = MCalDayViewThemeData(showTimeLegendTicks: true);
 
       expect(theme1.hashCode, theme2.hashCode);
     });
   });
 
-  group('MCalDayThemeData edge cases', () {
+  group('MCalDayViewThemeData edge cases', () {
     test('copyWith with all properties preserves original when no args', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         dayHeaderDayOfWeekStyle: TextStyle(fontSize: 12),
         dayHeaderDateStyle: TextStyle(fontSize: 24),
         timeLegendWidth: 72.0,
@@ -688,7 +688,7 @@ void main() {
     });
 
     test('lerp with identical themes returns same values', () {
-      const theme = MCalDayThemeData(
+      const theme = MCalDayViewThemeData(
         timeLegendWidth: 60.0,
         hourGridlineColor: Colors.blue,
       );
@@ -705,8 +705,8 @@ void main() {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       );
 
-      final theme1 = MCalDayThemeData.defaults(themeData);
-      final theme2 = MCalDayThemeData.defaults(themeData);
+      final theme1 = MCalDayViewThemeData.defaults(themeData);
+      final theme2 = MCalDayViewThemeData.defaults(themeData);
 
       expect(theme1.timeLegendWidth, theme2.timeLegendWidth);
       expect(theme1.showTimeLegendTicks, theme2.showTimeLegendTicks);
@@ -717,7 +717,7 @@ void main() {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       );
-      final defaults = MCalDayThemeData.defaults(themeData);
+      final defaults = MCalDayViewThemeData.defaults(themeData);
 
       expect(defaults.dropTargetTileBackgroundColor, isNotNull);
       expect(defaults.dropTargetTileInvalidBackgroundColor, isNotNull);
@@ -737,7 +737,7 @@ void main() {
     });
 
     test('new cascade properties round-trip via copyWith', () {
-      const original = MCalDayThemeData(
+      const original = MCalDayViewThemeData(
         dropTargetTileInvalidBackgroundColor: Color(0xFFFF0000),
         disabledTimeSlotColor: Color(0x20000000),
         resizeHandleColor: Color(0xFFFFFFFF),
@@ -757,14 +757,14 @@ void main() {
     });
 
     test('equality includes all property types', () {
-      const theme1 = MCalDayThemeData(
+      const theme1 = MCalDayViewThemeData(
         dayHeaderDayOfWeekStyle: TextStyle(fontSize: 12),
         timeLegendWidth: 60.0,
         showTimeLegendTicks: true,
         timedEventPadding: EdgeInsets.all(2.0),
         hourGridlineColor: Colors.blue,
       );
-      const theme2 = MCalDayThemeData(
+      const theme2 = MCalDayViewThemeData(
         dayHeaderDayOfWeekStyle: TextStyle(fontSize: 12),
         timeLegendWidth: 60.0,
         showTimeLegendTicks: true,

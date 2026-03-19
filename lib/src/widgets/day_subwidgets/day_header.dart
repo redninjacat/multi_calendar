@@ -94,19 +94,24 @@ class DayHeader extends StatelessWidget {
       }
     }
 
+    final headerPadding =
+        theme.dayViewTheme?.dayHeaderPadding ?? defaults.dayViewTheme!.dayHeaderPadding!;
+    final headerSpacing =
+        theme.dayViewTheme?.dayHeaderSpacing ?? defaults.dayViewTheme!.dayHeaderSpacing!;
+
     final defaultWidget = Container(
-      padding: const EdgeInsets.all(8.0),
+      padding: headerPadding,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showWeekNumbers && textDirection == TextDirection.ltr) ...[
             resolvedWeekNumWidget!,
-            const SizedBox(width: 8),
+            SizedBox(width: headerSpacing),
           ],
           _buildDayAndDate(defaults),
           if (showWeekNumbers && textDirection == TextDirection.rtl) ...[
-            const SizedBox(width: 8),
+            SizedBox(width: headerSpacing),
             resolvedWeekNumWidget!,
           ],
         ],
@@ -125,17 +130,21 @@ class DayHeader extends StatelessWidget {
   }
 
   Widget _buildWeekNumber(int weekNumber, MCalThemeData defaults) {
+    final wnPadding = theme.dayViewTheme?.dayHeaderWeekNumberPadding ??
+        defaults.dayViewTheme!.dayHeaderWeekNumberPadding!;
+    final wnRadius = theme.dayViewTheme?.dayHeaderWeekNumberBorderRadius ??
+        defaults.dayViewTheme!.dayHeaderWeekNumberBorderRadius!;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: wnPadding,
       decoration: BoxDecoration(
         color:
-            theme.weekNumberBackgroundColor ??
-            defaults.weekNumberBackgroundColor,
-        borderRadius: BorderRadius.circular(4),
+            theme.dayViewTheme?.weekNumberBackgroundColor ??
+            defaults.dayViewTheme!.weekNumberBackgroundColor,
+        borderRadius: BorderRadius.circular(wnRadius),
       ),
       child: Text(
         'W$weekNumber',
-        style: theme.weekNumberTextStyle ?? defaults.weekNumberTextStyle,
+        style: theme.dayViewTheme?.weekNumberTextStyle ?? defaults.dayViewTheme!.weekNumberTextStyle,
       ),
     );
   }
@@ -151,14 +160,14 @@ class DayHeader extends StatelessWidget {
         Text(
           dayOfWeek.toUpperCase(),
           style:
-              theme.dayTheme?.dayHeaderDayOfWeekStyle ??
-              defaults.dayTheme!.dayHeaderDayOfWeekStyle,
+              theme.dayViewTheme?.dayHeaderDayOfWeekStyle ??
+              defaults.dayViewTheme!.dayHeaderDayOfWeekStyle,
         ),
         Text(
           dateNum.toString(),
           style:
-              theme.dayTheme?.dayHeaderDateStyle ??
-              defaults.dayTheme!.dayHeaderDateStyle,
+              theme.dayViewTheme?.dayHeaderDateStyle ??
+              defaults.dayViewTheme!.dayHeaderDateStyle,
         ),
       ],
     );

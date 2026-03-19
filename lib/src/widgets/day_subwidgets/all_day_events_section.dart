@@ -116,13 +116,6 @@ class AllDayEventsSection extends StatelessWidget {
   final Duration dragLongPressDelay;
   final List<MCalRegion> regions;
 
-  static const _wrapSpacing = 4.0;
-  static const _wrapRunSpacing = 4.0;
-  static const _sectionHPadding = 8.0;
-
-  static const _defaultTileWidth = 120.0;
-  static const _defaultTileHeight = 28.0;
-  static const _defaultOverflowWidth = 80.0;
 
   /// Builds the [MCalTimeSlotContext] for all-day section background taps.
   MCalTimeSlotContext _buildAllDaySectionContext() => MCalTimeSlotContext(
@@ -137,9 +130,18 @@ class AllDayEventsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final effectiveMaxRows = maxRows;
-    final tileWidth = theme.dayTheme?.allDayTileWidth ?? _defaultTileWidth;
-    final tileHeight = theme.dayTheme?.allDayTileHeight ?? _defaultTileHeight;
+    final tileWidth = theme.dayViewTheme?.allDayTileWidth ??
+        defaults.dayViewTheme!.allDayTileWidth!;
+    final tileHeight = theme.dayViewTheme?.allDayTileHeight ??
+        defaults.dayViewTheme!.allDayTileHeight!;
+    final wrapSpacing = theme.dayViewTheme?.allDayWrapSpacing ??
+        defaults.dayViewTheme!.allDayWrapSpacing!;
+    final wrapRunSpacing = theme.dayViewTheme?.allDayWrapRunSpacing ??
+        defaults.dayViewTheme!.allDayWrapRunSpacing!;
+    final sectionPadding = theme.dayViewTheme?.allDaySectionPadding ??
+        defaults.dayViewTheme!.allDaySectionPadding!;
 
     final hasBackgroundHandlers =
         onTimeSlotTap != null ||
@@ -149,10 +151,7 @@ class AllDayEventsSection extends StatelessWidget {
 
     Widget section = Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: _sectionHPadding,
-        vertical: 4.0,
-      ),
+      padding: sectionPadding,
       decoration: BoxDecoration(
         color: theme.cellBackgroundColor,
         border: Border(
@@ -160,7 +159,8 @@ class AllDayEventsSection extends StatelessWidget {
             color:
                 theme.cellBorderColor ??
                 MCalThemeData.fromTheme(Theme.of(context)).cellBorderColor!,
-            width: 1.0,
+            width: theme.cellBorderWidth ??
+                MCalThemeData.fromTheme(Theme.of(context)).cellBorderWidth!,
           ),
         ),
       ),
@@ -169,20 +169,23 @@ class AllDayEventsSection extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 4.0),
+            padding: EdgeInsets.only(
+              bottom: theme.dayViewTheme?.allDaySectionLabelBottomPadding ??
+                  defaults.dayViewTheme!.allDaySectionLabelBottomPadding!,
+            ),
             child: Text(
               'All-day',
               style:
-                  theme.dayTheme?.timeLegendTextStyle ??
+                  theme.dayViewTheme?.timeLegendTextStyle ??
                   MCalThemeData.fromTheme(Theme.of(context))
-                      .dayTheme!
+                      .dayViewTheme!
                       .timeLegendTextStyle,
             ),
           ),
           LayoutBuilder(
             builder: (context, constraints) {
               final contentWidth = constraints.maxWidth;
-              final tilesPerRow = _tilesPerRow(contentWidth, tileWidth);
+              final tilesPerRow = _tilesPerRow(contentWidth, tileWidth, wrapSpacing);
               final totalSlots = effectiveMaxRows * tilesPerRow;
               final hasOverflow = events.length > totalSlots;
 
@@ -197,8 +200,8 @@ class AllDayEventsSection extends StatelessWidget {
               return ConstrainedBox(
                 constraints: BoxConstraints(minHeight: tileHeight),
                 child: Wrap(
-                  spacing: _wrapSpacing,
-                  runSpacing: _wrapRunSpacing,
+                  spacing: wrapSpacing,
+                  runSpacing: wrapRunSpacing,
                   children: [
                     for (final event in visibleEvents)
                       _buildEventTile(context, event, tileWidth, tileHeight),
@@ -246,9 +249,9 @@ class AllDayEventsSection extends StatelessWidget {
     return section;
   }
 
-  static int _tilesPerRow(double contentWidth, double tileWidth) {
+  static int _tilesPerRow(double contentWidth, double tileWidth, double wrapSpacing) {
     if (contentWidth <= 0 || tileWidth <= 0) return 1;
-    return ((contentWidth + _wrapSpacing) / (tileWidth + _wrapSpacing))
+    return ((contentWidth + wrapSpacing) / (tileWidth + wrapSpacing))
         .floor()
         .clamp(1, 99);
   }
@@ -272,12 +275,18 @@ class AllDayEventsSection extends StatelessWidget {
 
     if (keyboardFocusedEventId == event.id) {
       final kbDefaults = MCalThemeData.fromTheme(Theme.of(context));
-      final kbBorderColor = theme.dayTheme?.keyboardFocusBorderColor ??
-          kbDefaults.dayTheme!.keyboardFocusBorderColor!;
+      final kbBorderColor = theme.dayViewTheme?.keyboardFocusBorderColor ??
+          kbDefaults.dayViewTheme!.keyboardFocusBorderColor!;
+      final kbBorderWidth =
+          theme.dayViewTheme?.allDayKeyboardFocusBorderWidth ??
+          kbDefaults.dayViewTheme!.allDayKeyboardFocusBorderWidth!;
+      final kbBorderRadius =
+          theme.dayViewTheme?.keyboardFocusBorderRadius ??
+          kbDefaults.dayViewTheme!.keyboardFocusBorderRadius!;
       tile = Container(
         decoration: BoxDecoration(
-          border: Border.all(color: kbBorderColor, width: 2),
-          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: kbBorderColor, width: kbBorderWidth),
+          borderRadius: BorderRadius.circular(kbBorderRadius),
         ),
         child: tile,
       );
@@ -324,7 +333,9 @@ class AllDayEventsSection extends StatelessWidget {
     }
 
     if (dragEnabled) {
-      final hSpacing = theme.eventTileHorizontalSpacing ?? 2.0;
+      final defaults = MCalThemeData.fromTheme(Theme.of(context));
+      final hSpacing = theme.dayViewTheme?.eventTileHorizontalSpacing ??
+          defaults.dayViewTheme!.eventTileHorizontalSpacing!;
       tile = MCalDraggableEventTile(
         event: event,
         sourceDate: displayDate,
@@ -361,21 +372,30 @@ class AllDayEventsSection extends StatelessWidget {
   Widget _buildDefaultTile(BuildContext context, MCalCalendarEvent event) {
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final tileColor = resolveEventTileColor(
-      themeColor: theme.eventTileBackgroundColor,
-      allDayThemeColor: theme.allDayEventBackgroundColor,
+      themeColor: theme.dayViewTheme?.eventTileBackgroundColor,
+      allDayThemeColor: theme.dayViewTheme?.allDayEventBackgroundColor,
       eventColor: event.color,
-      ignoreEventColors: theme.ignoreEventColors,
-      defaultColor: defaults.eventTileBackgroundColor!,
+      enableEventColorOverrides: theme.enableEventColorOverrides,
+      defaultColor: defaults.dayViewTheme!.eventTileBackgroundColor!,
     );
     final cornerRadius =
-        theme.eventTileCornerRadius ?? defaults.eventTileCornerRadius!;
+        theme.dayViewTheme?.eventTileCornerRadius ?? defaults.dayViewTheme!.eventTileCornerRadius!;
     final borderWidth =
-        theme.allDayEventBorderWidth ?? defaults.allDayEventBorderWidth!;
+        theme.dayViewTheme?.allDayEventBorderWidth ?? defaults.dayViewTheme!.allDayEventBorderWidth!;
     final textStyle =
-        theme.allDayEventTextStyle ?? defaults.allDayEventTextStyle;
+        theme.dayViewTheme?.allDayEventTextStyle ?? defaults.dayViewTheme!.allDayEventTextStyle;
 
-    final tilePadding = theme.dayTheme?.allDayEventPadding ??
-        defaults.dayTheme!.allDayEventPadding!;
+    final tilePadding = theme.dayViewTheme?.allDayEventPadding ??
+        defaults.dayViewTheme!.allDayEventPadding!;
+
+    final handleWidth = theme.dayViewTheme?.allDayOverflowHandleWidth ??
+        defaults.dayViewTheme!.allDayOverflowHandleWidth!;
+    final handleHeight = theme.dayViewTheme?.allDayOverflowHandleHeight ??
+        defaults.dayViewTheme!.allDayOverflowHandleHeight!;
+    final handleRadius = theme.dayViewTheme?.allDayOverflowHandleBorderRadius ??
+        defaults.dayViewTheme!.allDayOverflowHandleBorderRadius!;
+    final handleGap = theme.dayViewTheme?.allDayOverflowHandleGap ??
+        defaults.dayViewTheme!.allDayOverflowHandleGap!;
 
     return Container(
       padding: tilePadding,
@@ -387,14 +407,14 @@ class AllDayEventsSection extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 3,
-            height: 16,
+            width: handleWidth,
+            height: handleHeight,
             decoration: BoxDecoration(
               color: tileColor,
-              borderRadius: BorderRadius.circular(1.5),
+              borderRadius: BorderRadius.circular(handleRadius),
             ),
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: handleGap),
           Expanded(
             child: Text(
               event.title,
@@ -413,8 +433,9 @@ class AllDayEventsSection extends StatelessWidget {
     int count,
     double tileHeight,
   ) {
-    final overflowWidth =
-        theme.dayTheme?.allDayOverflowIndicatorWidth ?? _defaultOverflowWidth;
+    final overflowDefaults = MCalThemeData.fromTheme(Theme.of(context));
+    final overflowWidth = theme.dayViewTheme?.allDayOverflowIndicatorWidth ??
+        overflowDefaults.dayViewTheme!.allDayOverflowIndicatorWidth!;
     final overflowEvents = events.skip(events.length - count).toList();
     final visibleEvts = events.take(events.length - count).toList();
 
@@ -486,20 +507,27 @@ class AllDayEventsSection extends StatelessWidget {
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final borderColor = theme.cellBorderColor ?? defaults.cellBorderColor!;
     final cornerRadius =
-        theme.eventTileCornerRadius ?? defaults.eventTileCornerRadius!;
-    final tilePadding = theme.dayTheme?.allDayEventPadding ??
-        defaults.dayTheme!.allDayEventPadding!;
+        theme.dayViewTheme?.eventTileCornerRadius ?? defaults.dayViewTheme!.eventTileCornerRadius!;
+    final tilePadding = theme.dayViewTheme?.allDayEventPadding ??
+        defaults.dayViewTheme!.allDayEventPadding!;
+    final indicatorFontSize =
+        theme.dayViewTheme?.allDayOverflowIndicatorFontSize ??
+        defaults.dayViewTheme!.allDayOverflowIndicatorFontSize!;
     return Container(
       padding: tilePadding,
       decoration: BoxDecoration(
         color: borderColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(cornerRadius),
-        border: Border.all(color: borderColor.withValues(alpha: 0.3), width: 1.0),
+        border: Border.all(
+          color: borderColor.withValues(alpha: 0.3),
+          width: theme.dayViewTheme?.allDayOverflowIndicatorBorderWidth ??
+              defaults.dayViewTheme!.allDayOverflowIndicatorBorderWidth!,
+        ),
       ),
       child: Text(
         '+$count more',
-        style: defaults.dayTheme!.timeLegendTextStyle?.copyWith(
-          fontSize: 11,
+        style: defaults.dayViewTheme!.timeLegendTextStyle?.copyWith(
+          fontSize: indicatorFontSize,
           fontWeight: FontWeight.w500,
         ),
       ),

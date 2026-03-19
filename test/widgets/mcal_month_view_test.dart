@@ -92,7 +92,7 @@ void main() {
       );
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.blue,
-        monthTheme: MCalMonthThemeData(
+        monthViewTheme: MCalMonthViewThemeData(
           todayBackgroundColor: Colors.red,
         ),
       );
@@ -184,7 +184,7 @@ void main() {
     testWidgets('applies theme from widget parameter', (tester) async {
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.blue,
-        monthTheme: MCalMonthThemeData(
+        monthViewTheme: MCalMonthViewThemeData(
           todayBackgroundColor: Colors.red,
         ),
       );
@@ -1197,7 +1197,7 @@ void main() {
 
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.purple,
-        monthTheme: MCalMonthThemeData(
+        monthViewTheme: MCalMonthViewThemeData(
           todayBackgroundColor: Colors.orange,
         ),
       );
@@ -1232,7 +1232,7 @@ void main() {
       expect(capturedContext, isNotNull);
       expect(capturedTheme, isNotNull);
       expect(capturedTheme!.cellBackgroundColor, equals(Colors.purple));
-      expect(capturedTheme!.monthTheme?.todayBackgroundColor, equals(Colors.orange));
+      expect(capturedTheme!.monthViewTheme?.todayBackgroundColor, equals(Colors.orange));
     });
 
     testWidgets('MCalTheme.of(context) works within eventTileBuilder', (
@@ -1253,7 +1253,9 @@ void main() {
       );
       testController.setMockEvents([testEvent]);
 
-      final customTheme = MCalThemeData(eventTileBackgroundColor: Colors.teal);
+      final customTheme = MCalThemeData(
+        monthViewTheme: MCalMonthViewThemeData(eventTileBackgroundColor: Colors.teal),
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -1267,7 +1269,7 @@ void main() {
                   eventTileBuilder: (context, tileContext, defaultTile) {
                     capturedTheme = MCalTheme.of(context);
                     return Container(
-                      color: MCalTheme.of(context).eventTileBackgroundColor,
+                      color: MCalTheme.of(context).monthViewTheme?.eventTileBackgroundColor,
                       child: defaultTile,
                     );
                   },
@@ -1281,7 +1283,7 @@ void main() {
 
       // Verify theme is accessible
       if (capturedTheme != null) {
-        expect(capturedTheme!.eventTileBackgroundColor, equals(Colors.teal));
+        expect(capturedTheme!.monthViewTheme?.eventTileBackgroundColor, equals(Colors.teal));
       }
     });
 

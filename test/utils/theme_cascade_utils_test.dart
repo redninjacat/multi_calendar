@@ -12,12 +12,12 @@ void main() {
   const black = Colors.black;
 
   group('resolveEventTileColor', () {
-    group('ignoreEventColors = false (event first)', () {
+    group('enableEventColorOverrides = false (event first)', () {
       test('event color wins when both event and theme colors are set', () {
         final result = resolveEventTileColor(
           themeColor: blue,
           eventColor: red,
-          ignoreEventColors: false,
+          enableEventColorOverrides: false,
           defaultColor: defaultColor,
         );
         expect(result, red);
@@ -27,7 +27,7 @@ void main() {
         final result = resolveEventTileColor(
           themeColor: blue,
           eventColor: null,
-          ignoreEventColors: false,
+          enableEventColorOverrides: false,
           defaultColor: defaultColor,
         );
         expect(result, blue);
@@ -38,19 +38,19 @@ void main() {
           themeColor: null,
           allDayThemeColor: green,
           eventColor: null,
-          ignoreEventColors: false,
+          enableEventColorOverrides: false,
           defaultColor: defaultColor,
         );
         expect(result, green);
       });
 
-      test('allDayThemeColor used as second fallback after event color (ignoreEventColors=false)', () {
-        // With ignoreEventColors=false: eventColor → allDayThemeColor → themeColor → default
+      test('allDayThemeColor used as second fallback after event color (enableEventColorOverrides=false)', () {
+        // With enableEventColorOverrides=false: eventColor → allDayThemeColor → themeColor → default
         final result = resolveEventTileColor(
           themeColor: null,
           allDayThemeColor: green,
           eventColor: null,
-          ignoreEventColors: false,
+          enableEventColorOverrides: false,
           defaultColor: defaultColor,
         );
         expect(result, green);
@@ -60,7 +60,7 @@ void main() {
         final result = resolveEventTileColor(
           themeColor: null,
           eventColor: null,
-          ignoreEventColors: false,
+          enableEventColorOverrides: false,
           defaultColor: defaultColor,
         );
         expect(result, defaultColor);
@@ -71,7 +71,7 @@ void main() {
           themeColor: blue,
           allDayThemeColor: green,
           eventColor: red,
-          ignoreEventColors: false,
+          enableEventColorOverrides: false,
           defaultColor: defaultColor,
         );
         expect(result, red);
@@ -82,20 +82,20 @@ void main() {
           themeColor: blue,
           allDayThemeColor: green,
           eventColor: null,
-          ignoreEventColors: false,
+          enableEventColorOverrides: false,
           defaultColor: defaultColor,
         );
         expect(result, green);
       });
     });
 
-    group('ignoreEventColors = true (theme first)', () {
+    group('enableEventColorOverrides = true (theme first)', () {
       test('allDayThemeColor wins when set', () {
         final result = resolveEventTileColor(
           themeColor: blue,
           allDayThemeColor: green,
           eventColor: red,
-          ignoreEventColors: true,
+          enableEventColorOverrides: true,
           defaultColor: defaultColor,
         );
         expect(result, green);
@@ -105,7 +105,7 @@ void main() {
         final result = resolveEventTileColor(
           themeColor: blue,
           eventColor: red,
-          ignoreEventColors: true,
+          enableEventColorOverrides: true,
           defaultColor: defaultColor,
         );
         expect(result, blue);
@@ -115,7 +115,7 @@ void main() {
         final result = resolveEventTileColor(
           themeColor: null,
           eventColor: red,
-          ignoreEventColors: true,
+          enableEventColorOverrides: true,
           defaultColor: defaultColor,
         );
         expect(result, red);
@@ -125,7 +125,7 @@ void main() {
         final result = resolveEventTileColor(
           themeColor: null,
           eventColor: null,
-          ignoreEventColors: true,
+          enableEventColorOverrides: true,
           defaultColor: defaultColor,
         );
         expect(result, defaultColor);
@@ -136,7 +136,7 @@ void main() {
           themeColor: blue,
           allDayThemeColor: green,
           eventColor: null,
-          ignoreEventColors: true,
+          enableEventColorOverrides: true,
           defaultColor: defaultColor,
         );
         expect(result, green);
@@ -150,44 +150,44 @@ void main() {
         dropTargetThemeColor: orange,
         themeColor: blue,
         eventColor: red,
-        ignoreEventColors: false,
+        enableEventColorOverrides: false,
         defaultColor: defaultColor,
       );
       expect(result, orange);
     });
 
-    test('dropTargetThemeColor wins even when ignoreEventColors=true', () {
+    test('dropTargetThemeColor wins even when enableEventColorOverrides=true', () {
       final result = resolveDropTargetTileColor(
         dropTargetThemeColor: orange,
         themeColor: blue,
         eventColor: red,
-        ignoreEventColors: true,
+        enableEventColorOverrides: true,
         defaultColor: defaultColor,
       );
       expect(result, orange);
     });
 
-    test('falls through to resolveEventTileColor when dropTargetThemeColor is null (ignoreEventColors=false)', () {
+    test('falls through to resolveEventTileColor when dropTargetThemeColor is null (enableEventColorOverrides=false)', () {
       final result = resolveDropTargetTileColor(
         dropTargetThemeColor: null,
         themeColor: blue,
         eventColor: red,
-        ignoreEventColors: false,
+        enableEventColorOverrides: false,
         defaultColor: defaultColor,
       );
-      // ignoreEventColors=false → event wins
+      // enableEventColorOverrides=false → event wins
       expect(result, red);
     });
 
-    test('falls through to resolveEventTileColor when dropTargetThemeColor is null (ignoreEventColors=true)', () {
+    test('falls through to resolveEventTileColor when dropTargetThemeColor is null (enableEventColorOverrides=true)', () {
       final result = resolveDropTargetTileColor(
         dropTargetThemeColor: null,
         themeColor: blue,
         eventColor: red,
-        ignoreEventColors: true,
+        enableEventColorOverrides: true,
         defaultColor: defaultColor,
       );
-      // ignoreEventColors=true → theme wins
+      // enableEventColorOverrides=true → theme wins
       expect(result, blue);
     });
 
@@ -197,7 +197,7 @@ void main() {
         themeColor: blue,
         allDayThemeColor: green,
         eventColor: null,
-        ignoreEventColors: false,
+        enableEventColorOverrides: false,
         defaultColor: defaultColor,
       );
       // event null → allDayThemeColor wins over themeColor
@@ -209,7 +209,7 @@ void main() {
         dropTargetThemeColor: null,
         themeColor: null,
         eventColor: null,
-        ignoreEventColors: false,
+        enableEventColorOverrides: false,
         defaultColor: defaultColor,
       );
       expect(result, defaultColor);

@@ -21,7 +21,7 @@ import '../models/mcal_region.dart';
 /// Example:
 /// ```dart
 /// MCalDayView(
-///   theme: MCalDayThemeData(
+///   theme: MCalDayViewThemeData(
 ///     timeLabelPosition: MCalTimeLabelPosition.topLeadingCentered,
 ///   ),
 ///   // Labels will appear on the left (LTR) / right (RTL), centered on hour lines

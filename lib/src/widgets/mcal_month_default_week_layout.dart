@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/mcal_calendar_event.dart';
+import '../styles/mcal_theme.dart';
 import '../utils/date_utils.dart';
 import 'mcal_layout_directionality.dart';
 import 'mcal_month_view_contexts.dart';
@@ -190,8 +191,11 @@ class MCalMonthDefaultWeekLayoutBuilder {
             config.dateLabelPosition == DateLabelPosition.topCenter ||
             config.dateLabelPosition == DateLabelPosition.topRight;
 
-        // Equal spacing above and below the date label (2px each = 4px total)
-        const dateLabelPadding = 2.0;
+        // Equal spacing above and below the date label
+        final theme = MCalTheme.of(context);
+        final weekLayoutDefaults = MCalThemeData.fromTheme(Theme.of(context));
+        final dateLabelPadding = theme.monthViewTheme?.weekLayoutDateLabelPadding ??
+            weekLayoutDefaults.monthViewTheme!.weekLayoutDateLabelPadding!;
         final dateLabelReservedSpace =
             config.dateLabelHeight + (dateLabelPadding * 2);
         final eventsTopOffset = dateLabelAtTop
@@ -200,7 +204,8 @@ class MCalMonthDefaultWeekLayoutBuilder {
 
         // Calculate available space for events
         final tileSlotHeight = config.tileHeight + config.tileVerticalSpacing;
-        const baseMargin = 2.0;
+        final baseMargin = theme.monthViewTheme?.weekLayoutBaseMargin ??
+            weekLayoutDefaults.monthViewTheme!.weekLayoutBaseMargin!;
 
         // First, calculate how many rows could fit WITHOUT the overflow indicator
         final availableWithoutOverflow =

@@ -91,12 +91,14 @@ class CurrentTimeIndicatorState extends State<CurrentTimeIndicator> {
 
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final indicatorColor =
-        widget.theme.dayTheme?.currentTimeIndicatorColor ??
-        defaults.dayTheme!.currentTimeIndicatorColor!;
+        widget.theme.dayViewTheme?.currentTimeIndicatorColor ??
+        defaults.dayViewTheme!.currentTimeIndicatorColor!;
     final indicatorWidth =
-        widget.theme.dayTheme?.currentTimeIndicatorWidth ?? 2.0;
+        widget.theme.dayViewTheme?.currentTimeIndicatorWidth ??
+        defaults.dayViewTheme!.currentTimeIndicatorWidth!;
     final dotRadius =
-        widget.theme.dayTheme?.currentTimeIndicatorDotRadius ?? 6.0;
+        widget.theme.dayViewTheme?.currentTimeIndicatorDotRadius ??
+        defaults.dayViewTheme!.currentTimeIndicatorDotRadius!;
 
     final defaultWidget = Row(
       children: [

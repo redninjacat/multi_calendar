@@ -6,7 +6,6 @@ import '../../utils/mcal_l10n_helper.dart';
 import '../mcal_gesture_detector.dart';
 import '../mcal_layout_directionality.dart';
 import '../mcal_month_view_contexts.dart';
-import 'week_number_cell.dart';
 
 /// Widget for rendering weekday header row.
 class WeekdayHeaderRowWidget extends StatelessWidget {
@@ -44,8 +43,11 @@ class WeekdayHeaderRowWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = mcalL10n(context);
+    final weekdayHeaderDefaults = MCalThemeData.fromTheme(Theme.of(context));
     final cellBorderColor = theme.cellBorderColor ??
-        MCalThemeData.fromTheme(Theme.of(context)).cellBorderColor!;
+        weekdayHeaderDefaults.cellBorderColor!;
+    final cellBorderW = theme.monthViewTheme?.cellBorderWidth ??
+        weekdayHeaderDefaults.monthViewTheme!.cellBorderWidth!;
     // Use layout direction from MCalLayoutDirectionality rather than the ambient
     // Directionality (which carries textDirection) to avoid any mismatch.
     final isLayoutRTL = MCalLayoutDirectionality.of(context);
@@ -68,19 +70,20 @@ class WeekdayHeaderRowWidget extends StatelessWidget {
 
       // Default header content (without Expanded - that's added at the end)
       Widget headerContent = Container(
-        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 2.0),
+        padding: theme.monthViewTheme?.weekdayHeaderPadding ??
+            weekdayHeaderDefaults.monthViewTheme!.weekdayHeaderPadding!,
         decoration: BoxDecoration(
           color:
-              theme.monthTheme?.weekdayHeaderBackgroundColor ??
-              theme.weekNumberBackgroundColor,
+              theme.monthViewTheme?.weekdayHeaderBackgroundColor ??
+              theme.monthViewTheme?.weekNumberBackgroundColor,
           border: Border(
-            bottom: BorderSide(color: cellBorderColor),
+            bottom: BorderSide(color: cellBorderColor, width: cellBorderW),
           ),
         ),
         child: Center(
           child: Text(
             dayName,
-            style: theme.monthTheme?.weekdayHeaderTextStyle,
+            style: theme.monthViewTheme?.weekdayHeaderTextStyle,
             textAlign: TextAlign.center,
             overflow: TextOverflow.clip,
             maxLines: 1,
@@ -138,23 +141,26 @@ class WeekdayHeaderRowWidget extends StatelessWidget {
     }
 
     // Build week number header cell
+    final weekNumColWidth = theme.monthViewTheme?.weekNumberColumnWidth ??
+        weekdayHeaderDefaults.monthViewTheme!.weekNumberColumnWidth!;
     final weekNumberHeader = Container(
-      width: WeekNumberCell.columnWidth,
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      width: weekNumColWidth,
+      padding: theme.monthViewTheme?.weekdayHeaderPadding ??
+          weekdayHeaderDefaults.monthViewTheme!.weekdayHeaderPadding!,
       decoration: BoxDecoration(
         color:
-            theme.weekNumberBackgroundColor ??
-            theme.monthTheme?.weekdayHeaderBackgroundColor,
+            theme.monthViewTheme?.weekNumberBackgroundColor ??
+            theme.monthViewTheme?.weekdayHeaderBackgroundColor,
           border: Border(
-          bottom: BorderSide(color: cellBorderColor),
+          bottom: BorderSide(color: cellBorderColor, width: cellBorderW),
         ),
       ),
       child: Center(
         child: Text(
           'Wk',
           style:
-              theme.weekNumberTextStyle ??
-              theme.monthTheme?.weekdayHeaderTextStyle,
+              theme.monthViewTheme?.weekNumberTextStyle ??
+              theme.monthViewTheme?.weekdayHeaderTextStyle,
           textAlign: TextAlign.center,
         ),
       ),

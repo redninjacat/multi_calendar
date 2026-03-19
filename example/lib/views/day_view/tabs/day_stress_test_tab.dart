@@ -239,7 +239,7 @@ class _DayStressTestTabState extends State<DayStressTestTab> {
         children: [
           MCalTheme(
             data: MCalThemeData(
-              dayTheme: MCalDayThemeData(
+              dayViewTheme: MCalDayViewThemeData(
                 hourGridlineColor: colorScheme.outline.withValues(alpha: 0.2),
                 hourGridlineWidth: 1.0,
                 majorGridlineColor:

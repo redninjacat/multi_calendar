@@ -47,9 +47,9 @@ void main() {
   final displayDate = DateTime(2025, 1, 6); // Monday
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Group 1: Month View — ignoreEventColors cascade
+  // Group 1: Month View — enableEventColorOverrides cascade
   // ──────────────────────────────────────────────────────────────────────────
-  group('Month View — ignoreEventColors cascade', () {
+  group('Month View — enableEventColorOverrides cascade', () {
     late _TestController controller;
 
     setUp(() {
@@ -58,8 +58,8 @@ void main() {
 
     tearDown(() => controller.dispose());
 
-    // ── 1a. ignoreEventColors: false (default) → event.color wins ─────────
-    testWidgets('ignoreEventColors false: event color wins over theme color', (
+    // ── 1a. enableEventColorOverrides: false (default) → event.color wins ─────────
+    testWidgets('enableEventColorOverrides false: event color wins over theme color', (
       tester,
     ) async {
       const eventColor = Color(0xFFE53935); // bright red
@@ -82,9 +82,9 @@ void main() {
               width: 800,
               height: 600,
               child: MCalTheme(
-                data: const MCalThemeData(
-                  eventTileBackgroundColor: themeColor,
-                  // ignoreEventColors defaults to false
+                data: MCalThemeData(
+                  monthViewTheme: MCalMonthViewThemeData(eventTileBackgroundColor: themeColor),
+                  // enableEventColorOverrides defaults to false
                 ),
                 child: MCalMonthView(
                   controller: controller,
@@ -101,7 +101,7 @@ void main() {
       expect(
         find.byWidgetPredicate((w) => _containerHasColor(w, eventColor)),
         findsWidgets,
-        reason: 'event tile should use event.color when ignoreEventColors=false',
+        reason: 'event tile should use event.color when enableEventColorOverrides=false',
       );
       expect(
         find.byWidgetPredicate((w) => _containerHasColor(w, themeColor)),
@@ -110,8 +110,8 @@ void main() {
       );
     });
 
-    // ── 1b. ignoreEventColors: true → theme color wins ────────────────────
-    testWidgets('ignoreEventColors true: theme color wins over event color', (
+    // ── 1b. enableEventColorOverrides: true → theme color wins ────────────────────
+    testWidgets('enableEventColorOverrides true: theme color wins over event color', (
       tester,
     ) async {
       const eventColor = Color(0xFFE53935); // bright red
@@ -134,9 +134,9 @@ void main() {
               width: 800,
               height: 600,
               child: MCalTheme(
-                data: const MCalThemeData(
-                  eventTileBackgroundColor: themeColor,
-                  ignoreEventColors: true,
+                data: MCalThemeData(
+                  monthViewTheme: MCalMonthViewThemeData(eventTileBackgroundColor: themeColor),
+                  enableEventColorOverrides: true,
                 ),
                 child: MCalMonthView(
                   controller: controller,
@@ -153,19 +153,19 @@ void main() {
       expect(
         find.byWidgetPredicate((w) => _containerHasColor(w, themeColor)),
         findsWidgets,
-        reason: 'event tile should use themeColor when ignoreEventColors=true',
+        reason: 'event tile should use themeColor when enableEventColorOverrides=true',
       );
       expect(
         find.byWidgetPredicate((w) => _containerHasColor(w, eventColor)),
         findsNothing,
         reason:
-            'event.color should not appear when ignoreEventColors=true and themeColor is set',
+            'event.color should not appear when enableEventColorOverrides=true and themeColor is set',
       );
     });
 
     // ── 1c. allDayEventBackgroundColor cascade (event.color = null) ────────
     testWidgets(
-      'allDayEventBackgroundColor wins when event.color is null (ignoreEventColors false)',
+      'allDayEventBackgroundColor wins when event.color is null (enableEventColorOverrides false)',
       (tester) async {
         const allDayColor = Color(0xFF43A047); // green
 
@@ -186,9 +186,9 @@ void main() {
                 width: 800,
                 height: 600,
                 child: MCalTheme(
-                  data: const MCalThemeData(
-                    allDayEventBackgroundColor: allDayColor,
-                    // ignoreEventColors defaults to false
+                  data: MCalThemeData(
+                    monthViewTheme: MCalMonthViewThemeData(eventTileBackgroundColor: allDayColor),
+                    // enableEventColorOverrides defaults to false
                   ),
                   child: MCalMonthView(
                     controller: controller,
@@ -211,9 +211,9 @@ void main() {
       },
     );
 
-    // ── 1d. ignoreEventColors: true with null theme color → event.color fallback
+    // ── 1d. enableEventColorOverrides: true with null theme color → event.color fallback
     testWidgets(
-      'ignoreEventColors true: event.color used as fallback when theme color is null',
+      'enableEventColorOverrides true: event.color used as fallback when theme color is null',
       (tester) async {
         const eventColor = Color(0xFFE53935);
 
@@ -235,8 +235,8 @@ void main() {
                 height: 600,
                 child: MCalTheme(
                   data: const MCalThemeData(
-                    // eventTileBackgroundColor: null → falls back to event.color
-                    ignoreEventColors: true,
+                    // monthViewTheme.eventTileBackgroundColor: null → falls back to event.color
+                    enableEventColorOverrides: true,
                   ),
                   child: MCalMonthView(
                     controller: controller,
@@ -250,12 +250,12 @@ void main() {
         await tester.pumpAndSettle();
 
         // When allDayThemeColor and themeColor are both null,
-        // cascade falls through to eventColor even with ignoreEventColors:true
+        // cascade falls through to eventColor even with enableEventColorOverrides:true
         expect(
           find.byWidgetPredicate((w) => _containerHasColor(w, eventColor)),
           findsWidgets,
           reason:
-              'event.color should be used as fallback in ignoreEventColors=true when theme colors are null',
+              'event.color should be used as fallback in enableEventColorOverrides=true when theme colors are null',
         );
       },
     );
@@ -314,9 +314,11 @@ void main() {
 
       await tester.pumpWidget(
         buildDayView(
-          const MCalThemeData(
-            eventTileLightContrastColor: lightContrast,
-            eventTileDarkContrastColor: darkContrast,
+          MCalThemeData(
+            dayViewTheme: MCalDayViewThemeData(
+              eventTileLightContrastColor: lightContrast,
+              eventTileDarkContrastColor: darkContrast,
+            ),
           ),
         ),
       );
@@ -351,9 +353,11 @@ void main() {
 
       await tester.pumpWidget(
         buildDayView(
-          const MCalThemeData(
-            eventTileLightContrastColor: lightContrast,
-            eventTileDarkContrastColor: darkContrast,
+          MCalThemeData(
+            dayViewTheme: MCalDayViewThemeData(
+              eventTileLightContrastColor: lightContrast,
+              eventTileDarkContrastColor: darkContrast,
+            ),
           ),
         ),
       );
@@ -368,10 +372,10 @@ void main() {
       );
     });
 
-    // ── 2c. Req 10.3: ignoreEventColors true + eventTileTextStyle.color ─────
+    // ── 2c. Req 10.3: enableEventColorOverrides true + eventTileTextStyle.color ─────
     //        Text style color takes precedence over contrast color
     testWidgets(
-      'Req 10.3: eventTileTextStyle.color wins over contrast color when ignoreEventColors=true',
+      'Req 10.3: eventTileTextStyle.color wins over contrast color when enableEventColorOverrides=true',
       (tester) async {
         const darkTile = Color(0xFF1A237E); // dark → normally → lightContrast
         const lightContrast = Color(0xFFFFFFFF);
@@ -391,10 +395,12 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             MCalThemeData(
-              ignoreEventColors: true,
-              eventTileTextStyle: const TextStyle(color: textStyleColor),
-              eventTileLightContrastColor: lightContrast,
-              eventTileDarkContrastColor: darkContrast,
+              enableEventColorOverrides: true,
+              dayViewTheme: MCalDayViewThemeData(
+                eventTileTextStyle: const TextStyle(color: textStyleColor),
+                eventTileLightContrastColor: lightContrast,
+                eventTileDarkContrastColor: darkContrast,
+              ),
             ),
           ),
         );
@@ -405,21 +411,21 @@ void main() {
           find.byWidgetPredicate((w) => _textHasColor(w, textStyleColor)),
           findsWidgets,
           reason:
-              'eventTileTextStyle.color should be applied to event text when ignoreEventColors=true',
+              'eventTileTextStyle.color should be applied to event text when enableEventColorOverrides=true',
         );
         // The standard contrast colors should not appear (textStyleColor took over)
         expect(
           find.byWidgetPredicate((w) => _textHasColor(w, lightContrast)),
           findsNothing,
           reason:
-              'lightContrastColor should not override eventTileTextStyle.color when ignoreEventColors=true',
+              'lightContrastColor should not override eventTileTextStyle.color when enableEventColorOverrides=true',
         );
       },
     );
 
-    // ── 2d. ignoreEventColors false → contrast color drives text, not style ─
+    // ── 2d. enableEventColorOverrides false → contrast color drives text, not style ─
     testWidgets(
-      'ignoreEventColors false: contrast color drives text even when eventTileTextStyle has a color',
+      'enableEventColorOverrides false: contrast color drives text even when eventTileTextStyle has a color',
       (tester) async {
         const darkTile = Color(0xFF1A237E);
         const lightContrast = Color(0xFFFFFDE7);
@@ -439,28 +445,30 @@ void main() {
         await tester.pumpWidget(
           buildDayView(
             MCalThemeData(
-              ignoreEventColors: false,
-              eventTileTextStyle: const TextStyle(color: textStyleColor),
-              eventTileLightContrastColor: lightContrast,
-              eventTileDarkContrastColor: darkContrast,
+              enableEventColorOverrides: false,
+              dayViewTheme: MCalDayViewThemeData(
+                eventTileTextStyle: const TextStyle(color: textStyleColor),
+                eventTileLightContrastColor: lightContrast,
+                eventTileDarkContrastColor: darkContrast,
+              ),
             ),
           ),
         );
         await tester.pumpAndSettle();
 
-        // ignoreEventColors:false → textStyleColor is NOT used for override;
+        // enableEventColorOverrides:false → textStyleColor is NOT used for override;
         // the contrast color (lightContrast for dark tile) drives the text.
         expect(
           find.byWidgetPredicate((w) => _textHasColor(w, lightContrast)),
           findsWidgets,
           reason:
-              'lightContrastColor should drive text color when ignoreEventColors=false',
+              'lightContrastColor should drive text color when enableEventColorOverrides=false',
         );
         expect(
           find.byWidgetPredicate((w) => _textHasColor(w, textStyleColor)),
           findsNothing,
           reason:
-              'eventTileTextStyle.color should NOT override contrast when ignoreEventColors=false',
+              'eventTileTextStyle.color should NOT override contrast when enableEventColorOverrides=false',
         );
       },
     );
@@ -502,7 +510,7 @@ void main() {
                 width: 800,
                 height: 600,
                 child: MCalTheme(
-                  data: const MCalThemeData(eventTileCornerRadius: radius),
+                  data: MCalThemeData(monthViewTheme: MCalMonthViewThemeData(eventTileCornerRadius: radius)),
                   child: MCalMonthView(
                     controller: controller,
                     enableAnimations: false,
@@ -600,10 +608,10 @@ void main() {
 
         expect(capturedTheme, isNotNull);
         expect(capturedTheme!.cellBackgroundColor, isNull);
-        expect(capturedTheme!.eventTileBackgroundColor, isNull);
-        expect(capturedTheme!.ignoreEventColors, isFalse);
-        expect(capturedTheme!.dayTheme, isNull);
-        expect(capturedTheme!.monthTheme, isNull);
+        expect(capturedTheme!.dayViewTheme?.eventTileBackgroundColor, isNull);
+        expect(capturedTheme!.enableEventColorOverrides, isFalse);
+        expect(capturedTheme!.dayViewTheme, isNull);
+        expect(capturedTheme!.monthViewTheme, isNull);
       },
     );
   });

@@ -302,6 +302,7 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
     // Using this consistent width makes grabOffsetX math reliable.
     final eventDurationDays = _calculateEventDurationDays();
     final containerWidth = widget.dayWidth * eventDurationDays;
+    final capturedDefaults = MCalThemeData.fromTheme(Theme.of(context));
 
     // The actual tile content width (with spacing removed)
     final tileWidth = containerWidth - (widget.horizontalSpacing * 2);
@@ -324,7 +325,9 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
                   elevation: _defaultDraggedTileElevation,
                   color: Colors.transparent,
                   borderRadius: BorderRadius.circular(
-                    capturedTheme?.eventTileCornerRadius ?? 4.0,
+                    capturedTheme?.dayViewTheme?.eventTileCornerRadius ??
+                        capturedTheme?.monthViewTheme?.eventTileCornerRadius ??
+                        capturedDefaults.dayViewTheme!.eventTileCornerRadius!,
                   ),
                   child: widget.defaultFeedbackBuilder!(tileWidth),
                 )
@@ -332,7 +335,9 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
                   elevation: _defaultDraggedTileElevation,
                   color: Colors.transparent,
                   borderRadius: BorderRadius.circular(
-                    capturedTheme?.eventTileCornerRadius ?? 4.0,
+                    capturedTheme?.dayViewTheme?.eventTileCornerRadius ??
+                        capturedTheme?.monthViewTheme?.eventTileCornerRadius ??
+                        capturedDefaults.dayViewTheme!.eventTileCornerRadius!,
                   ),
                   child: widget.child,
                 );
@@ -352,7 +357,9 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
         elevation: _defaultDraggedTileElevation,
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(
-          capturedTheme?.eventTileCornerRadius ?? 4.0,
+          capturedTheme?.dayViewTheme?.eventTileCornerRadius ??
+              capturedTheme?.monthViewTheme?.eventTileCornerRadius ??
+              capturedDefaults.dayViewTheme!.eventTileCornerRadius!,
         ),
         child: widget.defaultFeedbackBuilder!(tileWidth),
       );
@@ -369,7 +376,9 @@ class _MCalDraggableEventTileState extends State<MCalDraggableEventTile> {
           elevation: _defaultDraggedTileElevation,
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(
-            capturedTheme?.eventTileCornerRadius ?? 4.0,
+            capturedTheme?.dayViewTheme?.eventTileCornerRadius ??
+                capturedTheme?.monthViewTheme?.eventTileCornerRadius ??
+                capturedDefaults.dayViewTheme!.eventTileCornerRadius!,
           ),
           child: widget.child,
         ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Resolves the background color for an event tile using the standard cascade.
 ///
-/// [ignoreEventColors] controls the priority between event and theme colors:
+/// [enableEventColorOverrides] controls the priority between event and theme colors:
 /// - `false` (default): `eventColor` → `allDayThemeColor` → `themeColor` → `defaultColor`
 /// - `true`: `allDayThemeColor` → `themeColor` → `eventColor` → `defaultColor`
 ///
@@ -11,16 +11,17 @@ import 'package:flutter/material.dart';
 /// consumer theme has not set the relevant properties.
 ///
 /// For all-day or multi-day tiles, pass [allDayThemeColor] (e.g.
-/// `theme.allDayEventBackgroundColor`) as a higher-priority theme color and
-/// [themeColor] as the secondary (e.g. `theme.eventTileBackgroundColor`).
+/// `theme.dayViewTheme?.allDayEventBackgroundColor`) as a higher-priority
+/// theme color and [themeColor] as the secondary (e.g.
+/// `theme.dayViewTheme?.eventTileBackgroundColor`).
 Color resolveEventTileColor({
   required Color? themeColor,
   Color? allDayThemeColor,
   required Color? eventColor,
-  required bool ignoreEventColors,
+  required bool enableEventColorOverrides,
   required Color defaultColor,
 }) {
-  if (ignoreEventColors) {
+  if (enableEventColorOverrides) {
     return allDayThemeColor ?? themeColor ?? eventColor ?? defaultColor;
   } else {
     return eventColor ?? allDayThemeColor ?? themeColor ?? defaultColor;
@@ -29,18 +30,19 @@ Color resolveEventTileColor({
 
 /// Resolves the background color for a drop target tile.
 ///
-/// [dropTargetThemeColor] (e.g. `theme.dayTheme?.dropTargetTileBackgroundColor`)
+/// [dropTargetThemeColor] (e.g. `theme.dayViewTheme?.dropTargetTileBackgroundColor`)
 /// takes first priority. If null, falls through to the standard event tile
-/// cascade via [resolveEventTileColor] (which respects [ignoreEventColors]).
+/// cascade via [resolveEventTileColor] (which respects [enableEventColorOverrides]).
 ///
 /// Pass [allDayThemeColor] when the dragged event is all-day or multi-day
-/// (e.g. `theme.allDayEventBackgroundColor`) so the full cascade is respected.
+/// (e.g. `theme.dayViewTheme?.allDayEventBackgroundColor`) so the full cascade
+/// is respected.
 Color resolveDropTargetTileColor({
   required Color? dropTargetThemeColor,
   required Color? themeColor,
   Color? allDayThemeColor,
   required Color? eventColor,
-  required bool ignoreEventColors,
+  required bool enableEventColorOverrides,
   required Color defaultColor,
 }) {
   if (dropTargetThemeColor != null) return dropTargetThemeColor;
@@ -48,7 +50,7 @@ Color resolveDropTargetTileColor({
     themeColor: themeColor,
     allDayThemeColor: allDayThemeColor,
     eventColor: eventColor,
-    ignoreEventColors: ignoreEventColors,
+    enableEventColorOverrides: enableEventColorOverrides,
     defaultColor: defaultColor,
   );
 }

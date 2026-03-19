@@ -164,6 +164,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionAllDayEvents => 'All-Day Events';
 
   @override
+  String get sectionGlobal => 'Global';
+
+  @override
+  String get sectionTimeGrid => 'Time Grid';
+
+  @override
+  String get sectionDayHeader => 'Day Header';
+
+  @override
+  String get sectionMonthView => 'Month View';
+
+  @override
   String get settingShowNavigator => 'Show Navigator';
 
   @override
@@ -255,6 +267,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingCellBorderColor => 'Cell Border Color';
 
   @override
+  String get settingCellBorderWidth => 'Cell Border Width';
+
+  @override
   String get settingTodayBackgroundColor => 'Today Background Color';
 
   @override
@@ -277,7 +292,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingEventTileBorderWidth => 'Event Tile Border Width';
 
   @override
-  String get settingIgnoreEventColors => 'Ignore Event Colors';
+  String get settingEnableEventColorOverrides => 'Enable Event Color Overrides';
+
+  @override
+  String get settingDayHeaderPadding => 'Day Header Padding';
+
+  @override
+  String get settingDayHeaderSpacing => 'Day Header Spacing';
+
+  @override
+  String get settingTimeLegendLabelHeight => 'Time Label Height';
+
+  @override
+  String get settingTimedEventMarginH => 'Timed Event Horiz. Margin';
+
+  @override
+  String get settingTimedEventMarginV => 'Timed Event Vert. Margin';
+
+  @override
+  String get settingAllDayWrapSpacing => 'All-Day Tile Spacing';
+
+  @override
+  String get settingResizeHandleHeight => 'Resize Handle Height';
+
+  @override
+  String get settingNavigatorPadding => 'Navigator Padding';
 
   @override
   String get settingWeekdayHeaderBackgroundColor =>
@@ -453,6 +492,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingMinResizeDurationMinutes => 'Min Resize Duration (Minutes)';
+
+  @override
+  String get settingKeyboardFocusBorderRadius => 'Keyboard Focus Border Radius';
+
+  @override
+  String get settingTimedEventTitleTimeGap => 'Title-Time Gap';
+
+  @override
+  String get settingAllDayOverflowIndicatorBorderWidth =>
+      'Overflow Indicator Border Width';
+
+  @override
+  String get settingAllDaySectionLabelBottomPadding =>
+      'Section Label Bottom Padding';
 
   @override
   String get styleDefault => 'Default';

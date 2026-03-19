@@ -84,10 +84,10 @@ class DayViewThemeSettings {
     final colorScheme = baseTheme.colorScheme;
     final base = MCalThemeData.fromTheme(baseTheme);
     return base.copyWith(
-      eventTileBackgroundColor:
-          eventTileBackgroundColor ?? colorScheme.primaryContainer,
-      eventTileCornerRadius: eventTileCornerRadius,
-      dayTheme: base.dayTheme?.copyWith(
+      dayViewTheme: base.dayViewTheme?.copyWith(
+        eventTileBackgroundColor:
+            eventTileBackgroundColor ?? colorScheme.primaryContainer,
+        eventTileCornerRadius: eventTileCornerRadius,
         hourGridlineColor:
             hourGridlineColor ?? colorScheme.outline.withValues(alpha: 0.2),
         hourGridlineWidth: hourGridlineWidth,
@@ -100,7 +100,10 @@ class DayViewThemeSettings {
         timedEventMinHeight: timedEventMinHeight,
         timedEventPadding: timedEventPadding,
         resizeHandleSize: resizeHandleSize,
-      ) ?? MCalDayThemeData(
+      ) ?? MCalDayViewThemeData(
+        eventTileBackgroundColor:
+            eventTileBackgroundColor ?? colorScheme.primaryContainer,
+        eventTileCornerRadius: eventTileCornerRadius,
         hourGridlineColor:
             hourGridlineColor ?? colorScheme.outline.withValues(alpha: 0.2),
         hourGridlineWidth: hourGridlineWidth,

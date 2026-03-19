@@ -1379,7 +1379,7 @@ void main() {
       // Use the theme property which the MCalMonthView internally wraps with MCalTheme
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.purple,
-        eventTileBackgroundColor: Colors.orange,
+        monthViewTheme: MCalMonthViewThemeData(eventTileBackgroundColor: Colors.orange),
       );
 
       bool dayCellBuilderCalled = false;
@@ -1446,7 +1446,7 @@ void main() {
       final customTheme = MCalThemeData(
         cellBackgroundColor: Colors.lightBlue,
         navigatorBackgroundColor: Colors.indigo,
-        monthTheme: MCalMonthThemeData(
+        monthViewTheme: MCalMonthViewThemeData(
           todayBackgroundColor: Colors.amber,
           weekdayHeaderBackgroundColor: Colors.teal,
         ),
@@ -1476,8 +1476,8 @@ void main() {
 
       // Verify theme properties are set correctly
       expect(customTheme.cellBackgroundColor, equals(Colors.lightBlue));
-      expect(customTheme.monthTheme?.todayBackgroundColor, equals(Colors.amber));
-      expect(customTheme.monthTheme?.weekdayHeaderBackgroundColor, equals(Colors.teal));
+      expect(customTheme.monthViewTheme?.todayBackgroundColor, equals(Colors.amber));
+      expect(customTheme.monthViewTheme?.weekdayHeaderBackgroundColor, equals(Colors.teal));
       expect(customTheme.navigatorBackgroundColor, equals(Colors.indigo));
     });
 
@@ -1497,7 +1497,7 @@ void main() {
             body: MCalTheme(
               data: MCalThemeData(
                 cellBackgroundColor: Colors.red,
-                monthTheme: MCalMonthThemeData(
+                monthViewTheme: MCalMonthViewThemeData(
                   todayBackgroundColor: Colors.green,
                 ),
               ),
@@ -1538,7 +1538,7 @@ void main() {
       // Verify outer theme
       expect(outerTheme, isNotNull);
       expect(outerTheme!.cellBackgroundColor, equals(Colors.red));
-      expect(outerTheme!.monthTheme?.todayBackgroundColor, equals(Colors.green));
+      expect(outerTheme!.monthViewTheme?.todayBackgroundColor, equals(Colors.green));
 
       // Verify inner theme overrides
       expect(innerTheme, isNotNull);
@@ -1579,7 +1579,7 @@ void main() {
             extensions: [
               MCalThemeData(
                 cellBackgroundColor: Colors.cyan,
-                eventTileBackgroundColor: Colors.pink,
+                monthViewTheme: MCalMonthViewThemeData(eventTileBackgroundColor: Colors.pink),
               ),
             ],
           ),
@@ -1597,7 +1597,7 @@ void main() {
       // Should get theme from ThemeExtension
       expect(capturedTheme, isNotNull);
       expect(capturedTheme!.cellBackgroundColor, equals(Colors.cyan));
-      expect(capturedTheme!.eventTileBackgroundColor, equals(Colors.pink));
+      expect(capturedTheme!.monthViewTheme?.eventTileBackgroundColor, equals(Colors.pink));
     });
   });
 
@@ -1776,9 +1776,9 @@ void main() {
             body: SizedBox(
               height: 600,
               child: MCalTheme(
-                data: const MCalThemeData(
+                data: MCalThemeData(
                   cellBackgroundColor: Colors.grey,
-                  eventTileBackgroundColor: Colors.green,
+                  monthViewTheme: MCalMonthViewThemeData(eventTileBackgroundColor: Colors.green),
                 ),
                 child: MCalMonthView(
                   controller: controller,
