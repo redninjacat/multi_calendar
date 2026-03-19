@@ -486,7 +486,7 @@ class TimeGridEventsLayer extends StatelessWidget {
       margin: tileMargin,
       padding: tilePadding,
       decoration: BoxDecoration(
-        color: tileColor.withValues(alpha: 0.85),
+        color: tileColor,
         borderRadius: BorderRadius.only(
           topLeft: topRadius,
           topRight: topRadius,

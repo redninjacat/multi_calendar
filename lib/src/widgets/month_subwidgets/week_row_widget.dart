@@ -652,26 +652,36 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
         defaults.monthViewTheme!.eventTileCornerRadius!;
     final leftRadius = segment?.isFirstSegment ?? true ? cornerRadius : 0.0;
     final rightRadius = segment?.isLastSegment ?? true ? cornerRadius : 0.0;
-    // Determine tile color - respect enableEventColorOverrides theme setting
+    // Determine tile color - respect enableEventColorOverrides theme setting.
+    // All-day events prefer allDayEventBackgroundColor over eventTileBackgroundColor.
+    final Color? themeBgColor = event.isAllDay
+        ? (theme.monthViewTheme?.allDayEventBackgroundColor ?? theme.monthViewTheme?.eventTileBackgroundColor)
+        : theme.monthViewTheme?.eventTileBackgroundColor;
+    final Color defaultBgColor = event.isAllDay
+        ? (defaults.monthViewTheme!.allDayEventBackgroundColor ?? defaults.monthViewTheme!.eventTileBackgroundColor!)
+        : defaults.monthViewTheme!.eventTileBackgroundColor!;
     final tileColor = resolveEventTileColor(
-      themeColor: theme.monthViewTheme?.eventTileBackgroundColor,
+      themeColor: themeBgColor,
       eventColor: event.color,
       enableEventColorOverrides: theme.enableEventColorOverrides,
-      defaultColor: defaults.monthViewTheme!.eventTileBackgroundColor!,
+      defaultColor: defaultBgColor,
     );
 
-    // Determine border - only add if both color and width are specified
-    // For continuation segments, omit border on the continuation edge
-    final borderWidth = theme.monthViewTheme?.eventTileBorderWidth ?? 0.0;
-    final hasBorder =
-        borderWidth > 0 && theme.monthViewTheme?.eventTileBorderColor != null;
+    // Determine border — all-day events prefer allDay* border properties.
+    final borderWidth = event.isAllDay
+        ? (theme.monthViewTheme?.allDayEventBorderWidth ?? theme.monthViewTheme?.eventTileBorderWidth ?? 0.0)
+        : (theme.monthViewTheme?.eventTileBorderWidth ?? 0.0);
+    final Color? borderColorTheme = event.isAllDay
+        ? (theme.monthViewTheme?.allDayEventBorderColor ?? theme.monthViewTheme?.eventTileBorderColor)
+        : theme.monthViewTheme?.eventTileBorderColor;
+    final hasBorder = borderWidth > 0 && borderColorTheme != null;
     final isFirstSegment = segment?.isFirstSegment ?? true;
     final isLastSegment = segment?.isLastSegment ?? true;
 
     // Build border with individual sides based on segment position
     Border? tileBorder;
     if (hasBorder) {
-      final borderColor = theme.monthViewTheme!.eventTileBorderColor!;
+      final borderColor = borderColorTheme;
       final topBorder = BorderSide(color: borderColor, width: borderWidth);
       final bottomBorder = BorderSide(color: borderColor, width: borderWidth);
       // Only add left border if this is the first segment (event starts here)
@@ -692,8 +702,10 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
 
     // Extra horizontal padding when resize handles are shown so text does not
     // sit under the handles (rectangle stays full size; content shifts inward).
-    final tilePadding = theme.monthViewTheme?.eventTilePadding ??
-        defaults.monthViewTheme!.eventTilePadding!;
+    // All-day events prefer allDayEventPadding over eventTilePadding.
+    final tilePadding = event.isAllDay
+        ? (theme.monthViewTheme?.allDayEventPadding ?? theme.monthViewTheme?.eventTilePadding ?? defaults.monthViewTheme!.eventTilePadding!)
+        : (theme.monthViewTheme?.eventTilePadding ?? defaults.monthViewTheme!.eventTilePadding!);
     const double handleInset = 4.0;
     final startPadding =
         tilePadding.left + (tileContext.hasLeadingResizeHandle ? handleInset : 0);
@@ -766,15 +778,37 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
       );
     }
 
+    final lightContrast =
+        theme.monthViewTheme?.eventTileLightContrastColor ??
+        defaults.monthViewTheme!.eventTileLightContrastColor!;
+    final darkContrast =
+        theme.monthViewTheme?.eventTileDarkContrastColor ??
+        defaults.monthViewTheme!.eventTileDarkContrastColor!;
+    // All-day events prefer allDayEventTextStyle over eventTileTextStyle.
+    final TextStyle? resolvedTextStyle = event.isAllDay
+        ? (theme.monthViewTheme?.allDayEventTextStyle ?? theme.monthViewTheme?.eventTileTextStyle)
+        : theme.monthViewTheme?.eventTileTextStyle;
+    final textStyleColor = theme.enableEventColorOverrides
+        ? resolvedTextStyle?.color
+        : null;
+    final contrastColor = textStyleColor ??
+        resolveContrastColor(
+          backgroundColor: tileColor,
+          lightContrastColor: lightContrast,
+          darkContrastColor: darkContrast,
+        );
+    final baseTextStyle =
+        resolvedTextStyle ?? defaults.monthViewTheme!.eventTileTextStyle;
+    final tileTextStyle = baseTextStyle?.copyWith(color: contrastColor) ??
+        TextStyle(color: contrastColor);
+
     return Container(
       decoration: decoration,
       padding: contentPadding,
       alignment: Alignment.centerLeft,
       child: Text(
         event.title,
-        style:
-            theme.monthViewTheme?.eventTileTextStyle ??
-            defaults.monthViewTheme!.eventTileTextStyle,
+        style: tileTextStyle,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),

@@ -67,7 +67,8 @@ export 'src/models/mcal_recurrence_exception.dart';
 export 'src/models/mcal_recurrence_rule.dart';
 export 'src/models/mcal_region.dart';
 // Export styles
-export 'src/styles/mcal_all_day_theme_mixin.dart';
+export 'src/styles/mcal_all_day_section_theme_mixin.dart';
+export 'src/styles/mcal_all_day_tile_theme_mixin.dart';
 export 'src/styles/mcal_day_view_theme_data.dart';
 export 'src/styles/mcal_event_tile_theme_mixin.dart';
 export 'src/styles/mcal_month_view_theme_data.dart';

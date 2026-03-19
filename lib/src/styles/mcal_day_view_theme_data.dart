@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/mcal_day_view_contexts.dart';
-import 'mcal_all_day_theme_mixin.dart';
+import 'mcal_all_day_section_theme_mixin.dart';
+import 'mcal_all_day_tile_theme_mixin.dart';
 import 'mcal_event_tile_theme_mixin.dart';
 import 'mcal_time_grid_theme_mixin.dart';
 
@@ -11,11 +12,13 @@ import 'mcal_time_grid_theme_mixin.dart';
 /// for Day View theming.
 ///
 /// - [MCalEventTileThemeMixin] — event tile appearance, hover, contrast, drop
-///   target tiles, resize handle, week numbers, multi-day events (18 props)
+///   target tiles, resize handle, week numbers (17 props)
 /// - [MCalTimeGridThemeMixin] — time legend, gridlines, current time, time
 ///   regions, timed events, focus/hover slots, drop target overlay (50 props)
-/// - [MCalAllDayThemeMixin] — all-day event colors, tile sizing, section
-///   layout, overflow handle styling (19 props)
+/// - [MCalAllDayTileThemeMixin] — all-day event tile appearance: background,
+///   text style, border, padding (5 props)
+/// - [MCalAllDaySectionThemeMixin] — all-day section layout: tile sizing,
+///   wrap spacing, overflow handle styling (14 props)
 /// - Own — day header padding, spacing, styles (6 props)
 ///
 /// Use [MCalDayViewThemeData.defaults] to create a theme with Material 3
@@ -32,7 +35,7 @@ import 'mcal_time_grid_theme_mixin.dart';
 /// )
 /// ```
 class MCalDayViewThemeData
-    with MCalEventTileThemeMixin, MCalTimeGridThemeMixin, MCalAllDayThemeMixin {
+    with MCalEventTileThemeMixin, MCalTimeGridThemeMixin, MCalAllDayTileThemeMixin, MCalAllDaySectionThemeMixin {
   // ── EventTileThemeMixin fields ────────────────────────────────────────────
 
   @override
@@ -85,9 +88,6 @@ class MCalDayViewThemeData
 
   @override
   final Color? resizeHandleColor;
-
-  @override
-  final Color? multiDayEventBackgroundColor;
 
   // ── TimeGridThemeMixin fields ─────────────────────────────────────────────
 
@@ -241,7 +241,7 @@ class MCalDayViewThemeData
   @override
   final double? resizeHandleBorderRadius;
 
-  // ── AllDayThemeMixin fields ───────────────────────────────────────────────
+  // ── AllDayTileThemeMixin + AllDaySectionThemeMixin fields ─────────────────
 
   @override
   final Color? allDayEventBackgroundColor;
@@ -352,7 +352,6 @@ class MCalDayViewThemeData
     this.dropTargetTileBorderColor,
     this.dropTargetTileBorderWidth,
     this.resizeHandleColor,
-    this.multiDayEventBackgroundColor,
     // TimeGridThemeMixin
     this.timeLegendWidth,
     this.timeLegendTextStyle,
@@ -404,7 +403,7 @@ class MCalDayViewThemeData
     this.resizeHandleVisualHeight,
     this.resizeHandleHorizontalMargin,
     this.resizeHandleBorderRadius,
-    // AllDayThemeMixin
+    // AllDayTileThemeMixin
     this.allDayEventBackgroundColor,
     this.allDayEventTextStyle,
     this.allDayEventBorderColor,
@@ -466,7 +465,6 @@ class MCalDayViewThemeData
       dropTargetTileBorderColor: colorScheme.primary,
       dropTargetTileBorderWidth: 2.0,
       resizeHandleColor: Colors.white.withValues(alpha: 0.7),
-      multiDayEventBackgroundColor: colorScheme.primary.withValues(alpha: 0.8),
       // TimeGridThemeMixin defaults — existing
       timeLegendWidth: 60.0,
       timeLegendTextStyle: textTheme.labelSmall?.copyWith(
@@ -520,19 +518,19 @@ class MCalDayViewThemeData
       resizeHandleVisualHeight: 2.0,
       resizeHandleHorizontalMargin: 4.0,
       resizeHandleBorderRadius: 1.0,
-      // AllDayThemeMixin defaults — colors/styles from parent
+      // AllDayTileThemeMixin defaults
       allDayEventBackgroundColor: colorScheme.secondaryContainer,
       allDayEventTextStyle: textTheme.labelSmall?.copyWith(
         color: colorScheme.onSecondaryContainer,
       ),
       allDayEventBorderColor: colorScheme.secondary.withValues(alpha: 0.3),
       allDayEventBorderWidth: 1.0,
-      // AllDayThemeMixin defaults — sizing (match current hardcoded constants)
+      // AllDaySectionThemeMixin defaults — sizing
       allDayTileWidth: 120.0,
       allDayTileHeight: 28.0,
       allDayEventPadding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
       allDayOverflowIndicatorWidth: 80.0,
-      // AllDayThemeMixin defaults — new layout (match current hardcoded values)
+      // AllDaySectionThemeMixin defaults — layout
       allDayWrapSpacing: 4.0,
       allDayWrapRunSpacing: 4.0,
       allDaySectionPadding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -581,7 +579,6 @@ class MCalDayViewThemeData
     Color? dropTargetTileBorderColor,
     double? dropTargetTileBorderWidth,
     Color? resizeHandleColor,
-    Color? multiDayEventBackgroundColor,
     // TimeGridThemeMixin
     double? timeLegendWidth,
     TextStyle? timeLegendTextStyle,
@@ -633,7 +630,7 @@ class MCalDayViewThemeData
     double? resizeHandleVisualHeight,
     double? resizeHandleHorizontalMargin,
     double? resizeHandleBorderRadius,
-    // AllDayThemeMixin
+    // AllDayTileThemeMixin + AllDaySectionThemeMixin
     Color? allDayEventBackgroundColor,
     TextStyle? allDayEventTextStyle,
     Color? allDayEventBorderColor,
@@ -680,7 +677,6 @@ class MCalDayViewThemeData
       dropTargetTileBorderColor: dropTargetTileBorderColor ?? this.dropTargetTileBorderColor,
       dropTargetTileBorderWidth: dropTargetTileBorderWidth ?? this.dropTargetTileBorderWidth,
       resizeHandleColor: resizeHandleColor ?? this.resizeHandleColor,
-      multiDayEventBackgroundColor: multiDayEventBackgroundColor ?? this.multiDayEventBackgroundColor,
       // TimeGridThemeMixin
       timeLegendWidth: timeLegendWidth ?? this.timeLegendWidth,
       timeLegendTextStyle: timeLegendTextStyle ?? this.timeLegendTextStyle,
@@ -732,7 +728,7 @@ class MCalDayViewThemeData
       resizeHandleVisualHeight: resizeHandleVisualHeight ?? this.resizeHandleVisualHeight,
       resizeHandleHorizontalMargin: resizeHandleHorizontalMargin ?? this.resizeHandleHorizontalMargin,
       resizeHandleBorderRadius: resizeHandleBorderRadius ?? this.resizeHandleBorderRadius,
-      // AllDayThemeMixin
+      // AllDayTileThemeMixin + AllDaySectionThemeMixin
       allDayEventBackgroundColor: allDayEventBackgroundColor ?? this.allDayEventBackgroundColor,
       allDayEventTextStyle: allDayEventTextStyle ?? this.allDayEventTextStyle,
       allDayEventBorderColor: allDayEventBorderColor ?? this.allDayEventBorderColor,
@@ -785,7 +781,6 @@ class MCalDayViewThemeData
       dropTargetTileBorderColor: Color.lerp(dropTargetTileBorderColor, other.dropTargetTileBorderColor, t),
       dropTargetTileBorderWidth: _lerpDouble(dropTargetTileBorderWidth, other.dropTargetTileBorderWidth, t),
       resizeHandleColor: Color.lerp(resizeHandleColor, other.resizeHandleColor, t),
-      multiDayEventBackgroundColor: Color.lerp(multiDayEventBackgroundColor, other.multiDayEventBackgroundColor, t),
       // TimeGridThemeMixin
       timeLegendWidth: _lerpDouble(timeLegendWidth, other.timeLegendWidth, t),
       timeLegendTextStyle: TextStyle.lerp(timeLegendTextStyle, other.timeLegendTextStyle, t),
@@ -837,7 +832,7 @@ class MCalDayViewThemeData
       resizeHandleVisualHeight: _lerpDouble(resizeHandleVisualHeight, other.resizeHandleVisualHeight, t),
       resizeHandleHorizontalMargin: _lerpDouble(resizeHandleHorizontalMargin, other.resizeHandleHorizontalMargin, t),
       resizeHandleBorderRadius: _lerpDouble(resizeHandleBorderRadius, other.resizeHandleBorderRadius, t),
-      // AllDayThemeMixin
+      // AllDayTileThemeMixin + AllDaySectionThemeMixin
       allDayEventBackgroundColor: Color.lerp(allDayEventBackgroundColor, other.allDayEventBackgroundColor, t),
       allDayEventTextStyle: TextStyle.lerp(allDayEventTextStyle, other.allDayEventTextStyle, t),
       allDayEventBorderColor: Color.lerp(allDayEventBorderColor, other.allDayEventBorderColor, t),
@@ -897,7 +892,6 @@ class MCalDayViewThemeData
           dropTargetTileBorderColor == other.dropTargetTileBorderColor &&
           dropTargetTileBorderWidth == other.dropTargetTileBorderWidth &&
           resizeHandleColor == other.resizeHandleColor &&
-          multiDayEventBackgroundColor == other.multiDayEventBackgroundColor &&
           // TimeGridThemeMixin
           timeLegendWidth == other.timeLegendWidth &&
           timeLegendTextStyle == other.timeLegendTextStyle &&
@@ -949,7 +943,7 @@ class MCalDayViewThemeData
           resizeHandleVisualHeight == other.resizeHandleVisualHeight &&
           resizeHandleHorizontalMargin == other.resizeHandleHorizontalMargin &&
           resizeHandleBorderRadius == other.resizeHandleBorderRadius &&
-          // AllDayThemeMixin
+          // AllDayTileThemeMixin + AllDaySectionThemeMixin
           allDayEventBackgroundColor == other.allDayEventBackgroundColor &&
           allDayEventTextStyle == other.allDayEventTextStyle &&
           allDayEventBorderColor == other.allDayEventBorderColor &&
@@ -997,7 +991,6 @@ class MCalDayViewThemeData
         dropTargetTileBorderColor,
         dropTargetTileBorderWidth,
         resizeHandleColor,
-        multiDayEventBackgroundColor,
         // TimeGridThemeMixin
         timeLegendWidth,
         timeLegendTextStyle,
@@ -1049,7 +1042,7 @@ class MCalDayViewThemeData
         resizeHandleVisualHeight,
         resizeHandleHorizontalMargin,
         resizeHandleBorderRadius,
-        // AllDayThemeMixin
+        // AllDayTileThemeMixin + AllDaySectionThemeMixin
         allDayEventBackgroundColor,
         allDayEventTextStyle,
         allDayEventBorderColor,

@@ -30,74 +30,77 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
   // ============================================================
   // Global Properties
   // ============================================================
-  bool _enableEventColorOverrides = false;
+  bool? _enableEventColorOverrides;
   double? _cellBorderWidth;
 
   // ============================================================
   // Event Tile Properties
   // ============================================================
-  late Color _eventTileBackgroundColor;
-  late double _eventTileHeight;
-  late double _eventTileCornerRadius;
-  late double _eventTileHorizontalSpacing;
-  late double _eventTileVerticalSpacing;
-  late double _eventTileBorderWidth;
+  Color? _eventTileBackgroundColor;
+  double? _eventTileHeight;
+  double? _eventTileCornerRadius;
+  double? _eventTileHorizontalSpacing;
+  double? _eventTileVerticalSpacing;
+  double? _eventTileBorderWidth;
   Color? _eventTileBorderColor;
-  late double _eventTilePadding;
+  double? _eventTilePadding;
 
   // ============================================================
-  // Multi-Day Event Properties
+  // All-Day Event Properties
   // ============================================================
-  Color? _multiDayEventBackgroundColor;
+  Color? _allDayEventBackgroundColor;
+  Color? _allDayEventBorderColor;
+  double? _allDayEventBorderWidth;
+  double? _allDayEventPadding;
 
   // ============================================================
   // Cell Properties
   // ============================================================
-  late Color _cellBackgroundColor;
-  late Color _cellBorderColor;
-  late Color _todayBackgroundColor;
+  Color? _cellBackgroundColor;
+  Color? _cellBorderColor;
+  Color? _todayBackgroundColor;
 
   // ============================================================
   // Header Properties
   // ============================================================
-  late Color _weekdayHeaderBackgroundColor;
+  Color? _weekdayHeaderBackgroundColor;
 
   // ============================================================
   // Date Label Properties
   // ============================================================
-  late double _dateLabelHeight;
-  DateLabelPosition _dateLabelPosition = DateLabelPosition.topLeft;
+  double? _dateLabelHeight;
+  DateLabelPosition? _dateLabelPosition;
 
   // ============================================================
   // Overflow Properties
   // ============================================================
-  late double _overflowIndicatorHeight;
+  double? _overflowIndicatorHeight;
 
   // ============================================================
   // Navigator Properties
   // ============================================================
-  late Color _navigatorBackgroundColor;
+  Color? _navigatorBackgroundColor;
   double? _navigatorPaddingH;
   double? _navigatorPaddingV;
 
   // ============================================================
   // Drag & Drop Properties
   // ============================================================
-  late Color _dropTargetCellValidColor;
-  late Color _dropTargetCellInvalidColor;
-  late double _dragSourceOpacity;
-  late double _draggedTileElevation;
+  Color? _dropTargetCellValidColor;
+  Color? _dropTargetCellInvalidColor;
+  double? _dragSourceOpacity;
+  double? _draggedTileElevation;
 
   // ============================================================
   // Hover Properties
   // ============================================================
-  late Color _hoverCellBackgroundColor;
-  late Color _hoverEventBackgroundColor;
+  Color? _hoverCellBackgroundColor;
+  Color? _hoverEventBackgroundColor;
 
   // ============================================================
   // Week Number Properties
   // ============================================================
-  late Color _weekNumberBackgroundColor;
+  Color? _weekNumberBackgroundColor;
 
   @override
   void initState() {
@@ -105,13 +108,6 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
     final now = DateTime.now();
     _controller = MCalEventController(initialDate: now);
     _controller.addEvents(createSampleEvents());
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Initialize theme values from default preset
-    _loadPreset(_selectedPreset);
   }
 
   @override
@@ -123,53 +119,99 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
   void _loadPreset(ThemePreset preset) {
     final theme = Theme.of(context);
     final presetTheme = getMonthThemePreset(preset, theme);
-    final colorScheme = theme.colorScheme;
     
     setState(() {
       _selectedPreset = preset;
+
+      if (preset == ThemePreset.defaultPreset) {
+        _enableEventColorOverrides = null;
+        _cellBackgroundColor = null;
+        _cellBorderColor = null;
+        _cellBorderWidth = null;
+        _todayBackgroundColor = null;
+        _eventTileBackgroundColor = null;
+        _eventTileHeight = null;
+        _eventTileCornerRadius = null;
+        _eventTileHorizontalSpacing = null;
+        _eventTileVerticalSpacing = null;
+        _eventTileBorderWidth = null;
+        _eventTileBorderColor = null;
+        _eventTilePadding = null;
+        _allDayEventBackgroundColor = null;
+        _allDayEventBorderColor = null;
+        _allDayEventBorderWidth = null;
+        _allDayEventPadding = null;
+        _weekdayHeaderBackgroundColor = null;
+        _dateLabelHeight = null;
+        _dateLabelPosition = null;
+        _overflowIndicatorHeight = null;
+        _navigatorBackgroundColor = null;
+        _navigatorPaddingH = null;
+        _navigatorPaddingV = null;
+        _dropTargetCellValidColor = null;
+        _dropTargetCellInvalidColor = null;
+        _dragSourceOpacity = null;
+        _draggedTileElevation = null;
+        _hoverCellBackgroundColor = null;
+        _hoverEventBackgroundColor = null;
+        _weekNumberBackgroundColor = null;
+        return;
+      }
+
       _enableEventColorOverrides = presetTheme.enableEventColorOverrides;
-      _cellBackgroundColor = presetTheme.cellBackgroundColor ?? colorScheme.surface;
-      _cellBorderColor = presetTheme.cellBorderColor ?? colorScheme.outline.withValues(alpha: 0.2);
+      _cellBackgroundColor = presetTheme.cellBackgroundColor;
+      _cellBorderColor = presetTheme.cellBorderColor;
       _cellBorderWidth = presetTheme.cellBorderWidth;
-      _todayBackgroundColor = presetTheme.monthViewTheme?.todayBackgroundColor ?? colorScheme.primary.withValues(alpha: 0.1);
-      _eventTileBackgroundColor = presetTheme.monthViewTheme?.eventTileBackgroundColor ?? colorScheme.primaryContainer;
-      _eventTileHeight = presetTheme.monthViewTheme?.eventTileHeight ?? 20.0;
-      _eventTileCornerRadius = presetTheme.monthViewTheme?.eventTileCornerRadius ?? 3.0;
-      _eventTileHorizontalSpacing = presetTheme.monthViewTheme?.eventTileHorizontalSpacing ?? 1.0;
-      _eventTileVerticalSpacing = presetTheme.monthViewTheme?.eventTileVerticalSpacing ?? 1.0;
-      _eventTileBorderWidth = presetTheme.monthViewTheme?.eventTileBorderWidth ?? 0.0;
+      _todayBackgroundColor = presetTheme.monthViewTheme?.todayBackgroundColor;
+      _eventTileBackgroundColor = presetTheme.monthViewTheme?.eventTileBackgroundColor;
+      _eventTileHeight = presetTheme.monthViewTheme?.eventTileHeight;
+      _eventTileCornerRadius = presetTheme.monthViewTheme?.eventTileCornerRadius;
+      _eventTileHorizontalSpacing = presetTheme.monthViewTheme?.eventTileHorizontalSpacing;
+      _eventTileVerticalSpacing = presetTheme.monthViewTheme?.eventTileVerticalSpacing;
+      _eventTileBorderWidth = presetTheme.monthViewTheme?.eventTileBorderWidth;
       _eventTileBorderColor = presetTheme.monthViewTheme?.eventTileBorderColor;
-      _eventTilePadding = presetTheme.monthViewTheme?.eventTilePadding?.left ?? 4.0;
-      _multiDayEventBackgroundColor = presetTheme.monthViewTheme?.multiDayEventBackgroundColor;
-      _weekdayHeaderBackgroundColor = presetTheme.monthViewTheme?.weekdayHeaderBackgroundColor ?? colorScheme.surfaceContainerHighest;
-      _dateLabelHeight = presetTheme.monthViewTheme?.dateLabelHeight ?? 18.0;
-      _dateLabelPosition = presetTheme.monthViewTheme?.dateLabelPosition ?? DateLabelPosition.topLeft;
-      _overflowIndicatorHeight = presetTheme.monthViewTheme?.overflowIndicatorHeight ?? 14.0;
-      _navigatorBackgroundColor = presetTheme.navigatorBackgroundColor ?? colorScheme.surface;
+      _eventTilePadding = presetTheme.monthViewTheme?.eventTilePadding?.left;
+      _allDayEventBackgroundColor = presetTheme.monthViewTheme?.allDayEventBackgroundColor;
+      _allDayEventBorderColor = presetTheme.monthViewTheme?.allDayEventBorderColor;
+      _allDayEventBorderWidth = presetTheme.monthViewTheme?.allDayEventBorderWidth;
+      _allDayEventPadding = presetTheme.monthViewTheme?.allDayEventPadding?.left;
+      _weekdayHeaderBackgroundColor = presetTheme.monthViewTheme?.weekdayHeaderBackgroundColor;
+      _dateLabelHeight = presetTheme.monthViewTheme?.dateLabelHeight;
+      _dateLabelPosition = presetTheme.monthViewTheme?.dateLabelPosition;
+      _overflowIndicatorHeight = presetTheme.monthViewTheme?.overflowIndicatorHeight;
+      _navigatorBackgroundColor = presetTheme.navigatorBackgroundColor;
       final navPad = presetTheme.navigatorPadding?.resolve(TextDirection.ltr);
       _navigatorPaddingH = navPad?.left;
       _navigatorPaddingV = navPad?.top;
-      _dropTargetCellValidColor = presetTheme.monthViewTheme?.dropTargetCellValidColor ?? Colors.green.withValues(alpha: 0.3);
-      _dropTargetCellInvalidColor = presetTheme.monthViewTheme?.dropTargetCellInvalidColor ?? Colors.red.withValues(alpha: 0.3);
-      _dragSourceOpacity = presetTheme.monthViewTheme?.dragSourceOpacity ?? 0.5;
-      _draggedTileElevation = presetTheme.monthViewTheme?.draggedTileElevation ?? 6.0;
-      _hoverCellBackgroundColor = presetTheme.monthViewTheme?.hoverCellBackgroundColor ?? colorScheme.primary.withValues(alpha: 0.05);
-      _hoverEventBackgroundColor = presetTheme.monthViewTheme?.hoverEventBackgroundColor ?? colorScheme.primaryContainer.withValues(alpha: 0.8);
-      _weekNumberBackgroundColor = presetTheme.monthViewTheme?.weekNumberBackgroundColor ?? colorScheme.surfaceContainerHighest;
+      _dropTargetCellValidColor = presetTheme.monthViewTheme?.dropTargetCellValidColor;
+      _dropTargetCellInvalidColor = presetTheme.monthViewTheme?.dropTargetCellInvalidColor;
+      _dragSourceOpacity = presetTheme.monthViewTheme?.dragSourceOpacity;
+      _draggedTileElevation = presetTheme.monthViewTheme?.draggedTileElevation;
+      _hoverCellBackgroundColor = presetTheme.monthViewTheme?.hoverCellBackgroundColor;
+      _hoverEventBackgroundColor = presetTheme.monthViewTheme?.hoverEventBackgroundColor;
+      _weekNumberBackgroundColor = presetTheme.monthViewTheme?.weekNumberBackgroundColor;
     });
   }
 
-  MCalThemeData _buildThemeData() {
-    final navPaddingH = _navigatorPaddingH ?? 8.0;
-    final navPaddingV = _navigatorPaddingV ?? 8.0;
-    return MCalThemeData(
+  /// Build the current theme data from individual properties.
+  ///
+  /// Only non-null state variables are passed through; null values let the
+  /// library's master defaults (from [MCalThemeData.fromTheme]) take effect.
+  MCalThemeData _buildThemeData(ThemeData materialTheme) {
+    final baseTheme = MCalThemeData.fromTheme(materialTheme);
+
+    return baseTheme.copyWith(
       cellBackgroundColor: _cellBackgroundColor,
       cellBorderColor: _cellBorderColor,
       cellBorderWidth: _cellBorderWidth,
       enableEventColorOverrides: _enableEventColorOverrides,
       navigatorBackgroundColor: _navigatorBackgroundColor,
-      navigatorPadding: EdgeInsets.symmetric(
-          horizontal: navPaddingH, vertical: navPaddingV),
+      navigatorPadding: (_navigatorPaddingH != null || _navigatorPaddingV != null)
+          ? EdgeInsets.symmetric(
+              horizontal: _navigatorPaddingH ?? baseTheme.navigatorPadding!.horizontal / 2,
+              vertical: _navigatorPaddingV ?? baseTheme.navigatorPadding!.vertical / 2,
+            )
+          : null,
       monthViewTheme: MCalMonthViewThemeData(
         eventTileBackgroundColor: _eventTileBackgroundColor,
         eventTileCornerRadius: _eventTileCornerRadius,
@@ -179,10 +221,17 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
         todayBackgroundColor: _todayBackgroundColor,
         eventTileHeight: _eventTileHeight,
         eventTileVerticalSpacing: _eventTileVerticalSpacing,
-        eventTilePadding: EdgeInsets.symmetric(horizontal: _eventTilePadding),
+        eventTilePadding: _eventTilePadding != null
+            ? EdgeInsets.symmetric(horizontal: _eventTilePadding!)
+            : null,
         eventTileBorderWidth: _eventTileBorderWidth,
         eventTileBorderColor: _eventTileBorderColor,
-        multiDayEventBackgroundColor: _multiDayEventBackgroundColor,
+        allDayEventBackgroundColor: _allDayEventBackgroundColor,
+        allDayEventBorderColor: _allDayEventBorderColor,
+        allDayEventBorderWidth: _allDayEventBorderWidth,
+        allDayEventPadding: _allDayEventPadding != null
+            ? EdgeInsets.symmetric(horizontal: _allDayEventPadding!, vertical: (_allDayEventPadding! / 2).clamp(0, 8))
+            : null,
         weekdayHeaderBackgroundColor: _weekdayHeaderBackgroundColor,
         dateLabelHeight: _dateLabelHeight,
         dateLabelPosition: _dateLabelPosition,
@@ -209,6 +258,10 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
         return l10n.presetHighContrast;
       case ThemePreset.minimal:
         return l10n.presetMinimal;
+      case ThemePreset.rounded:
+        return l10n.presetRounded;
+      case ThemePreset.bordered:
+        return l10n.presetBordered;
     }
   }
 
@@ -233,7 +286,9 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final defaults = MCalThemeData.fromTheme(theme);
+    final monthDefaults = defaults.monthViewTheme!;
 
     return ResponsiveControlPanel(
       controlPanelTitle: l10n.themeSettings,
@@ -255,27 +310,21 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
           ControlPanelSection(
             title: l10n.sectionGlobal,
             children: [
-              ControlWidgets.toggle(
-                label: l10n.settingEnableEventColorOverrides,
-                value: _enableEventColorOverrides,
-                onChanged: (v) =>
-                    setState(() => _enableEventColorOverrides = v),
-              ),
               ControlWidgets.colorPicker(
                 label: l10n.settingCellBackgroundColor,
-                value: _cellBackgroundColor,
+                value: _cellBackgroundColor ?? defaults.cellBackgroundColor!,
                 onChanged: (c) => setState(() => _cellBackgroundColor = c),
                 cancelLabel: l10n.cancel,
               ),
               ControlWidgets.colorPicker(
                 label: l10n.settingCellBorderColor,
-                value: _cellBorderColor,
+                value: _cellBorderColor ?? defaults.cellBorderColor!,
                 onChanged: (c) => setState(() => _cellBorderColor = c),
                 cancelLabel: l10n.cancel,
               ),
               ControlWidgets.slider(
                 label: l10n.settingCellBorderWidth,
-                value: _cellBorderWidth ?? 1.0,
+                value: _cellBorderWidth ?? defaults.cellBorderWidth!,
                 min: 0,
                 max: 4,
                 divisions: 16,
@@ -284,13 +333,13 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
               ControlWidgets.colorPicker(
                 label: l10n.settingNavigatorBackgroundColor,
-                value: _navigatorBackgroundColor,
+                value: _navigatorBackgroundColor ?? defaults.navigatorBackgroundColor!,
                 onChanged: (c) => setState(() => _navigatorBackgroundColor = c),
                 cancelLabel: l10n.cancel,
               ),
               ControlWidgets.slider(
                 label: '${l10n.settingNavigatorPadding} H',
-                value: _navigatorPaddingH ?? 8.0,
+                value: _navigatorPaddingH ?? defaults.navigatorPadding!.horizontal / 2,
                 min: 0,
                 max: 24,
                 divisions: 24,
@@ -299,7 +348,7 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
               ControlWidgets.slider(
                 label: '${l10n.settingNavigatorPadding} V',
-                value: _navigatorPaddingV ?? 8.0,
+                value: _navigatorPaddingV ?? defaults.navigatorPadding!.vertical / 2,
                 min: 0,
                 max: 24,
                 divisions: 24,
@@ -309,42 +358,41 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
             ],
           ),
 
-          // ── Event Tiles (MCalEventTileThemeMixin) ────────────────────────────
+          // ── All Events (shared across all-day + timed) ─────────────────────
           ControlPanelSection(
-            title: l10n.sectionEventTiles,
+            title: l10n.sectionAllEvents,
             children: [
-              Opacity(
-                opacity: _enableEventColorOverrides ? 1.0 : 0.4,
-                child: IgnorePointer(
-                  ignoring: !_enableEventColorOverrides,
-                  child: ControlWidgets.colorPicker(
-                    label: l10n.settingEventTileBackgroundColor,
-                    value: _eventTileBackgroundColor,
-                    onChanged: (c) =>
-                        setState(() => _eventTileBackgroundColor = c),
-                    cancelLabel: l10n.cancel,
-                  ),
-                ),
+              ControlWidgets.toggle(
+                label: l10n.settingEnableEventColorOverrides,
+                value: _enableEventColorOverrides ?? defaults.enableEventColorOverrides,
+                onChanged: (v) =>
+                    setState(() => _enableEventColorOverrides = v),
+              ),
+              ControlWidgets.slider(
+                label: l10n.settingEventTileCornerRadius,
+                value: _eventTileCornerRadius ?? monthDefaults.eventTileCornerRadius!,
+                min: 0,
+                max: 12,
+                divisions: 24,
+                onChanged: (v) => setState(() => _eventTileCornerRadius = v),
+              ),
+              ControlWidgets.colorPicker(
+                label: l10n.settingHoverEventBackgroundColor,
+                value: _hoverEventBackgroundColor ?? monthDefaults.hoverEventBackgroundColor!,
+                onChanged: (c) => setState(() => _hoverEventBackgroundColor = c),
+                cancelLabel: l10n.cancel,
               ),
               ControlWidgets.slider(
                 label: l10n.settingEventTileHeight,
-                value: _eventTileHeight,
+                value: _eventTileHeight ?? monthDefaults.eventTileHeight!,
                 min: 12,
                 max: 40,
                 divisions: 28,
                 onChanged: (v) => setState(() => _eventTileHeight = v),
               ),
               ControlWidgets.slider(
-                label: l10n.settingEventTileCornerRadius,
-                value: _eventTileCornerRadius,
-                min: 0,
-                max: 12,
-                divisions: 24,
-                onChanged: (v) => setState(() => _eventTileCornerRadius = v),
-              ),
-              ControlWidgets.slider(
                 label: l10n.settingEventTileHorizontalSpacing,
-                value: _eventTileHorizontalSpacing,
+                value: _eventTileHorizontalSpacing ?? monthDefaults.eventTileHorizontalSpacing!,
                 min: 0,
                 max: 8,
                 divisions: 16,
@@ -352,21 +400,83 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
               ControlWidgets.slider(
                 label: l10n.settingEventTileVerticalSpacing,
-                value: _eventTileVerticalSpacing,
+                value: _eventTileVerticalSpacing ?? monthDefaults.eventTileVerticalSpacing!,
                 min: 0,
                 max: 8,
                 divisions: 16,
                 onChanged: (v) => setState(() => _eventTileVerticalSpacing = v),
               ),
+            ],
+          ),
+
+          // ── All-Day Events ───────────────────────────────────────────────────
+          ControlPanelSection(
+            title: l10n.sectionAllDayEvents,
+            children: [
+              Opacity(
+                opacity: (_enableEventColorOverrides ?? defaults.enableEventColorOverrides) ? 1.0 : 0.4,
+                child: IgnorePointer(
+                  ignoring: !(_enableEventColorOverrides ?? defaults.enableEventColorOverrides),
+                  child: ControlWidgets.colorPicker(
+                    label: l10n.settingAllDayEventBackgroundColor,
+                    value: _allDayEventBackgroundColor ?? monthDefaults.allDayEventBackgroundColor!,
+                    onChanged: (c) =>
+                        setState(() => _allDayEventBackgroundColor = c),
+                    cancelLabel: l10n.cancel,
+                  ),
+                ),
+              ),
+              ControlWidgets.colorPicker(
+                label: l10n.settingAllDayEventBorderColor,
+                value: _allDayEventBorderColor ?? monthDefaults.allDayEventBorderColor!,
+                onChanged: (c) => setState(() => _allDayEventBorderColor = c),
+                cancelLabel: l10n.cancel,
+              ),
+              ControlWidgets.slider(
+                label: l10n.settingAllDayEventBorderWidth,
+                value: _allDayEventBorderWidth ?? monthDefaults.allDayEventBorderWidth!,
+                min: 0,
+                max: 4,
+                divisions: 16,
+                onChanged: (v) => setState(() => _allDayEventBorderWidth = v),
+              ),
+              ControlWidgets.slider(
+                label: l10n.settingAllDayEventPadding,
+                value: _allDayEventPadding ?? monthDefaults.allDayEventPadding!.left,
+                min: 0,
+                max: 12,
+                divisions: 24,
+                onChanged: (v) => setState(() => _allDayEventPadding = v),
+              ),
+            ],
+          ),
+
+          // ── Timed Events ────────────────────────────────────────────────────
+          ControlPanelSection(
+            title: l10n.sectionTimedEvents,
+            children: [
+              Opacity(
+                opacity: (_enableEventColorOverrides ?? defaults.enableEventColorOverrides) ? 1.0 : 0.4,
+                child: IgnorePointer(
+                  ignoring: !(_enableEventColorOverrides ?? defaults.enableEventColorOverrides),
+                  child: ControlWidgets.colorPicker(
+                    label: l10n.settingEventTileBackgroundColor,
+                    value: _eventTileBackgroundColor ?? monthDefaults.eventTileBackgroundColor!,
+                    onChanged: (c) =>
+                        setState(() => _eventTileBackgroundColor = c),
+                    cancelLabel: l10n.cancel,
+                  ),
+                ),
+              ),
               ControlWidgets.colorPicker(
                 label: l10n.settingEventTileBorderColor,
-                value: _eventTileBorderColor ?? colorScheme.outline,
+                value: _eventTileBorderColor ?? monthDefaults.eventTileBorderColor ?? theme.colorScheme.outline,
                 onChanged: (c) => setState(() => _eventTileBorderColor = c),
                 cancelLabel: l10n.cancel,
               ),
               ControlWidgets.slider(
                 label: l10n.settingEventTileBorderWidth,
-                value: _eventTileBorderWidth,
+                value: _eventTileBorderWidth ?? monthDefaults.eventTileBorderWidth!,
                 min: 0,
                 max: 4,
                 divisions: 16,
@@ -374,60 +484,34 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
               ControlWidgets.slider(
                 label: l10n.settingEventTilePadding,
-                value: _eventTilePadding,
+                value: _eventTilePadding ?? monthDefaults.eventTilePadding!.left,
                 min: 0,
                 max: 12,
                 divisions: 24,
                 onChanged: (v) => setState(() => _eventTilePadding = v),
               ),
-              Opacity(
-                opacity: _enableEventColorOverrides ? 1.0 : 0.4,
-                child: IgnorePointer(
-                  ignoring: !_enableEventColorOverrides,
-                  child: ControlWidgets.colorPicker(
-                    label: l10n.settingMultiDayEventBackgroundColor,
-                    value: _multiDayEventBackgroundColor ??
-                        colorScheme.primary.withValues(alpha: 0.8),
-                    onChanged: (c) =>
-                        setState(() => _multiDayEventBackgroundColor = c),
-                    cancelLabel: l10n.cancel,
-                  ),
-                ),
-              ),
-              ControlWidgets.colorPicker(
-                label: l10n.settingHoverEventBackgroundColor,
-                value: _hoverEventBackgroundColor,
-                onChanged: (c) => setState(() => _hoverEventBackgroundColor = c),
-                cancelLabel: l10n.cancel,
-              ),
-              ControlWidgets.colorPicker(
-                label: l10n.settingWeekNumberBackgroundColor,
-                value: _weekNumberBackgroundColor,
-                onChanged: (c) => setState(() => _weekNumberBackgroundColor = c),
-                cancelLabel: l10n.cancel,
-              ),
             ],
           ),
 
-          // ── Month View (MCalMonthViewThemeData-specific) ─────────────────────
+          // ── Month Header ───────────────────────────────────────────────────
           ControlPanelSection(
-            title: l10n.sectionMonthView,
+            title: l10n.sectionMonthHeader,
             children: [
               ControlWidgets.colorPicker(
-                label: l10n.settingTodayBackgroundColor,
-                value: _todayBackgroundColor,
-                onChanged: (c) => setState(() => _todayBackgroundColor = c),
+                label: l10n.settingWeekdayHeaderBackgroundColor,
+                value: _weekdayHeaderBackgroundColor ?? monthDefaults.weekdayHeaderBackgroundColor!,
+                onChanged: (c) => setState(() => _weekdayHeaderBackgroundColor = c),
                 cancelLabel: l10n.cancel,
               ),
               ControlWidgets.colorPicker(
-                label: l10n.settingWeekdayHeaderBackgroundColor,
-                value: _weekdayHeaderBackgroundColor,
-                onChanged: (c) => setState(() => _weekdayHeaderBackgroundColor = c),
+                label: l10n.settingTodayBackgroundColor,
+                value: _todayBackgroundColor ?? monthDefaults.todayBackgroundColor!,
+                onChanged: (c) => setState(() => _todayBackgroundColor = c),
                 cancelLabel: l10n.cancel,
               ),
               ControlWidgets.slider(
                 label: l10n.settingDateLabelHeight,
-                value: _dateLabelHeight,
+                value: _dateLabelHeight ?? monthDefaults.dateLabelHeight!,
                 min: 12,
                 max: 36,
                 divisions: 24,
@@ -435,7 +519,7 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
               ControlWidgets.dropdown<DateLabelPosition>(
                 label: l10n.settingDateLabelPosition,
-                value: _dateLabelPosition,
+                value: _dateLabelPosition ?? monthDefaults.dateLabelPosition!,
                 items: DateLabelPosition.values
                     .map((p) => DropdownMenuItem(
                           value: p,
@@ -448,29 +532,48 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
                   }
                 },
               ),
+            ],
+          ),
+
+          // ── Month Grid ─────────────────────────────────────────────────────
+          ControlPanelSection(
+            title: l10n.sectionMonthGrid,
+            children: [
+              ControlWidgets.colorPicker(
+                label: l10n.settingWeekNumberBackgroundColor,
+                value: _weekNumberBackgroundColor ?? monthDefaults.weekNumberBackgroundColor!,
+                onChanged: (c) => setState(() => _weekNumberBackgroundColor = c),
+                cancelLabel: l10n.cancel,
+              ),
               ControlWidgets.slider(
                 label: l10n.settingOverflowIndicatorHeight,
-                value: _overflowIndicatorHeight,
+                value: _overflowIndicatorHeight ?? monthDefaults.overflowIndicatorHeight!,
                 min: 8,
                 max: 30,
                 divisions: 22,
                 onChanged: (v) => setState(() => _overflowIndicatorHeight = v),
               ),
               ControlWidgets.colorPicker(
+                label: l10n.settingHoverCellBackgroundColor,
+                value: _hoverCellBackgroundColor ?? monthDefaults.hoverCellBackgroundColor!,
+                onChanged: (c) => setState(() => _hoverCellBackgroundColor = c),
+                cancelLabel: l10n.cancel,
+              ),
+              ControlWidgets.colorPicker(
                 label: l10n.settingDropTargetCellValidColor,
-                value: _dropTargetCellValidColor,
+                value: _dropTargetCellValidColor ?? monthDefaults.dropTargetCellValidColor!,
                 onChanged: (c) => setState(() => _dropTargetCellValidColor = c),
                 cancelLabel: l10n.cancel,
               ),
               ControlWidgets.colorPicker(
                 label: l10n.settingDropTargetCellInvalidColor,
-                value: _dropTargetCellInvalidColor,
+                value: _dropTargetCellInvalidColor ?? monthDefaults.dropTargetCellInvalidColor!,
                 onChanged: (c) => setState(() => _dropTargetCellInvalidColor = c),
                 cancelLabel: l10n.cancel,
               ),
               ControlWidgets.slider(
                 label: l10n.settingDragSourceOpacity,
-                value: _dragSourceOpacity,
+                value: _dragSourceOpacity ?? monthDefaults.dragSourceOpacity!,
                 min: 0,
                 max: 1,
                 divisions: 20,
@@ -478,27 +581,26 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ),
               ControlWidgets.slider(
                 label: l10n.settingDraggedTileElevation,
-                value: _draggedTileElevation,
+                value: _draggedTileElevation ?? monthDefaults.draggedTileElevation!,
                 min: 0,
                 max: 16,
                 divisions: 16,
                 onChanged: (v) => setState(() => _draggedTileElevation = v),
-              ),
-              ControlWidgets.colorPicker(
-                label: l10n.settingHoverCellBackgroundColor,
-                value: _hoverCellBackgroundColor,
-                onChanged: (c) => setState(() => _hoverCellBackgroundColor = c),
-                cancelLabel: l10n.cancel,
               ),
             ],
           ),
         ],
       ),
       child: MCalTheme(
-        data: _buildThemeData(),
+        data: _buildThemeData(theme),
         child: MCalMonthView(
           controller: _controller,
           showNavigator: true,
+          showWeekNumbers: true,
+          enableDragToMove: true,
+          enableDragToResize: true,
+          onEventDropped: (_, details) => true,
+          onEventResized: (_, details) => true,
         ),
       ),
     );

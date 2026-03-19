@@ -124,42 +124,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sectionBlackoutDays => 'الأيام المحظورة';
 
   @override
-  String get sectionCells => 'الخلايا';
-
-  @override
-  String get sectionEventTiles => 'بلاطات الأحداث';
-
-  @override
-  String get sectionHeaders => 'الرؤوس';
-
-  @override
-  String get sectionDateLabels => 'تسميات التاريخ';
-
-  @override
-  String get sectionOverflow => 'الفائض';
-
-  @override
-  String get sectionNavigator => 'المتصفح';
-
-  @override
-  String get sectionHover => 'التمرير';
-
-  @override
-  String get sectionWeekNumbers => 'أرقام الأسابيع';
-
-  @override
-  String get sectionTimeLegend => 'مفتاح الوقت';
-
-  @override
-  String get sectionGridlines => 'خطوط الشبكة';
-
-  @override
-  String get sectionCurrentTime => 'مؤشر الوقت الحالي';
-
-  @override
-  String get sectionEvents => 'الأحداث';
-
-  @override
   String get sectionAllDayEvents => 'أحداث طوال اليوم';
 
   @override
@@ -169,10 +133,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sectionTimeGrid => 'شبكة الوقت';
 
   @override
+  String get sectionTimedEvents => 'أحداث مُجَدولة';
+
+  @override
+  String get sectionAllEvents => 'جميع الأحداث';
+
+  @override
   String get sectionDayHeader => 'رأس اليوم';
 
   @override
-  String get sectionMonthView => 'عرض الشهر';
+  String get sectionMonthHeader => 'رأس الشهر';
+
+  @override
+  String get sectionMonthGrid => 'شبكة الشهر';
 
   @override
   String get settingShowNavigator => 'إظهار المتصفح';
@@ -188,9 +161,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get settingShowWeekNumbers => 'إظهار أرقام الأسابيع';
-
-  @override
-  String get settingShowWeekNumber => 'إظهار رقم الأسبوع';
 
   @override
   String get settingShowSubHourLabels => 'إظهار تسميات أجزاء الساعة';
@@ -470,13 +440,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingEventTileBorderColor => 'لون حدود بلاطة الحدث';
 
   @override
-  String get settingMultiDayEventBackgroundColor =>
-      'لون خلفية حدث متعدد الأيام';
-
-  @override
-  String get sectionMultiDayEvents => 'أحداث متعددة الأيام';
-
-  @override
   String get settingSpecialTimeRegionColor => 'لون المنطقة الزمنية الخاصة';
 
   @override
@@ -608,6 +571,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get presetMinimal => 'أدنى';
+
+  @override
+  String get presetRounded => 'مستدير';
+
+  @override
+  String get presetBordered => 'محدّد';
 
   @override
   String get dateLabelPositionTopLeft => 'أعلى اليسار';

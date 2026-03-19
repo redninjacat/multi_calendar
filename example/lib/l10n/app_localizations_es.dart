@@ -125,42 +125,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sectionBlackoutDays => 'Días Bloqueados';
 
   @override
-  String get sectionCells => 'Celdas';
-
-  @override
-  String get sectionEventTiles => 'Fichas de Evento';
-
-  @override
-  String get sectionHeaders => 'Encabezados';
-
-  @override
-  String get sectionDateLabels => 'Etiquetas de Fecha';
-
-  @override
-  String get sectionOverflow => 'Desbordamiento';
-
-  @override
-  String get sectionNavigator => 'Navegador';
-
-  @override
-  String get sectionHover => 'Pasar el Cursor';
-
-  @override
-  String get sectionWeekNumbers => 'Números de Semana';
-
-  @override
-  String get sectionTimeLegend => 'Leyenda de Tiempo';
-
-  @override
-  String get sectionGridlines => 'Líneas de Cuadrícula';
-
-  @override
-  String get sectionCurrentTime => 'Indicador de Hora Actual';
-
-  @override
-  String get sectionEvents => 'Eventos';
-
-  @override
   String get sectionAllDayEvents => 'Eventos de Todo el Día';
 
   @override
@@ -170,10 +134,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sectionTimeGrid => 'Cuadrícula de Tiempo';
 
   @override
+  String get sectionTimedEvents => 'Eventos Programados';
+
+  @override
+  String get sectionAllEvents => 'Todos los Eventos';
+
+  @override
   String get sectionDayHeader => 'Encabezado de Día';
 
   @override
-  String get sectionMonthView => 'Vista Mensual';
+  String get sectionMonthHeader => 'Encabezado del Mes';
+
+  @override
+  String get sectionMonthGrid => 'Cuadrícula del Mes';
 
   @override
   String get settingShowNavigator => 'Mostrar Navegador';
@@ -190,9 +163,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingShowWeekNumbers => 'Mostrar Números de Semana';
-
-  @override
-  String get settingShowWeekNumber => 'Mostrar Número de Semana';
 
   @override
   String get settingShowSubHourLabels => 'Mostrar Etiquetas de Sub-Hora';
@@ -499,13 +469,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingEventTileBorderColor => 'Color de Borde de Ficha de Evento';
 
   @override
-  String get settingMultiDayEventBackgroundColor =>
-      'Color de Fondo de Evento de Varios Días';
-
-  @override
-  String get sectionMultiDayEvents => 'Eventos de Varios Días';
-
-  @override
   String get settingSpecialTimeRegionColor =>
       'Color de Región de Tiempo Especial';
 
@@ -640,6 +603,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get presetMinimal => 'Mínimo';
+
+  @override
+  String get presetRounded => 'Redondeado';
+
+  @override
+  String get presetBordered => 'Con bordes';
 
   @override
   String get dateLabelPositionTopLeft => 'Superior Izquierda';

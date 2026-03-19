@@ -400,9 +400,13 @@ class AllDayEventsSection extends StatelessWidget {
     return Container(
       padding: tilePadding,
       decoration: BoxDecoration(
-        color: tileColor.withValues(alpha: 0.2),
+        color: tileColor,
         borderRadius: BorderRadius.circular(cornerRadius),
-        border: Border.all(color: tileColor, width: borderWidth),
+        border: Border.all(
+          color: theme.dayViewTheme?.allDayEventBorderColor ??
+              defaults.dayViewTheme!.allDayEventBorderColor!,
+          width: borderWidth,
+        ),
       ),
       child: Row(
         children: [

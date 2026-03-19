@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../widgets/mcal_month_week_layout_contexts.dart' show DateLabelPosition;
+import 'mcal_all_day_tile_theme_mixin.dart';
 import 'mcal_event_tile_theme_mixin.dart';
 
 /// Theme data for Month View specific styling.
 ///
-/// This class mixes in [MCalEventTileThemeMixin] for event tile properties,
-/// and adds Month-View-specific properties (cell styling, date labels, headers,
-/// multi-day tiles, drag & drop, overflow, regions, overlays).
+/// This class mixes in [MCalEventTileThemeMixin] for timed event tile
+/// properties and [MCalAllDayTileThemeMixin] for all-day event tile
+/// properties, and adds Month-View-specific properties (cell styling, date
+/// labels, headers, multi-day tiles, drag & drop, overflow, regions, overlays).
 ///
 /// Use [MCalMonthViewThemeData.defaults] to create a theme with Material 3 defaults.
 ///
@@ -20,7 +22,7 @@ import 'mcal_event_tile_theme_mixin.dart';
 ///   ),
 /// )
 /// ```
-class MCalMonthViewThemeData with MCalEventTileThemeMixin {
+class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMixin {
   // ── EventTileThemeMixin fields ────────────────────────────────────────────
 
   @override
@@ -74,10 +76,24 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
   @override
   final Color? resizeHandleColor;
 
-  @override
-  final Color? multiDayEventBackgroundColor;
+  // ── AllDayTileThemeMixin fields ─────────────────────────────────────────────
 
-  // ── Month-View-specific retained properties (28) ──────────────────────────
+  @override
+  final Color? allDayEventBackgroundColor;
+
+  @override
+  final TextStyle? allDayEventTextStyle;
+
+  @override
+  final Color? allDayEventBorderColor;
+
+  @override
+  final double? allDayEventBorderWidth;
+
+  @override
+  final EdgeInsets? allDayEventPadding;
+
+  // ── Month-View-specific retained properties ────────────────────────────────
 
   /// Text style for day numbers in calendar cells.
   final TextStyle? cellTextStyle;
@@ -129,9 +145,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
 
   /// Elevation for the dragged tile feedback widget.
   final double? draggedTileElevation;
-
-  /// Text style for multi-day event tiles.
-  final TextStyle? multiDayEventTextStyle;
 
   /// Height of event tile slots (both single-day and multi-day).
   final double? eventTileHeight;
@@ -293,7 +306,12 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
     this.dropTargetTileBorderColor,
     this.dropTargetTileBorderWidth,
     this.resizeHandleColor,
-    this.multiDayEventBackgroundColor,
+    // AllDayTileThemeMixin
+    this.allDayEventBackgroundColor,
+    this.allDayEventTextStyle,
+    this.allDayEventBorderColor,
+    this.allDayEventBorderWidth,
+    this.allDayEventPadding,
     // Retained own
     this.cellTextStyle,
     this.todayBackgroundColor,
@@ -312,7 +330,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
     this.dropTargetCellBorderRadius,
     this.dragSourceOpacity,
     this.draggedTileElevation,
-    this.multiDayEventTextStyle,
     this.eventTileHeight,
     this.eventTileVerticalSpacing,
     this.dateLabelHeight,
@@ -377,7 +394,14 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
       dropTargetTileBorderColor: colorScheme.primary,
       dropTargetTileBorderWidth: 1.5,
       resizeHandleColor: Colors.white.withValues(alpha: 0.5),
-      multiDayEventBackgroundColor: colorScheme.primary.withValues(alpha: 0.8),
+      // AllDayTileThemeMixin defaults
+      allDayEventBackgroundColor: colorScheme.secondaryContainer,
+      allDayEventTextStyle: textTheme.labelSmall?.copyWith(
+        color: colorScheme.onSecondaryContainer,
+      ),
+      allDayEventBorderColor: colorScheme.secondary.withValues(alpha: 0.3),
+      allDayEventBorderWidth: 1.0,
+      allDayEventPadding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
       // Retained own defaults
       cellTextStyle: textTheme.bodyMedium?.copyWith(
         color: colorScheme.onSurface,
@@ -411,10 +435,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
       dropTargetCellBorderRadius: 4.0,
       dragSourceOpacity: 0.5,
       draggedTileElevation: 6.0,
-      multiDayEventTextStyle: textTheme.labelSmall?.copyWith(
-        color: colorScheme.onPrimary,
-        fontWeight: FontWeight.w500,
-      ),
       eventTileHeight: 20.0,
       eventTileVerticalSpacing: 1.0,
       eventTilePadding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -470,7 +490,12 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
     Color? dropTargetTileBorderColor,
     double? dropTargetTileBorderWidth,
     Color? resizeHandleColor,
-    Color? multiDayEventBackgroundColor,
+    // AllDayTileThemeMixin
+    Color? allDayEventBackgroundColor,
+    TextStyle? allDayEventTextStyle,
+    Color? allDayEventBorderColor,
+    double? allDayEventBorderWidth,
+    EdgeInsets? allDayEventPadding,
     // Retained own
     TextStyle? cellTextStyle,
     Color? todayBackgroundColor,
@@ -489,7 +514,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
     double? dropTargetCellBorderRadius,
     double? dragSourceOpacity,
     double? draggedTileElevation,
-    TextStyle? multiDayEventTextStyle,
     double? eventTileHeight,
     double? eventTileVerticalSpacing,
     double? dateLabelHeight,
@@ -540,7 +564,12 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
       dropTargetTileBorderColor: dropTargetTileBorderColor ?? this.dropTargetTileBorderColor,
       dropTargetTileBorderWidth: dropTargetTileBorderWidth ?? this.dropTargetTileBorderWidth,
       resizeHandleColor: resizeHandleColor ?? this.resizeHandleColor,
-      multiDayEventBackgroundColor: multiDayEventBackgroundColor ?? this.multiDayEventBackgroundColor,
+      // AllDayTileThemeMixin
+      allDayEventBackgroundColor: allDayEventBackgroundColor ?? this.allDayEventBackgroundColor,
+      allDayEventTextStyle: allDayEventTextStyle ?? this.allDayEventTextStyle,
+      allDayEventBorderColor: allDayEventBorderColor ?? this.allDayEventBorderColor,
+      allDayEventBorderWidth: allDayEventBorderWidth ?? this.allDayEventBorderWidth,
+      allDayEventPadding: allDayEventPadding ?? this.allDayEventPadding,
       // Retained own
       cellTextStyle: cellTextStyle ?? this.cellTextStyle,
       todayBackgroundColor: todayBackgroundColor ?? this.todayBackgroundColor,
@@ -559,7 +588,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
       dropTargetCellBorderRadius: dropTargetCellBorderRadius ?? this.dropTargetCellBorderRadius,
       dragSourceOpacity: dragSourceOpacity ?? this.dragSourceOpacity,
       draggedTileElevation: draggedTileElevation ?? this.draggedTileElevation,
-      multiDayEventTextStyle: multiDayEventTextStyle ?? this.multiDayEventTextStyle,
       eventTileHeight: eventTileHeight ?? this.eventTileHeight,
       eventTileVerticalSpacing: eventTileVerticalSpacing ?? this.eventTileVerticalSpacing,
       dateLabelHeight: dateLabelHeight ?? this.dateLabelHeight,
@@ -616,7 +644,12 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
       dropTargetTileBorderColor: Color.lerp(dropTargetTileBorderColor, other.dropTargetTileBorderColor, t),
       dropTargetTileBorderWidth: _lerpDouble(dropTargetTileBorderWidth, other.dropTargetTileBorderWidth, t),
       resizeHandleColor: Color.lerp(resizeHandleColor, other.resizeHandleColor, t),
-      multiDayEventBackgroundColor: Color.lerp(multiDayEventBackgroundColor, other.multiDayEventBackgroundColor, t),
+      // AllDayTileThemeMixin
+      allDayEventBackgroundColor: Color.lerp(allDayEventBackgroundColor, other.allDayEventBackgroundColor, t),
+      allDayEventTextStyle: TextStyle.lerp(allDayEventTextStyle, other.allDayEventTextStyle, t),
+      allDayEventBorderColor: Color.lerp(allDayEventBorderColor, other.allDayEventBorderColor, t),
+      allDayEventBorderWidth: _lerpDouble(allDayEventBorderWidth, other.allDayEventBorderWidth, t),
+      allDayEventPadding: EdgeInsets.lerp(allDayEventPadding, other.allDayEventPadding, t),
       // Retained own
       cellTextStyle: TextStyle.lerp(cellTextStyle, other.cellTextStyle, t),
       todayBackgroundColor: Color.lerp(todayBackgroundColor, other.todayBackgroundColor, t),
@@ -635,7 +668,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
       dropTargetCellBorderRadius: _lerpDouble(dropTargetCellBorderRadius, other.dropTargetCellBorderRadius, t),
       dragSourceOpacity: _lerpDouble(dragSourceOpacity, other.dragSourceOpacity, t),
       draggedTileElevation: _lerpDouble(draggedTileElevation, other.draggedTileElevation, t),
-      multiDayEventTextStyle: TextStyle.lerp(multiDayEventTextStyle, other.multiDayEventTextStyle, t),
       eventTileHeight: _lerpDouble(eventTileHeight, other.eventTileHeight, t),
       eventTileVerticalSpacing: _lerpDouble(eventTileVerticalSpacing, other.eventTileVerticalSpacing, t),
       dateLabelHeight: _lerpDouble(dateLabelHeight, other.dateLabelHeight, t),
@@ -699,7 +731,12 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
           dropTargetTileBorderColor == other.dropTargetTileBorderColor &&
           dropTargetTileBorderWidth == other.dropTargetTileBorderWidth &&
           resizeHandleColor == other.resizeHandleColor &&
-          multiDayEventBackgroundColor == other.multiDayEventBackgroundColor &&
+          // AllDayTileThemeMixin
+          allDayEventBackgroundColor == other.allDayEventBackgroundColor &&
+          allDayEventTextStyle == other.allDayEventTextStyle &&
+          allDayEventBorderColor == other.allDayEventBorderColor &&
+          allDayEventBorderWidth == other.allDayEventBorderWidth &&
+          allDayEventPadding == other.allDayEventPadding &&
           // Retained own
           cellTextStyle == other.cellTextStyle &&
           todayBackgroundColor == other.todayBackgroundColor &&
@@ -718,7 +755,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
           dropTargetCellBorderRadius == other.dropTargetCellBorderRadius &&
           dragSourceOpacity == other.dragSourceOpacity &&
           draggedTileElevation == other.draggedTileElevation &&
-          multiDayEventTextStyle == other.multiDayEventTextStyle &&
           eventTileHeight == other.eventTileHeight &&
           eventTileVerticalSpacing == other.eventTileVerticalSpacing &&
           dateLabelHeight == other.dateLabelHeight &&
@@ -770,7 +806,12 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
         dropTargetTileBorderColor,
         dropTargetTileBorderWidth,
         resizeHandleColor,
-        multiDayEventBackgroundColor,
+        // AllDayTileThemeMixin
+        allDayEventBackgroundColor,
+        allDayEventTextStyle,
+        allDayEventBorderColor,
+        allDayEventBorderWidth,
+        allDayEventPadding,
         // Retained own
         cellTextStyle,
         todayBackgroundColor,
@@ -789,7 +830,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin {
         dropTargetCellBorderRadius,
         dragSourceOpacity,
         draggedTileElevation,
-        multiDayEventTextStyle,
         eventTileHeight,
         eventTileVerticalSpacing,
         dateLabelHeight,

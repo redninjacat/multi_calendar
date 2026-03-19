@@ -124,42 +124,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get sectionBlackoutDays => 'ימים חסומים';
 
   @override
-  String get sectionCells => 'תאים';
-
-  @override
-  String get sectionEventTiles => 'משבצות אירוע';
-
-  @override
-  String get sectionHeaders => 'כותרות';
-
-  @override
-  String get sectionDateLabels => 'תוויות תאריך';
-
-  @override
-  String get sectionOverflow => 'גלישה';
-
-  @override
-  String get sectionNavigator => 'ניווט';
-
-  @override
-  String get sectionHover => 'ריחוף';
-
-  @override
-  String get sectionWeekNumbers => 'מספרי שבוע';
-
-  @override
-  String get sectionTimeLegend => 'מקרא זמן';
-
-  @override
-  String get sectionGridlines => 'קווי רשת';
-
-  @override
-  String get sectionCurrentTime => 'מחוון זמן נוכחי';
-
-  @override
-  String get sectionEvents => 'אירועים';
-
-  @override
   String get sectionAllDayEvents => 'אירועי כל היום';
 
   @override
@@ -169,10 +133,19 @@ class AppLocalizationsHe extends AppLocalizations {
   String get sectionTimeGrid => 'רשת זמן';
 
   @override
+  String get sectionTimedEvents => 'אירועים מתוזמנים';
+
+  @override
+  String get sectionAllEvents => 'כל האירועים';
+
+  @override
   String get sectionDayHeader => 'כותרת יום';
 
   @override
-  String get sectionMonthView => 'תצוגת חודש';
+  String get sectionMonthHeader => 'כותרת חודש';
+
+  @override
+  String get sectionMonthGrid => 'רשת חודש';
 
   @override
   String get settingShowNavigator => 'הצג ניווט';
@@ -188,9 +161,6 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get settingShowWeekNumbers => 'הצג מספרי שבוע';
-
-  @override
-  String get settingShowWeekNumber => 'הצג מספר שבוע';
 
   @override
   String get settingShowSubHourLabels => 'הצג תוויות תת-שעה';
@@ -464,12 +434,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get settingEventTileBorderColor => 'צבע גבול משבצת אירוע';
 
   @override
-  String get settingMultiDayEventBackgroundColor => 'צבע רקע אירוע מרובה ימים';
-
-  @override
-  String get sectionMultiDayEvents => 'אירועים מרובי ימים';
-
-  @override
   String get settingSpecialTimeRegionColor => 'צבע אזור זמן מיוחד';
 
   @override
@@ -600,6 +564,12 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get presetMinimal => 'מינימלי';
+
+  @override
+  String get presetRounded => 'מעוגל';
+
+  @override
+  String get presetBordered => 'מגודר';
 
   @override
   String get dateLabelPositionTopLeft => 'למעלה משמאל';

@@ -41,6 +41,8 @@ class _DayThemeTabState extends State<DayThemeTab> {
   // Event Properties
   // ============================================================
   Color? _eventTileBackgroundColor;
+  double? _eventTileBorderWidth;
+  Color? _eventTileBorderColor;
   double? _eventTileCornerRadius;
   double? _eventTileHorizontalSpacing;
   double? _timedEventMinHeight;
@@ -173,6 +175,8 @@ class _DayThemeTabState extends State<DayThemeTab> {
       _cellBackgroundColor = presetTheme.cellBackgroundColor;
       _cellBorderColor = presetTheme.cellBorderColor;
       _eventTileBackgroundColor = dayViewTheme?.eventTileBackgroundColor;
+      _eventTileBorderWidth = dayViewTheme?.eventTileBorderWidth;
+      _eventTileBorderColor = dayViewTheme?.eventTileBorderColor;
       _eventTileCornerRadius = dayViewTheme?.eventTileCornerRadius;
       _eventTileHorizontalSpacing = dayViewTheme?.eventTileHorizontalSpacing;
       _timedEventMinHeight = dayViewTheme?.timedEventMinHeight;
@@ -214,13 +218,12 @@ class _DayThemeTabState extends State<DayThemeTab> {
     });
   }
 
-  /// Build the current theme data from individual properties
+  /// Build the current theme data from individual properties.
+  ///
+  /// Only non-null state variables are passed through; null values let the
+  /// library's master defaults (from [MCalThemeData.fromTheme]) take effect.
   MCalThemeData _buildThemeData(ThemeData materialTheme) {
-    final colorScheme = materialTheme.colorScheme;
     final baseTheme = MCalThemeData.fromTheme(materialTheme);
-
-    final navPaddingH = _navigatorPaddingH ?? 8.0;
-    final navPaddingV = _navigatorPaddingV ?? 8.0;
 
     return baseTheme.copyWith(
       enableEventColorOverrides: _enableEventColorOverrides,
@@ -228,38 +231,44 @@ class _DayThemeTabState extends State<DayThemeTab> {
       cellBorderColor: _cellBorderColor,
       cellBorderWidth: _cellBorderWidth,
       navigatorBackgroundColor: _navigatorBackgroundColor,
-      navigatorPadding: EdgeInsets.symmetric(
-          horizontal: navPaddingH, vertical: navPaddingV),
+      navigatorPadding: (_navigatorPaddingH != null || _navigatorPaddingV != null)
+          ? EdgeInsets.symmetric(
+              horizontal: _navigatorPaddingH ?? baseTheme.navigatorPadding!.horizontal / 2,
+              vertical: _navigatorPaddingV ?? baseTheme.navigatorPadding!.vertical / 2,
+            )
+          : null,
       dayViewTheme: MCalDayViewThemeData(
         eventTileBackgroundColor: _eventTileBackgroundColor,
+        eventTileBorderWidth: _eventTileBorderWidth,
+        eventTileBorderColor: _eventTileBorderColor,
         hoverEventBackgroundColor: _hoverEventBackgroundColor,
         allDayEventBackgroundColor: _allDayEventBackgroundColor,
         allDayEventBorderColor: _allDayEventBorderColor,
         allDayEventBorderWidth: _allDayEventBorderWidth,
+        allDayEventPadding: _allDayEventPadding,
         eventTileCornerRadius: _eventTileCornerRadius,
         eventTileHorizontalSpacing: _eventTileHorizontalSpacing,
-        timeLegendWidth: _timeLegendWidth ?? 60.0,
+        timeLegendWidth: _timeLegendWidth,
         timeLegendLabelHeight: _timeLegendLabelHeight,
-        showTimeLegendTicks: _showTimeLegendTicks ?? false,
-        timeLegendTickColor: _timeLegendTickColor ?? colorScheme.outline.withValues(alpha: 0.3),
-        timeLegendTickWidth: _timeLegendTickWidth ?? 1.0,
-        timeLegendTickLength: _timeLegendTickLength ?? 8.0,
-        hourGridlineColor: _hourGridlineColor ?? colorScheme.outline.withValues(alpha: 0.2),
-        hourGridlineWidth: _hourGridlineWidth ?? 1.0,
-        majorGridlineColor: _majorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.15),
-        majorGridlineWidth: _majorGridlineWidth ?? 1.0,
-        minorGridlineColor: _minorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.08),
-        minorGridlineWidth: _minorGridlineWidth ?? 0.5,
-        currentTimeIndicatorColor: _currentTimeIndicatorColor ?? colorScheme.primary,
-        currentTimeIndicatorWidth: _currentTimeIndicatorWidth ?? 2.0,
-        currentTimeIndicatorDotRadius: _currentTimeIndicatorDotRadius ?? 4.0,
-        allDayEventPadding: _allDayEventPadding ?? const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
-        timedEventMinHeight: _timedEventMinHeight ?? 20.0,
-        timedEventPadding: _timedEventPadding ?? const EdgeInsets.all(4.0),
+        showTimeLegendTicks: _showTimeLegendTicks,
+        timeLegendTickColor: _timeLegendTickColor,
+        timeLegendTickWidth: _timeLegendTickWidth,
+        timeLegendTickLength: _timeLegendTickLength,
+        hourGridlineColor: _hourGridlineColor,
+        hourGridlineWidth: _hourGridlineWidth,
+        majorGridlineColor: _majorGridlineColor,
+        majorGridlineWidth: _majorGridlineWidth,
+        minorGridlineColor: _minorGridlineColor,
+        minorGridlineWidth: _minorGridlineWidth,
+        currentTimeIndicatorColor: _currentTimeIndicatorColor,
+        currentTimeIndicatorWidth: _currentTimeIndicatorWidth,
+        currentTimeIndicatorDotRadius: _currentTimeIndicatorDotRadius,
+        timedEventMinHeight: _timedEventMinHeight,
+        timedEventPadding: _timedEventPadding,
         timedEventMargin: (_timedEventMarginH != null || _timedEventMarginV != null)
             ? EdgeInsets.symmetric(
-                horizontal: _timedEventMarginH ?? 2.0,
-                vertical: _timedEventMarginV ?? 1.0,
+                horizontal: _timedEventMarginH ?? baseTheme.dayViewTheme!.timedEventMargin!.left,
+                vertical: _timedEventMarginV ?? baseTheme.dayViewTheme!.timedEventMargin!.top,
               )
             : null,
         dayHeaderPadding: _dayHeaderPaddingAll != null
@@ -271,8 +280,8 @@ class _DayThemeTabState extends State<DayThemeTab> {
         blockedTimeRegionColor: _blockedTimeRegionColor,
         timeRegionBorderColor: _timeRegionBorderColor,
         timeRegionTextColor: _timeRegionTextColor,
-        resizeHandleSize: _resizeHandleSize ?? 8.0,
-        minResizeDurationMinutes: _minResizeDurationMinutes ?? 15,
+        resizeHandleSize: _resizeHandleSize,
+        minResizeDurationMinutes: _minResizeDurationMinutes,
         keyboardFocusBorderRadius: _keyboardFocusBorderRadius,
         timedEventTitleTimeGap: _timedEventTitleTimeGap,
         allDayOverflowIndicatorBorderWidth: _allDayOverflowIndicatorBorderWidth,
@@ -285,7 +294,8 @@ class _DayThemeTabState extends State<DayThemeTab> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final defaults = MCalThemeData.fromTheme(theme);
+    final dayDefaults = defaults.dayViewTheme!;
 
     // Build control panel
     final controlPanel = Column(
@@ -311,6 +321,10 @@ class _DayThemeTabState extends State<DayThemeTab> {
                 return l10n.presetHighContrast;
               case ThemePreset.minimal:
                 return l10n.presetMinimal;
+              case ThemePreset.rounded:
+                return l10n.presetRounded;
+              case ThemePreset.bordered:
+                return l10n.presetBordered;
             }
           },
           onChanged: (preset) => _applyPreset(preset, theme),
@@ -322,37 +336,39 @@ class _DayThemeTabState extends State<DayThemeTab> {
         ControlPanelSection(
           title: l10n.sectionGlobal,
           children: [
-            ControlWidgets.toggle(
-              label: l10n.settingEnableEventColorOverrides,
-              value: _enableEventColorOverrides ?? false,
-              onChanged: (value) =>
-                  setState(() => _enableEventColorOverrides = value),
-            ),
             ControlWidgets.colorPicker(
               label: l10n.settingCellBackgroundColor,
-              value: _cellBackgroundColor ?? colorScheme.surface,
+              value: _cellBackgroundColor ?? defaults.cellBackgroundColor!,
               onChanged: (value) =>
                   setState(() => _cellBackgroundColor = value),
               cancelLabel: l10n.cancel,
             ),
             ControlWidgets.colorPicker(
               label: l10n.settingCellBorderColor,
-              value: _cellBorderColor ??
-                  colorScheme.outlineVariant,
+              value: _cellBorderColor ?? defaults.cellBorderColor!,
               onChanged: (value) =>
                   setState(() => _cellBorderColor = value),
               cancelLabel: l10n.cancel,
             ),
+            ControlWidgets.slider(
+              label: l10n.settingCellBorderWidth,
+              value: _cellBorderWidth ?? defaults.cellBorderWidth!,
+              min: 0,
+              max: 4,
+              divisions: 16,
+              onChanged: (value) =>
+                  setState(() => _cellBorderWidth = value),
+            ),
             ControlWidgets.colorPicker(
               label: l10n.settingNavigatorBackgroundColor,
-              value: _navigatorBackgroundColor ?? colorScheme.surface,
+              value: _navigatorBackgroundColor ?? defaults.navigatorBackgroundColor!,
               onChanged: (value) =>
                   setState(() => _navigatorBackgroundColor = value),
               cancelLabel: l10n.cancel,
             ),
             ControlWidgets.slider(
               label: '${l10n.settingNavigatorPadding} H',
-              value: _navigatorPaddingH ?? 8.0,
+              value: _navigatorPaddingH ?? defaults.navigatorPadding!.horizontal / 2,
               min: 0,
               max: 24,
               divisions: 24,
@@ -361,298 +377,64 @@ class _DayThemeTabState extends State<DayThemeTab> {
             ),
             ControlWidgets.slider(
               label: '${l10n.settingNavigatorPadding} V',
-              value: _navigatorPaddingV ?? 8.0,
+              value: _navigatorPaddingV ?? defaults.navigatorPadding!.vertical / 2,
               min: 0,
               max: 24,
               divisions: 24,
               onChanged: (value) =>
                   setState(() => _navigatorPaddingV = value),
             ),
-            ControlWidgets.slider(
-              label: l10n.settingCellBorderWidth,
-              value: _cellBorderWidth ?? 1.0,
-              min: 0,
-              max: 4,
-              divisions: 16,
-              onChanged: (value) =>
-                  setState(() => _cellBorderWidth = value),
-            ),
           ],
         ),
 
-        // ── Event Tiles (MCalEventTileThemeMixin) ────────────────────────────
+        // ── All Events (shared across all-day + timed) ─────────────────────
         ControlPanelSection(
-          title: l10n.sectionEventTiles,
+          title: l10n.sectionAllEvents,
           children: [
-            Opacity(
-              opacity: (_enableEventColorOverrides ?? false) ? 1.0 : 0.4,
-              child: IgnorePointer(
-                ignoring: !(_enableEventColorOverrides ?? false),
-                child: ControlWidgets.colorPicker(
-                  label: l10n.settingEventTileBackgroundColor,
-                  value: _eventTileBackgroundColor ??
-                      colorScheme.primaryContainer,
-                  onChanged: (value) =>
-                      setState(() => _eventTileBackgroundColor = value),
-                  cancelLabel: l10n.cancel,
-                ),
-              ),
-            ),
-            ControlWidgets.colorPicker(
-              label: l10n.settingHoverEventBackgroundColor,
-              value: _hoverEventBackgroundColor ??
-                  colorScheme.primaryContainer.withValues(alpha: 0.8),
+            ControlWidgets.toggle(
+              label: l10n.settingEnableEventColorOverrides,
+              value: _enableEventColorOverrides ?? defaults.enableEventColorOverrides,
               onChanged: (value) =>
-                  setState(() => _hoverEventBackgroundColor = value),
-              cancelLabel: l10n.cancel,
+                  setState(() => _enableEventColorOverrides = value),
             ),
             ControlWidgets.slider(
               label: l10n.settingEventTileCornerRadius,
-              value: _eventTileCornerRadius ?? 4.0,
+              value: _eventTileCornerRadius ?? dayDefaults.eventTileCornerRadius!,
               min: 0,
               max: 16,
               divisions: 16,
               onChanged: (value) => setState(() => _eventTileCornerRadius = value),
             ),
-            ControlWidgets.slider(
-              label: l10n.settingEventTileHorizontalSpacing,
-              value: _eventTileHorizontalSpacing ?? 2.0,
-              min: 0,
-              max: 8,
-              divisions: 16,
-              onChanged: (value) => setState(() => _eventTileHorizontalSpacing = value),
-            ),
-          ],
-        ),
-
-        // ── Time Grid (MCalTimeGridThemeMixin) ───────────────────────────────
-        ControlPanelSection(
-          title: l10n.sectionTimeGrid,
-          children: [
-            ControlWidgets.slider(
-              label: l10n.settingTimeLegendWidth,
-              value: _timeLegendWidth ?? 60.0,
-              min: 40,
-              max: 100,
-              divisions: 60,
-              onChanged: (value) => setState(() => _timeLegendWidth = value),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingTimeLegendLabelHeight,
-              value: _timeLegendLabelHeight ?? 20.0,
-              min: 12,
-              max: 32,
-              divisions: 20,
+            ControlWidgets.colorPicker(
+              label: l10n.settingHoverEventBackgroundColor,
+              value: _hoverEventBackgroundColor ?? dayDefaults.hoverEventBackgroundColor!,
               onChanged: (value) =>
-                  setState(() => _timeLegendLabelHeight = value),
-            ),
-            ControlWidgets.toggle(
-              label: l10n.settingShowTimeLegendTicks,
-              value: _showTimeLegendTicks ?? false,
-              onChanged: (value) => setState(() => _showTimeLegendTicks = value),
-            ),
-            ControlWidgets.colorPicker(
-              label: l10n.settingTimeLegendTickColor,
-              value: _timeLegendTickColor ?? colorScheme.outline.withValues(alpha: 0.3),
-              onChanged: (value) => setState(() => _timeLegendTickColor = value),
+                  setState(() => _hoverEventBackgroundColor = value),
               cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingTimeLegendTickWidth,
-              value: _timeLegendTickWidth ?? 1.0,
-              min: 0.5,
-              max: 3,
-              divisions: 25,
-              onChanged: (value) => setState(() => _timeLegendTickWidth = value),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingTimeLegendTickLength,
-              value: _timeLegendTickLength ?? 8.0,
-              min: 4,
-              max: 16,
-              divisions: 12,
-              onChanged: (value) => setState(() => _timeLegendTickLength = value),
-            ),
-            ControlWidgets.colorPicker(
-              label: l10n.settingHourGridlineColor,
-              value: _hourGridlineColor ?? colorScheme.outline.withValues(alpha: 0.2),
-              onChanged: (value) => setState(() => _hourGridlineColor = value),
-              cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingHourGridlineWidth,
-              value: _hourGridlineWidth ?? 1.0,
-              min: 0,
-              max: 3,
-              divisions: 30,
-              onChanged: (value) => setState(() => _hourGridlineWidth = value),
-            ),
-            ControlWidgets.colorPicker(
-              label: l10n.settingMajorGridlineColor,
-              value: _majorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.15),
-              onChanged: (value) => setState(() => _majorGridlineColor = value),
-              cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingMajorGridlineWidth,
-              value: _majorGridlineWidth ?? 1.0,
-              min: 0,
-              max: 3,
-              divisions: 30,
-              onChanged: (value) => setState(() => _majorGridlineWidth = value),
-            ),
-            ControlWidgets.colorPicker(
-              label: l10n.settingMinorGridlineColor,
-              value: _minorGridlineColor ?? colorScheme.outline.withValues(alpha: 0.08),
-              onChanged: (value) => setState(() => _minorGridlineColor = value),
-              cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingMinorGridlineWidth,
-              value: _minorGridlineWidth ?? 0.5,
-              min: 0,
-              max: 2,
-              divisions: 20,
-              onChanged: (value) => setState(() => _minorGridlineWidth = value),
-            ),
-            ControlWidgets.colorPicker(
-              label: l10n.settingCurrentTimeIndicatorColor,
-              value: _currentTimeIndicatorColor ?? colorScheme.primary,
-              onChanged: (value) => setState(() => _currentTimeIndicatorColor = value),
-              cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingCurrentTimeIndicatorWidth,
-              value: _currentTimeIndicatorWidth ?? 2.0,
-              min: 1,
-              max: 5,
-              divisions: 8,
-              onChanged: (value) => setState(() => _currentTimeIndicatorWidth = value),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingCurrentTimeIndicatorDotRadius,
-              value: _currentTimeIndicatorDotRadius ?? 4.0,
-              min: 2,
-              max: 8,
-              divisions: 12,
-              onChanged: (value) => setState(() => _currentTimeIndicatorDotRadius = value),
-            ),
-            ControlWidgets.colorPicker(
-              label: l10n.settingSpecialTimeRegionColor,
-              value: _specialTimeRegionColor ?? colorScheme.tertiaryContainer.withValues(alpha: 0.3),
-              onChanged: (value) => setState(() => _specialTimeRegionColor = value),
-              cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.colorPicker(
-              label: l10n.settingBlockedTimeRegionColor,
-              value: _blockedTimeRegionColor ?? colorScheme.errorContainer.withValues(alpha: 0.3),
-              onChanged: (value) => setState(() => _blockedTimeRegionColor = value),
-              cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.colorPicker(
-              label: l10n.settingTimeRegionBorderColor,
-              value: _timeRegionBorderColor ?? colorScheme.outline,
-              onChanged: (value) => setState(() => _timeRegionBorderColor = value),
-              cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.colorPicker(
-              label: l10n.settingTimeRegionTextColor,
-              value: _timeRegionTextColor ?? colorScheme.onSurface.withValues(alpha: 0.6),
-              onChanged: (value) => setState(() => _timeRegionTextColor = value),
-              cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingTimedEventMinHeight,
-              value: _timedEventMinHeight ?? 20.0,
-              min: 12,
-              max: 48,
-              divisions: 36,
-              onChanged: (value) => setState(() => _timedEventMinHeight = value),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingTimedEventPadding,
-              value: (_timedEventPadding?.left ?? 4.0),
-              min: 0,
-              max: 12,
-              divisions: 12,
-              onChanged: (value) => setState(() => _timedEventPadding = EdgeInsets.all(value)),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingTimedEventMarginH,
-              value: _timedEventMarginH ?? 2.0,
-              min: 0,
-              max: 8,
-              divisions: 16,
-              onChanged: (value) =>
-                  setState(() => _timedEventMarginH = value),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingTimedEventMarginV,
-              value: _timedEventMarginV ?? 1.0,
-              min: 0,
-              max: 6,
-              divisions: 12,
-              onChanged: (value) =>
-                  setState(() => _timedEventMarginV = value),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingTimedEventTitleTimeGap,
-              value: _timedEventTitleTimeGap ?? 2.0,
-              min: 0,
-              max: 8,
-              divisions: 16,
-              onChanged: (value) =>
-                  setState(() => _timedEventTitleTimeGap = value),
             ),
             ControlWidgets.slider(
               label: l10n.settingKeyboardFocusBorderRadius,
-              value: _keyboardFocusBorderRadius ?? 4.0,
+              value: _keyboardFocusBorderRadius ?? dayDefaults.keyboardFocusBorderRadius!,
               min: 0,
               max: 12,
               divisions: 24,
               onChanged: (value) =>
                   setState(() => _keyboardFocusBorderRadius = value),
             ),
-            ControlWidgets.slider(
-              label: l10n.settingResizeHandleHeight,
-              value: _resizeHandleVisualHeight ?? 2.0,
-              min: 1,
-              max: 8,
-              divisions: 14,
-              onChanged: (value) =>
-                  setState(() => _resizeHandleVisualHeight = value),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingResizeHandleSize,
-              value: _resizeHandleSize ?? 8.0,
-              min: 4,
-              max: 20,
-              divisions: 16,
-              onChanged: (value) => setState(() => _resizeHandleSize = value),
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingMinResizeDurationMinutes,
-              value: (_minResizeDurationMinutes ?? 15).toDouble(),
-              min: 5,
-              max: 60,
-              divisions: 11,
-              onChanged: (value) => setState(() => _minResizeDurationMinutes = value.round()),
-            ),
           ],
         ),
 
-        // ── All-Day Events (MCalAllDayThemeMixin) ────────────────────────────
+        // ── All-Day Events ───────────────────────────────────────────────────
         ControlPanelSection(
           title: l10n.sectionAllDayEvents,
           children: [
             Opacity(
-              opacity: (_enableEventColorOverrides ?? false) ? 1.0 : 0.4,
+              opacity: (_enableEventColorOverrides ?? defaults.enableEventColorOverrides) ? 1.0 : 0.4,
               child: IgnorePointer(
-                ignoring: !(_enableEventColorOverrides ?? false),
+                ignoring: !(_enableEventColorOverrides ?? defaults.enableEventColorOverrides),
                 child: ControlWidgets.colorPicker(
                   label: l10n.settingAllDayEventBackgroundColor,
-                  value: _allDayEventBackgroundColor ??
-                      colorScheme.secondaryContainer,
+                  value: _allDayEventBackgroundColor ?? dayDefaults.allDayEventBackgroundColor!,
                   onChanged: (value) =>
                       setState(() => _allDayEventBackgroundColor = value),
                   cancelLabel: l10n.cancel,
@@ -661,13 +443,13 @@ class _DayThemeTabState extends State<DayThemeTab> {
             ),
             ControlWidgets.colorPicker(
               label: l10n.settingAllDayEventBorderColor,
-              value: _allDayEventBorderColor ?? colorScheme.outline,
+              value: _allDayEventBorderColor ?? dayDefaults.allDayEventBorderColor!,
               onChanged: (value) => setState(() => _allDayEventBorderColor = value),
               cancelLabel: l10n.cancel,
             ),
             ControlWidgets.slider(
               label: l10n.settingAllDayEventBorderWidth,
-              value: _allDayEventBorderWidth ?? 1.0,
+              value: _allDayEventBorderWidth ?? dayDefaults.allDayEventBorderWidth!,
               min: 0,
               max: 4,
               divisions: 16,
@@ -675,7 +457,7 @@ class _DayThemeTabState extends State<DayThemeTab> {
             ),
             ControlWidgets.slider(
               label: l10n.settingAllDayEventPadding,
-              value: (_allDayEventPadding?.left ?? 6.0),
+              value: (_allDayEventPadding?.left ?? dayDefaults.allDayEventPadding!.left),
               min: 0,
               max: 16,
               divisions: 16,
@@ -685,7 +467,7 @@ class _DayThemeTabState extends State<DayThemeTab> {
             ),
             ControlWidgets.slider(
               label: l10n.settingAllDayOverflowIndicatorBorderWidth,
-              value: _allDayOverflowIndicatorBorderWidth ?? 1.0,
+              value: _allDayOverflowIndicatorBorderWidth ?? dayDefaults.allDayOverflowIndicatorBorderWidth!,
               min: 0,
               max: 4,
               divisions: 16,
@@ -694,12 +476,124 @@ class _DayThemeTabState extends State<DayThemeTab> {
             ),
             ControlWidgets.slider(
               label: l10n.settingAllDaySectionLabelBottomPadding,
-              value: _allDaySectionLabelBottomPadding ?? 4.0,
+              value: _allDaySectionLabelBottomPadding ?? dayDefaults.allDaySectionLabelBottomPadding!,
               min: 0,
               max: 16,
               divisions: 16,
               onChanged: (value) =>
                   setState(() => _allDaySectionLabelBottomPadding = value),
+            ),
+          ],
+        ),
+
+        // ── Timed Events ──────────────────────────────────────────────────────
+        ControlPanelSection(
+          title: l10n.sectionTimedEvents,
+          children: [
+            Opacity(
+              opacity: (_enableEventColorOverrides ?? defaults.enableEventColorOverrides) ? 1.0 : 0.4,
+              child: IgnorePointer(
+                ignoring: !(_enableEventColorOverrides ?? defaults.enableEventColorOverrides),
+                child: ControlWidgets.colorPicker(
+                  label: l10n.settingEventTileBackgroundColor,
+                  value: _eventTileBackgroundColor ?? dayDefaults.eventTileBackgroundColor!,
+                  onChanged: (value) =>
+                      setState(() => _eventTileBackgroundColor = value),
+                  cancelLabel: l10n.cancel,
+                ),
+              ),
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingEventTileBorderColor,
+              value: _eventTileBorderColor ?? dayDefaults.eventTileBorderColor ?? theme.colorScheme.outline,
+              onChanged: (value) =>
+                  setState(() => _eventTileBorderColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingEventTileBorderWidth,
+              value: _eventTileBorderWidth ?? dayDefaults.eventTileBorderWidth!,
+              min: 0,
+              max: 4,
+              divisions: 16,
+              onChanged: (value) =>
+                  setState(() => _eventTileBorderWidth = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingEventTileHorizontalSpacing,
+              value: _eventTileHorizontalSpacing ?? dayDefaults.eventTileHorizontalSpacing!,
+              min: 0,
+              max: 8,
+              divisions: 16,
+              onChanged: (value) => setState(() => _eventTileHorizontalSpacing = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingTimedEventMinHeight,
+              value: _timedEventMinHeight ?? dayDefaults.timedEventMinHeight!,
+              min: 12,
+              max: 48,
+              divisions: 36,
+              onChanged: (value) => setState(() => _timedEventMinHeight = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingTimedEventPadding,
+              value: (_timedEventPadding?.left ?? dayDefaults.timedEventPadding!.left),
+              min: 0,
+              max: 12,
+              divisions: 12,
+              onChanged: (value) => setState(() => _timedEventPadding = EdgeInsets.all(value)),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingTimedEventMarginH,
+              value: _timedEventMarginH ?? dayDefaults.timedEventMargin!.left,
+              min: 0,
+              max: 8,
+              divisions: 16,
+              onChanged: (value) =>
+                  setState(() => _timedEventMarginH = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingTimedEventMarginV,
+              value: _timedEventMarginV ?? dayDefaults.timedEventMargin!.top,
+              min: 0,
+              max: 6,
+              divisions: 12,
+              onChanged: (value) =>
+                  setState(() => _timedEventMarginV = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingTimedEventTitleTimeGap,
+              value: _timedEventTitleTimeGap ?? dayDefaults.timedEventTitleTimeGap!,
+              min: 0,
+              max: 8,
+              divisions: 16,
+              onChanged: (value) =>
+                  setState(() => _timedEventTitleTimeGap = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingResizeHandleHeight,
+              value: _resizeHandleVisualHeight ?? dayDefaults.resizeHandleVisualHeight!,
+              min: 1,
+              max: 8,
+              divisions: 14,
+              onChanged: (value) =>
+                  setState(() => _resizeHandleVisualHeight = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingResizeHandleSize,
+              value: _resizeHandleSize ?? dayDefaults.resizeHandleSize!,
+              min: 4,
+              max: 20,
+              divisions: 16,
+              onChanged: (value) => setState(() => _resizeHandleSize = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingMinResizeDurationMinutes,
+              value: (_minResizeDurationMinutes ?? dayDefaults.minResizeDurationMinutes!).toDouble(),
+              min: 5,
+              max: 60,
+              divisions: 11,
+              onChanged: (value) => setState(() => _minResizeDurationMinutes = value.round()),
             ),
           ],
         ),
@@ -710,7 +604,7 @@ class _DayThemeTabState extends State<DayThemeTab> {
           children: [
             ControlWidgets.slider(
               label: l10n.settingDayHeaderPadding,
-              value: _dayHeaderPaddingAll ?? 8.0,
+              value: _dayHeaderPaddingAll ?? dayDefaults.dayHeaderPadding!.left,
               min: 0,
               max: 20,
               divisions: 20,
@@ -719,12 +613,151 @@ class _DayThemeTabState extends State<DayThemeTab> {
             ),
             ControlWidgets.slider(
               label: l10n.settingDayHeaderSpacing,
-              value: _dayHeaderSpacing ?? 8.0,
+              value: _dayHeaderSpacing ?? dayDefaults.dayHeaderSpacing!,
               min: 0,
               max: 20,
               divisions: 20,
               onChanged: (value) =>
                   setState(() => _dayHeaderSpacing = value),
+            ),
+          ],
+        ),
+
+        // ── Time Grid ────────────────────────────────────────────────────────
+        ControlPanelSection(
+          title: l10n.sectionTimeGrid,
+          children: [
+            ControlWidgets.slider(
+              label: l10n.settingTimeLegendWidth,
+              value: _timeLegendWidth ?? dayDefaults.timeLegendWidth!,
+              min: 40,
+              max: 100,
+              divisions: 60,
+              onChanged: (value) => setState(() => _timeLegendWidth = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingTimeLegendLabelHeight,
+              value: _timeLegendLabelHeight ?? dayDefaults.timeLegendLabelHeight!,
+              min: 12,
+              max: 32,
+              divisions: 20,
+              onChanged: (value) =>
+                  setState(() => _timeLegendLabelHeight = value),
+            ),
+            ControlWidgets.toggle(
+              label: l10n.settingShowTimeLegendTicks,
+              value: _showTimeLegendTicks ?? dayDefaults.showTimeLegendTicks!,
+              onChanged: (value) => setState(() => _showTimeLegendTicks = value),
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingTimeLegendTickColor,
+              value: _timeLegendTickColor ?? dayDefaults.timeLegendTickColor!,
+              onChanged: (value) => setState(() => _timeLegendTickColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingTimeLegendTickWidth,
+              value: _timeLegendTickWidth ?? dayDefaults.timeLegendTickWidth!,
+              min: 0.5,
+              max: 3,
+              divisions: 25,
+              onChanged: (value) => setState(() => _timeLegendTickWidth = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingTimeLegendTickLength,
+              value: _timeLegendTickLength ?? dayDefaults.timeLegendTickLength!,
+              min: 4,
+              max: 16,
+              divisions: 12,
+              onChanged: (value) => setState(() => _timeLegendTickLength = value),
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingHourGridlineColor,
+              value: _hourGridlineColor ?? dayDefaults.hourGridlineColor!,
+              onChanged: (value) => setState(() => _hourGridlineColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingHourGridlineWidth,
+              value: _hourGridlineWidth ?? dayDefaults.hourGridlineWidth!,
+              min: 0,
+              max: 3,
+              divisions: 30,
+              onChanged: (value) => setState(() => _hourGridlineWidth = value),
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingMajorGridlineColor,
+              value: _majorGridlineColor ?? dayDefaults.majorGridlineColor!,
+              onChanged: (value) => setState(() => _majorGridlineColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingMajorGridlineWidth,
+              value: _majorGridlineWidth ?? dayDefaults.majorGridlineWidth!,
+              min: 0,
+              max: 3,
+              divisions: 30,
+              onChanged: (value) => setState(() => _majorGridlineWidth = value),
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingMinorGridlineColor,
+              value: _minorGridlineColor ?? dayDefaults.minorGridlineColor!,
+              onChanged: (value) => setState(() => _minorGridlineColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingMinorGridlineWidth,
+              value: _minorGridlineWidth ?? dayDefaults.minorGridlineWidth!,
+              min: 0,
+              max: 2,
+              divisions: 20,
+              onChanged: (value) => setState(() => _minorGridlineWidth = value),
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingCurrentTimeIndicatorColor,
+              value: _currentTimeIndicatorColor ?? dayDefaults.currentTimeIndicatorColor!,
+              onChanged: (value) => setState(() => _currentTimeIndicatorColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingCurrentTimeIndicatorWidth,
+              value: _currentTimeIndicatorWidth ?? dayDefaults.currentTimeIndicatorWidth!,
+              min: 1,
+              max: 5,
+              divisions: 8,
+              onChanged: (value) => setState(() => _currentTimeIndicatorWidth = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingCurrentTimeIndicatorDotRadius,
+              value: _currentTimeIndicatorDotRadius ?? dayDefaults.currentTimeIndicatorDotRadius!,
+              min: 2,
+              max: 8,
+              divisions: 12,
+              onChanged: (value) => setState(() => _currentTimeIndicatorDotRadius = value),
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingSpecialTimeRegionColor,
+              value: _specialTimeRegionColor ?? dayDefaults.specialTimeRegionColor!,
+              onChanged: (value) => setState(() => _specialTimeRegionColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingBlockedTimeRegionColor,
+              value: _blockedTimeRegionColor ?? dayDefaults.blockedTimeRegionColor!,
+              onChanged: (value) => setState(() => _blockedTimeRegionColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingTimeRegionBorderColor,
+              value: _timeRegionBorderColor ?? dayDefaults.timeRegionBorderColor!,
+              onChanged: (value) => setState(() => _timeRegionBorderColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingTimeRegionTextColor,
+              value: _timeRegionTextColor ?? dayDefaults.timeRegionTextColor!,
+              onChanged: (value) => setState(() => _timeRegionTextColor = value),
+              cancelLabel: l10n.cancel,
             ),
           ],
         ),
@@ -740,6 +773,11 @@ class _DayThemeTabState extends State<DayThemeTab> {
         endHour: 18,
         showCurrentTimeIndicator: true,
         showNavigator: true,
+        showWeekNumbers: true,
+        enableDragToMove: true,
+        enableDragToResize: true,
+        onEventDropped: (_, details) => true,
+        onEventResized: (_, details) => true,
       ),
     );
 

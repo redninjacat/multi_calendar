@@ -453,18 +453,18 @@ void main() {
       expect(theme1.dateLabelPosition, theme2.dateLabelPosition);
     });
 
-    test('copyWith updates multi-day and hover properties', () {
+    test('copyWith updates all-day and hover properties', () {
       const original = MCalMonthViewThemeData(
-        multiDayEventBackgroundColor: Colors.blue,
+        allDayEventBackgroundColor: Colors.blue,
         hoverCellBackgroundColor: Colors.grey,
       );
 
       final updated = original.copyWith(
-        multiDayEventBackgroundColor: Colors.red,
+        allDayEventBackgroundColor: Colors.red,
         hoverCellBackgroundColor: Colors.white,
       );
 
-      expect(updated.multiDayEventBackgroundColor, Colors.red);
+      expect(updated.allDayEventBackgroundColor, Colors.red);
       expect(updated.hoverCellBackgroundColor, Colors.white);
     });
 

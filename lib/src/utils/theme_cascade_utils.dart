@@ -65,8 +65,12 @@ Color resolveContrastColor({
   required Color lightContrastColor,
   required Color darkContrastColor,
 }) {
-  final luminance = 0.299 * backgroundColor.r +
-      0.587 * backgroundColor.g +
-      0.114 * backgroundColor.b;
+  // Alpha-composite against white to get the effective visual color,
+  // so semi-transparent colors on light surfaces resolve correctly.
+  final a = backgroundColor.a;
+  final effectiveR = backgroundColor.r * a + (1.0 - a);
+  final effectiveG = backgroundColor.g * a + (1.0 - a);
+  final effectiveB = backgroundColor.b * a + (1.0 - a);
+  final luminance = 0.299 * effectiveR + 0.587 * effectiveG + 0.114 * effectiveB;
   return luminance > 0.5 ? darkContrastColor : lightContrastColor;
 }

@@ -332,78 +332,6 @@ abstract class AppLocalizations {
   /// **'Blackout Days'**
   String get sectionBlackoutDays;
 
-  /// No description provided for @sectionCells.
-  ///
-  /// In en, this message translates to:
-  /// **'Cells'**
-  String get sectionCells;
-
-  /// No description provided for @sectionEventTiles.
-  ///
-  /// In en, this message translates to:
-  /// **'Event Tiles'**
-  String get sectionEventTiles;
-
-  /// No description provided for @sectionHeaders.
-  ///
-  /// In en, this message translates to:
-  /// **'Headers'**
-  String get sectionHeaders;
-
-  /// No description provided for @sectionDateLabels.
-  ///
-  /// In en, this message translates to:
-  /// **'Date Labels'**
-  String get sectionDateLabels;
-
-  /// No description provided for @sectionOverflow.
-  ///
-  /// In en, this message translates to:
-  /// **'Overflow'**
-  String get sectionOverflow;
-
-  /// No description provided for @sectionNavigator.
-  ///
-  /// In en, this message translates to:
-  /// **'Navigator'**
-  String get sectionNavigator;
-
-  /// No description provided for @sectionHover.
-  ///
-  /// In en, this message translates to:
-  /// **'Hover'**
-  String get sectionHover;
-
-  /// No description provided for @sectionWeekNumbers.
-  ///
-  /// In en, this message translates to:
-  /// **'Week Numbers'**
-  String get sectionWeekNumbers;
-
-  /// No description provided for @sectionTimeLegend.
-  ///
-  /// In en, this message translates to:
-  /// **'Time Legend'**
-  String get sectionTimeLegend;
-
-  /// No description provided for @sectionGridlines.
-  ///
-  /// In en, this message translates to:
-  /// **'Gridlines'**
-  String get sectionGridlines;
-
-  /// No description provided for @sectionCurrentTime.
-  ///
-  /// In en, this message translates to:
-  /// **'Current Time Indicator'**
-  String get sectionCurrentTime;
-
-  /// No description provided for @sectionEvents.
-  ///
-  /// In en, this message translates to:
-  /// **'Events'**
-  String get sectionEvents;
-
   /// No description provided for @sectionAllDayEvents.
   ///
   /// In en, this message translates to:
@@ -422,17 +350,35 @@ abstract class AppLocalizations {
   /// **'Time Grid'**
   String get sectionTimeGrid;
 
+  /// No description provided for @sectionTimedEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Timed Events'**
+  String get sectionTimedEvents;
+
+  /// No description provided for @sectionAllEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'All Events'**
+  String get sectionAllEvents;
+
   /// No description provided for @sectionDayHeader.
   ///
   /// In en, this message translates to:
   /// **'Day Header'**
   String get sectionDayHeader;
 
-  /// No description provided for @sectionMonthView.
+  /// No description provided for @sectionMonthHeader.
   ///
   /// In en, this message translates to:
-  /// **'Month View'**
-  String get sectionMonthView;
+  /// **'Month Header'**
+  String get sectionMonthHeader;
+
+  /// No description provided for @sectionMonthGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Month Grid'**
+  String get sectionMonthGrid;
 
   /// No description provided for @settingShowNavigator.
   ///
@@ -463,12 +409,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show Week Numbers'**
   String get settingShowWeekNumbers;
-
-  /// No description provided for @settingShowWeekNumber.
-  ///
-  /// In en, this message translates to:
-  /// **'Show Week Number'**
-  String get settingShowWeekNumber;
 
   /// No description provided for @settingShowSubHourLabels.
   ///
@@ -1010,18 +950,6 @@ abstract class AppLocalizations {
   /// **'Event Tile Border Color'**
   String get settingEventTileBorderColor;
 
-  /// No description provided for @settingMultiDayEventBackgroundColor.
-  ///
-  /// In en, this message translates to:
-  /// **'Multi-Day Event Background Color'**
-  String get settingMultiDayEventBackgroundColor;
-
-  /// No description provided for @sectionMultiDayEvents.
-  ///
-  /// In en, this message translates to:
-  /// **'Multi-Day Events'**
-  String get sectionMultiDayEvents;
-
   /// No description provided for @settingSpecialTimeRegionColor.
   ///
   /// In en, this message translates to:
@@ -1261,6 +1189,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Minimal'**
   String get presetMinimal;
+
+  /// No description provided for @presetRounded.
+  ///
+  /// In en, this message translates to:
+  /// **'Rounded'**
+  String get presetRounded;
+
+  /// No description provided for @presetBordered.
+  ///
+  /// In en, this message translates to:
+  /// **'Bordered'**
+  String get presetBordered;
 
   /// No description provided for @dateLabelPositionTopLeft.
   ///

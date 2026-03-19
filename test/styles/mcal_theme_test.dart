@@ -574,7 +574,7 @@ void main() {
       expect(emptyTheme.dayViewTheme?.eventTileTextStyle, isNull);
       expect(emptyTheme.navigatorTextStyle, isNull);
       expect(emptyTheme.navigatorBackgroundColor, isNull);
-      // Properties now on dayViewTheme (via MCalAllDayThemeMixin)
+      // Properties now on dayViewTheme (via MCalAllDayTileThemeMixin)
       expect(emptyTheme.dayViewTheme?.allDayEventBackgroundColor, isNull);
       expect(emptyTheme.dayViewTheme?.allDayEventTextStyle, isNull);
       expect(emptyTheme.dayViewTheme?.allDayEventBorderColor, isNull);

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Mixin defining the abstract property contract for event tile appearance,
-/// hover, contrast, drop target tiles, resize handle, week number, and
-/// multi-day event theming.
+/// Mixin defining the abstract property contract for timed event tile
+/// appearance, hover, contrast, drop target tiles, resize handle, and week
+/// number theming.
 ///
 /// This mixin is shared by [MCalDayViewThemeData] and [MCalMonthViewThemeData],
 /// ensuring each view can independently theme its event tiles without
@@ -82,13 +82,4 @@ mixin MCalEventTileThemeMixin {
 
   /// Color for event tile resize handles.
   Color? get resizeHandleColor;
-
-  // ── Multi-day events ──────────────────────────────────────────────────────
-
-  /// Background color for multi-day event tiles.
-  ///
-  /// This is the cascade-eligible color for multi-day event tiles. In Month
-  /// View this colors the horizontal bar segments; in Day View it colors
-  /// multi-day events that appear in the all-day section or as timed tiles.
-  Color? get multiDayEventBackgroundColor;
 }

@@ -129,24 +129,29 @@ class MCalMonthMultiDayTile extends StatelessWidget {
     final theme = MCalTheme.of(context);
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
 
-    // Determine background color respecting enableEventColorOverrides cascade
-    final backgroundColor = theme.enableEventColorOverrides
-        ? theme.monthViewTheme?.multiDayEventBackgroundColor ??
-              theme.monthViewTheme?.eventTileBackgroundColor ??
-              event.color ??
-              defaults.monthViewTheme!.eventTileBackgroundColor!
-        : event.color ??
-              theme.monthViewTheme?.multiDayEventBackgroundColor ??
-              theme.monthViewTheme?.eventTileBackgroundColor ??
-              defaults.monthViewTheme!.eventTileBackgroundColor!;
+    final monthTheme = theme.monthViewTheme;
+    final monthDefaults = defaults.monthViewTheme!;
 
-    // Determine text style using master defaults as final fallback
-    final textStyle = theme.monthViewTheme?.eventTileTextStyle ??
-        defaults.monthViewTheme!.eventTileTextStyle!;
+    // Pick the tile-level theme colour based on whether the event is all-day.
+    final Color? themeBg = event.isAllDay
+        ? (monthTheme?.allDayEventBackgroundColor ?? monthTheme?.eventTileBackgroundColor)
+        : monthTheme?.eventTileBackgroundColor;
+    final Color fallbackBg = event.isAllDay
+        ? (monthDefaults.allDayEventBackgroundColor ?? monthDefaults.eventTileBackgroundColor!)
+        : monthDefaults.eventTileBackgroundColor!;
+
+    final backgroundColor = theme.enableEventColorOverrides
+        ? themeBg ?? event.color ?? fallbackBg
+        : event.color ?? themeBg ?? fallbackBg;
+
+    // Pick text style: all-day events use allDayEventTextStyle when available.
+    final textStyle = event.isAllDay
+        ? (monthTheme?.allDayEventTextStyle ?? monthTheme?.eventTileTextStyle ?? monthDefaults.eventTileTextStyle!)
+        : (monthTheme?.eventTileTextStyle ?? monthDefaults.eventTileTextStyle!);
 
     // Calculate border radius based on position
-    final tileRadius = theme.monthViewTheme?.multiDayTileBorderRadius ??
-        defaults.monthViewTheme!.multiDayTileBorderRadius!;
+    final tileRadius = monthTheme?.multiDayTileBorderRadius ??
+        monthDefaults.multiDayTileBorderRadius!;
     final borderRadius = _calculateBorderRadius(details, tileRadius);
 
     // Build content: show title only on first day in row for cleaner appearance
@@ -159,13 +164,43 @@ class MCalMonthMultiDayTile extends StatelessWidget {
         maxLines: 1,
       );
     } else {
-      // For non-first days in row, show empty space to maintain tile continuity
       content = const SizedBox.shrink();
     }
 
-    // Calculate inner padding based on position (for text spacing from tile edges)
-    final tilePadding = theme.monthViewTheme?.multiDayTilePadding ??
-        defaults.monthViewTheme!.multiDayTilePadding!;
+    // Determine border — all-day events prefer allDay* border properties.
+    final borderWidth = event.isAllDay
+        ? (monthTheme?.allDayEventBorderWidth ?? monthTheme?.eventTileBorderWidth ?? 0.0)
+        : (monthTheme?.eventTileBorderWidth ?? 0.0);
+    final Color? borderColorTheme = event.isAllDay
+        ? (monthTheme?.allDayEventBorderColor ?? monthTheme?.eventTileBorderColor)
+        : monthTheme?.eventTileBorderColor;
+    final hasBorder = borderWidth > 0 && borderColorTheme != null;
+
+    Border? tileBorder;
+    if (hasBorder) {
+      final borderColor = borderColorTheme;
+      final topBorder = BorderSide(color: borderColor, width: borderWidth);
+      final bottomBorder = BorderSide(color: borderColor, width: borderWidth);
+      final isFirstSegment = details.isFirstDayOfEvent && details.isFirstDayInRow;
+      final isLastSegment = details.isLastDayOfEvent && details.isLastDayInRow;
+      final leftBorder = isFirstSegment
+          ? BorderSide(color: borderColor, width: borderWidth)
+          : BorderSide.none;
+      final rightBorder = isLastSegment
+          ? BorderSide(color: borderColor, width: borderWidth)
+          : BorderSide.none;
+      tileBorder = Border(
+        top: topBorder,
+        bottom: bottomBorder,
+        left: leftBorder,
+        right: rightBorder,
+      );
+    }
+
+    // Calculate inner padding — all-day events prefer allDayEventPadding.
+    final tilePadding = event.isAllDay
+        ? (monthTheme?.allDayEventPadding ?? monthTheme?.multiDayTilePadding ?? monthDefaults.multiDayTilePadding!)
+        : (monthTheme?.multiDayTilePadding ?? monthDefaults.multiDayTilePadding!);
     final hPad = tilePadding.horizontal / 2;
     final vPad = tilePadding.vertical / 2;
     EdgeInsetsGeometry padding;
@@ -179,12 +214,11 @@ class MCalMonthMultiDayTile extends StatelessWidget {
       padding = EdgeInsets.symmetric(vertical: vPad);
     }
 
-    // No margin here - the layout delegate enforces margins
-    // This container fills the available space provided by the layout
     return Container(
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: borderRadius,
+        border: tileBorder,
       ),
       padding: padding,
       alignment: Alignment.centerLeft,

@@ -361,8 +361,6 @@ void main() {
       'eventTileBackgroundColor in dayViewTheme applies to timed events',
       (tester) async {
         const tileColor = Color(0xFF00ACC1); // distinct teal
-        // The tile renders with alpha 0.85 applied
-        final expectedColor = tileColor.withValues(alpha: 0.85);
 
         controller.addEvents([
           MCalCalendarEvent(
@@ -385,9 +383,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Tile container uses tileColor.withValues(alpha: 0.85) for the fill
         expect(
-          find.byWidgetPredicate((w) => _containerHasColor(w, expectedColor)),
+          find.byWidgetPredicate((w) => _containerHasColor(w, tileColor)),
           findsWidgets,
           reason:
               'Event tile should use dayViewTheme.eventTileBackgroundColor (at 0.85 alpha)',
