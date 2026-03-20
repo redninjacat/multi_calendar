@@ -148,6 +148,30 @@ class AppLocalizationsHe extends AppLocalizations {
   String get sectionMonthGrid => 'רשת חודש';
 
   @override
+  String get sectionFocused => 'מיקוד';
+
+  @override
+  String get sectionKeyboardEventBorder => 'גבול אירוע מקלדת';
+
+  @override
+  String get settingFocusedCellBackgroundColor => 'רקע תא במיקוד';
+
+  @override
+  String get settingFocusedCellBorderColor => 'צבע גבול תא במיקוד';
+
+  @override
+  String get settingFocusedCellBorderWidth => 'עובי גבול תא במיקוד';
+
+  @override
+  String get settingFocusedSlotBackgroundColor => 'רקע משבצת במיקוד';
+
+  @override
+  String get settingFocusedSlotBorderColor => 'צבע גבול משבצת במיקוד';
+
+  @override
+  String get settingFocusedSlotBorderWidth => 'עובי גבול משבצת במיקוד';
+
+  @override
   String get settingShowNavigator => 'הצג ניווט';
 
   @override
@@ -1032,6 +1056,10 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get accessibilityDayNavT => 'קפוץ לרשת הזמן (משחזר את החריץ האחרון)';
+
+  @override
+  String get accessibilityDayNavE =>
+      'כנס למצב אירוע (מיקוד באירוע הקרוב ביותר)';
 
   @override
   String get accessibilityDayEventUpDown =>

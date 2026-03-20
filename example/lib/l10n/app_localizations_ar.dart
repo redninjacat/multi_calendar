@@ -148,6 +148,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sectionMonthGrid => 'شبكة الشهر';
 
   @override
+  String get sectionFocused => 'التركيز';
+
+  @override
+  String get sectionKeyboardEventBorder => 'حد حدث لوحة المفاتيح';
+
+  @override
+  String get settingFocusedCellBackgroundColor => 'خلفية الخلية المُركّز عليها';
+
+  @override
+  String get settingFocusedCellBorderColor => 'لون حد الخلية المُركّز عليها';
+
+  @override
+  String get settingFocusedCellBorderWidth => 'عرض حد الخلية المُركّز عليها';
+
+  @override
+  String get settingFocusedSlotBackgroundColor => 'خلفية الفتحة المُركّز عليها';
+
+  @override
+  String get settingFocusedSlotBorderColor => 'لون حد الفتحة المُركّز عليها';
+
+  @override
+  String get settingFocusedSlotBorderWidth => 'عرض حد الفتحة المُركّز عليها';
+
+  @override
   String get settingShowNavigator => 'إظهار المتصفح';
 
   @override
@@ -1051,6 +1075,9 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get accessibilityDayNavT =>
       'الانتقال إلى شبكة الوقت (يستعيد آخر فترة)';
+
+  @override
+  String get accessibilityDayNavE => 'الدخول إلى وضع الحدث (تركيز أقرب حدث)';
 
   @override
   String get accessibilityDayEventUpDown =>

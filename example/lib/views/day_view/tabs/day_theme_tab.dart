@@ -49,6 +49,13 @@ class _DayThemeTabState extends State<DayThemeTab> {
   Color? _hoverEventBackgroundColor;
 
   // ============================================================
+  // Focused time slot (keyboard focus on grid)
+  // ============================================================
+  Color? _focusedSlotBackgroundColor;
+  Color? _focusedSlotBorderColor;
+  double? _focusedSlotBorderWidth;
+
+  // ============================================================
   // Keyboard (event tile focus rings)
   // ============================================================
   double? _keyboardSelectionBorderWidth;
@@ -226,6 +233,9 @@ class _DayThemeTabState extends State<DayThemeTab> {
       _keyboardHighlightBorderWidth = dayViewTheme?.keyboardHighlightBorderWidth;
       _keyboardHighlightBorderColor = dayViewTheme?.keyboardHighlightBorderColor;
       _keyboardHighlightBorderRadius = dayViewTheme?.keyboardHighlightBorderRadius;
+      _focusedSlotBackgroundColor = dayViewTheme?.focusedSlotBackgroundColor;
+      _focusedSlotBorderColor = dayViewTheme?.focusedSlotBorderColor;
+      _focusedSlotBorderWidth = dayViewTheme?.focusedSlotBorderWidth;
       _timedEventTitleTimeGap = dayViewTheme?.timedEventTitleTimeGap;
       _allDayOverflowIndicatorBorderWidth = dayViewTheme?.allDayOverflowIndicatorBorderWidth;
       _allDaySectionLabelBottomPadding = dayViewTheme?.allDaySectionLabelBottomPadding;
@@ -252,6 +262,9 @@ class _DayThemeTabState extends State<DayThemeTab> {
             )
           : null,
       dayViewTheme: MCalDayViewThemeData(
+        focusedSlotBackgroundColor: _focusedSlotBackgroundColor,
+        focusedSlotBorderColor: _focusedSlotBorderColor,
+        focusedSlotBorderWidth: _focusedSlotBorderWidth,
         eventTileBackgroundColor: _eventTileBackgroundColor,
         eventTileBorderWidth: _eventTileBorderWidth,
         eventTileBorderColor: _eventTileBorderColor,
@@ -772,9 +785,42 @@ class _DayThemeTabState extends State<DayThemeTab> {
           ],
         ),
 
-        // ── Keyboard (last section) ──────────────────────────────────────────
+        // ── Focused slot (second-to-last) ───────────────────────────────────
         ControlPanelSection(
-          title: l10n.sectionKeyboard,
+          title: l10n.sectionFocused,
+          children: [
+            ControlWidgets.colorPicker(
+              label: l10n.settingFocusedSlotBackgroundColor,
+              value: _focusedSlotBackgroundColor ??
+                  dayDefaults.focusedSlotBackgroundColor!,
+              onChanged: (value) =>
+                  setState(() => _focusedSlotBackgroundColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingFocusedSlotBorderColor,
+              value: _focusedSlotBorderColor ??
+                  dayDefaults.focusedSlotBorderColor!,
+              onChanged: (value) =>
+                  setState(() => _focusedSlotBorderColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingFocusedSlotBorderWidth,
+              value: _focusedSlotBorderWidth ??
+                  dayDefaults.focusedSlotBorderWidth!,
+              min: 0,
+              max: 6,
+              divisions: 24,
+              onChanged: (value) =>
+                  setState(() => _focusedSlotBorderWidth = value),
+            ),
+          ],
+        ),
+
+        // ── Keyboard event border (last section) ─────────────────────────────
+        ControlPanelSection(
+          title: l10n.sectionKeyboardEventBorder,
           children: [
             ControlWidgets.slider(
               label: l10n.settingKeyboardSelectionBorderWidth,
@@ -789,7 +835,8 @@ class _DayThemeTabState extends State<DayThemeTab> {
             ControlWidgets.colorPicker(
               label: l10n.settingKeyboardSelectionBorderColor,
               value: _keyboardSelectionBorderColor ??
-                  dayDefaults.keyboardSelectionBorderColor!,
+                  dayDefaults.keyboardSelectionBorderColor ??
+                  theme.colorScheme.outline,
               onChanged: (value) =>
                   setState(() => _keyboardSelectionBorderColor = value),
               cancelLabel: l10n.cancel,
@@ -817,7 +864,8 @@ class _DayThemeTabState extends State<DayThemeTab> {
             ControlWidgets.colorPicker(
               label: l10n.settingKeyboardHighlightBorderColor,
               value: _keyboardHighlightBorderColor ??
-                  dayDefaults.keyboardHighlightBorderColor!,
+                  dayDefaults.keyboardHighlightBorderColor ??
+                  theme.colorScheme.outline,
               onChanged: (value) =>
                   setState(() => _keyboardHighlightBorderColor = value),
               cancelLabel: l10n.cancel,

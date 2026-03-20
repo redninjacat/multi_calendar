@@ -6,35 +6,18 @@
 multi_calendar/
 ├── lib/
 │   ├── src/
-│   │   ├── models/              # Event data models
-│   │   │   ├── mcal_calendar_event.dart
-│   │   │   ├── rrule_data.dart
-│   │   │   └── event_exception.dart
-│   │   ├── views/                # Calendar view widgets
-│   │   │   ├── mcal_day_view.dart
-│   │   │   ├── mcal_multi_day_view.dart
-│   │   │   └── mcal_month_view.dart
-│   │   ├── controllers/          # Event controller
-│   │   │   └── mcal_event_controller.dart
-│   │   ├── widgets/              # Shared widgets
-│   │   │   ├── event_tile.dart
-│   │   │   ├── time_slot.dart
-│   │   │   ├── day_header.dart
-│   │   │   ├── navigator.dart    # Optional navigator widget
-│   │   │   └── current_time_indicator.dart
-│   │   ├── utils/                # Utilities
-│   │   │   ├── rrule_parser.dart
-│   │   │   ├── date_utils.dart
-│   │   │   ├── event_expander.dart
-│   │   │   └── accessibility.dart
-│   │   └── styles/               # Style definitions
-│   │       ├── mcal_theme.dart
-│   │       ├── mcal_day_theme_data.dart
-│   │       └── mcal_month_view_theme_data.dart
+│   │   ├── models/              # Event, recurrence, regions, key bindings
+│   │   ├── controllers/        # mcal_event_controller.dart (MCalEventController)
+│   │   ├── styles/             # Theme data and mixins (mcal_theme.dart, mcal_day_view_theme_data.dart, …)
+│   │   ├── utils/              # date_utils.dart, theme_cascade_utils.dart, mcal_date_format_utils.dart, …
+│   │   └── widgets/            # Calendar views and implementation
+│   │       ├── mcal_day_view.dart
+│   │       ├── mcal_month_view.dart
+│   │       ├── day_subwidgets/ # Day view layers (all_day_events_section, time_grid_events_layer, …)
+│   │       └── month_subwidgets/ # Month cells, week rows, navigator, …
 │   ├── l10n/                     # Package-level localization (gen-l10n ARB files)
 │   │   ├── app_en.arb            # English translations (template)
 │   │   ├── app_es.arb            # Spanish translations
-│   │   ├── app_es_MX.arb         # Mexican Spanish translations
 │   │   ├── app_fr.arb            # French translations
 │   │   ├── app_ar.arb            # Arabic translations (RTL)
 │   │   ├── app_he.arb            # Hebrew translations (RTL)
@@ -44,7 +27,7 @@ multi_calendar/
 │   └── multi_calendar.dart       # Main export file
 ├── test/
 │   ├── models/
-│   ├── views/
+│   ├── widgets/
 │   ├── controllers/
 │   ├── utils/
 │   └── integration/
@@ -64,8 +47,8 @@ multi_calendar/
 
 ### Files
 - **Widgets/Views**: `snake_case.dart` (e.g., `day_view.dart`, `event_tile.dart`)
-- **Models**: `snake_case.dart` (e.g., `mc_calendar_event.dart`, `rrule_data.dart`)
-- **Controllers**: `snake_case.dart` (e.g., `mc_event_controller.dart`)
+- **Models**: `snake_case.dart` (e.g., `mcal_calendar_event.dart`, `mcal_recurrence_rule.dart`)
+- **Controllers**: `snake_case.dart` (e.g., `mcal_event_controller.dart`)
 - **Utilities**: `snake_case.dart` (e.g., `date_utils.dart`, `rrule_parser.dart`)
 - **Tests**: `[filename]_test.dart` (e.g., `day_view_test.dart`)
 
@@ -84,7 +67,7 @@ multi_calendar/
 1. Dart SDK imports (e.g., `dart:async`, `dart:math`)
 2. Flutter SDK imports (e.g., `package:flutter/material.dart`)
 3. External package imports (e.g., `package:rrule/rrule.dart`)
-4. Internal package imports (e.g., `package:multi_calendar/src/models/mc_calendar_event.dart`)
+4. Internal package imports (e.g., `package:multi_calendar/src/models/mcal_calendar_event.dart`)
 
 ### Module/Package Organization
 - Use `package:multi_calendar/...` for internal imports
@@ -98,31 +81,33 @@ multi_calendar/
 ```dart
 // 1. Imports
 import 'package:flutter/material.dart';
-import 'package:multi_calendar/src/models/mc_calendar_event.dart';
+import 'package:multi_calendar/src/controllers/mcal_event_controller.dart';
+import 'package:multi_calendar/src/models/mcal_calendar_event.dart';
 
 // 2. Class definition with documentation
-/// McDayView displays events in a single day with configurable time range.
-class McDayView extends StatefulWidget {
+/// MCalDayView displays events in a single day with configurable time range.
+class MCalDayView extends StatefulWidget {
   // 3. Constructor with required parameters
-  const McDayView({
+  const MCalDayView({
+    super.key,
     required this.controller,
-    this.timeRange,
-    this.onEventTap,
+    this.startHour = 0,
+    this.endHour = 23,
     // ...
   });
 
   // 4. Public properties
-  final McEventController controller;
-  final TimeRange? timeRange;
-  final void Function(McCalendarEvent event, DateTime dateTime)? onEventTap;
+  final MCalEventController controller;
+  final int startHour;
+  final int endHour;
 
   // 5. State class
   @override
-  State<McDayView> createState() => _McDayViewState();
+  State<MCalDayView> createState() => _MCalDayViewState();
 }
 
 // 6. State implementation
-class _McDayViewState extends State<McDayView> {
+class _MCalDayViewState extends State<MCalDayView> {
   // Private fields
   // Lifecycle methods
   // Build method
@@ -134,7 +119,7 @@ class _McDayViewState extends State<McDayView> {
 ```dart
 // 1. Imports
 // 2. Class definition
-class McCalendarEvent {
+class MCalCalendarEvent {
   // 3. Public properties
   // 4. Constructor
   // 5. Factory constructors
@@ -147,7 +132,7 @@ class McCalendarEvent {
 ```dart
 // 1. Imports
 // 2. Class definition
-class McEventController extends ChangeNotifier {
+class MCalEventController extends ChangeNotifier {
   // 3. Private fields
   // 4. Public properties
   // 5. Constructor
@@ -184,7 +169,7 @@ class McEventController extends ChangeNotifier {
 - Common widgets in `widgets/` directory
 
 ### External Integration Points
-- **McEventController**: Interface for loading events from external systems
+- **MCalEventController**: Interface for loading events from external systems
 - **Builder Callbacks**: Allow external customization of event tiles, cells, navigators, date/time labels
 - **Event Models**: Simple data classes that external systems can populate
 - **Callbacks**: onTap, onLongPress, onEventDrop, onEventResize, onHover* for external handling
@@ -253,7 +238,7 @@ class McEventController extends ChangeNotifier {
 ## Testing Structure
 
 - **Unit Tests**: For models, utilities, controllers (in `test/`)
-- **Widget Tests**: For view widgets (in `test/views/`)
+- **Widget Tests**: For view widgets (in `test/widgets/`)
 - **Integration Tests**: For full calendar workflows (in `test/integration/`)
 - **Test Coverage**: Aim for 80%+ coverage on core functionality
 - **Test Data**: Shared test fixtures in `test/fixtures/`

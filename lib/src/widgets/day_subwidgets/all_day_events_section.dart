@@ -270,43 +270,17 @@ class AllDayEventsSection extends StatelessWidget {
       regions: regions,
     );
 
-    final defaultWidget = _buildDefaultTile(context, event);
+    final isKbSelected = keyboardSelectedEventId == event.id;
+    final isKbHighlighted = keyboardHighlightedEventId == event.id;
+    final defaultWidget = _buildDefaultTile(
+      context,
+      event,
+      keyboardSelected: isKbSelected,
+      keyboardHighlighted: isKbHighlighted,
+    );
     Widget tile = allDayEventTileBuilder != null
         ? allDayEventTileBuilder!(context, event, tileContext, defaultWidget)
         : defaultWidget;
-
-    final kbDefaults = MCalThemeData.fromTheme(Theme.of(context));
-    final dayTheme = theme.dayViewTheme;
-    final dayDefs = kbDefaults.dayViewTheme!;
-    final isKbSelected = keyboardSelectedEventId == event.id;
-    final isKbHighlighted = keyboardHighlightedEventId == event.id;
-    if (isKbSelected || isKbHighlighted) {
-      final Color kbBorderColor;
-      final double kbBorderWidth;
-      final double kbBorderRadius;
-      if (isKbSelected) {
-        kbBorderColor = dayTheme?.keyboardSelectionBorderColor ??
-            dayDefs.keyboardSelectionBorderColor!;
-        kbBorderWidth = dayTheme?.keyboardSelectionBorderWidth ??
-            dayDefs.keyboardSelectionBorderWidth!;
-        kbBorderRadius = dayTheme?.keyboardSelectionBorderRadius ??
-            dayDefs.keyboardSelectionBorderRadius!;
-      } else {
-        kbBorderColor = dayTheme?.keyboardHighlightBorderColor ??
-            dayDefs.keyboardHighlightBorderColor!;
-        kbBorderWidth = dayTheme?.keyboardHighlightBorderWidth ??
-            dayDefs.keyboardHighlightBorderWidth!;
-        kbBorderRadius = dayTheme?.keyboardHighlightBorderRadius ??
-            dayDefs.keyboardHighlightBorderRadius!;
-      }
-      tile = Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: kbBorderColor, width: kbBorderWidth),
-          borderRadius: BorderRadius.circular(kbBorderRadius),
-        ),
-        child: tile,
-      );
-    }
 
     tile = Semantics(
       label: '${event.title}, All day',
@@ -385,7 +359,12 @@ class AllDayEventsSection extends StatelessWidget {
     return SizedBox(width: tileWidth, height: tileHeight, child: tile);
   }
 
-  Widget _buildDefaultTile(BuildContext context, MCalCalendarEvent event) {
+  Widget _buildDefaultTile(
+    BuildContext context,
+    MCalCalendarEvent event, {
+    bool keyboardSelected = false,
+    bool keyboardHighlighted = false,
+  }) {
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final tileColor = resolveEventTileColor(
       themeColor: theme.dayViewTheme?.eventTileBackgroundColor,
@@ -394,10 +373,18 @@ class AllDayEventsSection extends StatelessWidget {
       enableEventColorOverrides: theme.enableEventColorOverrides,
       defaultColor: defaults.dayViewTheme!.eventTileBackgroundColor!,
     );
-    final cornerRadius =
+    final lightContrast =
+        theme.dayViewTheme?.eventTileLightContrastColor ??
+        defaults.dayViewTheme!.eventTileLightContrastColor!;
+    final darkContrast =
+        theme.dayViewTheme?.eventTileDarkContrastColor ??
+        defaults.dayViewTheme!.eventTileDarkContrastColor!;
+    var cornerRadius =
         theme.dayViewTheme?.eventTileCornerRadius ?? defaults.dayViewTheme!.eventTileCornerRadius!;
-    final borderWidth =
+    var borderWidth =
         theme.dayViewTheme?.allDayEventBorderWidth ?? defaults.dayViewTheme!.allDayEventBorderWidth!;
+    var borderLineColor = theme.dayViewTheme?.allDayEventBorderColor ??
+        defaults.dayViewTheme!.allDayEventBorderColor!;
     final textStyle =
         theme.dayViewTheme?.allDayEventTextStyle ?? defaults.dayViewTheme!.allDayEventTextStyle;
 
@@ -413,14 +400,45 @@ class AllDayEventsSection extends StatelessWidget {
     final handleGap = theme.dayViewTheme?.allDayOverflowHandleGap ??
         defaults.dayViewTheme!.allDayOverflowHandleGap!;
 
+    if (keyboardSelected || keyboardHighlighted) {
+      final dayTheme = theme.dayViewTheme;
+      final dayDefs = defaults.dayViewTheme!;
+      final Color? rawKbColor;
+      final double kbW;
+      final double kbR;
+      if (keyboardSelected) {
+        rawKbColor =
+            dayTheme?.keyboardSelectionBorderColor ?? dayDefs.keyboardSelectionBorderColor;
+        kbW = dayTheme?.keyboardSelectionBorderWidth ??
+            dayDefs.keyboardSelectionBorderWidth!;
+        kbR = dayTheme?.keyboardSelectionBorderRadius ??
+            dayDefs.keyboardSelectionBorderRadius!;
+      } else {
+        rawKbColor =
+            dayTheme?.keyboardHighlightBorderColor ?? dayDefs.keyboardHighlightBorderColor;
+        kbW = dayTheme?.keyboardHighlightBorderWidth ??
+            dayDefs.keyboardHighlightBorderWidth!;
+        kbR = dayTheme?.keyboardHighlightBorderRadius ??
+            dayDefs.keyboardHighlightBorderRadius!;
+      }
+      final kbColor = rawKbColor ??
+          resolveContrastColor(
+            backgroundColor: tileColor,
+            lightContrastColor: lightContrast,
+            darkContrastColor: darkContrast,
+          );
+      borderLineColor = kbColor;
+      borderWidth = kbW;
+      cornerRadius = kbR;
+    }
+
     return Container(
       padding: tilePadding,
       decoration: BoxDecoration(
         color: tileColor,
         borderRadius: BorderRadius.circular(cornerRadius),
         border: Border.all(
-          color: theme.dayViewTheme?.allDayEventBorderColor ??
-              defaults.dayViewTheme!.allDayEventBorderColor!,
+          color: borderLineColor,
           width: borderWidth,
         ),
       ),

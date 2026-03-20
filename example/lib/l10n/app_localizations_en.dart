@@ -149,6 +149,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionMonthGrid => 'Month Grid';
 
   @override
+  String get sectionFocused => 'Focused';
+
+  @override
+  String get sectionKeyboardEventBorder => 'Keyboard Event Border';
+
+  @override
+  String get settingFocusedCellBackgroundColor => 'Focused Cell Background';
+
+  @override
+  String get settingFocusedCellBorderColor => 'Focused Cell Border Color';
+
+  @override
+  String get settingFocusedCellBorderWidth => 'Focused Cell Border Width';
+
+  @override
+  String get settingFocusedSlotBackgroundColor => 'Focused Slot Background';
+
+  @override
+  String get settingFocusedSlotBorderColor => 'Focused Slot Border Color';
+
+  @override
+  String get settingFocusedSlotBorderWidth => 'Focused Slot Border Width';
+
+  @override
   String get settingShowNavigator => 'Show Navigator';
 
   @override
@@ -1047,6 +1071,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accessibilityDayNavT => 'Jump to time grid (restores last slot)';
+
+  @override
+  String get accessibilityDayNavE => 'Enter Event Mode (focus nearest event)';
 
   @override
   String get accessibilityDayEventUpDown =>

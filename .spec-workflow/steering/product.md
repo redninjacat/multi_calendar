@@ -47,18 +47,18 @@ Multi Calendar is a Flutter package that provides flexible, customizable calenda
 8. **All-Day Event Support**: Events can be marked as all-day via the `isAllDay` field in `MCalCalendarEvent`. When `isAllDay` is true, time components of start and end dates are ignored. All-day events are displayed in the header section of Day and Multi-Day views.
 9. **Customizable Event Tiles**: Builder callbacks for event tiles on all views, with separate handling for all-day vs timed events
 10. **Time-Aware Interactions**: Tap and long-press handlers receive date/time context
-10. **Hover Support**: onHover\* event handlers for platforms that support it, passing pertinent details about hovered elements
-11. **Comprehensive Styling**: Expose styling properties and builder callbacks for cells, headers, fonts, colors, borders
-12. **Dynamic Cell Customization**: Builder callbacks and styling to dynamically change cell visuals and disable interactivity (e.g., blackout days)
-13. **Current Day/Time Indicators**: Visual indicators for current day (all views) and current time (time-based views)
-14. **Customizable Date/Time Formats**: Support standard date/time format strings OR custom builder callbacks for date/time labels
-15. **First Day of Week**: Configurable first day of the week (Sunday, Monday, etc.)
-16. **Optional Navigators**: Each view provides option to display simple navigator at top for quick date range changes, customizable via builders with navigation callbacks
-17. **Localization & Globalization**: Display dates/times using globalized formats, localize all static calendar text
-18. **Accessibility**: Full screen reader support for easy calendar access
-19. **Right-to-Left (RTL) Support**: RTL direction support for languages like Hebrew and Arabic
-20. **Date Range Restrictions**: Minimum and maximum date support to restrict date navigation
-21. **Mobile-First Design**: Optimized for mobile devices while scaling to larger screens (web, desktop)
+11. **Hover Support**: onHover\* event handlers for platforms that support it, passing pertinent details about hovered elements
+12. **Comprehensive Styling**: Expose styling properties and builder callbacks for cells, headers, fonts, colors, borders
+13. **Dynamic Cell Customization**: Builder callbacks and styling to dynamically change cell visuals and disable interactivity (e.g., blackout days)
+14. **Current Day/Time Indicators**: Visual indicators for current day (all views) and current time (time-based views)
+15. **Customizable Date/Time Formats**: Support standard date/time format strings OR custom builder callbacks for date/time labels
+16. **First Day of Week**: Configurable first day of the week (Sunday, Monday, etc.)
+17. **Optional Navigators**: Each view provides option to display simple navigator at top for quick date range changes, customizable via builders with navigation callbacks
+18. **Localization & Globalization**: Display dates/times using globalized formats, localize all static calendar text
+19. **Accessibility**: Full screen reader support for easy calendar access
+20. **Right-to-Left (RTL) Support**: RTL direction support for languages like Hebrew and Arabic
+21. **Date Range Restrictions**: Minimum and maximum date support to restrict date navigation
+22. **Mobile-First Design**: Optimized for mobile devices while scaling to larger screens (web, desktop)
 
 ## Business Objectives
 
@@ -105,7 +105,7 @@ Multi Calendar is a Flutter package that provides flexible, customizable calenda
 * **Time Zone Support**: Handle events across multiple time zones
 * **Additional Views**: Timeline view, agenda view, year view
 * **Event Conflict Detection**: Visual indicators for overlapping events
-* **Keyboard Navigation**: Enhanced keyboard navigation support
+* **Extended keyboard features**: Further shortcuts, focus modes, or platform-specific behavior beyond current Day/Month keyboard navigation, move/resize, and `MCalDayKeyBindings` / `MCalMonthKeyBindings`
 * **Animation**: Smooth transitions between views and dates
 * **Export/Import**: Calendar file format support (ICS, etc.)
 

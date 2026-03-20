@@ -64,7 +64,7 @@ Flutter package/library for displaying calendar views with event support. Publis
 
 ### External Integrations (if applicable)
 
-* **Event Sources**: Via McEventController callbacks - any backend can provide events
+* **Event Sources**: Via MCalEventController callbacks - any backend can provide events
 * **Protocols**: None directly - consuming app handles API calls
 * **Authentication**: None - handled by consuming application
 
@@ -101,10 +101,10 @@ Flutter package/library for displaying calendar views with event support. Publis
 ### Performance Requirements
 
 * **Rendering**: Smooth scrolling at `60fps` on mid-range mobile devices
-* **Event Loading**: McEventController loads events for visible date range PLUS previous and next ranges (for swipe preview)
+* **Event Loading**: MCalEventController loads events for visible date range PLUS previous and next ranges (for swipe preview)
 * **Event Lookup Performance**: O(log n) or better for event lookups by date range where n is the number of cached ranges
 * **Event Storage**: O(n) space complexity where n is the number of events in loaded ranges
-* **Memory Management**: McEventController retains events from adjacent ranges but eventually removes old events using efficient cleanup (O(n) or better)
+* **Memory Management**: MCalEventController retains events from adjacent ranges but eventually removes old events using efficient cleanup (O(n) or better)
 * **Memory Usage**: Typically holds 3 months worth of events (current + previous + next) for smooth swipe navigation
 * **Memory**: Efficient handling of large event sets (`1000+` events) on mobile devices with optimal time/space complexity
 * **RRULE Processing**: Efficient recurrence expansion for visible date ranges
@@ -119,7 +119,7 @@ Flutter package/library for displaying calendar views with event support. Publis
 * **Dependency Versions**:
   * Flutter: `>=1.17.0`
   * Dart SDK: `^3.10.4`
-  * intl: `^0.19.0` (for localization)
+  * intl: `^0.20.2` (for localization)
 * **Standards Compliance**:
   * RFC 5545 RRULE specification compliance
   * WCAG accessibility guidelines (where applicable)
@@ -195,9 +195,9 @@ Flutter package/library for displaying calendar views with event support. Publis
 ### Widget Lifecycle
 
 * Views must efficiently rebuild only when necessary
-* McEventController should use ValueNotifier or similar for reactive updates
-* McEventController must use efficient data structures (e.g., SortedMap, TreeMap, or similar) for O(log n) date range lookups
-* McEventController should implement memory-efficient caching with automatic cleanup of old events
+* MCalEventController should use ValueNotifier or similar for reactive updates
+* MCalEventController must use efficient data structures (e.g., SortedMap, TreeMap, or similar) for O(log n) date range lookups
+* MCalEventController should implement memory-efficient caching with automatic cleanup of old events
 * Consider using `const` constructors where possible for performance
 
 ### State Management
@@ -210,7 +210,7 @@ Flutter package/library for displaying calendar views with event support. Publis
 
 * Use `ListView.builder` or `CustomScrollView` for efficient scrolling
 * Implement viewport-based event loading with pre-loading of adjacent ranges for smooth swipe navigation
-* McEventController should use efficient in-memory data structures with optimal Big O complexity (O(log n) lookups, O(n) storage)
+* MCalEventController should use efficient in-memory data structures with optimal Big O complexity (O(log n) lookups, O(n) storage)
 * Consider `RepaintBoundary` widgets for complex event tiles
 * **Mobile Optimization**: Minimize widget rebuilds, use `const` constructors where possible
 * **Lazy Loading**: Load events and render cells only when visible

@@ -150,6 +150,10 @@ class MonthPageWidget extends StatefulWidget {
   final Widget Function(BuildContext, MCalWeekNumberContext)? weekNumberBuilder;
   final bool autoFocusOnCellTap;
 
+  /// Called on every pointer-driven cell tap, regardless of whether the
+  /// focused date changed. Used by the parent to exit keyboard modes.
+  final VoidCallback? onPointerCellInteraction;
+
   /// Function to get events for a specific month.
   final List<MCalCalendarEvent> Function(DateTime month) getEventsForMonth;
 
@@ -278,6 +282,7 @@ class MonthPageWidget extends StatefulWidget {
     this.showWeekNumbers = false,
     this.weekNumberBuilder,
     this.autoFocusOnCellTap = true,
+    this.onPointerCellInteraction,
     // Week layout customization
     this.weekLayoutBuilder,
     this.overflowIndicatorBuilder,
@@ -1406,6 +1411,7 @@ class MonthPageWidgetState extends State<MonthPageWidget> {
                 : null,
             autoFocusOnCellTap: widget.autoFocusOnCellTap,
             onSetFocusedDate: (date) {
+              widget.onPointerCellInteraction?.call();
               // Month View always passes isAllDay: true — it focuses entire days
               widget.controller.setFocusedDateTime(
                 dateOnly(date),

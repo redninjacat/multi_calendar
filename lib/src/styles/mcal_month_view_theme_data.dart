@@ -140,11 +140,25 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
   /// Background color for weekday headers.
   final Color? weekdayHeaderBackgroundColor;
 
-  /// Background color for the focused/selected date.
-  final Color? focusedDateBackgroundColor;
+  /// Background color for the focused day cell in the month grid.
+  ///
+  /// Ignored when [focusedCellDecoration] is non-null.
+  final Color? focusedCellBackgroundColor;
 
-  /// Text style for the focused/selected date.
-  final TextStyle? focusedDateTextStyle;
+  /// Border color for the focused day cell when [focusedCellDecoration] is null.
+  final Color? focusedCellBorderColor;
+
+  /// Border width for the focused day cell when [focusedCellDecoration] is null.
+  final double? focusedCellBorderWidth;
+
+  /// Full override for the focused cell's [BoxDecoration].
+  ///
+  /// When non-null, replaces [focusedCellBackgroundColor], [focusedCellBorderColor],
+  /// and [focusedCellBorderWidth].
+  final BoxDecoration? focusedCellDecoration;
+
+  /// Text style for the focused/selected date label.
+  final TextStyle? focusedCellTextStyle;
 
   /// Background color for calendar cells on hover.
   final Color? hoverCellBackgroundColor;
@@ -334,8 +348,11 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
     this.trailingDatesBackgroundColor,
     this.weekdayHeaderTextStyle,
     this.weekdayHeaderBackgroundColor,
-    this.focusedDateBackgroundColor,
-    this.focusedDateTextStyle,
+    this.focusedCellBackgroundColor,
+    this.focusedCellBorderColor,
+    this.focusedCellBorderWidth,
+    this.focusedCellDecoration,
+    this.focusedCellTextStyle,
     this.hoverCellBackgroundColor,
     this.dropTargetCellValidColor,
     this.dropTargetCellInvalidColor,
@@ -405,10 +422,10 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
       dropTargetTileBorderWidth: 1.5,
       resizeHandleColor: Colors.white.withValues(alpha: 0.5),
       keyboardSelectionBorderWidth: 2.0,
-      keyboardSelectionBorderColor: colorScheme.primary,
+      keyboardSelectionBorderColor: null,
       keyboardSelectionBorderRadius: 4.0,
       keyboardHighlightBorderWidth: 1.5,
-      keyboardHighlightBorderColor: colorScheme.outline,
+      keyboardHighlightBorderColor: null,
       keyboardHighlightBorderRadius: 4.0,
       // AllDayTileThemeMixin defaults
       allDayEventBackgroundColor: colorScheme.secondaryContainer,
@@ -440,8 +457,11 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
         fontWeight: FontWeight.w500,
       ),
       weekdayHeaderBackgroundColor: colorScheme.surfaceContainerHighest,
-      focusedDateBackgroundColor: colorScheme.primary.withValues(alpha: 0.2),
-      focusedDateTextStyle: textTheme.bodyMedium?.copyWith(
+      focusedCellBackgroundColor: colorScheme.primary.withValues(alpha: 0.2),
+      focusedCellBorderColor: colorScheme.primary,
+      focusedCellBorderWidth: 2.0,
+      focusedCellDecoration: null,
+      focusedCellTextStyle: textTheme.bodyMedium?.copyWith(
         color: colorScheme.primary,
         fontWeight: FontWeight.w600,
       ),
@@ -526,8 +546,11 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
     Color? trailingDatesBackgroundColor,
     TextStyle? weekdayHeaderTextStyle,
     Color? weekdayHeaderBackgroundColor,
-    Color? focusedDateBackgroundColor,
-    TextStyle? focusedDateTextStyle,
+    Color? focusedCellBackgroundColor,
+    Color? focusedCellBorderColor,
+    double? focusedCellBorderWidth,
+    BoxDecoration? focusedCellDecoration,
+    TextStyle? focusedCellTextStyle,
     Color? hoverCellBackgroundColor,
     Color? dropTargetCellValidColor,
     Color? dropTargetCellInvalidColor,
@@ -610,8 +633,12 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
       trailingDatesBackgroundColor: trailingDatesBackgroundColor ?? this.trailingDatesBackgroundColor,
       weekdayHeaderTextStyle: weekdayHeaderTextStyle ?? this.weekdayHeaderTextStyle,
       weekdayHeaderBackgroundColor: weekdayHeaderBackgroundColor ?? this.weekdayHeaderBackgroundColor,
-      focusedDateBackgroundColor: focusedDateBackgroundColor ?? this.focusedDateBackgroundColor,
-      focusedDateTextStyle: focusedDateTextStyle ?? this.focusedDateTextStyle,
+      focusedCellBackgroundColor:
+          focusedCellBackgroundColor ?? this.focusedCellBackgroundColor,
+      focusedCellBorderColor: focusedCellBorderColor ?? this.focusedCellBorderColor,
+      focusedCellBorderWidth: focusedCellBorderWidth ?? this.focusedCellBorderWidth,
+      focusedCellDecoration: focusedCellDecoration ?? this.focusedCellDecoration,
+      focusedCellTextStyle: focusedCellTextStyle ?? this.focusedCellTextStyle,
       hoverCellBackgroundColor: hoverCellBackgroundColor ?? this.hoverCellBackgroundColor,
       dropTargetCellValidColor: dropTargetCellValidColor ?? this.dropTargetCellValidColor,
       dropTargetCellInvalidColor: dropTargetCellInvalidColor ?? this.dropTargetCellInvalidColor,
@@ -700,8 +727,14 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
       trailingDatesBackgroundColor: Color.lerp(trailingDatesBackgroundColor, other.trailingDatesBackgroundColor, t),
       weekdayHeaderTextStyle: TextStyle.lerp(weekdayHeaderTextStyle, other.weekdayHeaderTextStyle, t),
       weekdayHeaderBackgroundColor: Color.lerp(weekdayHeaderBackgroundColor, other.weekdayHeaderBackgroundColor, t),
-      focusedDateBackgroundColor: Color.lerp(focusedDateBackgroundColor, other.focusedDateBackgroundColor, t),
-      focusedDateTextStyle: TextStyle.lerp(focusedDateTextStyle, other.focusedDateTextStyle, t),
+      focusedCellBackgroundColor:
+          Color.lerp(focusedCellBackgroundColor, other.focusedCellBackgroundColor, t),
+      focusedCellBorderColor:
+          Color.lerp(focusedCellBorderColor, other.focusedCellBorderColor, t),
+      focusedCellBorderWidth:
+          _lerpDouble(focusedCellBorderWidth, other.focusedCellBorderWidth, t),
+      focusedCellDecoration: t < 0.5 ? focusedCellDecoration : other.focusedCellDecoration,
+      focusedCellTextStyle: t < 0.5 ? focusedCellTextStyle : other.focusedCellTextStyle,
       hoverCellBackgroundColor: Color.lerp(hoverCellBackgroundColor, other.hoverCellBackgroundColor, t),
       dropTargetCellValidColor: Color.lerp(dropTargetCellValidColor, other.dropTargetCellValidColor, t),
       dropTargetCellInvalidColor: Color.lerp(dropTargetCellInvalidColor, other.dropTargetCellInvalidColor, t),
@@ -791,8 +824,11 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
           trailingDatesBackgroundColor == other.trailingDatesBackgroundColor &&
           weekdayHeaderTextStyle == other.weekdayHeaderTextStyle &&
           weekdayHeaderBackgroundColor == other.weekdayHeaderBackgroundColor &&
-          focusedDateBackgroundColor == other.focusedDateBackgroundColor &&
-          focusedDateTextStyle == other.focusedDateTextStyle &&
+          focusedCellBackgroundColor == other.focusedCellBackgroundColor &&
+          focusedCellBorderColor == other.focusedCellBorderColor &&
+          focusedCellBorderWidth == other.focusedCellBorderWidth &&
+          focusedCellDecoration == other.focusedCellDecoration &&
+          focusedCellTextStyle == other.focusedCellTextStyle &&
           hoverCellBackgroundColor == other.hoverCellBackgroundColor &&
           dropTargetCellValidColor == other.dropTargetCellValidColor &&
           dropTargetCellInvalidColor == other.dropTargetCellInvalidColor &&
@@ -870,8 +906,11 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
         trailingDatesBackgroundColor,
         weekdayHeaderTextStyle,
         weekdayHeaderBackgroundColor,
-        focusedDateBackgroundColor,
-        focusedDateTextStyle,
+        focusedCellBackgroundColor,
+        focusedCellBorderColor,
+        focusedCellBorderWidth,
+        focusedCellDecoration,
+        focusedCellTextStyle,
         hoverCellBackgroundColor,
         dropTargetCellValidColor,
         dropTargetCellInvalidColor,

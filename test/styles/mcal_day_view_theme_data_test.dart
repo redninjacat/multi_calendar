@@ -730,8 +730,8 @@ void main() {
       expect(defaults.dropTargetOverlayBorderColor, isNotNull);
       expect(defaults.disabledTimeSlotColor, isNotNull);
       expect(defaults.resizeHandleColor, isNotNull);
-      expect(defaults.keyboardSelectionBorderColor, isNotNull);
-      expect(defaults.keyboardHighlightBorderColor, isNotNull);
+      expect(defaults.keyboardSelectionBorderColor, isNull);
+      expect(defaults.keyboardHighlightBorderColor, isNull);
       expect(defaults.focusedSlotBorderColor, isNotNull);
       expect(defaults.focusedSlotBorderWidth, isNotNull);
       expect(defaults.focusedSlotBackgroundColor, isNotNull);

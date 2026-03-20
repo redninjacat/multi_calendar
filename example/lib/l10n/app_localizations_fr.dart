@@ -149,6 +149,36 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sectionMonthGrid => 'Grille du Mois';
 
   @override
+  String get sectionFocused => 'Focus';
+
+  @override
+  String get sectionKeyboardEventBorder => 'Contour clavier de l\'événement';
+
+  @override
+  String get settingFocusedCellBackgroundColor =>
+      'Arrière-plan de cellule focalisée';
+
+  @override
+  String get settingFocusedCellBorderColor =>
+      'Couleur du contour de cellule focalisée';
+
+  @override
+  String get settingFocusedCellBorderWidth =>
+      'Largeur du contour de cellule focalisée';
+
+  @override
+  String get settingFocusedSlotBackgroundColor =>
+      'Arrière-plan du créneau focalisé';
+
+  @override
+  String get settingFocusedSlotBorderColor =>
+      'Couleur du contour du créneau focalisé';
+
+  @override
+  String get settingFocusedSlotBorderWidth =>
+      'Largeur du contour du créneau focalisé';
+
+  @override
   String get settingShowNavigator => 'Afficher le Navigateur';
 
   @override
@@ -1111,6 +1141,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get accessibilityDayNavT =>
       'Aller à la grille de temps (restaure la dernière plage)';
+
+  @override
+  String get accessibilityDayNavE =>
+      'Entrer en Mode Événement (focus sur l\'événement le plus proche)';
 
   @override
   String get accessibilityDayEventUpDown =>

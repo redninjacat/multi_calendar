@@ -513,6 +513,15 @@ class MCalMonthView extends StatefulWidget {
   /// Defaults to true.
   final bool autoFocusOnCellTap;
 
+  /// Whether tapping an event tile enters Event Mode with that event focused.
+  ///
+  /// When true and [enableKeyboardNavigation] is true, tapping an event tile
+  /// enters Event Mode, highlighting the tapped event and enabling keyboard
+  /// cycling through events on that date.
+  ///
+  /// Defaults to true.
+  final bool autoFocusOnEventTap;
+
   // ============ Overflow handling ============
 
   /// Callback invoked when the overflow indicator ("+N more") is tapped.
@@ -1035,6 +1044,7 @@ class MCalMonthView extends StatefulWidget {
     this.onFocusedRangeChanged,
     // Cell behavior
     this.autoFocusOnCellTap = true,
+    this.autoFocusOnEventTap = true,
     // Overflow handling
     this.onOverflowTap,
     this.onOverflowLongPress,
@@ -1216,6 +1226,10 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Whether keyboard event selection mode is active (cycling through events).
   bool _isKeyboardEventSelectionMode = false;
 
+  /// Guard flag: true while a focus change is being driven by keyboard
+  /// navigation, so that [_onControllerChanged] does not exit keyboard modes.
+  bool _isKeyboardDrivenFocusChange = false;
+
   /// The event currently being moved via keyboard.
   MCalCalendarEvent? _keyboardMoveEvent;
 
@@ -1379,6 +1393,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     // Skip if this is a programmatic change to avoid recursive updates
     if (_isProgrammaticPageChange) return;
 
+    // Pointer-based swipe exits any active keyboard mode.
+    if (_isKeyboardEventSelectionMode || _isKeyboardMoveMode) {
+      _exitKeyboardMoveMode();
+    }
+
     // Task 9: Boundary detection - check if new page is within allowed range
     if (!_isPageIndexWithinBounds(pageIndex)) {
       // Snap back to the nearest valid page
@@ -1486,6 +1505,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     if (focusedDateChanged) {
       // Store full precision for accurate future diffs.
       _previousFocusedDate = currentFocusedDateTime;
+
+      // Pointer-driven focus change (cell tap) exits keyboard modes.
+      if (!_isKeyboardDrivenFocusChange &&
+          (_isKeyboardEventSelectionMode || _isKeyboardMoveMode)) {
+        _exitKeyboardMoveMode();
+      }
 
       // Fire onFocusedDateChanged with the date-only value (existing API).
       widget.onFocusedDateChanged?.call(currentDateOnly);
@@ -1795,7 +1820,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           onCellLongPress: widget.onCellLongPress,
           onDateLabelTap: widget.onDateLabelTap,
           onDateLabelLongPress: widget.onDateLabelLongPress,
-          onEventTap: widget.onEventTap,
+          onEventTap: _handleEventTap,
           onEventLongPress: widget.onEventLongPress,
           onCellDoubleTap: widget.onCellDoubleTap,
           onEventDoubleTap: widget.onEventDoubleTap,
@@ -1815,6 +1840,7 @@ class _MCalMonthViewState extends State<MCalMonthView> {
           showWeekNumbers: widget.showWeekNumbers,
           weekNumberBuilder: widget.weekNumberBuilder,
           autoFocusOnCellTap: widget.autoFocusOnCellTap,
+          onPointerCellInteraction: _handlePointerCellInteraction,
           getEventsForMonth: _getEventsForMonth,
           // Week layout customization
           weekLayoutBuilder: widget.weekLayoutBuilder,
@@ -2100,6 +2126,18 @@ class _MCalMonthViewState extends State<MCalMonthView> {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
+
+    // Guard so that controller listener does not exit keyboard modes
+    // when focus changes are driven by keyboard navigation.
+    _isKeyboardDrivenFocusChange = true;
+    try {
+      return _handleKeyEventInner(event);
+    } finally {
+      _isKeyboardDrivenFocusChange = false;
+    }
+  }
+
+  KeyEventResult _handleKeyEventInner(KeyEvent event) {
 
     // Obtain localization for announcements
     final l10n = mcalL10n(context);
@@ -2432,6 +2470,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Clears all keyboard-move state fields (and keyboard-resize sub-mode).
   void _exitKeyboardMoveMode() {
     _exitKeyboardResizeMode();
+    if (_isKeyboardMoveMode && _dragHandler?.isDragging == true) {
+      _dragHandler!.cancelDrag();
+    }
     _isKeyboardMoveMode = false;
     _isKeyboardEventSelectionMode = false;
     _isKeyboardOverflowFocused = false;
@@ -2444,6 +2485,9 @@ class _MCalMonthViewState extends State<MCalMonthView> {
 
   /// Clears keyboard-resize sub-mode state fields.
   void _exitKeyboardResizeMode() {
+    if (_isKeyboardResizeMode && _dragHandler?.isResizing == true) {
+      _dragHandler!.cancelResize();
+    }
     _isKeyboardResizeMode = false;
     _keyboardResizeEdge = MCalResizeEdge.end;
     _keyboardResizeProposedStart = null;
@@ -3489,6 +3533,53 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   }
 
   // ============================================================
+  // Pointer-interaction → keyboard-mode exit
+  // ============================================================
+
+  /// Called on every pointer-driven cell tap (including re-taps on the
+  /// already-focused cell where the controller won't notify).
+  void _handlePointerCellInteraction() {
+    if (_isKeyboardEventSelectionMode || _isKeyboardMoveMode) {
+      _exitKeyboardMoveMode();
+      setState(() {});
+    }
+  }
+
+  /// Handles event tile tap — enters Event Mode with the tapped event focused.
+  ///
+  /// Wraps the user's [onEventTap] so that tapping an event tile also enters
+  /// Event Mode (when [autoFocusOnEventTap] and [enableKeyboardNavigation]
+  /// are both true).
+  void _handleEventTap(BuildContext context, MCalEventTapDetails details) {
+    if (widget.autoFocusOnEventTap && widget.enableKeyboardNavigation) {
+      // Clean up any active keyboard move/resize before entering Event Mode.
+      if (_isKeyboardMoveMode || _isKeyboardEventSelectionMode ||
+          _isKeyboardResizeMode) {
+        _exitKeyboardMoveMode();
+      }
+
+      // Use the display date (the cell the user tapped), not event.start,
+      // so multi-day events focus the correct day.
+      final eventDate = dateOnly(details.displayDate);
+      final events = _getSortedEventsForDate(eventDate);
+      final idx = events.indexWhere((e) => e.id == details.event.id);
+
+      // Focus the event's date so the cell is highlighted
+      _isKeyboardDrivenFocusChange = true;
+      widget.controller.setFocusedDateTime(eventDate, isAllDay: true);
+      _isKeyboardDrivenFocusChange = false;
+
+      // Enter Event Mode with the tapped event selected
+      _isKeyboardEventSelectionMode = true;
+      _isKeyboardOverflowFocused = false;
+      _keyboardMoveEventIndex = idx >= 0 ? idx : 0;
+      _focusNode.requestFocus();
+      setState(() {});
+    }
+    widget.onEventTap?.call(context, details);
+  }
+
+  // ============================================================
   // Cross-Month Drag Navigation (Task 20)
   // ============================================================
 
@@ -3497,6 +3588,11 @@ class _MCalMonthViewState extends State<MCalMonthView> {
   /// Updates drag state tracking and prepares the drag handler.
   void _handleDragStarted(MCalCalendarEvent event, DateTime sourceDate) {
     if (!widget.enableDragToMove) return;
+
+    // Pointer-based drag exits any active keyboard mode.
+    if (_isKeyboardEventSelectionMode || _isKeyboardMoveMode) {
+      _exitKeyboardMoveMode();
+    }
 
     _isDragActive = true;
     _ensureDragHandler.startDrag(event, sourceDate);
@@ -3678,6 +3774,12 @@ class _MCalMonthViewState extends State<MCalMonthView> {
       final event = _pendingResizeEvent;
       final edge = _pendingResizeEdge;
       if (event == null || edge == null) return;
+
+      // Pointer-based resize exits any active keyboard mode.
+      if (_isKeyboardEventSelectionMode || _isKeyboardMoveMode) {
+        _exitKeyboardMoveMode();
+        setState(() {});
+      }
 
       _ensureDragHandler.startResize(event, edge);
       return;

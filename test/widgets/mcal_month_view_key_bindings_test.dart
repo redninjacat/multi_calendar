@@ -79,16 +79,34 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    /// Taps the calendar to focus it, then sends [key].
-    Future<void> focusAndSendKey(
-      WidgetTester tester,
-      LogicalKeyboardKey key,
-    ) async {
+    /// Taps the calendar to give it focus, restoring the focused date
+    /// that the tap may have changed.
+    Future<void> focusCalendar(WidgetTester tester) async {
       final savedDate = controller.focusedDateTime;
       await tester.tap(find.byType(MCalMonthView));
       await tester.pumpAndSettle();
       controller.setFocusedDateTime(savedDate, isAllDay: true);
       await tester.pumpAndSettle();
+    }
+
+    /// Taps the calendar to focus it, then sends [key].
+    /// Note: the tap is a pointer interaction that exits keyboard modes,
+    /// so use [sendKey] for subsequent keys within the same mode.
+    Future<void> focusAndSendKey(
+      WidgetTester tester,
+      LogicalKeyboardKey key,
+    ) async {
+      await focusCalendar(tester);
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
+
+    /// Sends a key without re-tapping. Use after [focusAndSendKey] or
+    /// [focusCalendar] to keep existing keyboard mode state.
+    Future<void> sendKey(
+      WidgetTester tester,
+      LogicalKeyboardKey key,
+    ) async {
       await tester.sendKeyEvent(key);
       await tester.pumpAndSettle();
     }
@@ -215,8 +233,8 @@ void main() {
 
         // Enter Event Mode
         await focusAndSendKey(tester, LogicalKeyboardKey.enter);
-        // Press D
-        await focusAndSendKey(tester, LogicalKeyboardKey.keyD);
+        // Press D (sendKey to keep Event Mode active)
+        await sendKey(tester, LogicalKeyboardKey.keyD);
 
         expect(deleteCalled, isFalse, reason: 'D should do nothing when delete binding is empty');
       });
@@ -234,7 +252,7 @@ void main() {
         );
 
         await focusAndSendKey(tester, LogicalKeyboardKey.enter);
-        await focusAndSendKey(tester, LogicalKeyboardKey.delete);
+        await sendKey(tester, LogicalKeyboardKey.delete);
 
         expect(
           deleteCalled,
@@ -260,7 +278,7 @@ void main() {
         );
 
         await focusAndSendKey(tester, LogicalKeyboardKey.enter);
-        await focusAndSendKey(tester, LogicalKeyboardKey.keyD);
+        await sendKey(tester, LogicalKeyboardKey.keyD);
 
         expect(deleteCalled, isTrue);
         expect(deletedEventId, equals('test-event'));

@@ -78,8 +78,8 @@ void main() {
       expect(theme.keyboardHighlightBorderWidth, 1.5);
       expect(theme.keyboardSelectionBorderRadius, 4.0);
       expect(theme.keyboardHighlightBorderRadius, 4.0);
-      expect(theme.keyboardSelectionBorderColor, isNotNull);
-      expect(theme.keyboardHighlightBorderColor, isNotNull);
+      expect(theme.keyboardSelectionBorderColor, isNull);
+      expect(theme.keyboardHighlightBorderColor, isNull);
     });
 
     test('defaults differs between light and dark themes', () {
@@ -600,6 +600,74 @@ void main() {
         expect(defaults.dropTargetCellValidColor, isNot(Colors.green.withValues(alpha: 0.3)));
         expect(defaults.dropTargetCellInvalidColor, isNot(Colors.red.withValues(alpha: 0.3)));
       });
+    });
+  });
+
+  group('MCalMonthViewThemeData focused-cell properties', () {
+    final themeData = ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+    );
+
+    test('defaults() sets focusedCell* and null keyboard border colors', () {
+      final d = MCalMonthViewThemeData.defaults(themeData);
+      expect(d.focusedCellBackgroundColor, isNotNull);
+      expect(d.focusedCellBorderColor, isNotNull);
+      expect(d.focusedCellBorderWidth, 2.0);
+      expect(d.focusedCellTextStyle, isNotNull);
+      expect(d.focusedCellDecoration, isNull);
+      expect(d.keyboardSelectionBorderColor, isNull);
+      expect(d.keyboardHighlightBorderColor, isNull);
+    });
+
+    test('copyWith overrides each focusedCell* field', () {
+      const dec = BoxDecoration(color: Color(0xFFE91E63));
+      const base = MCalMonthViewThemeData();
+      final u = base.copyWith(
+        focusedCellBackgroundColor: Colors.green,
+        focusedCellBorderColor: Colors.red,
+        focusedCellBorderWidth: 5.0,
+        focusedCellDecoration: dec,
+        focusedCellTextStyle: TextStyle(fontSize: 20),
+      );
+      expect(u.focusedCellBackgroundColor, Colors.green);
+      expect(u.focusedCellBorderColor, Colors.red);
+      expect(u.focusedCellBorderWidth, 5.0);
+      expect(u.focusedCellDecoration, dec);
+      expect(u.focusedCellTextStyle?.fontSize, 20);
+    });
+
+    test('lerp uses t < 0.5 switch for textStyle and decoration', () {
+      const dec1 = BoxDecoration(color: Colors.blue);
+      const dec2 = BoxDecoration(color: Colors.orange);
+      const a = MCalMonthViewThemeData(
+        focusedCellBackgroundColor: Colors.white,
+        focusedCellBorderColor: Colors.white,
+        focusedCellBorderWidth: 0,
+        focusedCellDecoration: dec1,
+        focusedCellTextStyle: TextStyle(fontSize: 10),
+      );
+      const b = MCalMonthViewThemeData(
+        focusedCellBackgroundColor: Colors.black,
+        focusedCellBorderColor: Colors.black,
+        focusedCellBorderWidth: 10,
+        focusedCellDecoration: dec2,
+        focusedCellTextStyle: TextStyle(fontSize: 30),
+      );
+      final low = a.lerp(b, 0.25);
+      expect(low.focusedCellTextStyle?.fontSize, 10);
+      expect(low.focusedCellDecoration?.color, Colors.blue);
+      expect(low.focusedCellBorderWidth, closeTo(2.5, 0.001));
+      final high = a.lerp(b, 0.5);
+      expect(high.focusedCellTextStyle?.fontSize, 30);
+      expect(high.focusedCellDecoration?.color, Colors.orange);
+    });
+
+    test('equality includes focusedCell* fields', () {
+      const x = MCalMonthViewThemeData(focusedCellBackgroundColor: Colors.cyan);
+      const y = MCalMonthViewThemeData(focusedCellBackgroundColor: Colors.deepPurple);
+      expect(x, isNot(equals(y)));
+      expect(x.hashCode, isNot(equals(y.hashCode)));
     });
   });
 }

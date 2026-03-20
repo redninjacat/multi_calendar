@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/focused-cell-theme-alignment/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-20T18:25:24.883Z",
+      "trigger": "initial",
+      "approvalId": "approval_1774031124879_w12b9vhdv",
+      "approvalTitle": "Tasks: Focused Cell Theme Alignment"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-03-20T19:58:00.261Z",
+      "trigger": "approved",
+      "approvalId": "approval_1774031124879_w12b9vhdv",
+      "approvalTitle": "Tasks: Focused Cell Theme Alignment"
+    }
+  ]
+}

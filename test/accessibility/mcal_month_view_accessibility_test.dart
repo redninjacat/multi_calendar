@@ -649,8 +649,8 @@ void main() {
                 child: MCalTheme(
                   data: MCalThemeData(
                     monthViewTheme: MCalMonthViewThemeData(
-                      focusedDateBackgroundColor: Colors.blue.shade100,
-                      focusedDateTextStyle: const TextStyle(
+                      focusedCellBackgroundColor: Colors.blue.shade100,
+                      focusedCellTextStyle: const TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.blue,
                       ),

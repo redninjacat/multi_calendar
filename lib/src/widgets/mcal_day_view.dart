@@ -1758,8 +1758,36 @@ class MCalDayViewState extends State<MCalDayView> {
     return false;
   }
 
+  /// Transitions to Navigation Mode: clears Event/Move/Resize sub-modes
+  /// and activates the navigation focus indicator on [slotIndex].
+  ///
+  /// Pass `null` for [slotIndex] to focus the all-day section.
+  void _activateNavigationMode({required int? slotIndex}) {
+    _cancelKeyboardResizeIfActive();
+    _cancelKeyboardMoveIfActive();
+    setState(() {
+      _isKeyboardEventMode = false;
+      _isKeyboardMoveMode = false;
+      _isKeyboardResizeMode = false;
+      _isKeyboardOverflowFocused = false;
+      _focusedEvent = null;
+      _keyboardMoveEvent = null;
+      _keyboardMoveOriginalStart = null;
+      _keyboardMoveOriginalEnd = null;
+      _keyboardMoveProposedStart = null;
+      _keyboardMoveProposedEnd = null;
+      _keyboardResizeEdge = null;
+      _keyboardEventIndex = 0;
+      _keyboardNavigationActive = true;
+      _focusedSlotIndex = slotIndex;
+      if (slotIndex != null) _lastTimeGridSlotIndex = slotIndex;
+    });
+  }
+
   /// Exits all keyboard modes and resets all keyboard state to defaults.
   void _exitAllKeyboardModes() {
+    _cancelKeyboardResizeIfActive();
+    _cancelKeyboardMoveIfActive();
     setState(() {
       _isKeyboardEventMode = false;
       _isKeyboardMoveMode = false;
@@ -1776,6 +1804,20 @@ class MCalDayViewState extends State<MCalDayView> {
       _keyboardNavigationActive = false;
       _focusedSlotIndex = null;
     });
+  }
+
+  /// Cancels an in-progress keyboard resize on the drag handler if active.
+  void _cancelKeyboardResizeIfActive() {
+    if (_isKeyboardResizeMode && _dragHandler?.isResizing == true) {
+      _dragHandler!.cancelResize();
+    }
+  }
+
+  /// Cancels an in-progress keyboard move/drag on the drag handler if active.
+  void _cancelKeyboardMoveIfActive() {
+    if (_isKeyboardMoveMode && _dragHandler?.isDragging == true) {
+      _dragHandler!.cancelDrag();
+    }
   }
 
   /// Processes a [FutureOr<bool>] result from [MCalDayView.onDeleteEventRequested].
@@ -2007,6 +2049,11 @@ class MCalDayViewState extends State<MCalDayView> {
     // Skip if this is a programmatic change to avoid recursive updates
     if (_isProgrammaticPageChange) return;
 
+    // Pointer-based swipe exits any active keyboard mode.
+    if (_isKeyboardEventMode || _isKeyboardMoveMode || _isKeyboardResizeMode) {
+      _exitAllKeyboardModes();
+    }
+
     final newDay = _pageIndexToDay(pageIndex);
     final previousDay = _displayDate;
     debugPrint(
@@ -2187,8 +2234,10 @@ class MCalDayViewState extends State<MCalDayView> {
     setState(() {
       _isLoading = false;
       _allEvents = widget.controller.getEventsForDate(_displayDate);
-      _allDayEvents = _allEvents.where((e) => e.isAllDay).toList();
-      _timedEvents = _allEvents.where((e) => !e.isAllDay).toList();
+      _allDayEvents = _allEvents.where((e) => e.isAllDay).toList()
+        ..sort((a, b) => a.start.compareTo(b.start));
+      _timedEvents = _allEvents.where((e) => !e.isAllDay).toList()
+        ..sort((a, b) => a.start.compareTo(b.start));
     });
   }
 
@@ -2240,8 +2289,10 @@ class MCalDayViewState extends State<MCalDayView> {
       timed = _timedEvents;
     } else {
       final all = widget.controller.getEventsForDate(date);
-      allDay = all.where((e) => e.isAllDay).toList();
-      timed = all.where((e) => !e.isAllDay).toList();
+      allDay = all.where((e) => e.isAllDay).toList()
+        ..sort((a, b) => a.start.compareTo(b.start));
+      timed = all.where((e) => !e.isAllDay).toList()
+        ..sort((a, b) => a.start.compareTo(b.start));
     }
 
     // During resize, substitute or inject a proposed-size version of the
@@ -2503,6 +2554,11 @@ class MCalDayViewState extends State<MCalDayView> {
   void _handleDragStarted(MCalCalendarEvent event, DateTime sourceDate) {
     if (!widget.enableDragToMove) return;
 
+    // Pointer-based drag exits any active keyboard mode.
+    if (_isKeyboardEventMode || _isKeyboardMoveMode || _isKeyboardResizeMode) {
+      _exitAllKeyboardModes();
+    }
+
     debugPrint('[DD] ═══════════════════════════════════════════════════');
     debugPrint(
       '[DD] DragStarted: event="${event.title}" source=$sourceDate isAllDay=${event.isAllDay}',
@@ -2707,7 +2763,8 @@ class MCalDayViewState extends State<MCalDayView> {
   /// ↑↓ move the focused slot (null = all-day, 0..n = time grid). Home/End
   /// jump to first/last time slot. PageUp/PageDown navigate to previous/next
   /// day. Enter/Space enter Event Mode. N creates an event. A jumps to the
-  /// all-day section. T jumps to the time grid. ←→ are ignored.
+  /// all-day section. T jumps to the time grid. E enters Event Mode focused on
+  /// the nearest event. ←→ navigate between days (RTL-aware).
   KeyEventResult _handleNavigationModeKey(KeyEvent event) {
     final key = event.logicalKey;
     final l10n = mcalL10n(context);
@@ -2829,10 +2886,16 @@ class MCalDayViewState extends State<MCalDayView> {
     if (_matchesAny(_keyBindings.enterEventMode, key)) {
       final eventsAtFocus = _eventsAtFocus();
       if (eventsAtFocus.isNotEmpty) {
+        final firstEvent = eventsAtFocus[0];
+        final visibleAllDay = _allDayVisibleCount != null
+            ? _allDayEvents.take(_allDayVisibleCount!).toList()
+            : _allDayEvents;
+        final allFocusable = [...visibleAllDay, ..._timedEvents];
+        final idx = allFocusable.indexWhere((e) => e.id == firstEvent.id);
         setState(() {
           _isKeyboardEventMode = true;
-          _keyboardEventIndex = 0;
-          _focusedEvent = eventsAtFocus[0];
+          _keyboardEventIndex = idx >= 0 ? idx : 0;
+          _focusedEvent = firstEvent;
         });
         _announceScreenReader(
           context,
@@ -2880,6 +2943,62 @@ class MCalDayViewState extends State<MCalDayView> {
       final focusedTime = _slotIndexToTime(target);
       final timeStr = _formatSlotTime(focusedTime);
       _announceScreenReader(context, l10n.announcementDayTimeGrid(timeStr));
+      return KeyEventResult.handled;
+    }
+
+    // ── E — jump to Event Mode (nearest event) ───────────────────────────────
+    if (_matchesAny(_keyBindings.jumpToEventMode, key)) {
+      final visibleAllDay = _allDayVisibleCount != null
+          ? _allDayEvents.take(_allDayVisibleCount!).toList()
+          : _allDayEvents;
+      final allFocusable = [...visibleAllDay, ..._timedEvents];
+      if (allFocusable.isEmpty) {
+        return KeyEventResult.handled;
+      }
+
+      final MCalCalendarEvent target;
+      if (_focusedSlotIndex == null) {
+        if (visibleAllDay.isNotEmpty) {
+          target = visibleAllDay.first;
+        } else if (_allDayEvents.isNotEmpty) {
+          // All-day section focused but every all-day row is behind overflow —
+          // still prefer the first all-day master event over jumping to timed.
+          target = _allDayEvents.first;
+        } else {
+          target = allFocusable.first;
+        }
+      } else if (_timedEvents.isEmpty) {
+        target = allFocusable.first;
+      } else {
+        final focusTime = _slotIndexToTime(_focusedSlotIndex!);
+        final atOrAfter = _timedEvents.where((e) => !e.start.isBefore(focusTime));
+        target = atOrAfter.isNotEmpty ? atOrAfter.first : _timedEvents.last;
+      }
+
+      final idx = allFocusable.indexWhere((e) => e.id == target.id);
+      setState(() {
+        _isKeyboardEventMode = true;
+        _keyboardNavigationActive = true;
+        _isKeyboardOverflowFocused = false;
+        _focusedEvent = target;
+        _keyboardEventIndex = idx >= 0 ? idx : 0;
+        if (!target.isAllDay) {
+          _focusedSlotIndex = _timeToSlotIndex(target.start);
+          _lastTimeGridSlotIndex = _focusedSlotIndex;
+          widget.controller.setFocusedDateTime(target.start);
+        } else {
+          _focusedSlotIndex = null;
+          widget.controller.setFocusedDateTime(
+            DateTime(_displayDate.year, _displayDate.month, _displayDate.day),
+            isAllDay: true,
+          );
+        }
+      });
+      _scrollToRevealEvent(target);
+      _announceScreenReader(
+        context,
+        l10n.announcementDayEventMode(allFocusable.length),
+      );
       return KeyEventResult.handled;
     }
 
@@ -3949,9 +4068,46 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Handles event tap - forwards to widget callback and optionally sets keyboard focus.
   void _handleEventTap(BuildContext context, MCalEventTapDetails details) {
     if (widget.autoFocusOnEventTap && widget.enableKeyboardNavigation) {
+      // Clean up any active keyboard move/resize before entering Event Mode.
+      if (_isKeyboardEventMode || _isKeyboardMoveMode ||
+          _isKeyboardResizeMode) {
+        _cancelKeyboardResizeIfActive();
+        _cancelKeyboardMoveIfActive();
+      }
+
+      final tappedEvent = details.event;
+      final visibleAllDay = _allDayVisibleCount != null
+          ? _allDayEvents.take(_allDayVisibleCount!).toList()
+          : _allDayEvents;
+      final allFocusable = [...visibleAllDay, ..._timedEvents];
+      final idx = allFocusable.indexWhere((e) => e.id == tappedEvent.id);
       setState(() {
-        _focusedEvent = details.event;
+        _isKeyboardEventMode = true;
+        _isKeyboardMoveMode = false;
+        _isKeyboardResizeMode = false;
+        _keyboardNavigationActive = true;
+        _isKeyboardOverflowFocused = false;
+        _keyboardMoveEvent = null;
+        _keyboardMoveOriginalStart = null;
+        _keyboardMoveOriginalEnd = null;
+        _keyboardMoveProposedStart = null;
+        _keyboardMoveProposedEnd = null;
+        _keyboardResizeEdge = null;
+        _focusedEvent = tappedEvent;
+        _keyboardEventIndex = idx >= 0 ? idx : 0;
+        if (!tappedEvent.isAllDay) {
+          _focusedSlotIndex = _timeToSlotIndex(tappedEvent.start);
+          _lastTimeGridSlotIndex = _focusedSlotIndex;
+          widget.controller.setFocusedDateTime(tappedEvent.start);
+        } else {
+          _focusedSlotIndex = null;
+          widget.controller.setFocusedDateTime(
+            DateTime(_displayDate.year, _displayDate.month, _displayDate.day),
+            isAllDay: true,
+          );
+        }
       });
+      _scrollToRevealEvent(tappedEvent);
       if (!_focusNode.hasFocus) {
         _focusNode.requestFocus();
       }
@@ -4080,6 +4236,12 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Called when resize drag starts. Initializes resize state.
   void _handleResizeStart(MCalCalendarEvent event, MCalResizeEdge edge) {
     if (!_resolveDragToResize()) return;
+
+    // Pointer-based resize exits any active keyboard mode.
+    if (_isKeyboardEventMode || _isKeyboardMoveMode || _isKeyboardResizeMode) {
+      _exitAllKeyboardModes();
+    }
+
     // Populate the drag layout cache so _checkVerticalScrollEdge has the
     // viewport bounds it needs for auto-scroll edge detection during resize.
     _cacheLayoutForDrag();
@@ -6564,14 +6726,12 @@ class MCalDayViewState extends State<MCalDayView> {
     // Fire user callback if provided
     widget.onTimeSlotTap?.call(context, slotContext);
 
-    // Tap-to-focus: always update focus regardless of whether callback was set
+    // Pointer tap activates Navigation Mode on the tapped slot,
+    // exiting Event/Move/Resize Mode if any were active.
     final slotIndex = _timeToSlotIndex(tappedTime);
-    _focusedSlotIndex = slotIndex;
-    _lastTimeGridSlotIndex = slotIndex;
-    _keyboardNavigationActive = true;
+    _activateNavigationMode(slotIndex: slotIndex);
     widget.controller.setFocusedDateTime(tappedTime);
     _scrollToFocusedSlot();
-    setState(() {});
   }
 
   /// Sets focus to the all-day section when the user taps the all-day area.
@@ -6579,13 +6739,13 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Called from the [AllDayEventsSection] tap wrapper. The [isAllDay: true]
   /// flag disambiguates this from a midnight time-slot tap (Req 3.1).
   void _handleAllDayTapToFocus() {
-    _focusedSlotIndex = null;
-    _keyboardNavigationActive = true;
+    // Pointer tap activates Navigation Mode on the all-day section,
+    // exiting Event/Move/Resize Mode if any were active.
+    _activateNavigationMode(slotIndex: null);
     widget.controller.setFocusedDateTime(
       DateTime(_displayDate.year, _displayDate.month, _displayDate.day),
       isAllDay: true,
     );
-    setState(() {});
   }
 
   /// Handles long-press on empty time slot area.
@@ -6638,6 +6798,12 @@ class MCalDayViewState extends State<MCalDayView> {
     );
 
     widget.onTimeSlotLongPress!(context, slotContext);
+
+    // Pointer interaction activates Navigation Mode on the long-pressed slot.
+    final slotIndex = _timeToSlotIndex(tappedTime);
+    _activateNavigationMode(slotIndex: slotIndex);
+    widget.controller.setFocusedDateTime(tappedTime);
+    _scrollToFocusedSlot();
   }
 
   /// Handles double-tap on empty time slot area.
@@ -6696,6 +6862,12 @@ class MCalDayViewState extends State<MCalDayView> {
     );
 
     widget.onTimeSlotDoubleTap!(context, slotContext);
+
+    // Pointer interaction activates Navigation Mode on the double-tapped slot.
+    final slotIndex = _timeToSlotIndex(tappedTime);
+    _activateNavigationMode(slotIndex: slotIndex);
+    widget.controller.setFocusedDateTime(tappedTime);
+    _scrollToFocusedSlot();
   }
 
   /// Handles secondary tap (right-click) on empty time slot area.
@@ -6747,6 +6919,12 @@ class MCalDayViewState extends State<MCalDayView> {
     );
 
     widget.onTimeSlotSecondaryTap!(context, slotContext);
+
+    // Pointer interaction activates Navigation Mode on the right-clicked slot.
+    final slotIndex = _timeToSlotIndex(tappedTime);
+    _activateNavigationMode(slotIndex: slotIndex);
+    widget.controller.setFocusedDateTime(tappedTime);
+    _scrollToFocusedSlot();
   }
 
   /// Wraps [MCalDayView.onHoverEvent] to also track [_hoveredEvent].

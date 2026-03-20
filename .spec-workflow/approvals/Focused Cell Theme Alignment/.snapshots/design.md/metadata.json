@@ -1,0 +1,30 @@
+{
+  "filePath": ".spec-workflow/specs/focused-cell-theme-alignment/design.md",
+  "currentVersion": 3,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-03-20T16:56:03.674Z",
+      "trigger": "initial",
+      "approvalId": "approval_1774025763669_ptdxshme3",
+      "approvalTitle": "Design: Focused Cell Theme Alignment"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-03-20T18:07:12.033Z",
+      "trigger": "approved",
+      "approvalId": "approval_1774027132316_7vexondxr",
+      "approvalTitle": "Design (revised): Focused Cell Theme Alignment"
+    },
+    {
+      "version": 3,
+      "filename": "snapshot-003.json",
+      "timestamp": "2026-03-20T18:07:13.540Z",
+      "trigger": "approved",
+      "approvalId": "approval_1774025763669_ptdxshme3",
+      "approvalTitle": "Design: Focused Cell Theme Alignment"
+    }
+  ]
+}

@@ -46,6 +46,13 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
   double? _eventTilePadding;
 
   // ============================================================
+  // Focused calendar cell (month grid)
+  // ============================================================
+  Color? _focusedCellBackgroundColor;
+  Color? _focusedCellBorderColor;
+  double? _focusedCellBorderWidth;
+
+  // ============================================================
   // Keyboard (event tile focus rings)
   // ============================================================
   double? _keyboardSelectionBorderWidth;
@@ -171,6 +178,9 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
         _keyboardHighlightBorderWidth = null;
         _keyboardHighlightBorderColor = null;
         _keyboardHighlightBorderRadius = null;
+        _focusedCellBackgroundColor = null;
+        _focusedCellBorderColor = null;
+        _focusedCellBorderWidth = null;
         return;
       }
 
@@ -213,6 +223,9 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
       _keyboardHighlightBorderWidth = m?.keyboardHighlightBorderWidth;
       _keyboardHighlightBorderColor = m?.keyboardHighlightBorderColor;
       _keyboardHighlightBorderRadius = m?.keyboardHighlightBorderRadius;
+      _focusedCellBackgroundColor = m?.focusedCellBackgroundColor;
+      _focusedCellBorderColor = m?.focusedCellBorderColor;
+      _focusedCellBorderWidth = m?.focusedCellBorderWidth;
     });
   }
 
@@ -236,6 +249,9 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
             )
           : null,
       monthViewTheme: MCalMonthViewThemeData(
+        focusedCellBackgroundColor: _focusedCellBackgroundColor,
+        focusedCellBorderColor: _focusedCellBorderColor,
+        focusedCellBorderWidth: _focusedCellBorderWidth,
         eventTileBackgroundColor: _eventTileBackgroundColor,
         eventTileCornerRadius: _eventTileCornerRadius,
         eventTileHorizontalSpacing: _eventTileHorizontalSpacing,
@@ -619,9 +635,42 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
             ],
           ),
 
-          // ── Keyboard (last section) ────────────────────────────────────────
+          // ── Focused cell (second-to-last) ────────────────────────────────
           ControlPanelSection(
-            title: l10n.sectionKeyboard,
+            title: l10n.sectionFocused,
+            children: [
+              ControlWidgets.colorPicker(
+                label: l10n.settingFocusedCellBackgroundColor,
+                value: _focusedCellBackgroundColor ??
+                    monthDefaults.focusedCellBackgroundColor!,
+                onChanged: (c) =>
+                    setState(() => _focusedCellBackgroundColor = c),
+                cancelLabel: l10n.cancel,
+              ),
+              ControlWidgets.colorPicker(
+                label: l10n.settingFocusedCellBorderColor,
+                value: _focusedCellBorderColor ??
+                    monthDefaults.focusedCellBorderColor!,
+                onChanged: (c) =>
+                    setState(() => _focusedCellBorderColor = c),
+                cancelLabel: l10n.cancel,
+              ),
+              ControlWidgets.slider(
+                label: l10n.settingFocusedCellBorderWidth,
+                value: _focusedCellBorderWidth ??
+                    monthDefaults.focusedCellBorderWidth!,
+                min: 0,
+                max: 6,
+                divisions: 24,
+                onChanged: (v) =>
+                    setState(() => _focusedCellBorderWidth = v),
+              ),
+            ],
+          ),
+
+          // ── Keyboard event border (last section) ─────────────────────────
+          ControlPanelSection(
+            title: l10n.sectionKeyboardEventBorder,
             children: [
               ControlWidgets.slider(
                 label: l10n.settingKeyboardSelectionBorderWidth,
@@ -636,7 +685,8 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ControlWidgets.colorPicker(
                 label: l10n.settingKeyboardSelectionBorderColor,
                 value: _keyboardSelectionBorderColor ??
-                    monthDefaults.keyboardSelectionBorderColor!,
+                    monthDefaults.keyboardSelectionBorderColor ??
+                    theme.colorScheme.outline,
                 onChanged: (c) =>
                     setState(() => _keyboardSelectionBorderColor = c),
                 cancelLabel: l10n.cancel,
@@ -664,7 +714,8 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
               ControlWidgets.colorPicker(
                 label: l10n.settingKeyboardHighlightBorderColor,
                 value: _keyboardHighlightBorderColor ??
-                    monthDefaults.keyboardHighlightBorderColor!,
+                    monthDefaults.keyboardHighlightBorderColor ??
+                    theme.colorScheme.outline,
                 onChanged: (c) =>
                     setState(() => _keyboardHighlightBorderColor = c),
                 cancelLabel: l10n.cancel,

@@ -232,40 +232,15 @@ class TimeGridEventsLayer extends StatelessWidget {
       regions: regions,
     );
 
-    Widget tile = _buildEventTile(context, event, tileContext);
-
-    final kbDefaults = MCalThemeData.fromTheme(Theme.of(context));
-    final dayTheme = theme.dayViewTheme;
-    final dayDefs = kbDefaults.dayViewTheme!;
     final isKbSelected = keyboardSelectedEventId == event.id;
     final isKbHighlighted = keyboardHighlightedEventId == event.id;
-    if (isKbSelected || isKbHighlighted) {
-      final Color kbBorderColor;
-      final double kbBorderWidth;
-      final double kbBorderRadius;
-      if (isKbSelected) {
-        kbBorderColor = dayTheme?.keyboardSelectionBorderColor ??
-            dayDefs.keyboardSelectionBorderColor!;
-        kbBorderWidth = dayTheme?.keyboardSelectionBorderWidth ??
-            dayDefs.keyboardSelectionBorderWidth!;
-        kbBorderRadius = dayTheme?.keyboardSelectionBorderRadius ??
-            dayDefs.keyboardSelectionBorderRadius!;
-      } else {
-        kbBorderColor = dayTheme?.keyboardHighlightBorderColor ??
-            dayDefs.keyboardHighlightBorderColor!;
-        kbBorderWidth = dayTheme?.keyboardHighlightBorderWidth ??
-            dayDefs.keyboardHighlightBorderWidth!;
-        kbBorderRadius = dayTheme?.keyboardHighlightBorderRadius ??
-            dayDefs.keyboardHighlightBorderRadius!;
-      }
-      tile = Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: kbBorderColor, width: kbBorderWidth),
-          borderRadius: BorderRadius.circular(kbBorderRadius),
-        ),
-        child: tile,
-      );
-    }
+    Widget tile = _buildEventTile(
+      context,
+      event,
+      tileContext,
+      keyboardSelected: isKbSelected,
+      keyboardHighlighted: isKbHighlighted,
+    );
 
     if (onEventTap != null ||
         (!enableDragToMove && onEventLongPress != null) ||
@@ -450,8 +425,10 @@ class TimeGridEventsLayer extends StatelessWidget {
     MCalThemeData defaults,
     MCalCalendarEvent event,
     MCalTimedEventTileContext tileContext,
-    String timeRange,
-  ) {
+    String timeRange, {
+    bool keyboardSelected = false,
+    bool keyboardHighlighted = false,
+  }) {
     final tileColor = resolveEventTileColor(
       themeColor: theme.dayViewTheme?.eventTileBackgroundColor,
       eventColor: event.color,
@@ -481,10 +458,10 @@ class TimeGridEventsLayer extends StatelessWidget {
 
     final cornerRadius =
         theme.dayViewTheme?.eventTileCornerRadius ?? defaults.dayViewTheme!.eventTileCornerRadius!;
-    final topRadius = tileContext.isStartOnDisplayDate
+    var topRadius = tileContext.isStartOnDisplayDate
         ? Radius.circular(cornerRadius)
         : Radius.zero;
-    final bottomRadius = tileContext.isEndOnDisplayDate
+    var bottomRadius = tileContext.isEndOnDisplayDate
         ? Radius.circular(cornerRadius)
         : Radius.zero;
 
@@ -494,9 +471,47 @@ class TimeGridEventsLayer extends StatelessWidget {
         defaults.dayViewTheme!.timedEventPadding!;
     final tileBorderWidth = theme.dayViewTheme?.eventTileBorderWidth ?? 0.0;
     final tileBorderColor = theme.dayViewTheme?.eventTileBorderColor;
-    final tileBorder = (tileBorderWidth > 0 && tileBorderColor != null)
+    var tileBorder = (tileBorderWidth > 0 && tileBorderColor != null)
         ? Border.all(color: tileBorderColor, width: tileBorderWidth)
         : Border.all(color: tileColor, width: 0.0);
+
+    if (keyboardSelected || keyboardHighlighted) {
+      final dayTheme = theme.dayViewTheme;
+      final dayDefs = defaults.dayViewTheme!;
+      final Color? rawKbColor;
+      final double kbW;
+      final double kbR;
+      if (keyboardSelected) {
+        rawKbColor =
+            dayTheme?.keyboardSelectionBorderColor ?? dayDefs.keyboardSelectionBorderColor;
+        kbW = dayTheme?.keyboardSelectionBorderWidth ??
+            dayDefs.keyboardSelectionBorderWidth!;
+        kbR = dayTheme?.keyboardSelectionBorderRadius ??
+            dayDefs.keyboardSelectionBorderRadius!;
+      } else {
+        rawKbColor =
+            dayTheme?.keyboardHighlightBorderColor ?? dayDefs.keyboardHighlightBorderColor;
+        kbW = dayTheme?.keyboardHighlightBorderWidth ??
+            dayDefs.keyboardHighlightBorderWidth!;
+        kbR = dayTheme?.keyboardHighlightBorderRadius ??
+            dayDefs.keyboardHighlightBorderRadius!;
+      }
+      final kbColor = rawKbColor ??
+          resolveContrastColor(
+            backgroundColor: tileColor,
+            lightContrastColor: lightContrast,
+            darkContrastColor: darkContrast,
+          );
+      tileBorder = Border.all(color: kbColor, width: kbW);
+      final topR = tileContext.isStartOnDisplayDate
+          ? Radius.circular(kbR)
+          : Radius.zero;
+      final bottomR = tileContext.isEndOnDisplayDate
+          ? Radius.circular(kbR)
+          : Radius.zero;
+      topRadius = topR;
+      bottomRadius = bottomR;
+    }
 
     return Container(
       margin: tileMargin,
@@ -545,8 +560,10 @@ class TimeGridEventsLayer extends StatelessWidget {
   Widget _buildEventTile(
     BuildContext context,
     MCalCalendarEvent event,
-    MCalTimedEventTileContext tileContext,
-  ) {
+    MCalTimedEventTileContext tileContext, {
+    bool keyboardSelected = false,
+    bool keyboardHighlighted = false,
+  }) {
     final locale = Localizations.maybeLocaleOf(context) ?? const Locale('en');
     final localeStr = locale.toString();
 
@@ -592,6 +609,8 @@ class TimeGridEventsLayer extends StatelessWidget {
       event,
       tileContext,
       timeRange,
+      keyboardSelected: keyboardSelected,
+      keyboardHighlighted: keyboardHighlighted,
     );
 
     final tileWidget = timedEventTileBuilder != null

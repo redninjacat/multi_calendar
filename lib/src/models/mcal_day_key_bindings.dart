@@ -11,9 +11,9 @@ import 'mcal_month_key_bindings.dart';
 /// the same action (e.g., both Tab and ArrowDown cycle forward in Event Mode).
 /// An empty list disables the action entirely.
 ///
-/// There are 24 configurable action slots across the four modes — 3 more than
-/// [MCalMonthKeyBindings]: [jumpToAllDay], [jumpToTimeGrid] (Navigation Mode),
-/// and [convertEventType] (Event Mode).
+/// There are 25 configurable action slots across the four modes — 4 more than
+/// [MCalMonthKeyBindings]: [jumpToAllDay], [jumpToTimeGrid], [jumpToEventMode]
+/// (Navigation Mode), and [convertEventType] (Event Mode).
 ///
 /// ## Default bindings
 ///
@@ -63,6 +63,7 @@ class MCalDayKeyBindings {
     this.createEvent = const [MCalKeyActivator(LogicalKeyboardKey.keyN)],
     this.jumpToAllDay = const [MCalKeyActivator(LogicalKeyboardKey.keyA)],
     this.jumpToTimeGrid = const [MCalKeyActivator(LogicalKeyboardKey.keyT)],
+    this.jumpToEventMode = const [MCalKeyActivator(LogicalKeyboardKey.keyE)],
 
     // Event Mode
     this.cycleForward = const [
@@ -156,6 +157,16 @@ class MCalDayKeyBindings {
   ///
   /// Default: T.
   final List<MCalKeyActivator> jumpToTimeGrid;
+
+  /// Keys that enter Event Mode focused on the nearest event for the current
+  /// focus position (first visible all-day when in the all-day section; first
+  /// timed event at or after the focused slot when in the time grid).
+  ///
+  /// Only active in Navigation Mode. In Resize Mode, [LogicalKeyboardKey.keyE]
+  /// switches to the end edge instead.
+  ///
+  /// Default: E.
+  final List<MCalKeyActivator> jumpToEventMode;
 
   // ── Event Mode ────────────────────────────────────────────────────────────
 
@@ -271,6 +282,7 @@ class MCalDayKeyBindings {
     List<MCalKeyActivator>? createEvent,
     List<MCalKeyActivator>? jumpToAllDay,
     List<MCalKeyActivator>? jumpToTimeGrid,
+    List<MCalKeyActivator>? jumpToEventMode,
     List<MCalKeyActivator>? cycleForward,
     List<MCalKeyActivator>? cycleBackward,
     List<MCalKeyActivator>? activate,
@@ -297,6 +309,7 @@ class MCalDayKeyBindings {
       createEvent: createEvent ?? this.createEvent,
       jumpToAllDay: jumpToAllDay ?? this.jumpToAllDay,
       jumpToTimeGrid: jumpToTimeGrid ?? this.jumpToTimeGrid,
+      jumpToEventMode: jumpToEventMode ?? this.jumpToEventMode,
       cycleForward: cycleForward ?? this.cycleForward,
       cycleBackward: cycleBackward ?? this.cycleBackward,
       activate: activate ?? this.activate,
@@ -328,6 +341,7 @@ class MCalDayKeyBindings {
         other.createEvent == createEvent &&
         other.jumpToAllDay == jumpToAllDay &&
         other.jumpToTimeGrid == jumpToTimeGrid &&
+        other.jumpToEventMode == jumpToEventMode &&
         other.cycleForward == cycleForward &&
         other.cycleBackward == cycleBackward &&
         other.activate == activate &&
@@ -356,6 +370,7 @@ class MCalDayKeyBindings {
         createEvent,
         jumpToAllDay,
         jumpToTimeGrid,
+        jumpToEventMode,
         cycleForward,
         cycleBackward,
         activate,
@@ -380,6 +395,7 @@ class MCalDayKeyBindings {
       'createEvent: $createEvent, '
       'jumpToAllDay: $jumpToAllDay, '
       'jumpToTimeGrid: $jumpToTimeGrid, '
+      'jumpToEventMode: $jumpToEventMode, '
       'cycleForward: $cycleForward, '
       'cycleBackward: $cycleBackward, '
       'activate: $activate, '

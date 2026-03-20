@@ -1000,4 +1000,183 @@ void main() {
       },
     );
   });
+
+  group('Day View tap-to-Event-Mode and jumpToEventMode (E)', () {
+    late _TestController controller;
+
+    setUp(() {
+      controller = _TestController(initialDate: DateTime(2025, 1, 15));
+    });
+
+    tearDown(() {
+      controller.dispose();
+    });
+
+    Future<void> pumpDayView(
+      WidgetTester tester, {
+      required List<MCalCalendarEvent> events,
+      void Function(BuildContext, MCalEventTapDetails)? onEventTap,
+      int startHour = 6,
+      int endHour = 18,
+    }) async {
+      controller.setEvents(events);
+      controller.setFocusedDateTime(DateTime(2025, 1, 15, 8, 0));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en', 'US'),
+          home: Scaffold(
+            body: SizedBox(
+              width: 800,
+              height: 900,
+              child: MCalDayView(
+                controller: controller,
+                startHour: startHour,
+                endHour: endHour,
+                timeSlotDuration: const Duration(minutes: 15),
+                showNavigator: false,
+                showCurrentTimeIndicator: false,
+                autoScrollToCurrentTime: false,
+                enableKeyboardNavigation: true,
+                autoFocusOnEventTap: true,
+                onEventTap: onEventTap,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> focusDayView(WidgetTester tester) async {
+      await tester.tap(find.byType(MCalDayView));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'tap timed event then arrow down cycles to next event in Event Mode',
+      (tester) async {
+        final activated = <String>[];
+        final a = MCalCalendarEvent(
+          id: 'dv-a',
+          title: 'Alpha',
+          start: DateTime(2025, 1, 15, 9, 0),
+          end: DateTime(2025, 1, 15, 10, 0),
+          color: Colors.blue,
+        );
+        final b = MCalCalendarEvent(
+          id: 'dv-b',
+          title: 'Beta',
+          start: DateTime(2025, 1, 15, 11, 0),
+          end: DateTime(2025, 1, 15, 12, 0),
+          color: Colors.orange,
+        );
+
+        await pumpDayView(
+          tester,
+          events: [a, b],
+          onEventTap: (c, d) => activated.add(d.event.id),
+        );
+
+        await focusDayView(tester);
+        await tester.tap(find.text('Beta'));
+        await tester.pumpAndSettle();
+        expect(activated, contains('dv-b'));
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(activated.last, 'dv-a');
+      },
+    );
+
+    testWidgets(
+      'E key from time grid focuses first timed event at or after focused slot',
+      (tester) async {
+        final activated = <String>[];
+        final a = MCalCalendarEvent(
+          id: 'dv-e-a',
+          title: 'Early',
+          start: DateTime(2025, 1, 15, 9, 0),
+          end: DateTime(2025, 1, 15, 10, 0),
+          color: Colors.blue,
+        );
+        final b = MCalCalendarEvent(
+          id: 'dv-e-b',
+          title: 'Late',
+          start: DateTime(2025, 1, 15, 11, 0),
+          end: DateTime(2025, 1, 15, 12, 0),
+          color: Colors.orange,
+        );
+
+        await pumpDayView(
+          tester,
+          events: [a, b],
+          onEventTap: (c, d) => activated.add(d.event.id),
+        );
+
+        await focusDayView(tester);
+        controller.setFocusedDateTime(DateTime(2025, 1, 15, 10, 0));
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+        await tester.pumpAndSettle();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(activated, contains('dv-e-b'));
+        expect(activated.last, 'dv-e-b');
+      },
+    );
+
+    testWidgets(
+      'E key from all-day section focuses first visible all-day event',
+      (tester) async {
+        final activated = <String>[];
+        final ad = MCalCalendarEvent(
+          id: 'dv-ad',
+          title: 'AllDayFirst',
+          start: DateTime(2025, 1, 15),
+          end: DateTime(2025, 1, 15, 23, 59),
+          isAllDay: true,
+          color: Colors.teal,
+        );
+        final timed = MCalCalendarEvent(
+          id: 'dv-timed',
+          title: 'Timed',
+          start: DateTime(2025, 1, 15, 9, 0),
+          end: DateTime(2025, 1, 15, 10, 0),
+          color: Colors.blue,
+        );
+
+        await pumpDayView(
+          tester,
+          events: [ad, timed],
+          onEventTap: (c, d) => activated.add(d.event.id),
+        );
+
+        await focusDayView(tester);
+        controller.setFocusedDateTime(DateTime(2025, 1, 15), isAllDay: true);
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+        await tester.pumpAndSettle();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(activated.last, 'dv-ad');
+      },
+    );
+
+    testWidgets('E key on empty day does not throw', (tester) async {
+      await pumpDayView(tester, events: []);
+      await focusDayView(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+      await tester.pumpAndSettle();
+      expect(find.byType(MCalDayView), findsOneWidget);
+    });
+  });
 }

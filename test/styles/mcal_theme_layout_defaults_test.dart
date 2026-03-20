@@ -119,11 +119,11 @@ void main() {
     });
 
     // Keyboard focus (event tile mixin)
-    test('keyboardSelectionBorderWidth matches previous timed focus width 2.0', () {
-      expect(d.keyboardSelectionBorderWidth, 2.0);
+    test('keyboardSelectionBorderWidth matches day view default 3.0', () {
+      expect(d.keyboardSelectionBorderWidth, 3.0);
     });
-    test('keyboardHighlightBorderWidth matches previous highlight 1.5', () {
-      expect(d.keyboardHighlightBorderWidth, 1.5);
+    test('keyboardHighlightBorderWidth matches day view default 2.0', () {
+      expect(d.keyboardHighlightBorderWidth, 2.0);
     });
     test('keyboardSelectionBorderRadius matches previous 4.0', () {
       expect(d.keyboardSelectionBorderRadius, 4.0);
@@ -170,10 +170,10 @@ void main() {
       expect(d.resizeHandleHorizontalMargin, isNotNull);
       expect(d.resizeHandleBorderRadius, isNotNull);
       expect(d.keyboardSelectionBorderWidth, isNotNull);
-      expect(d.keyboardSelectionBorderColor, isNotNull);
+      expect(d.keyboardSelectionBorderColor, isNull);
       expect(d.keyboardSelectionBorderRadius, isNotNull);
       expect(d.keyboardHighlightBorderWidth, isNotNull);
-      expect(d.keyboardHighlightBorderColor, isNotNull);
+      expect(d.keyboardHighlightBorderColor, isNull);
       expect(d.keyboardHighlightBorderRadius, isNotNull);
       expect(d.timedEventTitleTimeGap, isNotNull);
       expect(d.eventTileBorderWidth, isNotNull);
@@ -373,8 +373,8 @@ void main() {
       expect(d.monthViewTheme!.dateLabelPadding, isNotNull);
       expect(d.monthViewTheme!.weekNumberColumnWidth, isNotNull);
       expect(d.monthViewTheme!.keyboardSelectionBorderWidth, isNotNull);
-      expect(d.monthViewTheme!.keyboardSelectionBorderColor, isNotNull);
-      expect(d.monthViewTheme!.keyboardHighlightBorderColor, isNotNull);
+      expect(d.monthViewTheme!.keyboardSelectionBorderColor, isNull);
+      expect(d.monthViewTheme!.keyboardHighlightBorderColor, isNull);
     });
   });
 

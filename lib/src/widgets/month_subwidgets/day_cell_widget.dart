@@ -12,6 +12,55 @@ import '../mcal_builder_wrapper.dart';
 import '../mcal_callback_details.dart';
 import '../mcal_month_view_contexts.dart';
 
+/// Dims only the **fill** of a focused-cell [BoxDecoration] for non-interactive
+/// cells (α = 0.6), matching [DayCellWidget]'s composed focused branch. Borders
+/// and other fields are unchanged.
+BoxDecoration _dimNonInteractiveFocusedFill(BoxDecoration source) {
+  Color dim(Color c) => c.withValues(alpha: 0.6);
+
+  Gradient dimGradient(Gradient g) {
+    if (g is LinearGradient) {
+      return LinearGradient(
+        begin: g.begin,
+        end: g.end,
+        colors: g.colors.map(dim).toList(),
+        stops: g.stops,
+        tileMode: g.tileMode,
+        transform: g.transform,
+      );
+    }
+    if (g is RadialGradient) {
+      return RadialGradient(
+        center: g.center,
+        radius: g.radius,
+        colors: g.colors.map(dim).toList(),
+        stops: g.stops,
+        tileMode: g.tileMode,
+        focal: g.focal,
+        focalRadius: g.focalRadius,
+        transform: g.transform,
+      );
+    }
+    if (g is SweepGradient) {
+      return SweepGradient(
+        center: g.center,
+        startAngle: g.startAngle,
+        endAngle: g.endAngle,
+        colors: g.colors.map(dim).toList(),
+        stops: g.stops,
+        tileMode: g.tileMode,
+        transform: g.transform,
+      );
+    }
+    return g;
+  }
+
+  return source.copyWith(
+    color: source.color != null ? dim(source.color!) : null,
+    gradient: source.gradient != null ? dimGradient(source.gradient!) : null,
+  );
+}
+
 /// Placeholder widget for day cell (will be fully implemented in task 9).
 class DayCellWidget extends StatefulWidget {
   final DateTime date;
@@ -388,34 +437,59 @@ class DayCellWidgetState extends State<DayCellWidget> {
   /// Non-interactive cells may have reduced visual prominence.
   BoxDecoration _getCellDecoration(BuildContext context, [bool isInteractive = true]) {
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
+    final monthTheme = widget.theme.monthViewTheme;
+    final monthDefs = defaults.monthViewTheme!;
     Color? backgroundColor;
     final borderColor =
         widget.theme.cellBorderColor ?? defaults.cellBorderColor!;
-    final borderWidth = widget.theme.monthViewTheme?.cellBorderWidth ??
-        defaults.monthViewTheme!.cellBorderWidth!;
+    final borderWidth =
+        monthTheme?.cellBorderWidth ?? monthDefs.cellBorderWidth!;
 
-    // Apply focused styling first (takes priority)
+    // Apply focused styling first (takes priority).
+    // Each branch follows the cascade: consumer theme → master defaults.
     if (widget.isFocused) {
+      final fullDecoration =
+          monthTheme?.focusedCellDecoration ?? monthDefs.focusedCellDecoration;
+      if (fullDecoration != null) {
+        if (!isInteractive) {
+          return _dimNonInteractiveFocusedFill(fullDecoration);
+        }
+        return fullDecoration;
+      }
+
       backgroundColor =
-          widget.theme.monthViewTheme?.focusedDateBackgroundColor ??
-          widget.theme.cellBackgroundColor;
+          monthTheme?.focusedCellBackgroundColor ??
+          monthDefs.focusedCellBackgroundColor!;
+      final focusBorderColor =
+          monthTheme?.focusedCellBorderColor ?? monthDefs.focusedCellBorderColor!;
+      final focusBorderWidth =
+          monthTheme?.focusedCellBorderWidth ?? monthDefs.focusedCellBorderWidth!;
+
+      if (!isInteractive) {
+        backgroundColor = backgroundColor.withValues(alpha: 0.6);
+      }
+
+      return BoxDecoration(
+        color: backgroundColor,
+        border: Border.all(color: focusBorderColor, width: focusBorderWidth),
+      );
     } else if (widget.isToday) {
       backgroundColor =
           widget.theme.monthViewTheme?.todayBackgroundColor ??
-          widget.theme.cellBackgroundColor;
+          defaults.monthViewTheme!.todayBackgroundColor!;
     } else if (widget.isCurrentMonth) {
-      backgroundColor = widget.theme.cellBackgroundColor;
+      backgroundColor =
+          widget.theme.cellBackgroundColor ?? defaults.cellBackgroundColor!;
     } else {
-      // Leading/trailing date
-      backgroundColor = widget.isCurrentMonth
-          ? widget.theme.cellBackgroundColor
-          : (widget.theme.monthViewTheme?.leadingDatesBackgroundColor ??
-                widget.theme.monthViewTheme?.trailingDatesBackgroundColor ??
-                widget.theme.cellBackgroundColor);
+      backgroundColor =
+          widget.theme.monthViewTheme?.leadingDatesBackgroundColor ??
+          widget.theme.monthViewTheme?.trailingDatesBackgroundColor ??
+          widget.theme.cellBackgroundColor ??
+          defaults.cellBackgroundColor!;
     }
 
     // Apply reduced opacity for non-interactive cells
-    if (!isInteractive && backgroundColor != null) {
+    if (!isInteractive) {
       backgroundColor = backgroundColor.withValues(alpha: 0.6);
     }
 
@@ -461,25 +535,27 @@ class DayCellWidgetState extends State<DayCellWidget> {
       );
     }
 
-    // Otherwise use default rendering with appropriate styling
+    // Otherwise use default rendering with appropriate styling.
+    // Each branch follows the cascade: consumer theme → master defaults.
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
     TextStyle? textStyle;
     if (widget.isFocused) {
-      // Focused date takes priority for text styling
       textStyle =
-          widget.theme.monthViewTheme?.focusedDateTextStyle ??
-          widget.theme.monthViewTheme?.cellTextStyle;
+          widget.theme.monthViewTheme?.focusedCellTextStyle ??
+          defaults.monthViewTheme!.focusedCellTextStyle;
     } else if (widget.isToday) {
       textStyle =
           widget.theme.monthViewTheme?.todayTextStyle ??
-          widget.theme.monthViewTheme?.cellTextStyle;
+          defaults.monthViewTheme!.todayTextStyle;
     } else if (widget.isCurrentMonth) {
-      textStyle = widget.theme.monthViewTheme?.cellTextStyle;
+      textStyle =
+          widget.theme.monthViewTheme?.cellTextStyle ??
+          defaults.monthViewTheme!.cellTextStyle;
     } else {
-      // Leading/trailing date
       textStyle =
           widget.theme.monthViewTheme?.leadingDatesTextStyle ??
           widget.theme.monthViewTheme?.trailingDatesTextStyle ??
-          widget.theme.monthViewTheme?.cellTextStyle;
+          defaults.monthViewTheme!.cellTextStyle;
     }
 
     return Text(
@@ -501,34 +577,40 @@ class DayCellWidgetState extends State<DayCellWidget> {
     BuildContext context,
     MCalDateLabelContext labelContext,
   ) {
-    // Use the same styling logic as _buildDateLabel but with context-based values
+    // Resolve text styles via cascade: consumer theme → master defaults.
+    final defaults = MCalThemeData.fromTheme(Theme.of(context));
     TextStyle? textStyle;
-    if (labelContext.isToday) {
+    if (widget.isFocused) {
+      textStyle =
+          widget.theme.monthViewTheme?.focusedCellTextStyle ??
+          defaults.monthViewTheme!.focusedCellTextStyle;
+    } else if (labelContext.isToday) {
       textStyle =
           widget.theme.monthViewTheme?.todayTextStyle ??
-          widget.theme.monthViewTheme?.cellTextStyle;
+          defaults.monthViewTheme!.todayTextStyle;
     } else if (labelContext.isCurrentMonth) {
-      textStyle = widget.theme.monthViewTheme?.cellTextStyle;
+      textStyle =
+          widget.theme.monthViewTheme?.cellTextStyle ??
+          defaults.monthViewTheme!.cellTextStyle;
     } else {
       textStyle =
           widget.theme.monthViewTheme?.leadingDatesTextStyle ??
           widget.theme.monthViewTheme?.trailingDatesTextStyle ??
-          widget.theme.monthViewTheme?.cellTextStyle;
+          defaults.monthViewTheme!.cellTextStyle;
     }
 
     final dateText = Text(
       labelContext.defaultFormattedString,
       style: textStyle?.copyWith(
-        fontWeight: labelContext.isToday ? FontWeight.bold : null,
+        fontWeight: (labelContext.isToday || widget.isFocused)
+            ? FontWeight.bold
+            : null,
       ),
       textAlign: TextAlign.center,
     );
 
     // Get alignment from the DateLabelPosition
     final alignment = labelContext.horizontalAlignment;
-
-    // Use theme dateLabelHeight to prevent overflow when cells are constrained
-    final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final labelHeight = widget.theme.monthViewTheme?.dateLabelHeight ??
         defaults.monthViewTheme!.dateLabelHeight!;
 

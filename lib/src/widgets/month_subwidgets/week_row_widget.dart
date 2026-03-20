@@ -440,12 +440,13 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
     final Widget Function(BuildContext, MCalMonthOverflowIndicatorContext)
     wrappedOverflowIndicatorBuilder;
     if (overflowFocusedDate != null) {
-      final focusColor = widget.theme.monthViewTheme?.focusedDateBackgroundColor;
       wrappedOverflowIndicatorBuilder =
           (BuildContext ctx, MCalMonthOverflowIndicatorContext overflowCtx) {
             final child = baseOverflowIndicatorBuilder(ctx, overflowCtx);
-            if (focusColor != null &&
-                overflowCtx.date.year == overflowFocusedDate.year &&
+            final defaults = MCalThemeData.fromTheme(Theme.of(ctx));
+            final focusColor = widget.theme.monthViewTheme?.focusedCellBackgroundColor ??
+                defaults.monthViewTheme!.focusedCellBackgroundColor!;
+            if (overflowCtx.date.year == overflowFocusedDate.year &&
                 overflowCtx.date.month == overflowFocusedDate.month &&
                 overflowCtx.date.day == overflowFocusedDate.day) {
               return DecoratedBox(
@@ -667,6 +668,13 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
       defaultColor: defaultBgColor,
     );
 
+    final lightContrast =
+        theme.monthViewTheme?.eventTileLightContrastColor ??
+        defaults.monthViewTheme!.eventTileLightContrastColor!;
+    final darkContrast =
+        theme.monthViewTheme?.eventTileDarkContrastColor ??
+        defaults.monthViewTheme!.eventTileDarkContrastColor!;
+
     // Determine border — all-day events prefer allDay* border properties.
     final borderWidth = event.isAllDay
         ? (theme.monthViewTheme?.allDayEventBorderWidth ?? theme.monthViewTheme?.eventTileBorderWidth ?? 0.0)
@@ -724,24 +732,30 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
     if (keyboardState != MCalEventKeyboardState.none) {
       final m = theme.monthViewTheme;
       final md = defaults.monthViewTheme!;
-      final Color indicatorColor;
       final double indicatorWidth;
       final double kbCornerRadius;
+      final Color? rawIndicator;
       if (keyboardState == MCalEventKeyboardState.selected) {
-        indicatorColor =
-            m?.keyboardSelectionBorderColor ?? md.keyboardSelectionBorderColor!;
+        rawIndicator =
+            m?.keyboardSelectionBorderColor ?? md.keyboardSelectionBorderColor;
         indicatorWidth =
             m?.keyboardSelectionBorderWidth ?? md.keyboardSelectionBorderWidth!;
         kbCornerRadius = m?.keyboardSelectionBorderRadius ??
             md.keyboardSelectionBorderRadius!;
       } else {
-        indicatorColor =
-            m?.keyboardHighlightBorderColor ?? md.keyboardHighlightBorderColor!;
+        rawIndicator =
+            m?.keyboardHighlightBorderColor ?? md.keyboardHighlightBorderColor;
         indicatorWidth =
             m?.keyboardHighlightBorderWidth ?? md.keyboardHighlightBorderWidth!;
         kbCornerRadius = m?.keyboardHighlightBorderRadius ??
             md.keyboardHighlightBorderRadius!;
       }
+      final indicatorColor = rawIndicator ??
+          resolveContrastColor(
+            backgroundColor: tileColor,
+            lightContrastColor: lightContrast,
+            darkContrastColor: darkContrast,
+          );
 
       final kbBorderSide = BorderSide(
         color: indicatorColor,
@@ -781,12 +795,6 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
       );
     }
 
-    final lightContrast =
-        theme.monthViewTheme?.eventTileLightContrastColor ??
-        defaults.monthViewTheme!.eventTileLightContrastColor!;
-    final darkContrast =
-        theme.monthViewTheme?.eventTileDarkContrastColor ??
-        defaults.monthViewTheme!.eventTileDarkContrastColor!;
     // All-day events prefer allDayEventTextStyle over eventTileTextStyle.
     final TextStyle? resolvedTextStyle = event.isAllDay
         ? (theme.monthViewTheme?.allDayEventTextStyle ?? theme.monthViewTheme?.eventTileTextStyle)

@@ -213,6 +213,10 @@ class _DayAccessibilityTabState extends State<DayAccessibilityTab> {
             keys: 'T',
             action: l10n.accessibilityDayNavT,
           ),
+          _ShortcutRow(
+            keys: 'E',
+            action: l10n.accessibilityDayNavE,
+          ),
           const SizedBox(height: 12),
 
           // Event Mode

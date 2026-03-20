@@ -174,6 +174,9 @@ MCalThemeData getMonthThemePreset(ThemePreset preset, ThemeData materialTheme) {
           hoverCellBackgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.3),
           dropTargetCellValidColor: colorScheme.primary.withValues(alpha: 0.4),
           dropTargetCellInvalidColor: colorScheme.error.withValues(alpha: 0.4),
+          focusedCellBackgroundColor: colorScheme.primary.withValues(alpha: 0.35),
+          focusedCellBorderColor: colorScheme.onSurface,
+          focusedCellBorderWidth: 3.0,
         ),
       );
 
@@ -479,6 +482,9 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
           timeLegendTickColor: colorScheme.onSurface.withValues(alpha: 0.3),
           timeLegendTickWidth: 1.5,
           timeLegendTickLength: 10.0,
+          focusedSlotBackgroundColor: colorScheme.primary.withValues(alpha: 0.22),
+          focusedSlotBorderColor: colorScheme.onSurface,
+          focusedSlotBorderWidth: 3.0,
         ),
       );
 

@@ -380,6 +380,54 @@ abstract class AppLocalizations {
   /// **'Month Grid'**
   String get sectionMonthGrid;
 
+  /// No description provided for @sectionFocused.
+  ///
+  /// In en, this message translates to:
+  /// **'Focused'**
+  String get sectionFocused;
+
+  /// No description provided for @sectionKeyboardEventBorder.
+  ///
+  /// In en, this message translates to:
+  /// **'Keyboard Event Border'**
+  String get sectionKeyboardEventBorder;
+
+  /// No description provided for @settingFocusedCellBackgroundColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Focused Cell Background'**
+  String get settingFocusedCellBackgroundColor;
+
+  /// No description provided for @settingFocusedCellBorderColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Focused Cell Border Color'**
+  String get settingFocusedCellBorderColor;
+
+  /// No description provided for @settingFocusedCellBorderWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Focused Cell Border Width'**
+  String get settingFocusedCellBorderWidth;
+
+  /// No description provided for @settingFocusedSlotBackgroundColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Focused Slot Background'**
+  String get settingFocusedSlotBackgroundColor;
+
+  /// No description provided for @settingFocusedSlotBorderColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Focused Slot Border Color'**
+  String get settingFocusedSlotBorderColor;
+
+  /// No description provided for @settingFocusedSlotBorderWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Focused Slot Border Width'**
+  String get settingFocusedSlotBorderWidth;
+
   /// No description provided for @settingShowNavigator.
   ///
   /// In en, this message translates to:
@@ -2047,6 +2095,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Jump to time grid (restores last slot)'**
   String get accessibilityDayNavT;
+
+  /// No description provided for @accessibilityDayNavE.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Event Mode (focus nearest event)'**
+  String get accessibilityDayNavE;
 
   /// No description provided for @accessibilityDayEventUpDown.
   ///

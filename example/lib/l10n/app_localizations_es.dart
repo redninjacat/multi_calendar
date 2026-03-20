@@ -149,6 +149,34 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sectionMonthGrid => 'Cuadrícula del Mes';
 
   @override
+  String get sectionFocused => 'Enfoque';
+
+  @override
+  String get sectionKeyboardEventBorder => 'Borde de evento de teclado';
+
+  @override
+  String get settingFocusedCellBackgroundColor => 'Fondo de celda enfocada';
+
+  @override
+  String get settingFocusedCellBorderColor =>
+      'Color del borde de celda enfocada';
+
+  @override
+  String get settingFocusedCellBorderWidth =>
+      'Grosor del borde de celda enfocada';
+
+  @override
+  String get settingFocusedSlotBackgroundColor => 'Fondo de franja enfocada';
+
+  @override
+  String get settingFocusedSlotBorderColor =>
+      'Color del borde de franja enfocada';
+
+  @override
+  String get settingFocusedSlotBorderWidth =>
+      'Grosor del borde de franja enfocada';
+
+  @override
   String get settingShowNavigator => 'Mostrar Navegador';
 
   @override
@@ -1094,6 +1122,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get accessibilityDayNavT =>
       'Ir a la cuadrícula de tiempo (restaura la última franja)';
+
+  @override
+  String get accessibilityDayNavE =>
+      'Entrar en Modo Evento (enfocar el evento más cercano)';
 
   @override
   String get accessibilityDayEventUpDown =>

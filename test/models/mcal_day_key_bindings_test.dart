@@ -70,6 +70,14 @@ void main() {
         );
       });
 
+      test('jumpToEventMode defaults to E (Day View-specific)', () {
+        const bindings = MCalDayKeyBindings();
+        expect(
+          bindings.jumpToEventMode.any((a) => a.key == LogicalKeyboardKey.keyE),
+          isTrue,
+        );
+      });
+
       test('convertEventType defaults to X (Day View-specific)', () {
         const bindings = MCalDayKeyBindings();
         expect(
@@ -298,6 +306,7 @@ void main() {
         expect(copy.enterEventMode, equals(original.enterEventMode));
         expect(copy.jumpToAllDay, equals(original.jumpToAllDay));
         expect(copy.jumpToTimeGrid, equals(original.jumpToTimeGrid));
+        expect(copy.jumpToEventMode, equals(original.jumpToEventMode));
         expect(copy.convertEventType, equals(original.convertEventType));
         expect(copy.confirmMove, equals(original.confirmMove));
         expect(copy.confirmResize, equals(original.confirmResize));
@@ -345,6 +354,11 @@ void main() {
         const bindings = MCalDayKeyBindings();
         expect(bindings.toString(), contains('convertEventType'));
       });
+
+      test('includes jumpToEventMode field', () {
+        const bindings = MCalDayKeyBindings();
+        expect(bindings.toString(), contains('jumpToEventMode'));
+      });
     });
 
     group('Day View-specific properties', () {
@@ -363,11 +377,12 @@ void main() {
         expect(bindings.convertEventType, isA<List<MCalKeyActivator>>());
       });
 
-      test('all three Day View-specific properties are non-empty by default',
+      test('all four Day View-specific navigation properties are non-empty by default',
           () {
         const bindings = MCalDayKeyBindings();
         expect(bindings.jumpToAllDay, isNotEmpty);
         expect(bindings.jumpToTimeGrid, isNotEmpty);
+        expect(bindings.jumpToEventMode, isNotEmpty);
         expect(bindings.convertEventType, isNotEmpty);
       });
     });

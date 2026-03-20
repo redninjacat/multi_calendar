@@ -2,7 +2,6 @@ Please review the code regarding enabling drag to move and drag to resize in the
 
 Please review the keyboard shortcuts for both the day view and month view. They seem to be different. Month view seems to be the most correct. The important things are that all semantics should be in place and keys should be consistent across views. E.g. navigating between pages days and then events within days should be consistent. Day view has two event areas so both need to be handled and could have extra keys not in the month view. But then selecting, resizing and moving events should be consistent across views. Again, month view is mostly correct (or perhaps entirely correct.) (in any case, when both day view and month view use different keys to do the same thing, defer to month view UNLESS day view is somehow better/easier for the user)
 
-Please do web search of Material 3 themes as they pertain to Flutter and then review this again. I want to make sure that the "Master" colors is consistent with Material 3 design.
 
 Month view
  keyboard navigation
@@ -13,7 +12,8 @@ Month view
  Swipe navigation direction - vertical - edge detection and example snackbar
 
 Day view
- make key handling work like month view
+ key event navigation out of sequence
+ key event selection is less than ideal, need to be able to select an event without being "in" the event
 
 
 
