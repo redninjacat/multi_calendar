@@ -501,7 +501,28 @@ class AppLocalizationsFr extends AppLocalizations {
       'Durée Minimale de Redimensionnement (Minutes)';
 
   @override
-  String get settingKeyboardFocusBorderRadius => 'Rayon de bordure de focus';
+  String get settingKeyboardSelectionBorderWidth =>
+      'Largeur de bordure de sélection';
+
+  @override
+  String get settingKeyboardSelectionBorderColor =>
+      'Couleur de bordure de sélection';
+
+  @override
+  String get settingKeyboardSelectionBorderRadius =>
+      'Rayon de bordure de sélection';
+
+  @override
+  String get settingKeyboardHighlightBorderWidth =>
+      'Largeur de bordure de surbrillance';
+
+  @override
+  String get settingKeyboardHighlightBorderColor =>
+      'Couleur de bordure de surbrillance';
+
+  @override
+  String get settingKeyboardHighlightBorderRadius =>
+      'Rayon de bordure de surbrillance';
 
   @override
   String get settingTimedEventTitleTimeGap => 'Écart titre-heure';

@@ -42,9 +42,6 @@ mixin MCalAllDaySectionThemeMixin {
   /// Padding around the all-day section container.
   EdgeInsets? get allDaySectionPadding;
 
-  /// Border width for the keyboard focus ring on focused all-day tiles (in pixels).
-  double? get allDayKeyboardFocusBorderWidth;
-
   // ── Overflow handle ────────────────────────────────────────────────────────
 
   /// Visual width of the overflow handle bar (in pixels).

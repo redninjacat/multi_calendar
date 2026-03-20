@@ -1068,7 +1068,8 @@ void main() {
         expect(dayViewTheme.dropTargetOverlayBorderWidth, isNotNull);
         expect(dayViewTheme.disabledTimeSlotColor, isNotNull);
         expect(dayViewTheme.resizeHandleColor, isNotNull);
-        expect(dayViewTheme.keyboardFocusBorderColor, isNotNull);
+        expect(dayViewTheme.keyboardSelectionBorderColor, isNotNull);
+        expect(dayViewTheme.keyboardHighlightBorderColor, isNotNull);
         expect(dayViewTheme.focusedSlotBorderColor, isNotNull);
         expect(dayViewTheme.focusedSlotBorderWidth, isNotNull);
         expect(dayViewTheme.focusedSlotBackgroundColor, isNotNull);

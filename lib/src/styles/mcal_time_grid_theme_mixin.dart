@@ -121,11 +121,6 @@ mixin MCalTimeGridThemeMixin {
   /// in `time_grid_events_layer.dart`.
   EdgeInsets? get timedEventMargin;
 
-  /// Border width for the keyboard focus ring on focused timed event tiles (in pixels).
-  ///
-  /// Replaces the hardcoded `2` in `time_grid_events_layer.dart`.
-  double? get timedEventKeyboardFocusBorderWidth;
-
   /// Font size for timed event tile title text when the tile is compact (in pixels).
   ///
   /// Replaces the hardcoded `10` in `time_grid_events_layer.dart`.
@@ -178,16 +173,6 @@ mixin MCalTimeGridThemeMixin {
 
   /// Color for the disabled time slot fill.
   Color? get disabledTimeSlotColor;
-
-  /// Border color for the keyboard focus ring on focused event tiles.
-  Color? get keyboardFocusBorderColor;
-
-  /// Border radius of the keyboard focus ring on focused event tiles (in pixels).
-  ///
-  /// Applies to both timed event and all-day event keyboard focus indicators.
-  /// Replaces the hardcoded `4` (`BorderRadius.circular(4)`) in
-  /// `time_grid_events_layer.dart` and `all_day_events_section.dart`.
-  double? get keyboardFocusBorderRadius;
 
   /// Hit area size for resize handles on timed events (in logical pixels).
   double? get resizeHandleSize;

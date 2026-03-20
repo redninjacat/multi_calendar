@@ -1292,7 +1292,10 @@ class MCalDayView extends StatefulWidget {
   /// Return `true` (or a `Future<bool>` that resolves to `true`) to confirm deletion
   /// and return to Navigation Mode. Return `false` to keep the event selected in
   /// Event Mode.
-  final FutureOr<bool> Function(BuildContext context, MCalEventTapDetails details)?
+  final FutureOr<bool> Function(
+    BuildContext context,
+    MCalEventTapDetails details,
+  )?
   onDeleteEventRequested;
 
   /// Called when the user requests to convert the focused event between all-day and
@@ -1309,7 +1312,8 @@ class MCalDayView extends StatefulWidget {
     MCalCalendarEvent event,
     bool toAllDay,
     DateTime? suggestedStartTime,
-  )? onEventTypeConversionRequested;
+  )?
+  onEventTypeConversionRequested;
 
   // ============================================================================
   // Drag and Drop Callbacks
@@ -1612,7 +1616,6 @@ class MCalDayViewState extends State<MCalDayView> {
   // Layout Cache
   // ============================================================================
 
-
   // Drag layout cache — captured once per drag session (or refreshed after
   // page navigation) to avoid repeated RenderBox lookups every frame.
   // Mirrors the caching strategy in Month View's _updateLayoutCache.
@@ -1656,9 +1659,28 @@ class MCalDayViewState extends State<MCalDayView> {
   int? _lastTimeGridSlotIndex;
   bool _isKeyboardOverflowFocused = false;
   int _keyboardEventIndex = 0;
+
   /// True once the user has pressed a navigation key, so focus indicators
   /// are not shown on initial render before keyboard use has begun.
   bool _keyboardNavigationActive = false;
+
+  /// Event tile keyboard highlight — Tab/Shift+Tab cycle in Event Mode only.
+  String? get _keyboardHighlightedEventIdForDayView {
+    if (!_keyboardNavigationActive) return null;
+    if (_isKeyboardMoveMode || _isKeyboardResizeMode) return null;
+    if (_isKeyboardEventMode && _focusedEvent != null) return _focusedEvent!.id;
+    return null;
+  }
+
+  /// Event tile keyboard selection — confirmed move or resize for this event.
+  String? get _keyboardSelectedEventIdForDayView {
+    if (!_keyboardNavigationActive) return null;
+    if (_isKeyboardMoveMode) return _keyboardMoveEvent?.id;
+    if (_isKeyboardResizeMode) {
+      return _dragHandler?.resizingEvent?.id ?? _focusedEvent?.id;
+    }
+    return null;
+  }
 
   // Focused DateTime Sync (Focused DateTime spec)
   // Previous snapshot used to detect changes in _onControllerChanged.
@@ -1793,8 +1815,7 @@ class MCalDayViewState extends State<MCalDayView> {
   void initState() {
     super.initState();
     _displayDate = dateOnly(widget.controller.displayDate);
-    _scrollController =
-        widget.scrollController ?? ResettableScrollController();
+    _scrollController = widget.scrollController ?? ResettableScrollController();
     _scrollController!.addListener(_onScrollPositionChanged);
     _focusNode = FocusNode();
 
@@ -2169,6 +2190,32 @@ class MCalDayViewState extends State<MCalDayView> {
       _allDayEvents = _allEvents.where((e) => e.isAllDay).toList();
       _timedEvents = _allEvents.where((e) => !e.isAllDay).toList();
     });
+  }
+
+  /// Replaces [_focusedEvent] with the current instance from [_allDayEvents] /
+  /// [_timedEvents] when the ID matches.
+  ///
+  /// After a successful drop, the controller stores a new [MCalCalendarEvent]
+  /// instance for the same id while local state may still hold the pre-move
+  /// object. Keyboard move/resize use that reference for [MCalCalendarEvent.start]
+  /// / [MCalCalendarEvent.end], which otherwise produces wrong proposed ranges
+  /// and a stale drop overlay at the old position.
+  void _syncFocusedEventFromController() {
+    final focused = _focusedEvent;
+    if (focused == null) return;
+    final id = focused.id;
+    for (final e in _allDayEvents) {
+      if (e.id == id) {
+        _focusedEvent = e;
+        return;
+      }
+    }
+    for (final e in _timedEvents) {
+      if (e.id == id) {
+        _focusedEvent = e;
+        return;
+      }
+    }
   }
 
   /// Returns events for [date], using the cached lists when [date] matches
@@ -2690,7 +2737,9 @@ class MCalDayViewState extends State<MCalDayView> {
           _focusedSlotIndex = (_focusedSlotIndex! - 1).clamp(0, totalSlots - 1);
           _lastTimeGridSlotIndex = _focusedSlotIndex;
         });
-        widget.controller.setFocusedDateTime(_slotIndexToTime(_focusedSlotIndex!));
+        widget.controller.setFocusedDateTime(
+          _slotIndexToTime(_focusedSlotIndex!),
+        );
         _scrollToFocusedSlot();
       }
       return KeyEventResult.handled;
@@ -2705,19 +2754,22 @@ class MCalDayViewState extends State<MCalDayView> {
           _focusedSlotIndex = target;
           _lastTimeGridSlotIndex = target;
         });
-        widget.controller.setFocusedDateTime(_slotIndexToTime(_focusedSlotIndex!));
+        widget.controller.setFocusedDateTime(
+          _slotIndexToTime(_focusedSlotIndex!),
+        );
         _scrollToFocusedSlot();
         final focusedTime = _slotIndexToTime(_focusedSlotIndex!);
         final timeStr = _formatSlotTime(focusedTime);
         _announceScreenReader(context, l10n.announcementDayTimeGrid(timeStr));
       } else {
-        final next =
-            (_focusedSlotIndex! + 1).clamp(0, totalSlots - 1);
+        final next = (_focusedSlotIndex! + 1).clamp(0, totalSlots - 1);
         setState(() {
           _focusedSlotIndex = next;
           _lastTimeGridSlotIndex = next;
         });
-        widget.controller.setFocusedDateTime(_slotIndexToTime(_focusedSlotIndex!));
+        widget.controller.setFocusedDateTime(
+          _slotIndexToTime(_focusedSlotIndex!),
+        );
         _scrollToFocusedSlot();
       }
       return KeyEventResult.handled;
@@ -2729,7 +2781,9 @@ class MCalDayViewState extends State<MCalDayView> {
         _focusedSlotIndex = 0;
         _lastTimeGridSlotIndex = 0;
       });
-      widget.controller.setFocusedDateTime(_slotIndexToTime(_focusedSlotIndex!));
+      widget.controller.setFocusedDateTime(
+        _slotIndexToTime(_focusedSlotIndex!),
+      );
       _scrollToFocusedSlot();
       return KeyEventResult.handled;
     }
@@ -2741,7 +2795,9 @@ class MCalDayViewState extends State<MCalDayView> {
         _focusedSlotIndex = last;
         _lastTimeGridSlotIndex = last;
       });
-      widget.controller.setFocusedDateTime(_slotIndexToTime(_focusedSlotIndex!));
+      widget.controller.setFocusedDateTime(
+        _slotIndexToTime(_focusedSlotIndex!),
+      );
       _scrollToFocusedSlot();
       return KeyEventResult.handled;
     }
@@ -2779,7 +2835,9 @@ class MCalDayViewState extends State<MCalDayView> {
           _focusedEvent = eventsAtFocus[0];
         });
         _announceScreenReader(
-          context, l10n.announcementDayEventMode(eventsAtFocus.length));
+          context,
+          l10n.announcementDayEventMode(eventsAtFocus.length),
+        );
       }
       return KeyEventResult.handled;
     }
@@ -2815,7 +2873,9 @@ class MCalDayViewState extends State<MCalDayView> {
         _focusedSlotIndex = target;
         _lastTimeGridSlotIndex = target;
       });
-      widget.controller.setFocusedDateTime(_slotIndexToTime(_focusedSlotIndex!));
+      widget.controller.setFocusedDateTime(
+        _slotIndexToTime(_focusedSlotIndex!),
+      );
       _scrollToFocusedSlot();
       final focusedTime = _slotIndexToTime(target);
       final timeStr = _formatSlotTime(focusedTime);
@@ -2875,10 +2935,11 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Returns the slot index closest to the current time of day.
   int _nearestSlotToNow(int totalSlots) {
     final now = DateTime.now();
-    final minutesSinceStart =
-        (now.hour - widget.startHour) * 60 + now.minute;
-    return (minutesSinceStart ~/ widget.timeSlotDuration.inMinutes)
-        .clamp(0, totalSlots - 1);
+    final minutesSinceStart = (now.hour - widget.startHour) * 60 + now.minute;
+    return (minutesSinceStart ~/ widget.timeSlotDuration.inMinutes).clamp(
+      0,
+      totalSlots - 1,
+    );
   }
 
   /// Formats a [DateTime] as a readable time string for announcements.
@@ -2957,7 +3018,8 @@ class MCalDayViewState extends State<MCalDayView> {
     final visibleAllDay = _allDayVisibleCount != null
         ? _allDayEvents.take(_allDayVisibleCount!).toList()
         : _allDayEvents;
-    final hasOverflow = _allDayVisibleCount != null &&
+    final hasOverflow =
+        _allDayVisibleCount != null &&
         _allDayEvents.length > _allDayVisibleCount!;
     final allFocusable = [...visibleAllDay, ..._timedEvents];
     final overflowIndex = visibleAllDay.length; // index of overflow in cycle
@@ -2984,8 +3046,9 @@ class MCalDayViewState extends State<MCalDayView> {
         });
       } else {
         // Adjust for overflow slot offset if after overflow.
-        final eventListIndex =
-            (hasOverflow && index > overflowIndex) ? index - 1 : index;
+        final eventListIndex = (hasOverflow && index > overflowIndex)
+            ? index - 1
+            : index;
         final focusedEv = allFocusable[eventListIndex];
         setState(() {
           _isKeyboardOverflowFocused = false;
@@ -3013,8 +3076,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
     // ── Cycle Backward ────────────────────────────────────────────────────────
     if (_matchesAny(_keyBindings.cycleBackward, key)) {
-      final prev =
-          (_keyboardEventIndex - 1 + totalCyclable) % totalCyclable;
+      final prev = (_keyboardEventIndex - 1 + totalCyclable) % totalCyclable;
       applyFocusAtIndex(prev);
       return KeyEventResult.handled;
     }
@@ -3022,7 +3084,9 @@ class MCalDayViewState extends State<MCalDayView> {
     // ── Activate (Enter / Space) ───────────────────────────────────────────────
     if (_matchesAny(_keyBindings.activate, key)) {
       if (_isKeyboardOverflowFocused) {
-        final overflowEvents = _allDayEvents.skip(visibleAllDay.length).toList();
+        final overflowEvents = _allDayEvents
+            .skip(visibleAllDay.length)
+            .toList();
         widget.onOverflowTap?.call(context, overflowEvents, _displayDate);
         _exitAllKeyboardModes();
       } else if (_focusedEvent != null) {
@@ -3047,7 +3111,9 @@ class MCalDayViewState extends State<MCalDayView> {
           );
           final result = widget.onDeleteEventRequested!(context, details);
           _announceScreenReader(
-              context, l10n.announcementDayEventDeleted(ev.title));
+            context,
+            l10n.announcementDayEventDeleted(ev.title),
+          );
           _handleDeleteResult(result);
         }
       }
@@ -3163,7 +3229,9 @@ class MCalDayViewState extends State<MCalDayView> {
         _focusedEvent = ev;
       });
       _announceScreenReader(
-          context, l10n.announcementDayMoveCancelled(ev.title));
+        context,
+        l10n.announcementDayMoveCancelled(ev.title),
+      );
       return KeyEventResult.handled;
     }
 
@@ -3233,19 +3301,45 @@ class MCalDayViewState extends State<MCalDayView> {
     // ── Switch to Start Edge (S) ──────────────────────────────────────────────
     if (_matchesAny(_keyBindings.switchToStartEdge, key)) {
       if (focusedEv != null) {
+        // Snapshot the live proposed range before cancelResize() clears it.
+        // [_keyboardResizeEdgeOffset] always tracks the *active* edge in pixel
+        // space; without re-basing it when switching edges, it still holds the
+        // previous edge's offset (e.g. end Y while resizing start), which
+        // [_updateKeyboardResizePreview] then mis-reads as a start time and
+        // min-duration clamp collapses to "end minus one slot".
+        final dh = _dragHandler;
+        final ps = dh?.proposedStartDate ??
+            _keyboardResizeProposedStart ??
+            focusedEv.start;
+        final pe = dh?.proposedEndDate ??
+            _keyboardResizeProposedEnd ??
+            focusedEv.end;
         _keyboardResizeEdge = MCalResizeEdge.start;
         _ensureDragHandler.cancelResize();
         _ensureDragHandler.startResize(focusedEv, MCalResizeEdge.start);
         if (focusedEv.isAllDay) {
-          final start = _keyboardResizeProposedStart ?? focusedEv.start;
-          final end = _keyboardResizeProposedEnd ?? focusedEv.end;
-          final isValid = _validateResize(focusedEv, start, end,
-              MCalResizeEdge.start);
+          _keyboardResizeProposedStart = ps;
+          _keyboardResizeProposedEnd = pe;
+          final isValid = _validateResize(
+            focusedEv,
+            ps,
+            pe,
+            MCalResizeEdge.start,
+          );
           _ensureDragHandler.updateResize(
-            proposedStart: start, proposedEnd: end,
-            isValid: isValid, cells: const [],
+            proposedStart: ps,
+            proposedEnd: pe,
+            isValid: isValid,
+            cells: const [],
           );
         } else {
+          _keyboardResizeProposedStart = ps;
+          _keyboardResizeProposedEnd = pe;
+          _keyboardResizeEdgeOffset = timeToOffset(
+            time: ps,
+            startHour: widget.startHour,
+            hourHeight: _hourHeight,
+          );
           _updateKeyboardResizePreview();
         }
         _announceScreenReader(context, l10n.announcementResizingStartEdge);
@@ -3256,19 +3350,39 @@ class MCalDayViewState extends State<MCalDayView> {
     // ── Switch to End Edge (E) ────────────────────────────────────────────────
     if (_matchesAny(_keyBindings.switchToEndEdge, key)) {
       if (focusedEv != null) {
+        final dh = _dragHandler;
+        final ps = dh?.proposedStartDate ??
+            _keyboardResizeProposedStart ??
+            focusedEv.start;
+        final pe = dh?.proposedEndDate ??
+            _keyboardResizeProposedEnd ??
+            focusedEv.end;
         _keyboardResizeEdge = MCalResizeEdge.end;
         _ensureDragHandler.cancelResize();
         _ensureDragHandler.startResize(focusedEv, MCalResizeEdge.end);
         if (focusedEv.isAllDay) {
-          final start = _keyboardResizeProposedStart ?? focusedEv.start;
-          final end = _keyboardResizeProposedEnd ?? focusedEv.end;
-          final isValid = _validateResize(focusedEv, start, end,
-              MCalResizeEdge.end);
+          _keyboardResizeProposedStart = ps;
+          _keyboardResizeProposedEnd = pe;
+          final isValid = _validateResize(
+            focusedEv,
+            ps,
+            pe,
+            MCalResizeEdge.end,
+          );
           _ensureDragHandler.updateResize(
-            proposedStart: start, proposedEnd: end,
-            isValid: isValid, cells: const [],
+            proposedStart: ps,
+            proposedEnd: pe,
+            isValid: isValid,
+            cells: const [],
           );
         } else {
+          _keyboardResizeProposedStart = ps;
+          _keyboardResizeProposedEnd = pe;
+          _keyboardResizeEdgeOffset = timeToOffset(
+            time: pe,
+            startHour: widget.startHour,
+            hourHeight: _hourHeight,
+          );
           _updateKeyboardResizePreview();
         }
         _announceScreenReader(context, l10n.announcementResizingEndEdge);
@@ -3284,7 +3398,9 @@ class MCalDayViewState extends State<MCalDayView> {
         _focusedEvent = focusedEv;
         _enterKeyboardMoveMode();
         _announceScreenReader(
-            context, l10n.announcementDayMoveMode(focusedEv.title));
+          context,
+          l10n.announcementDayMoveMode(focusedEv.title),
+        );
       }
       return KeyEventResult.handled;
     }
@@ -3314,6 +3430,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
   /// Enters keyboard move mode for the focused event (Ctrl+M).
   void _enterKeyboardMoveMode() {
+    _syncFocusedEventFromController();
     final event = _focusedEvent;
     if (event == null || !widget.enableDragToMove) return;
 
@@ -3581,6 +3698,7 @@ class MCalDayViewState extends State<MCalDayView> {
 
   /// Enters keyboard resize mode for the focused event.
   void _enterKeyboardResizeMode() {
+    _syncFocusedEventFromController();
     final event = _focusedEvent;
     if (event == null || !_resolveDragToResize()) return;
 
@@ -3591,8 +3709,12 @@ class MCalDayViewState extends State<MCalDayView> {
     if (event.isAllDay) {
       _keyboardResizeProposedStart = event.start;
       _keyboardResizeProposedEnd = event.end;
-      final isValid = _validateResize(event, event.start, event.end,
-          MCalResizeEdge.end);
+      final isValid = _validateResize(
+        event,
+        event.start,
+        event.end,
+        MCalResizeEdge.end,
+      );
       _ensureDragHandler.updateResize(
         proposedStart: event.start,
         proposedEnd: event.end,
@@ -3600,6 +3722,8 @@ class MCalDayViewState extends State<MCalDayView> {
         cells: const [],
       );
     } else {
+      _keyboardResizeProposedStart = event.start;
+      _keyboardResizeProposedEnd = event.end;
       _keyboardResizeEdgeOffset = timeToOffset(
         time: event.end,
         startHour: widget.startHour,
@@ -3618,7 +3742,11 @@ class MCalDayViewState extends State<MCalDayView> {
   /// Offset of the edge being resized (for keyboard resize mode).
   double _keyboardResizeEdgeOffset = 0.0;
 
-  /// Proposed start/end for all-day keyboard resize (date-based, not pixel-based).
+  /// Proposed start/end for keyboard resize: all-day uses these as the live
+  /// range; **timed** uses them to remember the full (start,end) while one
+  /// edge tracks [_keyboardResizeEdgeOffset], so switching S/E keeps the other
+  /// edge at the last preview (not [MCalCalendarEvent.start]/end from the
+  /// original [resizingEvent]).
   DateTime? _keyboardResizeProposedStart;
   DateTime? _keyboardResizeProposedEnd;
 
@@ -3630,6 +3758,7 @@ class MCalDayViewState extends State<MCalDayView> {
     final event = dragHandler.resizingEvent!;
     final edge = _keyboardResizeEdge ?? MCalResizeEdge.end;
     final hourHeight = _hourHeight;
+    // Inactive edge: use cached preview pair so timed resize survives S↔E.
     final proposedStart = edge == MCalResizeEdge.start
         ? snapToTimeSlot(
             time: offsetToTime(
@@ -3640,7 +3769,7 @@ class MCalDayViewState extends State<MCalDayView> {
             ),
             timeSlotDuration: widget.timeSlotDuration,
           )
-        : event.start;
+        : (_keyboardResizeProposedStart ?? event.start);
     final proposedEnd = edge == MCalResizeEdge.end
         ? snapToTimeSlot(
             time: offsetToTime(
@@ -3651,7 +3780,7 @@ class MCalDayViewState extends State<MCalDayView> {
             ),
             timeSlotDuration: widget.timeSlotDuration,
           )
-        : event.end;
+        : (_keyboardResizeProposedEnd ?? event.end);
 
     final eventMinDuration = widget.timeSlotDuration.inMinutes >= 15
         ? widget.timeSlotDuration
@@ -3676,6 +3805,10 @@ class MCalDayViewState extends State<MCalDayView> {
       isValid: isValid,
       cells: const [],
     );
+    if (!event.isAllDay) {
+      _keyboardResizeProposedStart = start;
+      _keyboardResizeProposedEnd = end;
+    }
   }
 
   /// Adjusts keyboard resize by N slots (positive = longer).
@@ -3768,8 +3901,9 @@ class MCalDayViewState extends State<MCalDayView> {
       final activeDate = edge == MCalResizeEdge.end
           ? (_keyboardResizeProposedEnd ?? event.end)
           : (_keyboardResizeProposedStart ?? event.start);
-      final dateStr =
-          DateFormat.yMMMMEEEEd(locale.toString()).format(activeDate);
+      final dateStr = DateFormat.yMMMMEEEEd(
+        locale.toString(),
+      ).format(activeDate);
       _announceScreenReader(
         context,
         l10n.announcementDayResizingEvent(event.title, edgeName, dateStr),
@@ -5459,6 +5593,10 @@ class MCalDayViewState extends State<MCalDayView> {
       }
     }
 
+    if (_focusedEvent?.id == event.id) {
+      _syncFocusedEventFromController();
+    }
+
     debugPrint(
       '[DD] HandleDrop: calling cancelDrag() to complete — edgeTimerActive=${dragHandler?.debugEdgeTimerActive} vertScrollTimerActive=${_verticalScrollTimer?.isActive}',
     );
@@ -5598,6 +5736,10 @@ class MCalDayViewState extends State<MCalDayView> {
           ]);
         }
       }
+    }
+
+    if (_focusedEvent?.id == event.id) {
+      _syncFocusedEventFromController();
     }
 
     dragHandler.cancelDrag();
@@ -5816,23 +5958,27 @@ class MCalDayViewState extends State<MCalDayView> {
     final isAllDay = event.isAllDay;
     final tileColor = isValid
         ? resolveDropTargetTileColor(
-            dropTargetThemeColor: theme.dayViewTheme?.dropTargetTileBackgroundColor,
+            dropTargetThemeColor:
+                theme.dayViewTheme?.dropTargetTileBackgroundColor,
             themeColor: theme.dayViewTheme?.eventTileBackgroundColor,
-            allDayThemeColor: isAllDay ? theme.dayViewTheme?.allDayEventBackgroundColor : null,
+            allDayThemeColor: isAllDay
+                ? theme.dayViewTheme?.allDayEventBackgroundColor
+                : null,
             eventColor: event.color,
             enableEventColorOverrides: theme.enableEventColorOverrides,
             defaultColor: defaults.dayViewTheme!.eventTileBackgroundColor!,
           )
         : theme.dayViewTheme?.dropTargetTileInvalidBackgroundColor ??
-            defaults.dayViewTheme!.dropTargetTileInvalidBackgroundColor!;
-    final cornerRadius = theme.dayViewTheme?.dropTargetTileCornerRadius ??
+              defaults.dayViewTheme!.dropTargetTileInvalidBackgroundColor!;
+    final cornerRadius =
+        theme.dayViewTheme?.dropTargetTileCornerRadius ??
         theme.dayViewTheme?.eventTileCornerRadius ??
         defaults.dayViewTheme!.eventTileCornerRadius!;
     final borderColor = isValid
         ? (theme.dayViewTheme?.dropTargetTileBorderColor ??
-            defaults.dayViewTheme!.dropTargetTileBorderColor!)
+              defaults.dayViewTheme!.dropTargetTileBorderColor!)
         : (theme.dayViewTheme?.dropTargetTileInvalidBackgroundColor ??
-            defaults.dayViewTheme!.dropTargetTileInvalidBackgroundColor!);
+              defaults.dayViewTheme!.dropTargetTileInvalidBackgroundColor!);
     final borderWidth =
         theme.dayViewTheme?.dropTargetTileBorderWidth ??
         defaults.dayViewTheme!.dropTargetTileBorderWidth!;
@@ -5851,11 +5997,16 @@ class MCalDayViewState extends State<MCalDayView> {
         child: !isValid
             ? Align(
                 alignment: Alignment.topLeft,
-                  child: Icon(
+                child: Icon(
                   Icons.block,
                   size: 12,
-                  color: theme.dayViewTheme?.dropTargetTileInvalidBackgroundColor ??
-                      defaults.dayViewTheme!.dropTargetTileInvalidBackgroundColor!,
+                  color:
+                      theme
+                          .dayViewTheme
+                          ?.dropTargetTileInvalidBackgroundColor ??
+                      defaults
+                          .dayViewTheme!
+                          .dropTargetTileInvalidBackgroundColor!,
                 ),
               )
             : null,
@@ -5922,12 +6073,14 @@ class MCalDayViewState extends State<MCalDayView> {
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final overlayColor = isValid
         ? (theme.dayViewTheme?.dropTargetOverlayValidColor ??
-            defaults.dayViewTheme!.dropTargetOverlayValidColor!)
+              defaults.dayViewTheme!.dropTargetOverlayValidColor!)
         : (theme.dayViewTheme?.dropTargetOverlayInvalidColor ??
-            defaults.dayViewTheme!.dropTargetOverlayInvalidColor!);
-    final overlayBorderWidth = theme.dayViewTheme?.dropTargetOverlayBorderWidth ??
+              defaults.dayViewTheme!.dropTargetOverlayInvalidColor!);
+    final overlayBorderWidth =
+        theme.dayViewTheme?.dropTargetOverlayBorderWidth ??
         defaults.dayViewTheme!.dropTargetOverlayBorderWidth!;
-    final overlayBorderColor = theme.dayViewTheme?.dropTargetOverlayBorderColor ??
+    final overlayBorderColor =
+        theme.dayViewTheme?.dropTargetOverlayBorderColor ??
         defaults.dayViewTheme!.dropTargetOverlayBorderColor!;
     final defaultOverlay = Positioned(
       top: topOffset,
@@ -6070,14 +6223,18 @@ class MCalDayViewState extends State<MCalDayView> {
     final theme = _resolveTheme(context);
     final defaults = MCalThemeData.fromTheme(Theme.of(context));
     final dayTheme = theme.dayViewTheme;
-    final borderColor = dayTheme?.focusedSlotBorderColor ??
+    final borderColor =
+        dayTheme?.focusedSlotBorderColor ??
         defaults.dayViewTheme!.focusedSlotBorderColor!;
-    final borderWidth = dayTheme?.focusedSlotBorderWidth ??
+    final borderWidth =
+        dayTheme?.focusedSlotBorderWidth ??
         defaults.dayViewTheme!.focusedSlotBorderWidth!;
-    final bgColor = dayTheme?.focusedSlotBackgroundColor ??
+    final bgColor =
+        dayTheme?.focusedSlotBackgroundColor ??
         defaults.dayViewTheme!.focusedSlotBackgroundColor!;
 
-    final decoration = dayTheme?.focusedSlotDecoration ??
+    final decoration =
+        dayTheme?.focusedSlotDecoration ??
         BoxDecoration(
           color: bgColor,
           border: Border(
@@ -6090,9 +6247,7 @@ class MCalDayViewState extends State<MCalDayView> {
       left: 0,
       right: 0,
       height: slotHeight,
-      child: IgnorePointer(
-        child: Container(decoration: decoration),
-      ),
+      child: IgnorePointer(child: Container(decoration: decoration)),
     );
   }
 
@@ -6191,7 +6346,8 @@ class MCalDayViewState extends State<MCalDayView> {
           onEventDoubleTap: widget.onEventDoubleTap,
           onEventSecondaryTap: widget.onEventSecondaryTap,
           onHoverEvent: _wrapOnHoverEvent(),
-          keyboardFocusedEventId: _focusedEvent?.id,
+          keyboardHighlightedEventId: _keyboardHighlightedEventIdForDayView,
+          keyboardSelectedEventId: _keyboardSelectedEventIdForDayView,
           enableDragToMove: widget.enableDragToMove,
           enableDragToResize: _resolveDragToResize(),
           draggedTileBuilder: widget.draggedTileBuilder,
@@ -6721,7 +6877,6 @@ class MCalDayViewState extends State<MCalDayView> {
     return false;
   }
 
-
   // ============================================================================
   // Default Builder Methods (Task 10)
   // ============================================================================
@@ -6822,7 +6977,8 @@ class MCalDayViewState extends State<MCalDayView> {
               onEventLongPress: widget.onEventLongPress,
               onEventDoubleTap: widget.onEventDoubleTap,
               onEventSecondaryTap: widget.onAllDayEventSecondaryTap,
-              keyboardFocusedEventId: _focusedEvent?.id,
+              keyboardHighlightedEventId: _keyboardHighlightedEventIdForDayView,
+              keyboardSelectedEventId: _keyboardSelectedEventIdForDayView,
               onOverflowTap: widget.onOverflowTap,
               onOverflowLongPress: widget.onOverflowLongPress,
               onOverflowDoubleTap: widget.onOverflowDoubleTap,
@@ -6856,24 +7012,32 @@ class MCalDayViewState extends State<MCalDayView> {
                 !_isKeyboardResizeMode)
               Positioned.fill(
                 child: IgnorePointer(
-                  child: Builder(builder: (context) {
-                    final t = _resolveTheme(context);
-                    final d = MCalThemeData.fromTheme(Theme.of(context));
-                    final borderColor = t.dayViewTheme?.focusedSlotBorderColor ??
-                        d.dayViewTheme!.focusedSlotBorderColor!;
-                    final borderWidth = t.dayViewTheme?.focusedSlotBorderWidth ??
-                        d.dayViewTheme!.focusedSlotBorderWidth!;
-                    final bgColor = t.dayViewTheme?.focusedSlotBackgroundColor ??
-                        d.dayViewTheme!.focusedSlotBackgroundColor!;
-                    return DecoratedBox(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          left: BorderSide(color: borderColor, width: borderWidth),
+                  child: Builder(
+                    builder: (context) {
+                      final t = _resolveTheme(context);
+                      final d = MCalThemeData.fromTheme(Theme.of(context));
+                      final borderColor =
+                          t.dayViewTheme?.focusedSlotBorderColor ??
+                          d.dayViewTheme!.focusedSlotBorderColor!;
+                      final borderWidth =
+                          t.dayViewTheme?.focusedSlotBorderWidth ??
+                          d.dayViewTheme!.focusedSlotBorderWidth!;
+                      final bgColor =
+                          t.dayViewTheme?.focusedSlotBackgroundColor ??
+                          d.dayViewTheme!.focusedSlotBackgroundColor!;
+                      return DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            left: BorderSide(
+                              color: borderColor,
+                              width: borderWidth,
+                            ),
+                          ),
+                          color: bgColor.withValues(alpha: 0.04),
                         ),
-                        color: bgColor.withValues(alpha: 0.04),
-                      ),
-                    );
-                  }),
+                      );
+                    },
+                  ),
                 ),
               ),
           ],
@@ -7225,4 +7389,3 @@ class MCalDayViewState extends State<MCalDayView> {
 
 // MCalLayoutDirectionality is defined in mcal_layout_directionality.dart and shared
 // with mcal_month_view.dart and mcal_month_default_week_layout.dart.
-

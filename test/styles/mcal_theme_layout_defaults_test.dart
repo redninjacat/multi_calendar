@@ -54,9 +54,6 @@ void main() {
       expect(d.allDaySectionPadding,
           const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0));
     });
-    test('allDayKeyboardFocusBorderWidth matches previous hardcoded 2.0', () {
-      expect(d.allDayKeyboardFocusBorderWidth, 2.0);
-    });
     test('allDayOverflowHandleWidth matches previous hardcoded 3.0', () {
       expect(d.allDayOverflowHandleWidth, 3.0);
     });
@@ -88,9 +85,6 @@ void main() {
     test('timedEventMargin matches previous hardcoded value', () {
       expect(d.timedEventMargin,
           const EdgeInsets.symmetric(horizontal: 2.0, vertical: 1.0));
-    });
-    test('timedEventKeyboardFocusBorderWidth matches previous hardcoded 2.0', () {
-      expect(d.timedEventKeyboardFocusBorderWidth, 2.0);
     });
     test('timedEventCompactFontSize matches previous hardcoded 10.0', () {
       expect(d.timedEventCompactFontSize, 10.0);
@@ -124,9 +118,18 @@ void main() {
       expect(d.resizeHandleBorderRadius, 1.0);
     });
 
-    // Keyboard focus
-    test('keyboardFocusBorderRadius matches previous hardcoded 4.0', () {
-      expect(d.keyboardFocusBorderRadius, 4.0);
+    // Keyboard focus (event tile mixin)
+    test('keyboardSelectionBorderWidth matches previous timed focus width 2.0', () {
+      expect(d.keyboardSelectionBorderWidth, 2.0);
+    });
+    test('keyboardHighlightBorderWidth matches previous highlight 1.5', () {
+      expect(d.keyboardHighlightBorderWidth, 1.5);
+    });
+    test('keyboardSelectionBorderRadius matches previous 4.0', () {
+      expect(d.keyboardSelectionBorderRadius, 4.0);
+    });
+    test('keyboardHighlightBorderRadius matches previous 4.0', () {
+      expect(d.keyboardHighlightBorderRadius, 4.0);
     });
 
     // Event tile mixin on DayViewThemeData
@@ -149,7 +152,6 @@ void main() {
       expect(d.allDayWrapSpacing, isNotNull);
       expect(d.allDayWrapRunSpacing, isNotNull);
       expect(d.allDaySectionPadding, isNotNull);
-      expect(d.allDayKeyboardFocusBorderWidth, isNotNull);
       expect(d.allDayOverflowHandleWidth, isNotNull);
       expect(d.allDayOverflowHandleHeight, isNotNull);
       expect(d.allDayOverflowHandleBorderRadius, isNotNull);
@@ -159,7 +161,6 @@ void main() {
       expect(d.allDaySectionLabelBottomPadding, isNotNull);
       expect(d.timeLegendLabelHeight, isNotNull);
       expect(d.timedEventMargin, isNotNull);
-      expect(d.timedEventKeyboardFocusBorderWidth, isNotNull);
       expect(d.timedEventCompactFontSize, isNotNull);
       expect(d.timedEventNormalFontSize, isNotNull);
       expect(d.timeRegionBorderWidth, isNotNull);
@@ -168,7 +169,12 @@ void main() {
       expect(d.resizeHandleVisualHeight, isNotNull);
       expect(d.resizeHandleHorizontalMargin, isNotNull);
       expect(d.resizeHandleBorderRadius, isNotNull);
-      expect(d.keyboardFocusBorderRadius, isNotNull);
+      expect(d.keyboardSelectionBorderWidth, isNotNull);
+      expect(d.keyboardSelectionBorderColor, isNotNull);
+      expect(d.keyboardSelectionBorderRadius, isNotNull);
+      expect(d.keyboardHighlightBorderWidth, isNotNull);
+      expect(d.keyboardHighlightBorderColor, isNotNull);
+      expect(d.keyboardHighlightBorderRadius, isNotNull);
       expect(d.timedEventTitleTimeGap, isNotNull);
       expect(d.eventTileBorderWidth, isNotNull);
     });
@@ -367,6 +373,8 @@ void main() {
       expect(d.monthViewTheme!.dateLabelPadding, isNotNull);
       expect(d.monthViewTheme!.weekNumberColumnWidth, isNotNull);
       expect(d.monthViewTheme!.keyboardSelectionBorderWidth, isNotNull);
+      expect(d.monthViewTheme!.keyboardSelectionBorderColor, isNotNull);
+      expect(d.monthViewTheme!.keyboardHighlightBorderColor, isNotNull);
     });
   });
 

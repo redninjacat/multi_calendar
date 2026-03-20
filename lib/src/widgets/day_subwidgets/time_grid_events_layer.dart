@@ -45,7 +45,8 @@ class TimeGridEventsLayer extends StatelessWidget {
     this.onEventDoubleTap,
     this.onEventSecondaryTap,
     this.onHoverEvent,
-    this.keyboardFocusedEventId,
+    this.keyboardHighlightedEventId,
+    this.keyboardSelectedEventId,
     this.enableDragToMove = false,
     this.enableDragToResize = false,
     this.draggedTileBuilder,
@@ -84,7 +85,8 @@ class TimeGridEventsLayer extends StatelessWidget {
   final void Function(BuildContext, MCalEventTapDetails)? onEventDoubleTap;
   final void Function(BuildContext, MCalEventTapDetails)? onEventSecondaryTap;
   final void Function(BuildContext, MCalCalendarEvent?)? onHoverEvent;
-  final String? keyboardFocusedEventId;
+  final String? keyboardHighlightedEventId;
+  final String? keyboardSelectedEventId;
   final bool enableDragToMove;
   final bool enableDragToResize;
   final Widget Function(
@@ -232,16 +234,30 @@ class TimeGridEventsLayer extends StatelessWidget {
 
     Widget tile = _buildEventTile(context, event, tileContext);
 
-    if (keyboardFocusedEventId == event.id) {
-      final kbDefaults = MCalThemeData.fromTheme(Theme.of(context));
-      final kbBorderColor = theme.dayViewTheme?.keyboardFocusBorderColor ??
-          kbDefaults.dayViewTheme!.keyboardFocusBorderColor!;
-      final kbBorderWidth =
-          theme.dayViewTheme?.timedEventKeyboardFocusBorderWidth ??
-          kbDefaults.dayViewTheme!.timedEventKeyboardFocusBorderWidth!;
-      final kbBorderRadius =
-          theme.dayViewTheme?.keyboardFocusBorderRadius ??
-          kbDefaults.dayViewTheme!.keyboardFocusBorderRadius!;
+    final kbDefaults = MCalThemeData.fromTheme(Theme.of(context));
+    final dayTheme = theme.dayViewTheme;
+    final dayDefs = kbDefaults.dayViewTheme!;
+    final isKbSelected = keyboardSelectedEventId == event.id;
+    final isKbHighlighted = keyboardHighlightedEventId == event.id;
+    if (isKbSelected || isKbHighlighted) {
+      final Color kbBorderColor;
+      final double kbBorderWidth;
+      final double kbBorderRadius;
+      if (isKbSelected) {
+        kbBorderColor = dayTheme?.keyboardSelectionBorderColor ??
+            dayDefs.keyboardSelectionBorderColor!;
+        kbBorderWidth = dayTheme?.keyboardSelectionBorderWidth ??
+            dayDefs.keyboardSelectionBorderWidth!;
+        kbBorderRadius = dayTheme?.keyboardSelectionBorderRadius ??
+            dayDefs.keyboardSelectionBorderRadius!;
+      } else {
+        kbBorderColor = dayTheme?.keyboardHighlightBorderColor ??
+            dayDefs.keyboardHighlightBorderColor!;
+        kbBorderWidth = dayTheme?.keyboardHighlightBorderWidth ??
+            dayDefs.keyboardHighlightBorderWidth!;
+        kbBorderRadius = dayTheme?.keyboardHighlightBorderRadius ??
+            dayDefs.keyboardHighlightBorderRadius!;
+      }
       tile = Container(
         decoration: BoxDecoration(
           border: Border.all(color: kbBorderColor, width: kbBorderWidth),

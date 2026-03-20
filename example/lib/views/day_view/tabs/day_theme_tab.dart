@@ -32,7 +32,6 @@ class _DayThemeTabState extends State<DayThemeTab> {
   Color? _cellBackgroundColor;
   Color? _cellBorderColor;
   double? _cellBorderWidth;
-  double? _keyboardFocusBorderRadius;
   double? _timedEventTitleTimeGap;
   double? _allDayOverflowIndicatorBorderWidth;
   double? _allDaySectionLabelBottomPadding;
@@ -48,6 +47,16 @@ class _DayThemeTabState extends State<DayThemeTab> {
   double? _timedEventMinHeight;
   EdgeInsets? _timedEventPadding;
   Color? _hoverEventBackgroundColor;
+
+  // ============================================================
+  // Keyboard (event tile focus rings)
+  // ============================================================
+  double? _keyboardSelectionBorderWidth;
+  Color? _keyboardSelectionBorderColor;
+  double? _keyboardSelectionBorderRadius;
+  double? _keyboardHighlightBorderWidth;
+  Color? _keyboardHighlightBorderColor;
+  double? _keyboardHighlightBorderRadius;
 
   // ============================================================
   // All-Day Event Properties
@@ -211,7 +220,12 @@ class _DayThemeTabState extends State<DayThemeTab> {
       _minResizeDurationMinutes = dayViewTheme?.minResizeDurationMinutes?.toInt();
 
       _cellBorderWidth = presetTheme.cellBorderWidth;
-      _keyboardFocusBorderRadius = dayViewTheme?.keyboardFocusBorderRadius;
+      _keyboardSelectionBorderWidth = dayViewTheme?.keyboardSelectionBorderWidth;
+      _keyboardSelectionBorderColor = dayViewTheme?.keyboardSelectionBorderColor;
+      _keyboardSelectionBorderRadius = dayViewTheme?.keyboardSelectionBorderRadius;
+      _keyboardHighlightBorderWidth = dayViewTheme?.keyboardHighlightBorderWidth;
+      _keyboardHighlightBorderColor = dayViewTheme?.keyboardHighlightBorderColor;
+      _keyboardHighlightBorderRadius = dayViewTheme?.keyboardHighlightBorderRadius;
       _timedEventTitleTimeGap = dayViewTheme?.timedEventTitleTimeGap;
       _allDayOverflowIndicatorBorderWidth = dayViewTheme?.allDayOverflowIndicatorBorderWidth;
       _allDaySectionLabelBottomPadding = dayViewTheme?.allDaySectionLabelBottomPadding;
@@ -248,6 +262,12 @@ class _DayThemeTabState extends State<DayThemeTab> {
         allDayEventPadding: _allDayEventPadding,
         eventTileCornerRadius: _eventTileCornerRadius,
         eventTileHorizontalSpacing: _eventTileHorizontalSpacing,
+        keyboardSelectionBorderWidth: _keyboardSelectionBorderWidth,
+        keyboardSelectionBorderColor: _keyboardSelectionBorderColor,
+        keyboardSelectionBorderRadius: _keyboardSelectionBorderRadius,
+        keyboardHighlightBorderWidth: _keyboardHighlightBorderWidth,
+        keyboardHighlightBorderColor: _keyboardHighlightBorderColor,
+        keyboardHighlightBorderRadius: _keyboardHighlightBorderRadius,
         timeLegendWidth: _timeLegendWidth,
         timeLegendLabelHeight: _timeLegendLabelHeight,
         showTimeLegendTicks: _showTimeLegendTicks,
@@ -282,7 +302,6 @@ class _DayThemeTabState extends State<DayThemeTab> {
         timeRegionTextColor: _timeRegionTextColor,
         resizeHandleSize: _resizeHandleSize,
         minResizeDurationMinutes: _minResizeDurationMinutes,
-        keyboardFocusBorderRadius: _keyboardFocusBorderRadius,
         timedEventTitleTimeGap: _timedEventTitleTimeGap,
         allDayOverflowIndicatorBorderWidth: _allDayOverflowIndicatorBorderWidth,
         allDaySectionLabelBottomPadding: _allDaySectionLabelBottomPadding,
@@ -411,15 +430,6 @@ class _DayThemeTabState extends State<DayThemeTab> {
               onChanged: (value) =>
                   setState(() => _hoverEventBackgroundColor = value),
               cancelLabel: l10n.cancel,
-            ),
-            ControlWidgets.slider(
-              label: l10n.settingKeyboardFocusBorderRadius,
-              value: _keyboardFocusBorderRadius ?? dayDefaults.keyboardFocusBorderRadius!,
-              min: 0,
-              max: 12,
-              divisions: 24,
-              onChanged: (value) =>
-                  setState(() => _keyboardFocusBorderRadius = value),
             ),
           ],
         ),
@@ -758,6 +768,69 @@ class _DayThemeTabState extends State<DayThemeTab> {
               value: _timeRegionTextColor ?? dayDefaults.timeRegionTextColor!,
               onChanged: (value) => setState(() => _timeRegionTextColor = value),
               cancelLabel: l10n.cancel,
+            ),
+          ],
+        ),
+
+        // ── Keyboard (last section) ──────────────────────────────────────────
+        ControlPanelSection(
+          title: l10n.sectionKeyboard,
+          children: [
+            ControlWidgets.slider(
+              label: l10n.settingKeyboardSelectionBorderWidth,
+              value: _keyboardSelectionBorderWidth ??
+                  dayDefaults.keyboardSelectionBorderWidth!,
+              min: 0,
+              max: 6,
+              divisions: 24,
+              onChanged: (value) =>
+                  setState(() => _keyboardSelectionBorderWidth = value),
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingKeyboardSelectionBorderColor,
+              value: _keyboardSelectionBorderColor ??
+                  dayDefaults.keyboardSelectionBorderColor!,
+              onChanged: (value) =>
+                  setState(() => _keyboardSelectionBorderColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingKeyboardSelectionBorderRadius,
+              value: _keyboardSelectionBorderRadius ??
+                  dayDefaults.keyboardSelectionBorderRadius!,
+              min: 0,
+              max: 16,
+              divisions: 32,
+              onChanged: (value) =>
+                  setState(() => _keyboardSelectionBorderRadius = value),
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingKeyboardHighlightBorderWidth,
+              value: _keyboardHighlightBorderWidth ??
+                  dayDefaults.keyboardHighlightBorderWidth!,
+              min: 0,
+              max: 6,
+              divisions: 24,
+              onChanged: (value) =>
+                  setState(() => _keyboardHighlightBorderWidth = value),
+            ),
+            ControlWidgets.colorPicker(
+              label: l10n.settingKeyboardHighlightBorderColor,
+              value: _keyboardHighlightBorderColor ??
+                  dayDefaults.keyboardHighlightBorderColor!,
+              onChanged: (value) =>
+                  setState(() => _keyboardHighlightBorderColor = value),
+              cancelLabel: l10n.cancel,
+            ),
+            ControlWidgets.slider(
+              label: l10n.settingKeyboardHighlightBorderRadius,
+              value: _keyboardHighlightBorderRadius ??
+                  dayDefaults.keyboardHighlightBorderRadius!,
+              min: 0,
+              max: 16,
+              divisions: 32,
+              onChanged: (value) =>
+                  setState(() => _keyboardHighlightBorderRadius = value),
             ),
           ],
         ),

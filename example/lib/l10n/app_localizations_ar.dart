@@ -459,7 +459,22 @@ class AppLocalizationsAr extends AppLocalizations {
       'الحد الأدنى لمدة تغيير الحجم (دقائق)';
 
   @override
-  String get settingKeyboardFocusBorderRadius => 'نصف قطر حدود التركيز';
+  String get settingKeyboardSelectionBorderWidth => 'عرض حدود التحديد';
+
+  @override
+  String get settingKeyboardSelectionBorderColor => 'لون حدود التحديد';
+
+  @override
+  String get settingKeyboardSelectionBorderRadius => 'نصف قطر حدود التحديد';
+
+  @override
+  String get settingKeyboardHighlightBorderWidth => 'عرض حدود الإبراز';
+
+  @override
+  String get settingKeyboardHighlightBorderColor => 'لون حدود الإبراز';
+
+  @override
+  String get settingKeyboardHighlightBorderRadius => 'نصف قطر حدود الإبراز';
 
   @override
   String get settingTimedEventTitleTimeGap => 'المسافة بين العنوان والوقت';

@@ -46,6 +46,16 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
   double? _eventTilePadding;
 
   // ============================================================
+  // Keyboard (event tile focus rings)
+  // ============================================================
+  double? _keyboardSelectionBorderWidth;
+  Color? _keyboardSelectionBorderColor;
+  double? _keyboardSelectionBorderRadius;
+  double? _keyboardHighlightBorderWidth;
+  Color? _keyboardHighlightBorderColor;
+  double? _keyboardHighlightBorderRadius;
+
+  // ============================================================
   // All-Day Event Properties
   // ============================================================
   Color? _allDayEventBackgroundColor;
@@ -155,6 +165,12 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
         _hoverCellBackgroundColor = null;
         _hoverEventBackgroundColor = null;
         _weekNumberBackgroundColor = null;
+        _keyboardSelectionBorderWidth = null;
+        _keyboardSelectionBorderColor = null;
+        _keyboardSelectionBorderRadius = null;
+        _keyboardHighlightBorderWidth = null;
+        _keyboardHighlightBorderColor = null;
+        _keyboardHighlightBorderRadius = null;
         return;
       }
 
@@ -190,6 +206,13 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
       _hoverCellBackgroundColor = presetTheme.monthViewTheme?.hoverCellBackgroundColor;
       _hoverEventBackgroundColor = presetTheme.monthViewTheme?.hoverEventBackgroundColor;
       _weekNumberBackgroundColor = presetTheme.monthViewTheme?.weekNumberBackgroundColor;
+      final m = presetTheme.monthViewTheme;
+      _keyboardSelectionBorderWidth = m?.keyboardSelectionBorderWidth;
+      _keyboardSelectionBorderColor = m?.keyboardSelectionBorderColor;
+      _keyboardSelectionBorderRadius = m?.keyboardSelectionBorderRadius;
+      _keyboardHighlightBorderWidth = m?.keyboardHighlightBorderWidth;
+      _keyboardHighlightBorderColor = m?.keyboardHighlightBorderColor;
+      _keyboardHighlightBorderRadius = m?.keyboardHighlightBorderRadius;
     });
   }
 
@@ -216,6 +239,12 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
         eventTileBackgroundColor: _eventTileBackgroundColor,
         eventTileCornerRadius: _eventTileCornerRadius,
         eventTileHorizontalSpacing: _eventTileHorizontalSpacing,
+        keyboardSelectionBorderWidth: _keyboardSelectionBorderWidth,
+        keyboardSelectionBorderColor: _keyboardSelectionBorderColor,
+        keyboardSelectionBorderRadius: _keyboardSelectionBorderRadius,
+        keyboardHighlightBorderWidth: _keyboardHighlightBorderWidth,
+        keyboardHighlightBorderColor: _keyboardHighlightBorderColor,
+        keyboardHighlightBorderRadius: _keyboardHighlightBorderRadius,
         hoverEventBackgroundColor: _hoverEventBackgroundColor,
         weekNumberBackgroundColor: _weekNumberBackgroundColor,
         todayBackgroundColor: _todayBackgroundColor,
@@ -586,6 +615,69 @@ class _MonthThemeTabState extends State<MonthThemeTab> {
                 max: 16,
                 divisions: 16,
                 onChanged: (v) => setState(() => _draggedTileElevation = v),
+              ),
+            ],
+          ),
+
+          // ── Keyboard (last section) ────────────────────────────────────────
+          ControlPanelSection(
+            title: l10n.sectionKeyboard,
+            children: [
+              ControlWidgets.slider(
+                label: l10n.settingKeyboardSelectionBorderWidth,
+                value: _keyboardSelectionBorderWidth ??
+                    monthDefaults.keyboardSelectionBorderWidth!,
+                min: 0,
+                max: 6,
+                divisions: 24,
+                onChanged: (v) =>
+                    setState(() => _keyboardSelectionBorderWidth = v),
+              ),
+              ControlWidgets.colorPicker(
+                label: l10n.settingKeyboardSelectionBorderColor,
+                value: _keyboardSelectionBorderColor ??
+                    monthDefaults.keyboardSelectionBorderColor!,
+                onChanged: (c) =>
+                    setState(() => _keyboardSelectionBorderColor = c),
+                cancelLabel: l10n.cancel,
+              ),
+              ControlWidgets.slider(
+                label: l10n.settingKeyboardSelectionBorderRadius,
+                value: _keyboardSelectionBorderRadius ??
+                    monthDefaults.keyboardSelectionBorderRadius!,
+                min: 0,
+                max: 16,
+                divisions: 32,
+                onChanged: (v) =>
+                    setState(() => _keyboardSelectionBorderRadius = v),
+              ),
+              ControlWidgets.slider(
+                label: l10n.settingKeyboardHighlightBorderWidth,
+                value: _keyboardHighlightBorderWidth ??
+                    monthDefaults.keyboardHighlightBorderWidth!,
+                min: 0,
+                max: 6,
+                divisions: 24,
+                onChanged: (v) =>
+                    setState(() => _keyboardHighlightBorderWidth = v),
+              ),
+              ControlWidgets.colorPicker(
+                label: l10n.settingKeyboardHighlightBorderColor,
+                value: _keyboardHighlightBorderColor ??
+                    monthDefaults.keyboardHighlightBorderColor!,
+                onChanged: (c) =>
+                    setState(() => _keyboardHighlightBorderColor = c),
+                cancelLabel: l10n.cancel,
+              ),
+              ControlWidgets.slider(
+                label: l10n.settingKeyboardHighlightBorderRadius,
+                value: _keyboardHighlightBorderRadius ??
+                    monthDefaults.keyboardHighlightBorderRadius!,
+                min: 0,
+                max: 16,
+                divisions: 32,
+                onChanged: (v) =>
+                    setState(() => _keyboardHighlightBorderRadius = v),
               ),
             ],
           ),

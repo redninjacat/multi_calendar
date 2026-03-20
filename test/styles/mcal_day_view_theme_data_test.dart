@@ -730,7 +730,8 @@ void main() {
       expect(defaults.dropTargetOverlayBorderColor, isNotNull);
       expect(defaults.disabledTimeSlotColor, isNotNull);
       expect(defaults.resizeHandleColor, isNotNull);
-      expect(defaults.keyboardFocusBorderColor, isNotNull);
+      expect(defaults.keyboardSelectionBorderColor, isNotNull);
+      expect(defaults.keyboardHighlightBorderColor, isNotNull);
       expect(defaults.focusedSlotBorderColor, isNotNull);
       expect(defaults.focusedSlotBorderWidth, isNotNull);
       expect(defaults.focusedSlotBackgroundColor, isNotNull);
@@ -741,7 +742,7 @@ void main() {
         dropTargetTileInvalidBackgroundColor: Color(0xFFFF0000),
         disabledTimeSlotColor: Color(0x20000000),
         resizeHandleColor: Color(0xFFFFFFFF),
-        keyboardFocusBorderColor: Color(0xFF0000FF),
+        keyboardSelectionBorderColor: Color(0xFF0000FF),
         focusedSlotBorderWidth: 2.5,
       );
       final updated = original.copyWith(

@@ -339,7 +339,8 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
             fontSize: 10,
           ),
           eventTileCornerRadius: 2.0,
-          keyboardFocusBorderRadius: 2.0,
+          keyboardSelectionBorderRadius: 2.0,
+          keyboardHighlightBorderRadius: 2.0,
           allDayEventBackgroundColor: const Color(0xFF06B6D4).withValues(alpha: 0.2),
           allDayEventTextStyle: textTheme.labelSmall?.copyWith(
             color: const Color(0xFF0E7490),
@@ -390,7 +391,8 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
             fontSize: 14,
           ),
           eventTileCornerRadius: 8.0,
-          keyboardFocusBorderRadius: 8.0,
+          keyboardSelectionBorderRadius: 8.0,
+          keyboardHighlightBorderRadius: 8.0,
           allDayEventBackgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.2),
           allDayEventTextStyle: textTheme.bodyMedium?.copyWith(
             color: const Color(0xFF92400E),
@@ -497,7 +499,8 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
             color: const Color(0xFF0F766E),
           ),
           eventTileCornerRadius: 2.0,
-          keyboardFocusBorderRadius: 2.0,
+          keyboardSelectionBorderRadius: 2.0,
+          keyboardHighlightBorderRadius: 2.0,
           allDayEventBackgroundColor: const Color(0xFF14B8A6).withValues(alpha: 0.18),
           allDayEventTextStyle: textTheme.labelSmall?.copyWith(
             color: const Color(0xFF0F766E),
@@ -546,7 +549,8 @@ MCalThemeData getDayThemePreset(ThemePreset preset, ThemeData materialTheme) {
             color: Colors.white,
           ),
           eventTileCornerRadius: 12.0,
-          keyboardFocusBorderRadius: 12.0,
+          keyboardSelectionBorderRadius: 12.0,
+          keyboardHighlightBorderRadius: 12.0,
           allDayEventBackgroundColor: const Color(0xFF10B981).withValues(alpha: 0.25),
           allDayEventTextStyle: textTheme.labelMedium?.copyWith(
             color: const Color(0xFF065F46),

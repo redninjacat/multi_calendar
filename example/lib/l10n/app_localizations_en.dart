@@ -457,7 +457,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingMinResizeDurationMinutes => 'Min Resize Duration (Minutes)';
 
   @override
-  String get settingKeyboardFocusBorderRadius => 'Keyboard Focus Border Radius';
+  String get settingKeyboardSelectionBorderWidth =>
+      'Selection border width (move/resize)';
+
+  @override
+  String get settingKeyboardSelectionBorderColor => 'Selection border color';
+
+  @override
+  String get settingKeyboardSelectionBorderRadius => 'Selection border radius';
+
+  @override
+  String get settingKeyboardHighlightBorderWidth =>
+      'Highlight border width (cycle)';
+
+  @override
+  String get settingKeyboardHighlightBorderColor => 'Highlight border color';
+
+  @override
+  String get settingKeyboardHighlightBorderRadius => 'Highlight border radius';
 
   @override
   String get settingTimedEventTitleTimeGap => 'Title-Time Gap';

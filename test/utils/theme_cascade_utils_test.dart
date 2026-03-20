@@ -290,5 +290,47 @@ void main() {
       );
       expect(result, customLight);
     });
+
+    test(
+        'semi-transparent: dark at low alpha composites to light surface — darkContrastColor',
+        () {
+      final result = resolveContrastColor(
+        backgroundColor: Colors.black.withValues(alpha: 0.1),
+        lightContrastColor: white,
+        darkContrastColor: black,
+      );
+      expect(result, black);
+    });
+
+    test(
+        'semi-transparent: light at low alpha still reads as light — darkContrastColor',
+        () {
+      final result = resolveContrastColor(
+        backgroundColor: Colors.white.withValues(alpha: 0.1),
+        lightContrastColor: white,
+        darkContrastColor: black,
+      );
+      expect(result, black);
+    });
+
+    test(
+        'semi-transparent: dark at high alpha still reads as dark — lightContrastColor',
+        () {
+      final result = resolveContrastColor(
+        backgroundColor: Colors.black.withValues(alpha: 0.9),
+        lightContrastColor: white,
+        darkContrastColor: black,
+      );
+      expect(result, white);
+    });
+
+    test('fully transparent color composites to white — darkContrastColor', () {
+      final result = resolveContrastColor(
+        backgroundColor: const Color(0x00FF0000),
+        lightContrastColor: white,
+        darkContrastColor: black,
+      );
+      expect(result, black);
+    });
   });
 }

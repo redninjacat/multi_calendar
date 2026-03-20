@@ -82,4 +82,24 @@ mixin MCalEventTileThemeMixin {
 
   /// Color for event tile resize handles.
   Color? get resizeHandleColor;
+
+  // ── Keyboard focus (all views, all event types) ───────────────────────────
+
+  /// Border width for the keyboard **selected** state (move/resize confirmed).
+  double? get keyboardSelectionBorderWidth;
+
+  /// Border color for the keyboard **selected** state.
+  Color? get keyboardSelectionBorderColor;
+
+  /// Corner radius for the keyboard **selected** indicator (in pixels).
+  double? get keyboardSelectionBorderRadius;
+
+  /// Border width for the keyboard **highlighted** state (Tab/Shift+Tab cycle).
+  double? get keyboardHighlightBorderWidth;
+
+  /// Border color for the keyboard **highlighted** state.
+  Color? get keyboardHighlightBorderColor;
+
+  /// Corner radius for the keyboard **highlighted** indicator (in pixels).
+  double? get keyboardHighlightBorderRadius;
 }

@@ -24,6 +24,16 @@ MCalCalendarEvent _timedEvent({String id = 'ev-timed'}) => MCalCalendarEvent(
       color: Colors.blue,
     );
 
+/// Longer timed event (90 min) — exposes bogus "start = end − slot" after S if
+/// keyboard edge offset is not re-based when switching from end to start edge.
+MCalCalendarEvent _longTimedEvent() => MCalCalendarEvent(
+      id: 'ev-long',
+      title: 'Design Workshop',
+      start: DateTime(_testDate.year, _testDate.month, _testDate.day, 6, 0),
+      end: DateTime(_testDate.year, _testDate.month, _testDate.day, 7, 30),
+      color: Colors.orange,
+    );
+
 void main() {
   setUpAll(() async {
     await initializeDateFormatting('en', null);
@@ -314,6 +324,60 @@ void main() {
       });
 
       testWidgets(
+          'After keyboard move, keyboard resize uses post-move event '
+          'instance (oldStart/oldEnd match controller, not stale pre-move)',
+          (tester) async {
+        MCalEventResizedDetails? resizedDetails;
+        final event = _timedEvent();
+        await pumpCalendar(
+          tester,
+          events: [event],
+          onEventDropped: (ctx, details) => true,
+          onEventResized: (ctx, details) {
+            resizedDetails = details;
+            return true;
+          },
+        );
+
+        // Focus timed event → Move mode → two slots down → confirm.
+        await sendKey(tester, LogicalKeyboardKey.arrowDown);
+        await sendKeyOnly(tester, LogicalKeyboardKey.enter);
+        await sendKeyOnly(tester, LogicalKeyboardKey.keyM);
+        await sendKeyOnly(tester, LogicalKeyboardKey.arrowDown);
+        await sendKeyOnly(tester, LogicalKeyboardKey.arrowDown);
+        await sendKeyOnly(tester, LogicalKeyboardKey.enter);
+
+        final moved = controller
+            .getEventsForDate(_testDate)
+            .firstWhere((e) => e.id == event.id);
+        expect(
+          moved.start,
+          equals(
+            DateTime(_testDate.year, _testDate.month, _testDate.day, 6, 30),
+          ),
+          reason: 'Sanity: two 15-min steps from 6:00',
+        );
+        expect(
+          moved.end,
+          equals(DateTime(_testDate.year, _testDate.month, _testDate.day, 7, 0)),
+        );
+
+        // Resize end by one slot and confirm.
+        await sendKeyOnly(tester, LogicalKeyboardKey.keyR);
+        await sendKeyOnly(tester, LogicalKeyboardKey.arrowDown);
+        await sendKeyOnly(tester, LogicalKeyboardKey.enter);
+
+        expect(resizedDetails, isNotNull);
+        expect(
+          resizedDetails!.oldStartDate,
+          equals(moved.start),
+          reason: 'Drag handler must use controller event after move, '
+              'not a stale pre-move start time',
+        );
+        expect(resizedDetails!.oldEndDate, equals(moved.end));
+      });
+
+      testWidgets(
           'M key in Resize Mode transitions to Move Mode '
           '(subsequent Escape cancels move and returns to Event Mode)',
           (tester) async {
@@ -371,6 +435,97 @@ void main() {
         await sendKeyOnly(tester, LogicalKeyboardKey.keyE);
         await sendKeyOnly(tester, LogicalKeyboardKey.escape);
         // No exception = pass.
+      });
+
+      testWidgets(
+          'S re-bases keyboard resize offset to start (not end − slot)',
+          (tester) async {
+        MCalEventResizedDetails? resizedDetails;
+        final event = _longTimedEvent();
+        await pumpCalendar(
+          tester,
+          events: [event],
+          onEventResized: (ctx, details) {
+            resizedDetails = details;
+            return true;
+          },
+        );
+
+        await sendKey(tester, LogicalKeyboardKey.arrowDown);
+        await sendKeyOnly(tester, LogicalKeyboardKey.enter);
+        await sendKeyOnly(tester, LogicalKeyboardKey.keyR);
+        // Default: end edge; switch to start — preview must keep real start.
+        await sendKeyOnly(tester, LogicalKeyboardKey.keyS);
+        // Confirm without nudging; range should still match original event.
+        await sendKeyOnly(tester, LogicalKeyboardKey.enter);
+
+        expect(resizedDetails, isNotNull);
+        expect(
+          resizedDetails!.newStartDate,
+          equals(event.start),
+          reason: 'Start edge must not jump to end.minus(slot) when pressing S',
+        );
+        expect(resizedDetails!.newEndDate, equals(event.end));
+      });
+
+      testWidgets(
+          'timed: nudge end then S keeps extended end when confirming',
+          (tester) async {
+        MCalEventResizedDetails? resizedDetails;
+        final event = _timedEvent();
+        await pumpCalendar(
+          tester,
+          events: [event],
+          onEventResized: (ctx, details) {
+            resizedDetails = details;
+            return true;
+          },
+        );
+
+        await sendKey(tester, LogicalKeyboardKey.arrowDown);
+        await sendKeyOnly(tester, LogicalKeyboardKey.enter);
+        await sendKeyOnly(tester, LogicalKeyboardKey.keyR);
+        await sendKeyOnly(tester, LogicalKeyboardKey.arrowDown);
+        await sendKeyOnly(tester, LogicalKeyboardKey.keyS);
+        await sendKeyOnly(tester, LogicalKeyboardKey.enter);
+
+        expect(resizedDetails, isNotNull);
+        final expectedEnd = event.end.add(const Duration(minutes: 15));
+        expect(resizedDetails!.newEndDate, equals(expectedEnd));
+        expect(resizedDetails!.newStartDate, equals(event.start));
+      });
+
+      testWidgets(
+          'timed: nudge start then E keeps adjusted start when confirming',
+          (tester) async {
+        MCalEventResizedDetails? resizedDetails;
+        final event = _timedEvent();
+        await pumpCalendar(
+          tester,
+          events: [event],
+          onEventResized: (ctx, details) {
+            resizedDetails = details;
+            return true;
+          },
+        );
+
+        await sendKey(tester, LogicalKeyboardKey.arrowDown);
+        await sendKeyOnly(tester, LogicalKeyboardKey.enter);
+        await sendKeyOnly(tester, LogicalKeyboardKey.keyR);
+        // Extend end first so we have room to move start later without
+        // hitting min duration against a grid floor (startHour = 6).
+        await sendKeyOnly(tester, LogicalKeyboardKey.arrowDown);
+        await sendKeyOnly(tester, LogicalKeyboardKey.keyS);
+        // On start edge, ArrowDown moves start later (+15 min).
+        await sendKeyOnly(tester, LogicalKeyboardKey.arrowDown);
+        await sendKeyOnly(tester, LogicalKeyboardKey.keyE);
+        await sendKeyOnly(tester, LogicalKeyboardKey.enter);
+
+        expect(resizedDetails, isNotNull);
+        final extendedEnd = event.end.add(const Duration(minutes: 15));
+        final expectedStart = event.start.add(const Duration(minutes: 15));
+        expect(resizedDetails!.newStartDate, equals(expectedStart));
+        expect(resizedDetails!.newEndDate, equals(extendedEnd));
       });
     });
 

@@ -12,7 +12,7 @@ import 'mcal_time_grid_theme_mixin.dart';
 /// for Day View theming.
 ///
 /// - [MCalEventTileThemeMixin] — event tile appearance, hover, contrast, drop
-///   target tiles, resize handle, week numbers (17 props)
+///   target tiles, resize handle, week numbers, keyboard focus rings (23 props)
 /// - [MCalTimeGridThemeMixin] — time legend, gridlines, current time, time
 ///   regions, timed events, focus/hover slots, drop target overlay (50 props)
 /// - [MCalAllDayTileThemeMixin] — all-day event tile appearance: background,
@@ -88,6 +88,24 @@ class MCalDayViewThemeData
 
   @override
   final Color? resizeHandleColor;
+
+  @override
+  final double? keyboardSelectionBorderWidth;
+
+  @override
+  final Color? keyboardSelectionBorderColor;
+
+  @override
+  final double? keyboardSelectionBorderRadius;
+
+  @override
+  final double? keyboardHighlightBorderWidth;
+
+  @override
+  final Color? keyboardHighlightBorderColor;
+
+  @override
+  final double? keyboardHighlightBorderRadius;
 
   // ── TimeGridThemeMixin fields ─────────────────────────────────────────────
 
@@ -179,9 +197,6 @@ class MCalDayViewThemeData
   final EdgeInsets? timedEventMargin;
 
   @override
-  final double? timedEventKeyboardFocusBorderWidth;
-
-  @override
   final double? timedEventCompactFontSize;
 
   @override
@@ -219,12 +234,6 @@ class MCalDayViewThemeData
 
   @override
   final Color? disabledTimeSlotColor;
-
-  @override
-  final Color? keyboardFocusBorderColor;
-
-  @override
-  final double? keyboardFocusBorderRadius;
 
   @override
   final double? resizeHandleSize;
@@ -275,9 +284,6 @@ class MCalDayViewThemeData
 
   @override
   final EdgeInsets? allDaySectionPadding;
-
-  @override
-  final double? allDayKeyboardFocusBorderWidth;
 
   @override
   final double? allDayOverflowHandleWidth;
@@ -352,6 +358,12 @@ class MCalDayViewThemeData
     this.dropTargetTileBorderColor,
     this.dropTargetTileBorderWidth,
     this.resizeHandleColor,
+    this.keyboardSelectionBorderWidth,
+    this.keyboardSelectionBorderColor,
+    this.keyboardSelectionBorderRadius,
+    this.keyboardHighlightBorderWidth,
+    this.keyboardHighlightBorderColor,
+    this.keyboardHighlightBorderRadius,
     // TimeGridThemeMixin
     this.timeLegendWidth,
     this.timeLegendTextStyle,
@@ -382,7 +394,6 @@ class MCalDayViewThemeData
     this.timedEventMinHeight,
     this.timedEventPadding,
     this.timedEventMargin,
-    this.timedEventKeyboardFocusBorderWidth,
     this.timedEventCompactFontSize,
     this.timedEventNormalFontSize,
     this.timedEventTitleTimeGap,
@@ -396,8 +407,6 @@ class MCalDayViewThemeData
     this.dropTargetOverlayBorderWidth,
     this.dropTargetOverlayBorderColor,
     this.disabledTimeSlotColor,
-    this.keyboardFocusBorderColor,
-    this.keyboardFocusBorderRadius,
     this.resizeHandleSize,
     this.minResizeDurationMinutes,
     this.resizeHandleVisualHeight,
@@ -415,7 +424,6 @@ class MCalDayViewThemeData
     this.allDayWrapSpacing,
     this.allDayWrapRunSpacing,
     this.allDaySectionPadding,
-    this.allDayKeyboardFocusBorderWidth,
     this.allDayOverflowHandleWidth,
     this.allDayOverflowHandleHeight,
     this.allDayOverflowHandleBorderRadius,
@@ -465,6 +473,12 @@ class MCalDayViewThemeData
       dropTargetTileBorderColor: colorScheme.primary,
       dropTargetTileBorderWidth: 2.0,
       resizeHandleColor: Colors.white.withValues(alpha: 0.7),
+      keyboardSelectionBorderWidth: 2.0,
+      keyboardSelectionBorderColor: colorScheme.primary,
+      keyboardSelectionBorderRadius: 4.0,
+      keyboardHighlightBorderWidth: 1.5,
+      keyboardHighlightBorderColor: colorScheme.outline,
+      keyboardHighlightBorderRadius: 4.0,
       // TimeGridThemeMixin defaults — existing
       timeLegendWidth: 60.0,
       timeLegendTextStyle: textTheme.labelSmall?.copyWith(
@@ -501,14 +515,11 @@ class MCalDayViewThemeData
       dropTargetOverlayBorderWidth: 3.0,
       dropTargetOverlayBorderColor: colorScheme.primary,
       disabledTimeSlotColor: colorScheme.onSurface.withValues(alpha: 0.12),
-      keyboardFocusBorderColor: colorScheme.primary,
-      keyboardFocusBorderRadius: 4.0,
       resizeHandleSize: 8.0,
       minResizeDurationMinutes: 15,
       // TimeGridThemeMixin defaults — new layout (match current hardcoded values)
       timeLegendLabelHeight: 20.0,
       timedEventMargin: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 1.0),
-      timedEventKeyboardFocusBorderWidth: 2.0,
       timedEventCompactFontSize: 10.0,
       timedEventNormalFontSize: 12.0,
       timedEventTitleTimeGap: 2.0,
@@ -534,7 +545,6 @@ class MCalDayViewThemeData
       allDayWrapSpacing: 4.0,
       allDayWrapRunSpacing: 4.0,
       allDaySectionPadding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      allDayKeyboardFocusBorderWidth: 2.0,
       allDayOverflowHandleWidth: 3.0,
       allDayOverflowHandleHeight: 16.0,
       allDayOverflowHandleBorderRadius: 1.5,
@@ -579,6 +589,12 @@ class MCalDayViewThemeData
     Color? dropTargetTileBorderColor,
     double? dropTargetTileBorderWidth,
     Color? resizeHandleColor,
+    double? keyboardSelectionBorderWidth,
+    Color? keyboardSelectionBorderColor,
+    double? keyboardSelectionBorderRadius,
+    double? keyboardHighlightBorderWidth,
+    Color? keyboardHighlightBorderColor,
+    double? keyboardHighlightBorderRadius,
     // TimeGridThemeMixin
     double? timeLegendWidth,
     TextStyle? timeLegendTextStyle,
@@ -609,7 +625,6 @@ class MCalDayViewThemeData
     double? timedEventMinHeight,
     EdgeInsets? timedEventPadding,
     EdgeInsets? timedEventMargin,
-    double? timedEventKeyboardFocusBorderWidth,
     double? timedEventCompactFontSize,
     double? timedEventNormalFontSize,
     double? timedEventTitleTimeGap,
@@ -623,8 +638,6 @@ class MCalDayViewThemeData
     double? dropTargetOverlayBorderWidth,
     Color? dropTargetOverlayBorderColor,
     Color? disabledTimeSlotColor,
-    Color? keyboardFocusBorderColor,
-    double? keyboardFocusBorderRadius,
     double? resizeHandleSize,
     int? minResizeDurationMinutes,
     double? resizeHandleVisualHeight,
@@ -642,7 +655,6 @@ class MCalDayViewThemeData
     double? allDayWrapSpacing,
     double? allDayWrapRunSpacing,
     EdgeInsets? allDaySectionPadding,
-    double? allDayKeyboardFocusBorderWidth,
     double? allDayOverflowHandleWidth,
     double? allDayOverflowHandleHeight,
     double? allDayOverflowHandleBorderRadius,
@@ -677,6 +689,18 @@ class MCalDayViewThemeData
       dropTargetTileBorderColor: dropTargetTileBorderColor ?? this.dropTargetTileBorderColor,
       dropTargetTileBorderWidth: dropTargetTileBorderWidth ?? this.dropTargetTileBorderWidth,
       resizeHandleColor: resizeHandleColor ?? this.resizeHandleColor,
+      keyboardSelectionBorderWidth:
+          keyboardSelectionBorderWidth ?? this.keyboardSelectionBorderWidth,
+      keyboardSelectionBorderColor:
+          keyboardSelectionBorderColor ?? this.keyboardSelectionBorderColor,
+      keyboardSelectionBorderRadius:
+          keyboardSelectionBorderRadius ?? this.keyboardSelectionBorderRadius,
+      keyboardHighlightBorderWidth:
+          keyboardHighlightBorderWidth ?? this.keyboardHighlightBorderWidth,
+      keyboardHighlightBorderColor:
+          keyboardHighlightBorderColor ?? this.keyboardHighlightBorderColor,
+      keyboardHighlightBorderRadius:
+          keyboardHighlightBorderRadius ?? this.keyboardHighlightBorderRadius,
       // TimeGridThemeMixin
       timeLegendWidth: timeLegendWidth ?? this.timeLegendWidth,
       timeLegendTextStyle: timeLegendTextStyle ?? this.timeLegendTextStyle,
@@ -707,7 +731,6 @@ class MCalDayViewThemeData
       timedEventMinHeight: timedEventMinHeight ?? this.timedEventMinHeight,
       timedEventPadding: timedEventPadding ?? this.timedEventPadding,
       timedEventMargin: timedEventMargin ?? this.timedEventMargin,
-      timedEventKeyboardFocusBorderWidth: timedEventKeyboardFocusBorderWidth ?? this.timedEventKeyboardFocusBorderWidth,
       timedEventCompactFontSize: timedEventCompactFontSize ?? this.timedEventCompactFontSize,
       timedEventNormalFontSize: timedEventNormalFontSize ?? this.timedEventNormalFontSize,
       timedEventTitleTimeGap: timedEventTitleTimeGap ?? this.timedEventTitleTimeGap,
@@ -721,8 +744,6 @@ class MCalDayViewThemeData
       dropTargetOverlayBorderWidth: dropTargetOverlayBorderWidth ?? this.dropTargetOverlayBorderWidth,
       dropTargetOverlayBorderColor: dropTargetOverlayBorderColor ?? this.dropTargetOverlayBorderColor,
       disabledTimeSlotColor: disabledTimeSlotColor ?? this.disabledTimeSlotColor,
-      keyboardFocusBorderColor: keyboardFocusBorderColor ?? this.keyboardFocusBorderColor,
-      keyboardFocusBorderRadius: keyboardFocusBorderRadius ?? this.keyboardFocusBorderRadius,
       resizeHandleSize: resizeHandleSize ?? this.resizeHandleSize,
       minResizeDurationMinutes: minResizeDurationMinutes ?? this.minResizeDurationMinutes,
       resizeHandleVisualHeight: resizeHandleVisualHeight ?? this.resizeHandleVisualHeight,
@@ -740,7 +761,6 @@ class MCalDayViewThemeData
       allDayWrapSpacing: allDayWrapSpacing ?? this.allDayWrapSpacing,
       allDayWrapRunSpacing: allDayWrapRunSpacing ?? this.allDayWrapRunSpacing,
       allDaySectionPadding: allDaySectionPadding ?? this.allDaySectionPadding,
-      allDayKeyboardFocusBorderWidth: allDayKeyboardFocusBorderWidth ?? this.allDayKeyboardFocusBorderWidth,
       allDayOverflowHandleWidth: allDayOverflowHandleWidth ?? this.allDayOverflowHandleWidth,
       allDayOverflowHandleHeight: allDayOverflowHandleHeight ?? this.allDayOverflowHandleHeight,
       allDayOverflowHandleBorderRadius: allDayOverflowHandleBorderRadius ?? this.allDayOverflowHandleBorderRadius,
@@ -781,6 +801,18 @@ class MCalDayViewThemeData
       dropTargetTileBorderColor: Color.lerp(dropTargetTileBorderColor, other.dropTargetTileBorderColor, t),
       dropTargetTileBorderWidth: _lerpDouble(dropTargetTileBorderWidth, other.dropTargetTileBorderWidth, t),
       resizeHandleColor: Color.lerp(resizeHandleColor, other.resizeHandleColor, t),
+      keyboardSelectionBorderWidth:
+          _lerpDouble(keyboardSelectionBorderWidth, other.keyboardSelectionBorderWidth, t),
+      keyboardSelectionBorderColor:
+          Color.lerp(keyboardSelectionBorderColor, other.keyboardSelectionBorderColor, t),
+      keyboardSelectionBorderRadius:
+          _lerpDouble(keyboardSelectionBorderRadius, other.keyboardSelectionBorderRadius, t),
+      keyboardHighlightBorderWidth:
+          _lerpDouble(keyboardHighlightBorderWidth, other.keyboardHighlightBorderWidth, t),
+      keyboardHighlightBorderColor:
+          Color.lerp(keyboardHighlightBorderColor, other.keyboardHighlightBorderColor, t),
+      keyboardHighlightBorderRadius:
+          _lerpDouble(keyboardHighlightBorderRadius, other.keyboardHighlightBorderRadius, t),
       // TimeGridThemeMixin
       timeLegendWidth: _lerpDouble(timeLegendWidth, other.timeLegendWidth, t),
       timeLegendTextStyle: TextStyle.lerp(timeLegendTextStyle, other.timeLegendTextStyle, t),
@@ -811,7 +843,6 @@ class MCalDayViewThemeData
       timedEventMinHeight: _lerpDouble(timedEventMinHeight, other.timedEventMinHeight, t),
       timedEventPadding: EdgeInsets.lerp(timedEventPadding, other.timedEventPadding, t),
       timedEventMargin: EdgeInsets.lerp(timedEventMargin, other.timedEventMargin, t),
-      timedEventKeyboardFocusBorderWidth: _lerpDouble(timedEventKeyboardFocusBorderWidth, other.timedEventKeyboardFocusBorderWidth, t),
       timedEventCompactFontSize: _lerpDouble(timedEventCompactFontSize, other.timedEventCompactFontSize, t),
       timedEventNormalFontSize: _lerpDouble(timedEventNormalFontSize, other.timedEventNormalFontSize, t),
       timedEventTitleTimeGap: _lerpDouble(timedEventTitleTimeGap, other.timedEventTitleTimeGap, t),
@@ -825,8 +856,6 @@ class MCalDayViewThemeData
       dropTargetOverlayBorderWidth: _lerpDouble(dropTargetOverlayBorderWidth, other.dropTargetOverlayBorderWidth, t),
       dropTargetOverlayBorderColor: Color.lerp(dropTargetOverlayBorderColor, other.dropTargetOverlayBorderColor, t),
       disabledTimeSlotColor: Color.lerp(disabledTimeSlotColor, other.disabledTimeSlotColor, t),
-      keyboardFocusBorderColor: Color.lerp(keyboardFocusBorderColor, other.keyboardFocusBorderColor, t),
-      keyboardFocusBorderRadius: _lerpDouble(keyboardFocusBorderRadius, other.keyboardFocusBorderRadius, t),
       resizeHandleSize: _lerpDouble(resizeHandleSize, other.resizeHandleSize, t),
       minResizeDurationMinutes: t < 0.5 ? minResizeDurationMinutes : other.minResizeDurationMinutes,
       resizeHandleVisualHeight: _lerpDouble(resizeHandleVisualHeight, other.resizeHandleVisualHeight, t),
@@ -844,7 +873,6 @@ class MCalDayViewThemeData
       allDayWrapSpacing: _lerpDouble(allDayWrapSpacing, other.allDayWrapSpacing, t),
       allDayWrapRunSpacing: _lerpDouble(allDayWrapRunSpacing, other.allDayWrapRunSpacing, t),
       allDaySectionPadding: EdgeInsets.lerp(allDaySectionPadding, other.allDaySectionPadding, t),
-      allDayKeyboardFocusBorderWidth: _lerpDouble(allDayKeyboardFocusBorderWidth, other.allDayKeyboardFocusBorderWidth, t),
       allDayOverflowHandleWidth: _lerpDouble(allDayOverflowHandleWidth, other.allDayOverflowHandleWidth, t),
       allDayOverflowHandleHeight: _lerpDouble(allDayOverflowHandleHeight, other.allDayOverflowHandleHeight, t),
       allDayOverflowHandleBorderRadius: _lerpDouble(allDayOverflowHandleBorderRadius, other.allDayOverflowHandleBorderRadius, t),
@@ -892,6 +920,12 @@ class MCalDayViewThemeData
           dropTargetTileBorderColor == other.dropTargetTileBorderColor &&
           dropTargetTileBorderWidth == other.dropTargetTileBorderWidth &&
           resizeHandleColor == other.resizeHandleColor &&
+          keyboardSelectionBorderWidth == other.keyboardSelectionBorderWidth &&
+          keyboardSelectionBorderColor == other.keyboardSelectionBorderColor &&
+          keyboardSelectionBorderRadius == other.keyboardSelectionBorderRadius &&
+          keyboardHighlightBorderWidth == other.keyboardHighlightBorderWidth &&
+          keyboardHighlightBorderColor == other.keyboardHighlightBorderColor &&
+          keyboardHighlightBorderRadius == other.keyboardHighlightBorderRadius &&
           // TimeGridThemeMixin
           timeLegendWidth == other.timeLegendWidth &&
           timeLegendTextStyle == other.timeLegendTextStyle &&
@@ -922,7 +956,6 @@ class MCalDayViewThemeData
           timedEventMinHeight == other.timedEventMinHeight &&
           timedEventPadding == other.timedEventPadding &&
           timedEventMargin == other.timedEventMargin &&
-          timedEventKeyboardFocusBorderWidth == other.timedEventKeyboardFocusBorderWidth &&
           timedEventCompactFontSize == other.timedEventCompactFontSize &&
           timedEventNormalFontSize == other.timedEventNormalFontSize &&
           timedEventTitleTimeGap == other.timedEventTitleTimeGap &&
@@ -936,8 +969,6 @@ class MCalDayViewThemeData
           dropTargetOverlayBorderWidth == other.dropTargetOverlayBorderWidth &&
           dropTargetOverlayBorderColor == other.dropTargetOverlayBorderColor &&
           disabledTimeSlotColor == other.disabledTimeSlotColor &&
-          keyboardFocusBorderColor == other.keyboardFocusBorderColor &&
-          keyboardFocusBorderRadius == other.keyboardFocusBorderRadius &&
           resizeHandleSize == other.resizeHandleSize &&
           minResizeDurationMinutes == other.minResizeDurationMinutes &&
           resizeHandleVisualHeight == other.resizeHandleVisualHeight &&
@@ -955,7 +986,6 @@ class MCalDayViewThemeData
           allDayWrapSpacing == other.allDayWrapSpacing &&
           allDayWrapRunSpacing == other.allDayWrapRunSpacing &&
           allDaySectionPadding == other.allDaySectionPadding &&
-          allDayKeyboardFocusBorderWidth == other.allDayKeyboardFocusBorderWidth &&
           allDayOverflowHandleWidth == other.allDayOverflowHandleWidth &&
           allDayOverflowHandleHeight == other.allDayOverflowHandleHeight &&
           allDayOverflowHandleBorderRadius == other.allDayOverflowHandleBorderRadius &&
@@ -991,6 +1021,12 @@ class MCalDayViewThemeData
         dropTargetTileBorderColor,
         dropTargetTileBorderWidth,
         resizeHandleColor,
+        keyboardSelectionBorderWidth,
+        keyboardSelectionBorderColor,
+        keyboardSelectionBorderRadius,
+        keyboardHighlightBorderWidth,
+        keyboardHighlightBorderColor,
+        keyboardHighlightBorderRadius,
         // TimeGridThemeMixin
         timeLegendWidth,
         timeLegendTextStyle,
@@ -1021,7 +1057,6 @@ class MCalDayViewThemeData
         timedEventMinHeight,
         timedEventPadding,
         timedEventMargin,
-        timedEventKeyboardFocusBorderWidth,
         timedEventCompactFontSize,
         timedEventNormalFontSize,
         timedEventTitleTimeGap,
@@ -1035,8 +1070,6 @@ class MCalDayViewThemeData
         dropTargetOverlayBorderWidth,
         dropTargetOverlayBorderColor,
         disabledTimeSlotColor,
-        keyboardFocusBorderColor,
-        keyboardFocusBorderRadius,
         resizeHandleSize,
         minResizeDurationMinutes,
         resizeHandleVisualHeight,
@@ -1054,7 +1087,6 @@ class MCalDayViewThemeData
         allDayWrapSpacing,
         allDayWrapRunSpacing,
         allDaySectionPadding,
-        allDayKeyboardFocusBorderWidth,
         allDayOverflowHandleWidth,
         allDayOverflowHandleHeight,
         allDayOverflowHandleBorderRadius,

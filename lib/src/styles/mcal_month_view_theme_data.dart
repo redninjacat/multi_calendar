@@ -18,7 +18,7 @@ import 'mcal_event_tile_theme_mixin.dart';
 ///   monthViewTheme: MCalMonthViewThemeData(
 ///     eventTileHeight: 24.0,
 ///     dateLabelPosition: DateLabelPosition.topCenter,
-///     keyboardSelectionBorderWidth: 2.5,
+///     keyboardSelectionBorderWidth: 3.0,
 ///   ),
 /// )
 /// ```
@@ -75,6 +75,24 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
 
   @override
   final Color? resizeHandleColor;
+
+  @override
+  final double? keyboardSelectionBorderWidth;
+
+  @override
+  final Color? keyboardSelectionBorderColor;
+
+  @override
+  final double? keyboardSelectionBorderRadius;
+
+  @override
+  final double? keyboardHighlightBorderWidth;
+
+  @override
+  final Color? keyboardHighlightBorderColor;
+
+  @override
+  final double? keyboardHighlightBorderRadius;
 
   // ── AllDayTileThemeMixin fields ─────────────────────────────────────────────
 
@@ -209,18 +227,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
   /// Replaces the hardcoded `8.0` in `day_cell_widget.dart`.
   final double? regionFontSize;
 
-  /// Border width for the keyboard focus ring when a cell is selected or
-  /// being moved/resized (in pixels).
-  ///
-  /// Replaces the hardcoded `2.0` in `week_row_widget.dart`.
-  final double? keyboardSelectionBorderWidth;
-
-  /// Border width for the keyboard focus ring when a cell is highlighted
-  /// during tab cycling (in pixels).
-  ///
-  /// Replaces the hardcoded `1.5` in `week_row_widget.dart`.
-  final double? keyboardHighlightBorderWidth;
-
   /// Diameter of the circle drawn behind the date label for the current day
   /// or focused date (in pixels).
   ///
@@ -306,6 +312,12 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
     this.dropTargetTileBorderColor,
     this.dropTargetTileBorderWidth,
     this.resizeHandleColor,
+    this.keyboardSelectionBorderWidth,
+    this.keyboardSelectionBorderColor,
+    this.keyboardSelectionBorderRadius,
+    this.keyboardHighlightBorderWidth,
+    this.keyboardHighlightBorderColor,
+    this.keyboardHighlightBorderRadius,
     // AllDayTileThemeMixin
     this.allDayEventBackgroundColor,
     this.allDayEventTextStyle,
@@ -347,8 +359,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
     this.regionIconSize,
     this.regionIconGap,
     this.regionFontSize,
-    this.keyboardSelectionBorderWidth,
-    this.keyboardHighlightBorderWidth,
     this.dateLabelCircleSize,
     this.weekNumberColumnWidth,
     this.weekNumberBorderWidth,
@@ -394,6 +404,12 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
       dropTargetTileBorderColor: colorScheme.primary,
       dropTargetTileBorderWidth: 1.5,
       resizeHandleColor: Colors.white.withValues(alpha: 0.5),
+      keyboardSelectionBorderWidth: 2.0,
+      keyboardSelectionBorderColor: colorScheme.primary,
+      keyboardSelectionBorderRadius: 4.0,
+      keyboardHighlightBorderWidth: 1.5,
+      keyboardHighlightBorderColor: colorScheme.outline,
+      keyboardHighlightBorderRadius: 4.0,
       // AllDayTileThemeMixin defaults
       allDayEventBackgroundColor: colorScheme.secondaryContainer,
       allDayEventTextStyle: textTheme.labelSmall?.copyWith(
@@ -454,8 +470,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
       regionIconSize: 9.0,
       regionIconGap: 2.0,
       regionFontSize: 8.0,
-      keyboardSelectionBorderWidth: 2.0,
-      keyboardHighlightBorderWidth: 1.5,
       dateLabelCircleSize: 24.0,
       weekNumberColumnWidth: 36.0,
       weekNumberBorderWidth: 0.5,
@@ -490,6 +504,12 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
     Color? dropTargetTileBorderColor,
     double? dropTargetTileBorderWidth,
     Color? resizeHandleColor,
+    double? keyboardSelectionBorderWidth,
+    Color? keyboardSelectionBorderColor,
+    double? keyboardSelectionBorderRadius,
+    double? keyboardHighlightBorderWidth,
+    Color? keyboardHighlightBorderColor,
+    double? keyboardHighlightBorderRadius,
     // AllDayTileThemeMixin
     Color? allDayEventBackgroundColor,
     TextStyle? allDayEventTextStyle,
@@ -531,8 +551,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
     double? regionIconSize,
     double? regionIconGap,
     double? regionFontSize,
-    double? keyboardSelectionBorderWidth,
-    double? keyboardHighlightBorderWidth,
     double? dateLabelCircleSize,
     double? weekNumberColumnWidth,
     double? weekNumberBorderWidth,
@@ -564,6 +582,18 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
       dropTargetTileBorderColor: dropTargetTileBorderColor ?? this.dropTargetTileBorderColor,
       dropTargetTileBorderWidth: dropTargetTileBorderWidth ?? this.dropTargetTileBorderWidth,
       resizeHandleColor: resizeHandleColor ?? this.resizeHandleColor,
+      keyboardSelectionBorderWidth:
+          keyboardSelectionBorderWidth ?? this.keyboardSelectionBorderWidth,
+      keyboardSelectionBorderColor:
+          keyboardSelectionBorderColor ?? this.keyboardSelectionBorderColor,
+      keyboardSelectionBorderRadius:
+          keyboardSelectionBorderRadius ?? this.keyboardSelectionBorderRadius,
+      keyboardHighlightBorderWidth:
+          keyboardHighlightBorderWidth ?? this.keyboardHighlightBorderWidth,
+      keyboardHighlightBorderColor:
+          keyboardHighlightBorderColor ?? this.keyboardHighlightBorderColor,
+      keyboardHighlightBorderRadius:
+          keyboardHighlightBorderRadius ?? this.keyboardHighlightBorderRadius,
       // AllDayTileThemeMixin
       allDayEventBackgroundColor: allDayEventBackgroundColor ?? this.allDayEventBackgroundColor,
       allDayEventTextStyle: allDayEventTextStyle ?? this.allDayEventTextStyle,
@@ -605,8 +635,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
       regionIconSize: regionIconSize ?? this.regionIconSize,
       regionIconGap: regionIconGap ?? this.regionIconGap,
       regionFontSize: regionFontSize ?? this.regionFontSize,
-      keyboardSelectionBorderWidth: keyboardSelectionBorderWidth ?? this.keyboardSelectionBorderWidth,
-      keyboardHighlightBorderWidth: keyboardHighlightBorderWidth ?? this.keyboardHighlightBorderWidth,
       dateLabelCircleSize: dateLabelCircleSize ?? this.dateLabelCircleSize,
       weekNumberColumnWidth: weekNumberColumnWidth ?? this.weekNumberColumnWidth,
       weekNumberBorderWidth: weekNumberBorderWidth ?? this.weekNumberBorderWidth,
@@ -644,6 +672,18 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
       dropTargetTileBorderColor: Color.lerp(dropTargetTileBorderColor, other.dropTargetTileBorderColor, t),
       dropTargetTileBorderWidth: _lerpDouble(dropTargetTileBorderWidth, other.dropTargetTileBorderWidth, t),
       resizeHandleColor: Color.lerp(resizeHandleColor, other.resizeHandleColor, t),
+      keyboardSelectionBorderWidth:
+          _lerpDouble(keyboardSelectionBorderWidth, other.keyboardSelectionBorderWidth, t),
+      keyboardSelectionBorderColor:
+          Color.lerp(keyboardSelectionBorderColor, other.keyboardSelectionBorderColor, t),
+      keyboardSelectionBorderRadius:
+          _lerpDouble(keyboardSelectionBorderRadius, other.keyboardSelectionBorderRadius, t),
+      keyboardHighlightBorderWidth:
+          _lerpDouble(keyboardHighlightBorderWidth, other.keyboardHighlightBorderWidth, t),
+      keyboardHighlightBorderColor:
+          Color.lerp(keyboardHighlightBorderColor, other.keyboardHighlightBorderColor, t),
+      keyboardHighlightBorderRadius:
+          _lerpDouble(keyboardHighlightBorderRadius, other.keyboardHighlightBorderRadius, t),
       // AllDayTileThemeMixin
       allDayEventBackgroundColor: Color.lerp(allDayEventBackgroundColor, other.allDayEventBackgroundColor, t),
       allDayEventTextStyle: TextStyle.lerp(allDayEventTextStyle, other.allDayEventTextStyle, t),
@@ -685,8 +725,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
       regionIconSize: _lerpDouble(regionIconSize, other.regionIconSize, t),
       regionIconGap: _lerpDouble(regionIconGap, other.regionIconGap, t),
       regionFontSize: _lerpDouble(regionFontSize, other.regionFontSize, t),
-      keyboardSelectionBorderWidth: _lerpDouble(keyboardSelectionBorderWidth, other.keyboardSelectionBorderWidth, t),
-      keyboardHighlightBorderWidth: _lerpDouble(keyboardHighlightBorderWidth, other.keyboardHighlightBorderWidth, t),
       dateLabelCircleSize: _lerpDouble(dateLabelCircleSize, other.dateLabelCircleSize, t),
       weekNumberColumnWidth: _lerpDouble(weekNumberColumnWidth, other.weekNumberColumnWidth, t),
       weekNumberBorderWidth: _lerpDouble(weekNumberBorderWidth, other.weekNumberBorderWidth, t),
@@ -731,6 +769,12 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
           dropTargetTileBorderColor == other.dropTargetTileBorderColor &&
           dropTargetTileBorderWidth == other.dropTargetTileBorderWidth &&
           resizeHandleColor == other.resizeHandleColor &&
+          keyboardSelectionBorderWidth == other.keyboardSelectionBorderWidth &&
+          keyboardSelectionBorderColor == other.keyboardSelectionBorderColor &&
+          keyboardSelectionBorderRadius == other.keyboardSelectionBorderRadius &&
+          keyboardHighlightBorderWidth == other.keyboardHighlightBorderWidth &&
+          keyboardHighlightBorderColor == other.keyboardHighlightBorderColor &&
+          keyboardHighlightBorderRadius == other.keyboardHighlightBorderRadius &&
           // AllDayTileThemeMixin
           allDayEventBackgroundColor == other.allDayEventBackgroundColor &&
           allDayEventTextStyle == other.allDayEventTextStyle &&
@@ -772,8 +816,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
           regionIconSize == other.regionIconSize &&
           regionIconGap == other.regionIconGap &&
           regionFontSize == other.regionFontSize &&
-          keyboardSelectionBorderWidth == other.keyboardSelectionBorderWidth &&
-          keyboardHighlightBorderWidth == other.keyboardHighlightBorderWidth &&
           dateLabelCircleSize == other.dateLabelCircleSize &&
           weekNumberColumnWidth == other.weekNumberColumnWidth &&
           weekNumberBorderWidth == other.weekNumberBorderWidth &&
@@ -806,6 +848,12 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
         dropTargetTileBorderColor,
         dropTargetTileBorderWidth,
         resizeHandleColor,
+        keyboardSelectionBorderWidth,
+        keyboardSelectionBorderColor,
+        keyboardSelectionBorderRadius,
+        keyboardHighlightBorderWidth,
+        keyboardHighlightBorderColor,
+        keyboardHighlightBorderRadius,
         // AllDayTileThemeMixin
         allDayEventBackgroundColor,
         allDayEventTextStyle,
@@ -847,8 +895,6 @@ class MCalMonthViewThemeData with MCalEventTileThemeMixin, MCalAllDayTileThemeMi
         regionIconSize,
         regionIconGap,
         regionFontSize,
-        keyboardSelectionBorderWidth,
-        keyboardHighlightBorderWidth,
         dateLabelCircleSize,
         weekNumberColumnWidth,
         weekNumberBorderWidth,

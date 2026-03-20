@@ -718,28 +718,30 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
       end: endPadding,
     );
 
-    // Keyboard selection indicator: override the border to show selection state.
-    // - highlighted (cycling): 1.5px border in a contrasting colour
-    // - selected (move/resize): 2px border in a contrasting colour with a
-    //   subtle background tint shift
+    // Keyboard indicator — uses [MCalEventTileThemeMixin] keyboard* theme props.
     final keyboardState = tileContext.keyboardState;
     BoxDecoration decoration;
     if (keyboardState != MCalEventKeyboardState.none) {
-      // Use a high-contrast border: white or black depending on tile luminance
-      final lightContrast =
-          theme.monthViewTheme?.eventTileLightContrastColor ?? defaults.monthViewTheme!.eventTileLightContrastColor!;
-      final darkContrast =
-          theme.monthViewTheme?.eventTileDarkContrastColor ?? defaults.monthViewTheme!.eventTileDarkContrastColor!;
-      final indicatorColor = resolveContrastColor(
-        backgroundColor: tileColor,
-        lightContrastColor: lightContrast,
-        darkContrastColor: darkContrast,
-      );
-      final indicatorWidth = keyboardState == MCalEventKeyboardState.selected
-          ? (theme.monthViewTheme?.keyboardSelectionBorderWidth ??
-              defaults.monthViewTheme!.keyboardSelectionBorderWidth!)
-          : (theme.monthViewTheme?.keyboardHighlightBorderWidth ??
-              defaults.monthViewTheme!.keyboardHighlightBorderWidth!);
+      final m = theme.monthViewTheme;
+      final md = defaults.monthViewTheme!;
+      final Color indicatorColor;
+      final double indicatorWidth;
+      final double kbCornerRadius;
+      if (keyboardState == MCalEventKeyboardState.selected) {
+        indicatorColor =
+            m?.keyboardSelectionBorderColor ?? md.keyboardSelectionBorderColor!;
+        indicatorWidth =
+            m?.keyboardSelectionBorderWidth ?? md.keyboardSelectionBorderWidth!;
+        kbCornerRadius = m?.keyboardSelectionBorderRadius ??
+            md.keyboardSelectionBorderRadius!;
+      } else {
+        indicatorColor =
+            m?.keyboardHighlightBorderColor ?? md.keyboardHighlightBorderColor!;
+        indicatorWidth =
+            m?.keyboardHighlightBorderWidth ?? md.keyboardHighlightBorderWidth!;
+        kbCornerRadius = m?.keyboardHighlightBorderRadius ??
+            md.keyboardHighlightBorderRadius!;
+      }
 
       final kbBorderSide = BorderSide(
         color: indicatorColor,
@@ -754,16 +756,17 @@ class WeekRowWidgetState extends State<WeekRowWidget> {
         right: kbRightBorder,
       );
 
-      // For selected state, slightly shift the background to reinforce
       final effectiveColor = keyboardState == MCalEventKeyboardState.selected
           ? Color.lerp(tileColor, indicatorColor, 0.10)!
           : tileColor;
 
+      final leftR = isFirstSegment ? kbCornerRadius : 0.0;
+      final rightR = isLastSegment ? kbCornerRadius : 0.0;
       decoration = BoxDecoration(
         color: effectiveColor,
         borderRadius: BorderRadius.horizontal(
-          left: Radius.circular(leftRadius),
-          right: Radius.circular(rightRadius),
+          left: Radius.circular(leftR),
+          right: Radius.circular(rightR),
         ),
         border: kbBorder,
       );

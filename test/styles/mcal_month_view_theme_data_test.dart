@@ -68,6 +68,20 @@ void main() {
       expect(theme.todayBackgroundColor, isNotNull);
     });
 
+    test('defaults populate keyboard ring properties on event tile mixin', () {
+      final themeData = ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+      );
+      final theme = MCalMonthViewThemeData.defaults(themeData);
+      expect(theme.keyboardSelectionBorderWidth, 2.0);
+      expect(theme.keyboardHighlightBorderWidth, 1.5);
+      expect(theme.keyboardSelectionBorderRadius, 4.0);
+      expect(theme.keyboardHighlightBorderRadius, 4.0);
+      expect(theme.keyboardSelectionBorderColor, isNotNull);
+      expect(theme.keyboardHighlightBorderColor, isNotNull);
+    });
+
     test('defaults differs between light and dark themes', () {
       final lightTheme = ThemeData(
         useMaterial3: true,

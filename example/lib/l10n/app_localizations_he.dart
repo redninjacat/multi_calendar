@@ -453,7 +453,22 @@ class AppLocalizationsHe extends AppLocalizations {
       'משך מינימלי לשינוי גודל (דקות)';
 
   @override
-  String get settingKeyboardFocusBorderRadius => 'רדיוס גבול מיקוד';
+  String get settingKeyboardSelectionBorderWidth => 'רוחב גבול בחירה';
+
+  @override
+  String get settingKeyboardSelectionBorderColor => 'צבע גבול בחירה';
+
+  @override
+  String get settingKeyboardSelectionBorderRadius => 'רדיוס גבול בחירה';
+
+  @override
+  String get settingKeyboardHighlightBorderWidth => 'רוחב גבול הדגשה';
+
+  @override
+  String get settingKeyboardHighlightBorderColor => 'צבע גבול הדגשה';
+
+  @override
+  String get settingKeyboardHighlightBorderRadius => 'רדיוס גבול הדגשה';
 
   @override
   String get settingTimedEventTitleTimeGap => 'רווח כותרת-שעה';

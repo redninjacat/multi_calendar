@@ -986,11 +986,41 @@ abstract class AppLocalizations {
   /// **'Min Resize Duration (Minutes)'**
   String get settingMinResizeDurationMinutes;
 
-  /// No description provided for @settingKeyboardFocusBorderRadius.
+  /// No description provided for @settingKeyboardSelectionBorderWidth.
   ///
   /// In en, this message translates to:
-  /// **'Keyboard Focus Border Radius'**
-  String get settingKeyboardFocusBorderRadius;
+  /// **'Selection border width (move/resize)'**
+  String get settingKeyboardSelectionBorderWidth;
+
+  /// No description provided for @settingKeyboardSelectionBorderColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Selection border color'**
+  String get settingKeyboardSelectionBorderColor;
+
+  /// No description provided for @settingKeyboardSelectionBorderRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Selection border radius'**
+  String get settingKeyboardSelectionBorderRadius;
+
+  /// No description provided for @settingKeyboardHighlightBorderWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlight border width (cycle)'**
+  String get settingKeyboardHighlightBorderWidth;
+
+  /// No description provided for @settingKeyboardHighlightBorderColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlight border color'**
+  String get settingKeyboardHighlightBorderColor;
+
+  /// No description provided for @settingKeyboardHighlightBorderRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlight border radius'**
+  String get settingKeyboardHighlightBorderRadius;
 
   /// No description provided for @settingTimedEventTitleTimeGap.
   ///
